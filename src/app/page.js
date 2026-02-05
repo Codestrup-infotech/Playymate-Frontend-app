@@ -315,7 +315,7 @@ function Slider({ i, setI, onFinish }) {
           }}
           className="rounded-xl bg-[#2C1029] px-5 py-2 text-[#FF94F6]"
         >
-          {i === slides.length - 1 ? "Finish" : "Next"}
+          {i === slides.length - 1 ? "Get Start" : "Next"}
         </button>
       </div>
 

@@ -9,7 +9,7 @@ module.exports = {
 
     animation: {
         "spin-slow": "spin 12s linear infinite",
-        "spin-slow-reverse": "spin 16s linear infinite reverse",
+        "spin-slow-reverse": "spin 6s linear reverse",
       },
 
        fontFamily: {
