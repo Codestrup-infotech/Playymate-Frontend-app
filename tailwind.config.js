@@ -17,7 +17,16 @@ module.exports = {
         'Poppins':['Poppins','sans-serif'],
         'Playfair Display':['Playfair Display','serif']
       },
+      
 
-  } },
+  }
+
+
+  
+},
+
+
+  
+
   plugins: [],
 };
