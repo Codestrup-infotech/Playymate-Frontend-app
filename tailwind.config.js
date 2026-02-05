@@ -1,0 +1,23 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./src/app/**/*.{js,jsx}",
+    "./src/components/**/*.{js,jsx}",
+    "./src/pages/**/*.{js,jsx}",
+  ],
+  theme: { extend: {
+
+    animation: {
+        "spin-slow": "spin 12s linear infinite",
+        "spin-slow-reverse": "spin 16s linear infinite reverse",
+      },
+
+       fontFamily: {
+
+        'Poppins':['Poppins','sans-serif'],
+        'Playfair Display':['Playfair Display','serif']
+      },
+
+  } },
+  plugins: [],
+};
