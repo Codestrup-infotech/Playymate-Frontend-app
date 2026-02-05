@@ -430,7 +430,7 @@ function Slider() {
             <button
               onClick={() => {
                 if (i < totalScreens - 1) {
-                  setI(i + 1); // slide 5 → final page
+                  setI(i + 1); 
                 }
               }}
               className={`px-6 py-2 font-Poppins transition-all duration-300
