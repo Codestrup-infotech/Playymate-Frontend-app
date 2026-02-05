@@ -444,7 +444,8 @@ function Slider() {
 
       </div>
 
-    </div>
+
+</main>
   );
 }
 
