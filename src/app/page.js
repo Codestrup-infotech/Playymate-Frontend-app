@@ -345,10 +345,10 @@ function Slider() {
 
   return (
     <main className="min-h-screen bg-black flex items-center justify-center">
-      <div className="w-[420px] text-white">
+      <div className="w-[450px] text-white">
 
         {/* SLIDING CONTENT ONLY */}
-        <div className="relative overflow-hidden h-[500px]">
+        <div className="relative overflow-hidden ">
           <div
             className="flex transition-transform duration-700 ease-in-out"
             style={{ transform: `translateX(-${i * 100}%)` }}
@@ -380,7 +380,14 @@ function Slider() {
                 className="h-16 mb-4"
               />
 
-              <div className="mx-auto w-[370px] h-[400px] rounded-3xl border-2 border-purple-500 shadow-xl shadow-purple-500/30 bg-gradient-to-b from-purple-700/40 to-black p-6 flex flex-col items-center justify-center">
+              <div className="mx-auto w-[370px] h-[400px] rounded-3xl border-2 border-purple-500 shadow-xl shadow-purple-500/30  p-6 flex flex-col items-center justify-center"
+              
+               style={{
+          background:
+            "radial-gradient(circle at center, #000000, #000000, #000000, #140521, #140521)",
+        }}
+              
+              >
                 <h2 className="font-Playfair text-[30px] font-semibold mb-2">
                   Build Your Perfect{" "}
                   <span className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent">
@@ -407,7 +414,7 @@ function Slider() {
 
         {/* DOTS (ONLY FOR 1–5 SLIDES, NOT FINAL PAGE) */}
         {!isFinalPage && (
-          <div className="flex justify-center gap-3 mt-2">
+          <div className="flex justify-center gap-3 mt-4">
             {slides.map((item, idx) => (
               <button
                 key={idx}
@@ -423,7 +430,7 @@ function Slider() {
 
         {/* NEXT / GET STARTED BUTTON (ONLY FOR 1–5 SLIDES) */}
         {!isFinalPage && (
-          <div className="mt-5 flex justify-end">
+          <div className=" flex justify-end">
             <button
               onClick={() => {
                 if (i < totalScreens - 1) {
@@ -433,7 +440,7 @@ function Slider() {
               className={`px-6 py-2 font-Poppins transition-all duration-300
                 ${isLastSlide
                   ? "rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white shadow-lg shadow-pink-400/40"
-                  : "rounded-xl text-[#FF94F6] " + slides[i].btn
+                  : "rounded-xl bg-[#140521] text-[#FF94F6] " + slides[i].btn
                 }
               `}
             >

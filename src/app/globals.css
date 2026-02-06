@@ -24,3 +24,42 @@
 .otp {
   @apply w-12 h-12 text-center bg-[#111] border border-gray-700 rounded-lg text-xl;
 }
+
+
+
+@keyframes orbit-swing-near {
+  /* Start & End – normal orbit distance */
+  0%, 100% {
+    transform: rotate(var(--angle)) 
+               translate(88px) 
+               rotate(calc(var(--angle) * -1));
+  }
+
+  /* Swing Left – move slightly closer to center */
+  25% {
+    transform: rotate(calc(var(--angle) - 40deg)) 
+               translate(65px)   /* closer, but not center */
+               rotate(calc((var(--angle) - 40deg) * -1));
+  }
+
+  /* Middle – back to normal distance */
+  50% {
+    transform: rotate(var(--angle)) 
+               translate(88px) 
+               rotate(calc(var(--angle) * -1));
+  }
+
+  /* Swing Right – move slightly closer to center */
+  75% {
+    transform: rotate(calc(var(--angle) + 40deg)) 
+               translate(65px)   /* closer, but not center */
+               rotate(calc((var(--angle) + 40deg) * -1));
+  }
+}
+
+.animate-orbit-cycle {
+  opacity: 1 !important;
+  animation: orbit-swing-near 6s ease-in-out infinite;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
