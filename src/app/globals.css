@@ -27,39 +27,74 @@
 
 
 
-@keyframes orbit-swing-near {
-  /* Start & End – normal orbit distance */
+/* Animation for Outer Ring (6 Avatars) */
+@keyframes orbit-outer {
   0%, 100% {
-    transform: rotate(var(--angle)) 
-               translate(88px) 
-               rotate(calc(var(--angle) * -1));
+    transform: rotate(var(--angle)) translate(150px) rotate(calc(var(--angle) * -1));
   }
-
-  /* Swing Left – move slightly closer to center */
   25% {
-    transform: rotate(calc(var(--angle) - 40deg)) 
-               translate(65px)   /* closer, but not center */
-               rotate(calc((var(--angle) - 40deg) * -1));
+    transform: rotate(calc(var(--angle) - 40deg)) translate(180px) rotate(calc((var(--angle) - 40deg) * -1));
   }
-
-  /* Middle – back to normal distance */
   50% {
-    transform: rotate(var(--angle)) 
-               translate(88px) 
-               rotate(calc(var(--angle) * -1));
+    transform: rotate(var(--angle)) translate(150px) rotate(calc(var(--angle) * -1));
   }
-
-  /* Swing Right – move slightly closer to center */
   75% {
-    transform: rotate(calc(var(--angle) + 40deg)) 
-               translate(65px)   /* closer, but not center */
-               rotate(calc((var(--angle) + 40deg) * -1));
+    transform: rotate(calc(var(--angle) + 40deg)) translate(180px) rotate(calc((var(--angle) + 40deg) * -1));
   }
 }
 
-.animate-orbit-cycle {
-  opacity: 1 !important;
-  animation: orbit-swing-near 6s ease-in-out infinite;
-  backface-visibility: hidden;
-  perspective: 1000px;
+/* Animation for Inner Ring Edge (2 Avatars - Half in/Half out) */
+@keyframes orbit-inner {
+  0%, 100% {
+    transform: rotate(var(--angle)) translate(96px) rotate(calc(var(--angle) * -1));
+  }
+  25% {
+    transform: rotate(calc(var(--angle) - 40deg)) translate(110px) rotate(calc((var(--angle) - 40deg) * -1));
+  }
+  50% {
+    transform: rotate(var(--angle)) translate(96px) rotate(calc(var(--angle) * -1));
+  }
+  75% {
+    transform: rotate(calc(var(--angle) + 40deg)) translate(110px) rotate(calc((var(--angle) + 40deg) * -1));
+  }
 }
+
+.animate-orbit-outer {
+  animation: orbit-outer 7s ease-in-out infinite;
+}
+
+.animate-orbit-inner {
+  animation: orbit-inner 7s ease-in-out infinite;
+}
+
+
+
+
+
+
+/* .animate-variant2 {
+  animation:
+    blast-out 0.5s ease-out forwards,
+    orbit-spin 16s linear infinite;
+
+  animation-delay: 1.34s, 2.2s;
+} */
+
+
+
+
+
+
+/* Personal Verifiction Flow */
+
+/* Hide scrollbar but keep scrolling */
+.scrollbar-hide::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;   /* IE / old Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+

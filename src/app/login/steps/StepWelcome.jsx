@@ -1,102 +1,80 @@
 export default function StepWelcome({ goPhone, goGoogle, goFacebook }) {
+const outerAvatars = [
+  "/loginAvatars/avatars1.jpg",
+  "/loginAvatars/avatars6.jpg",
+  "/loginAvatars/avatars8.png",
+  "/loginAvatars/avatars4.jpg",
+  "/loginAvatars/avatars5.jpg",
+  "/loginAvatars/avatars7.png",
+];
 
-    const avatars = [
-      
-        "/loginAvatars/avatars1.jpg",
-        "/loginAvatars/avatars2.jpg",
-        "/loginAvatars/avatars3.jpg",
-        "/loginAvatars/avatars4.jpg",
-        "/loginAvatars/avatars5.jpg",
-        "/loginAvatars/avatars6.jpg",
-    ];
-
+const innerAvatars = [
+  "/loginAvatars/avatars1.jpg",
+  "/loginAvatars/avatars2.jpg",
+];
 
     return (
 
         <>
 
             <div className=" lg:px-32 lg:py-12 px-4">
-                <div className=" lg:flex flex flex-col lg:flex-row justify-center  lg:space-x-32 space-y-20 lg:space-y-0 border-[0.5px] border-dashed border-gray-700 rounded-3xl lg:px-20 py-20">
+                <div className=" lg:flex flex flex-col lg:flex-row justify-center  lg:space-x-32 space-y-20 lg:space-y-0 border-[0.5px] border-dashed border-gray-700 rounded-3xl py-10">
 
-                    <div className="flex flex-col space-y-10  ">
-                        <img src="/loginAvatars/logo.png" alt="" className="mb-8 w-72  " />
+<div className="flex flex-col justify-center items-center"> 
+                   <img src="/loginAvatars/logo.png" alt="" className="w-72  mb-4  " />
+                      
+                             <div className=" bg-black flex items-center justify-center">
+      <div className="relative w-[400px] h-[400px] flex items-center justify-center  ">
+        
+        {/* OUTER DASHED RING - 6 Avatars */}
+        <div className="absolute w-[350px] h-[350px] border-2 border-dashed border-gray-600 rounded-full flex items-center justify-center">
+          {outerAvatars.map((src, i) => (
+            <div
+              key={`outer-${i}`}
+              className="absolute w-14 h-14 rounded-full p-[2px] animate-orbit-outer"
+              style={{ "--angle": `${i * 60}deg` }}
+            >
+              <div className="w-full h-full rounded-full overflow-hidden ">
+                <img src={src} alt="" className="w-full h-full" />
+              </div>
+            </div>
+          ))}
+        </div>
 
-                        {/* AVATAR RING */}
-                        {/* <div className="relative flex justify-center ">
+        {/* INNER DARK RING - bg-[#262626] */}
+        <div className="absolute w-52 h-52 bg-[#262626] rounded-full flex items-center justify-center">
+          {/* INNER AVATARS - Positioned half-in, half-out */}
+          {innerAvatars.map((src, i) => (
+            <div
+              key={`inner-${i}`}
+              className="absolute w-12 h-12 rounded-full p-[1px] animate-orbit-inner z-20"
+              style={{ "--angle": `${i * 180 + 90}deg` }} 
+            >
+              <div className="w-full h-full rounded-full overflow-hidden ">
+                <img src={src} alt="" className="w-full h-full" />
+              </div>
+            </div>
+          ))}
 
+          {/* CENTER WHITE CORE */}
+          <div className="w-36 h-36 bg-white rounded-full flex items-center justify-center z-10 shadow-lg">
+            <div className=" rounded-full overflow-hidden">
+              <img
+                src="/loginAvatars/avatars6.jpg"
+                alt="Center"
+                className="w-24 h-24 justify-center  items-center"
+              />
+            </div>
+          </div>
+        </div>
 
-                         
-                            <div className="relative w-24 h-24 rounded-full bg-white flex items-center justify-center z-10">
-                                <div className="relative w-16 h-16 rounded-full overflow-hidden">
-                                    <img src="/loginAvatars/centerAvatar.jpg" alt="avatar" className="object-cover" />
-                                </div>
-                            </div>
+      </div>
+    </div> </div>
+                     
 
-                          
-                            <div className="absolute inset-0 flex items-center justify-center mb-">
+                
 
-                               
-                                <div className="w-44 h-44 border-2 border-dashed border-gray-600 rounded-full animate-spin-slow" />
-
-                                {avatars.map((a, i) => (
-                                    <div
-                                        key={i}
-                                        className="absolute animate-spin-slow-reverse w-9 h-9 rounded-full p-[2px] bg-gradient-to-r from-pink-500 to-orange-400 shadow-lg"
-                                        style={{
-                                            transform: `rotate(${i * 60}deg) translate(88px) rotate(-${i * 60}deg)`
-                                        }}
-                                    >
-                                        <div className="relative w-full h-full rounded-full overflow-hidden bg-black">
-
-                                            <img src="/loginAvatars/avatarsRing.png" alt="ring" className="absolute inset-0 w-full h-full" />
-                                        </div>
-                                    </div>
-                                ))}
-
-                            </div>
-                        </div> */}
-
- <div className="relative flex justify-center mb-14">
-
-
-                            {/* CENTER AVATAR */}
-                            <div className="relative w-24 h-24 rounded-full bg-white/10 flex items-center justify-center z-10">
-                                <div className="relative w-16 h-16 rounded-full overflow-hidden">
-                                   <img src="/loginAvatars/avatars3.jpg" alt="avatar" className="object-cover" />
-                                </div>
-                            </div>
-
-                            {/* ORBIT */}
-                            <div className="absolute inset-0 flex items-center justify-center mb-">
-
-                                {/* DASHED RING */}
-                                <div className="w-44 h-44 border-2 border-dashed border-gray-600 rounded-full " />
-
-                                {avatars.map((a, i) => (
-                                    <div
-                                        key={i}
-                                        className="absolute w-9 h-9 rounded-full p-[2px]
-                                            bg-gradient-to-r from-pink-500 to-orange-400
-                                                shadow-lg animate-orbit-cycle"
-                                        style={{
-                                            "--angle": `${i * 60}deg`,
-                                        }}
-                                    >
-                                        <div className="relative w-full h-full rounded-full overflow-hidden bg-black">
-                                            <img src={a} alt="avatar" className="object-cover w-full h-full" />
-
-                                        </div>
-                                    </div>
-                                ))}
-
-
-                            </div>
-                            
-                        </div>
-
-                    </div>
-
-                    <div >
+                    <div className="pt-20" >
                         <div className="flex  flex-col justify-center  items-center mb-5">
                             <h2 className="text-3xl font-Playfair Display font-bold Display mb-2">
                                 Find Your People,
@@ -152,6 +130,8 @@ export default function StepWelcome({ goPhone, goGoogle, goFacebook }) {
 
     );
 }
+
+
 
 
 
