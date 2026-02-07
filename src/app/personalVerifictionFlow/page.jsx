@@ -1,9 +1,16 @@
 "use client";
 import React from "react";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+
 
 export default function PersonalVerifictionFlow() {
-    const [step, setStep] = useState(1);
+   const searchParams = useSearchParams();
+
+const initialStep = Number(searchParams.get("step")) || 1;
+
+const [step, setStep] = useState(initialStep);
+
 
     const [data, setData] = useState({
         gender: "",
@@ -80,8 +87,8 @@ export default function PersonalVerifictionFlow() {
 
             )}
 
-            {step === 8 && (
-                <CompleteProfileStep
+             {step === 8 && (
+                <KYC
                     value={data.status}
                     onSelect={(status) =>
                         setData({ ...data, status })
@@ -93,7 +100,69 @@ export default function PersonalVerifictionFlow() {
             )}
 
 
+             {step === 9 && (
+                <VerifyAadhaar
+                    value={data.status}
+                    onSelect={(status) =>
+                        setData({ ...data, status })
+                    }
+                    onNext={() => setStep(10)}
+                    onBack={() => setStep(8)}
+                />
+
+            )}
+
+              {step === 10 && (
+                <AthaarOTP
+                    value={data.status}
+                    onSelect={(status) =>
+                        setData({ ...data, status })
+                    }
+                    onNext={() => setStep(11)}
+                    onBack={() => setStep(9)}
+                />
+
+            )}
+
+            
+              {step === 11 && (
+                <FaceVerification
+                    value={data.status}
+                    onSelect={(status) =>
+                        setData({ ...data, status })
+                    }
+                    onNext={() => setStep(12)}
+                    onBack={() => setStep(10)}
+                />
+
+            )}
+
+             {step === 12 && (
+                <AlignFace
+                    value={data.status}
+                    onSelect={(status) =>
+                        setData({ ...data, status })
+                    }
+                    onNext={() => setStep(13)}
+                    onBack={() => setStep(11)}
+                />
+
+            )} 
+
+            {step === 13 && (
+                <Success
+                    value={data.status}
+                    onSelect={(status) =>
+                        setData({ ...data, status })
+                    }
+                    onNext={() => setStep(14)}
+                    onBack={() => setStep(12)}
+                />
+
+            )} 
+
         </div>
+
     );
 }
 
@@ -197,9 +266,9 @@ function AgeStep({ data, setData, onNext, onBack }) {
 
                 {/* center highlight */}
                 <div className="absolute top-1/2 left-0 w-full h-[52px]
-          -translate-y-1/2
-          border-t border-b border-pink-500/40
-          bg-pink-500/5 rounded-xl z-10 pointer-events-none"
+                               -translate-y-1/2
+                                 border-t border-b border-pink-500/40
+                             bg-pink-500/5 rounded-xl z-10 pointer-events-none"
                 />
 
                 <div className="grid grid-cols-3 h-full">
@@ -227,9 +296,9 @@ function AgeStep({ data, setData, onNext, onBack }) {
             </div>
 
             {/* AGE CARD */}
-            <div className="mt-12 border border-pink-500/40 rounded-2xl p-5
+            <div className="mt-12 border-2 border-pink-500/40 rounded-2xl p-5
         bg-black/60
-        shadow-[0_0_40px_rgba(236,72,153,0.35)]">
+        ">
 
                 <p className="text-xl font-semibold">
                     You’re {age}
@@ -345,7 +414,7 @@ function WheelColumn({ items, value, onChange, highlight }) {
                                     ? highlight
                                         ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent text-2xl font-semibold"
                                         : "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent text-2xl font-semibold"
-                                    : "text-gray-500 opacity-30"
+                                    : "text-gray-500 opacity-30 text-2xl"
                                 }`}
                         >
                             {item}
@@ -435,6 +504,7 @@ function ParentConsentStep({ onNext, onBack }) {
 
 
 // STEP 4 — LOCATION
+
 function LocationPermissionStep({ onNext, onBack }) {
     return (
         <div className="relative w-[360px] h-[640px] overflow-hidden bg-black">
@@ -484,6 +554,7 @@ function LocationPermissionStep({ onNext, onBack }) {
 }
 
 // STEP 5 - LocationPicker
+
 function LocationPickerStep({ onNext, onBack }) {
     const [query, setQuery] = React.useState("");
 
@@ -592,10 +663,10 @@ function PhotoStep({ onNext, onBack }) {
 
                 {/* CAMERA BUTTON */}
                 <label className="absolute -bottom-3 -right-3 w-12 h-12
-          rounded-full bg-pink-500 flex items-center justify-center
-          cursor-pointer shadow-lg">
+                   rounded-full bg-gradient-to-r from-pink-500 to-orange-400 flex items-center justify-center
+                   cursor-pointer shadow-lg">
 
-                    📷
+                    <img src="/loginAvatars/camera.png" alt="" />
                     <input
                         type="file"
                         accept="image/*"
@@ -654,231 +725,546 @@ function PhotoStep({ onNext, onBack }) {
 
 // STEP 7 — STATUS
 
-function StatusStep({ value, onSelect, onNext, onBack }) {
-    const options = [
-        { label: "Student", icon: "🎓" },
-        { label: "Working Professional", icon: "💼" },
-        { label: "Business Owner", icon: "👜" },
-        { label: "Self - Employed", icon: "👤" },
-        { label: "Freelancer", icon: "🧑‍💻" },
-        { label: "Other", icon: "⋯" },
-    ];
+import { useRouter } from "next/navigation";
+function StatusStep({ value, onSelect, onBack }) {
 
-    return (
-        <div className="w-[360px] text-center text-white">
+  const router = useRouter();
 
-            <div className="flex items-center gap-12 mb-3">
-                <button onClick={onBack} className="mt-6 mb-10 text-gray-400 text-3xl font-bold"> ← </button>
+  const options = [
+    { label: "Student", icon: "🎓" },
+    { label: "Working Professional", icon: "💼" },
+    { label: "Business Owner", icon: "👜" },
+    { label: "Self - Employed", icon: "👤" },
+    { label: "Freelancer", icon: "🧑‍💻" },
+    { label: "Other", icon: "⋯" },
+  ];
 
-                {/* TITLE */}
-                <h1 className="text-3xl font-serif leading-tight">
-                    What are you{" "}
-                    <span className="bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
-                        doing right now?
-                    </span>
-                </h1>
-            </div>
-            <p className="text-gray-400 mt-2 text-sm px-6">
-                This helps us tailor your Playmate experience.
-            </p>
+  // 👉 Decide page based on status
+  const handleNext = () => {
+    if (!value) return;
 
-            {/* OPTIONS */}
-            <div className="mt-5 space-y-3 px-4">
+    switch (value) {
+      case "Student":
+        router.push("/personalVerifictionFlow/profile_setup/student");
+        break;
 
-                {options.map((opt) => {
-                    const active = value === opt.label;
+      case "Working Professional":
+        router.push("/personalVerifictionFlow/profile_setup/working_professional");
+        break;
 
-                    return (
-                        <button
-                            key={opt.label}
-                            onClick={() => onSelect(opt.label)}
-                            className={`w-full flex items-center justify-between
-                px-4 py-4 rounded-xl border transition-all
-                ${active
-                                    ? "border-pink-500 bg-white/5 shadow-[0_0_20px_rgba(236,72,153,0.35)]"
-                                    : "border-gray-700 bg-white/2"
-                                }`}
-                        >
-                            {/* LEFT */}
-                            <div className="flex items-center gap-3 text-left">
+      case "Business Owner":
+        router.push("/personalVerifictionFlow/profile_setup/business_owner");
+        break;
 
-                                <span className="text-xl">{opt.icon}</span>
+      case "Self - Employed":
+        router.push("/personalVerifictionFlow/profile_setup/self_employed");
+        break;
 
-                                <span className="text-sm">
-                                    {opt.label}
-                                </span>
-                            </div>
+      case "Freelancer":
+        router.push("/personalVerifictionFlow/profile_setup/freelancer");
+        break;
 
-                            {/* RADIO */}
-                            <div
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
-                  ${active
-                                        ? "border-pink-500"
-                                        : "border-gray-500"
-                                    }`}
-                            >
-                                {active && (
-                                    <div className="w-2.5 h-2.5 rounded-full
-                    bg-gradient-to-r from-pink-500 to-orange-400"
-                                    />
-                                )}
-                            </div>
-                        </button>
-                    );
-                })}
-            </div>
-
-            {/* BUTTON */}
-            <button
-                disabled={!value}
-                onClick={onNext}
-                className="mt-8 w-[90%] py-4 rounded-full
-          bg-gradient-to-r from-pink-500 to-orange-400
-          font-semibold
-          disabled:opacity-40"
-            >
-                Continue
-            </button>
-
-            {/* SKIP */}
-            <button
-                // onClick={}
-                className="mt-4 text-xs text-gray-400"
-            >
-                Skip for now
-            </button>
-
-        </div>
-    );
-}
-
-//STEP 8 - CompleteProfile
-
-function CompleteProfileStep({ onNext, onBack }) {
-  const [form, setForm] = React.useState({
-    education: "",
-    hometown: "",
-    qualification: "",
-    bio: "",
-  });
+      default:
+        router.push("/personalVerifictionFlow/profile_setup/other");
+    }
+  };
 
   return (
-    <div className="w-[360px] h-[640px] text-white relative px-6">
+    <div className="w-[360px] text-center text-white">
 
-      {/* TOP BAR */}
-      <div className="flex items-center gap-3 pt-4">
-        <button onClick={onBack} className="text-xl">←</button>
-        <p className="flex-1 text-center text-sm text-gray-400">
-          Profile setup
-        </p>
-      </div>
-
-      {/* TITLE */}
-      <div className="mt-6 text-center">
+      <div className="flex items-center gap-12 mb-3">
+        <button onClick={onBack} className="mt-6 mb-10 text-gray-400 text-3xl font-bold">
+          ←
+        </button>
 
         <h1 className="text-3xl font-serif leading-tight">
-          Complete your{" "}
+          What are you{" "}
           <span className="bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
-            profile
+            doing right now?
+          </span>
+        </h1>
+      </div>
+
+      <p className="text-gray-400 mt-2 text-sm px-6">
+        This helps us tailor your Playmate experience.
+      </p>
+
+      {/* OPTIONS */}
+      <div className="mt-5 space-y-3 px-4">
+        {options.map((opt) => {
+          const active = value === opt.label;
+
+          return (
+            <button
+              key={opt.label}
+              onClick={() => onSelect(opt.label)}
+              className={`w-full flex items-center justify-between
+                px-4 py-4 rounded-xl border transition-all
+                ${active
+                  ? "border-pink-500 bg-white/5 shadow-[0_0_20px_rgba(236,72,153,0.35)]"
+                  : "border-gray-700 bg-white/2"
+                }`}
+            >
+              <div className="flex items-center gap-3 text-left">
+                <span className="text-xl">{opt.icon}</span>
+                <span className="text-sm">{opt.label}</span>
+              </div>
+
+              <div
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
+                  ${active ? "border-pink-500" : "border-gray-500"}`}
+              >
+                {active && (
+                  <div className="w-2.5 h-2.5 rounded-full
+                    bg-gradient-to-r from-pink-500 to-orange-400"
+                  />
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* CONTINUE */}
+      <button
+        disabled={!value}
+        onClick={handleNext}
+        className="mt-8 w-[90%] py-4 rounded-full
+          bg-gradient-to-r from-pink-500 to-orange-400
+          font-semibold disabled:opacity-40"
+      >
+        Continue
+      </button>
+
+      {/* SKIP */}
+      <button className="mt-4 text-xs text-gray-400">
+        Skip for now
+      </button>
+
+    </div>
+  );
+}
+
+// step 8   /   KYC
+
+function KYC({ onNext, onSkip, onBack }) {
+  return (
+    <div className="min-h-screen bg-black relative flex items-center justify-center px-6">
+
+      {/* Back Arrow */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-5 left-5 text-white/80 text-xl"
+        >
+          ←
+        </button>
+      )}
+
+      {/* Card */}
+      <div
+        className="
+          w-full max-w-sm
+          rounded-3xl
+          p-8
+          text-center
+          bg-gradient-to-br from-[#2a1626] to-[#120a12]
+          shadow-[0_0_60px_rgba(255,100,160,0.18)]
+        "
+      >
+        {/* Title */}
+        <h1 className="text-3xl font-serif text-white">
+          Start Your{" "}
+          <span className="text-orange-400">
+            KYC
           </span>
         </h1>
 
-        <p className="mt-2 text-gray-400 text-sm px-4">
-          Help us recommend better playmates for you. You can skip this anytime.
+        {/* Subtitle */}
+        <p className="mt-3 text-sm text-white/50 leading-relaxed">
+          Free users must verify within 30 days
+          <br />
+          to continue using the app
         </p>
+
+        {/* Buttons */}
+        <div className="mt-10 flex gap-4 justify-center">
+
+          {/* Skip */}
+          <button
+            onClick={onNext}
+            className="
+              px-9 py-3 rounded-full
+              border border-pink-500/60
+              text-white/70
+              hover:bg-white/5
+              transition
+            "
+          >
+            Skip
+          </button>
+
+          {/* Continue */}
+          <button
+            onClick={onNext}
+            className="
+              px-9 py-3 rounded-full font-semibold text-white
+              bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
+              shadow-[0_0_28px_rgba(255,130,60,0.5)]
+              hover:scale-[1.04]
+              transition
+            "
+          >
+            Continue
+          </button>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// step 9  /   Verify Aadhar
+
+function VerifyAadhaar({ onBack, onNext }) {
+  const [aadhaar, setAadhaar] = React.useState("");
+
+  return (
+    <div className="min-h-screen bg-black relative px-6 text-white flex flex-col">
+
+      {/* Back */}
+      <button
+        onClick={onBack}
+        className="absolute top-5 left-5 text-white/80 text-xl"
+      >
+        ←
+      </button>
+
+      {/* CONTENT */}
+      <div className="mt-28 text-center">
+
+        <h1 className="text-3xl font-serif leading-tight">
+          Enter Your{" "}
+          <span className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] bg-clip-text text-transparent">
+            Aadhar
+          </span>
+          <br />
+          <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+            Number
+          </span>
+        </h1>
+
+        <p className="mt-4 text-sm text-white/40 px-4">
+          We have sent the OTP to your aadhar
+          <br />
+          number
+        </p>
+
+        {/* INPUT */}
+        <div className="mt-10">
+
+          <div className="p-[1.5px] rounded-2xl bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]">
+            <input
+              value={aadhaar}
+              maxLength={12}
+              onChange={(e) =>
+                setAadhaar(
+                  e.target.value.replace(/\D/g, "")
+                )
+              }
+              placeholder="Enter your 16 Digit Aadhar Number"
+              className="
+                w-full rounded-2xl px-5 py-4
+                bg-[#141414]
+                outline-none
+                text-sm
+                placeholder:text-white/30
+              "
+            />
+          </div>
+
+        </div>
       </div>
 
-      {/* FORM */}
-      <div className="mt-8 space-y-5">
+      {/* VERIFY BUTTON */}
+      <div className="mt-auto pb-10">
 
-        {/* EDUCATION */}
-        <InputBox
-          label="Education"
-          placeholder="College / school / University name"
-          value={form.education}
-          onChange={(v) =>
-            setForm({ ...form, education: v })
-          }
-          icon="🎓"
-        />
+        <button
+          disabled={aadhaar.length !== 12}
+          onClick={onNext}
+          className="
+            w-full py-4 rounded-full font-semibold
+            bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
+            shadow-[0_0_28px_rgba(255,130,60,0.5)]
+            disabled:opacity-40
+          "
+        >
+          Verify Aadhar
+        </button>
+      </div>
 
-        {/* HOMETOWN */}
-        <InputBox
-          label="Hometown"
-          placeholder="Where are you from?"
-          value={form.hometown}
-          onChange={(v) =>
-            setForm({ ...form, hometown: v })
-          }
-          icon="📍"
-        />
+    </div>
+  );
+}
 
-        {/* QUALIFICATION */}
-        <InputBox
-          label="Qualification"
-          placeholder="Where do you work?"
-          value={form.qualification}
-          onChange={(v) =>
-            setForm({ ...form, qualification: v })
-          }
-          icon="👜"
-        />
+// step 10   /   Adhaar OTP
 
-        {/* BIO */}
-        <div>
-          <label className="text-xs text-gray-400 mb-1 block">
-            Bio
-          </label>
+function AthaarOTP({ onBack, onVerify,onNext, onResend }) {
+  const [otp, setOtp] = React.useState(["", "", "", "", "", ""]);
+  const inputsRef = React.useRef([]);
 
-          <div className="border border-pink-500/40 rounded-xl p-4 bg-white/5">
+  const handleChange = (value, index) => {
+    if (!/^\d?$/.test(value)) return;
 
-            <div className="flex gap-2 items-start">
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
 
-              <span className="mt-1">✏️</span>
+    if (value && index < 5) {
+      inputsRef.current[index + 1].focus();
+    }
+  };
 
-              <textarea
-                rows={4}
-                placeholder="Tell us about yourself..."
-                value={form.bio}
-                onChange={(e) =>
-                  setForm({ ...form, bio: e.target.value })
-                }
-                className="bg-transparent w-full outline-none text-sm resize-none"
-              />
+  const handleKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      inputsRef.current[index - 1].focus();
+    }
+  };
+
+  const code = otp.join("");
+
+  return (
+    <div className="min-h-screen bg-black relative px-6 text-white flex flex-col">
+
+      {/* Back */}
+      <button
+        onClick={onBack}
+        className="absolute top-5 left-5 text-white/80 text-xl"
+      >
+        ←
+      </button>
+
+      {/* CONTENT */}
+      <div className="mt-28 text-center">
+
+        <h1 className="text-3xl font-serif leading-tight">
+          Verification{" "}
+          <span className="text-orange-400">
+            Code
+          </span>
+        </h1>
+
+        <p className="mt-4 text-sm text-white/40 px-4 leading-relaxed">
+          Please enter the code we just sent to your registered
+          <br />
+          mobile number to verify your Aadhaar number.
+        </p>
+
+        {/* OTP BOXES */}
+        <div className="mt-10 flex justify-center gap-3">
+
+          {otp.map((digit, i) => (
+            <input
+              key={i}
+              ref={(el) => (inputsRef.current[i] = el)}
+              value={digit}
+              maxLength={1}
+              onChange={(e) =>
+                handleChange(e.target.value, i)
+              }
+              onKeyDown={(e) =>
+                handleKeyDown(e, i)
+              }
+              className="
+                w-12 h-14 text-center text-xl
+                rounded-xl
+                bg-[#141414]
+                border border-[#EF3AFF]/40
+                focus:border-[#FF8319]
+                outline-none
+              "
+            />
+          ))}
+        </div>
+
+        {/* RESEND */}
+        <div className="mt-6 text-sm text-white/50">
+          Didn’t receive OTP?{" "}
+          <button
+            onClick={onResend}
+            className="text-white underline"
+          >
+            Resend Code
+          </button>
+        </div>
+      </div>
+
+      {/* VERIFY BUTTON */}
+      <div className="mt-auto pb-10">
+
+        <button
+          disabled={code.length !== 6}
+          onClick={onNext}
+          className="
+            w-full py-4 rounded-full font-semibold
+            bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
+            shadow-[0_0_28px_rgba(255,130,60,0.5)]
+            disabled:opacity-40
+          "
+        >
+          Verify
+        </button>
+      </div>
+
+    </div>
+  );
+}
+
+//step 11    /    FaceVerification 
+
+function FaceVerification({ onBack, onStart, onNext }) {
+
+  return (
+    <div className="min-h-screen bg-black relative px-6 text-white flex flex-col">
+
+      {/* Back */}
+      <button
+        onClick={onBack}
+        className="absolute top-5 left-5 text-white/80 text-xl"
+      >
+        ←
+      </button>
+
+      {/* CONTENT */}
+      <div className="mt-24 text-center">
+
+        {/* TITLE */}
+        <h1 className="text-3xl font-serif">
+          <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+            Face
+          </span>{" "}
+          Verification
+        </h1>
+
+        {/* ICON */}
+        <div className="mt-10 flex justify-center relative">
+
+          {/* Scan Frame */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-44 h-44 relative">
+
+              {/* corners */}
+              <span className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-pink-500" />
+              <span className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-orange-400" />
+              <span className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-pink-500" />
+              <span className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-orange-400" />
 
             </div>
           </div>
 
-          <button
-            className="mt-2 text-xs text-pink-400 flex items-center gap-1"
-            type="button"
-          >
-            ✨ Generate bio with AI
-          </button>
+          {/* Avatar */}
+          <div className="relative z-10 w-28 h-28 rounded-full bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] flex items-center justify-center">
+            <span className="text-3xl text-black">✔</span>
+          </div>
+
         </div>
 
+        {/* TEXT */}
+        <h2 className="mt-10 text-lg font-semibold">
+          Verify your identity
+        </h2>
+
+        <p className="mt-3 w-96 text-md text-white/40 px-10 leading-relaxed">
+          Please enter the code we just sent to your registered
+          mobile number to verify your Aadhaar number.
+        </p>
       </div>
 
-      {/* FOOTER */}
-      <div className="absolute bottom-8 left-0 w-full px-6">
-
-        <button
-          onClick={() => {
-            console.log("PROFILE DATA:", form);
-            onNext();
-          }}
-          className="w-full py-4 rounded-full
-            bg-gradient-to-r from-pink-500 to-orange-400
-            font-semibold"
-        >
-          Save & Continue
-        </button>
+      {/* BUTTON */}
+      <div className="mt-auto pb-10">
 
         <button
           onClick={onNext}
-          className="mt-4 text-xs text-gray-400 w-full"
+          className="
+            w-full py-4 rounded-full font-semibold
+            bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
+            shadow-[0_0_30px_rgba(255,130,60,0.55)]
+            hover:scale-[1.03]
+            transition
+          "
         >
-          Skip for now
+          Start Verification
+        </button>
+
+      </div>
+
+    </div>
+  );
+}
+
+// step 12    /   AlignFace
+
+function AlignFace({ onBack, onVerify , onNext }) {
+    
+  return (
+    <div className="min-h-screen bg-black relative px-6 text-white flex flex-col items-center">
+
+      {/* Back */}
+      <button
+        onClick={onBack}
+        className="absolute top-5 left-5 text-white/80 text-xl"
+      >
+        ←
+      </button>
+
+      {/* TITLE */}
+      <h1 className="mt-20 text-center text-3xl font-serif leading-tight">
+        Align Your Face in the
+        <br />
+        Frame
+      </h1>
+
+      {/* SCAN AREA */}
+      <div className="mt-12 relative">
+
+        {/* Circular Frame */}
+        <div className="relative w-72 h-72 rounded-full overflow-hidden border border-white/15">
+
+          {/* Fake Camera Image */}
+          <img
+            src="/loginAvatars/faceVerifyimg.png" // replace with camera feed later
+            alt="Face preview"
+            className="w-full h-full object-cover opacity-90"
+          />
+
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-black/30" />
+
+          {/* Scan Line */}
+          <div className="absolute top-1/2 left-0 w-full h-[2px]
+            bg-gradient-to-r from-transparent via-blue-400 to-transparent
+            animate-pulse"
+          />
+
+          {/* Circular Ring */}
+          <div className="absolute inset-0 rounded-full ring-2 ring-white/10" />
+        </div>
+      </div>
+
+      {/* VERIFY BUTTON */}
+      <div className="mt-auto w-full pb-10">
+
+        <button
+          onClick={onNext}
+          className="
+            w-full py-4 rounded-full font-semibold
+            bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
+            shadow-[0_0_30px_rgba(255,130,60,0.55)]
+            hover:scale-[1.03]
+            transition
+          "
+        >
+          Verify
         </button>
       </div>
 
@@ -886,27 +1272,53 @@ function CompleteProfileStep({ onNext, onBack }) {
   );
 }
 
-function InputBox({ label, placeholder, value, onChange, icon }) {
+// step 13   /   Success
+
+function Success({ onBack, onDone }) {
   return (
-    <div>
-      <label className="text-xs text-gray-400 mb-1 block">
-        {label}
-      </label>
+    <div className="min-h-screen bg-black relative px-6 text-white flex flex-col">
 
-      <div className="border border-pink-500/40 rounded-xl p-4 bg-white/5
-        flex items-center gap-2">
+      {/* Back */}
+      <button
+        onClick={onBack}
+        className="absolute top-5 left-5 text-white/80 text-xl"
+      >
+        ←
+      </button>
 
-        <span>{icon}</span>
+      {/* CENTER CONTENT */}
+      <div className="flex-1 flex flex-col justify-center items-center text-center">
 
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="bg-transparent outline-none text-sm w-full"
-        />
+        <h1 className="text-4xl font-serif font-semibold
+          bg-gradient-to-r from-pink-400 to-orange-400
+          bg-clip-text text-transparent">
+          Congratulations!
+        </h1>
+
+        <p className="mt-4 text-sm text-white/40 max-w-xs">
+          Your account has been verified successfully.
+        </p>
 
       </div>
+
+      {/* OPTIONAL CTA */}
+      {onDone && (
+        <div className="pb-10">
+          <button
+            onClick={onDone}
+            className="
+              w-full py-4 rounded-full font-semibold
+              bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
+              shadow-[0_0_28px_rgba(255,130,60,0.5)]
+            "
+          >
+            Continue
+          </button>
+        </div>
+      )}
+
     </div>
   );
 }
+
 
