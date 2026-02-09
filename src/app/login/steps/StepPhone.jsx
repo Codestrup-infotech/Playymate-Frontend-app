@@ -116,7 +116,7 @@ export default function StepPhone({ onBackToWelcome }) {
     if (code.length !== 4) return alert("Enter 4 digit OTP");
 
 
-  
+    
 
 
 
@@ -295,7 +295,7 @@ Enter
               Verify
             </button>
 
-            <p className="text-center text-sm text-gray-400">
+            <p className="text-center text-sm text-gray-400 font-Poppins ">
               {timer > 0 ? (
                 <>Resend OTP in <span className="text-red-400">{timer}s</span></>
               ) : (
@@ -367,6 +367,7 @@ Enter
                   className="w-12 h-12 rounded-xl bg-black border border-gray-700 text-center text-xl"
                 />
               ))}
+              
             </div>
 
             <button
