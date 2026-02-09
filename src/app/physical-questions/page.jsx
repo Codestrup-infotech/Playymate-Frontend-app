@@ -206,6 +206,8 @@ const sports = [
   { name: "Card Games", icon: "🃏" },
   { name: "Motor Sports", icon: "🏍️" },
   { name: "Pickle Ball", icon: "🥒" },
+  { name: "Tennis", icon: "🎾" },
+  { name:"Cycling", icon:"🚴" },
 ];
 
 export default function Page() {
@@ -249,18 +251,18 @@ export default function Page() {
         {step === 1 && (
           <>
             <div className="text-center mb-10 flex flex-col space-y-5">
-              <h1 className="text-white text-3xl md:text-4xl font-semibold">
+              <h1 className="text-white text-3xl md:text-4xl font-Playfair Display font-semibold">
                 What Sports Do You Love to{" "}
                 <span className="bg-gradient-to-r px-2 font-bold from-pink-400 to-orange-400 bg-clip-text text-transparent">
                   Play
                 </span>
               </h1>
-              <p className="text-gray-400 mt-2">
+              <p className="text-gray-400 mt-2  font-Poppins ">
                 Choose up to 3 interests for your profile
               </p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 font-Poppins  ">
               {sports.map((sport, i) => {
                 const isActive = selected.includes(sport.name);
                 return (
@@ -298,11 +300,11 @@ export default function Page() {
         {/* STEP 2 */}
         {step === 2 && (
           <>
-            <div className="text-center mb-10">
-              <h1 className="text-white text-3xl font-semibold">
+            <div className=" mb-10 flex flex-col space-y-5 text-center items-center">
+              <h1 className="text-white text-3xl font-semibold font-Playfair Display">
                 Your Selected Sports
               </h1>
-              <p className="text-gray-400">Choose one to continue</p>
+              <p className="text-gray-400 font-Poppins">Choose one to continue</p>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
