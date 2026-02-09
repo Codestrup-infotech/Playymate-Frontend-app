@@ -13,21 +13,28 @@ export default function StudentProfilePage() {
     bio: "",
   });
 
+
+const goBackToQuestion = () => {
+  sessionStorage.setItem("pq_step", "7"); // remember step
+  router.push("/personal-verifiction");   // clean URL
+};
+
+
   return (
-    <div className="min-h-screen bg-black flex justify-center items-center px-4">
+    <div className="min-h-screen bg-black flex justify-center items-center px-4 py-10 ">
 
       <div className="w-full max-w-sm text-white relative">
 
         {/* TOP BAR */}
         <div className="flex items-center gap-3 pt-4">
          <button
-            onClick={() => router.push("/personalVerifictionFlow?step=7")}
+            onClick={goBackToQuestion}
             className="text-xl text-white/70"
          >
          ←
         </button>
 
-          <p className="flex-1 text-center text-sm text-white/40">
+          <p className="flex-1 text-center text-md font-Poppins text-white/40">
             Profile setup
           </p>
         </div>
@@ -35,20 +42,20 @@ export default function StudentProfilePage() {
         {/* TITLE */}
         <div className="mt-8 text-center">
 
-          <h1 className="text-3xl font-serif leading-tight">
+          <h1 className="text-3xl font-Playfair Display font-semibold  leading-tight">
             Complete your{" "}
             <span className="bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
               Student Profile
             </span>
           </h1>
 
-          <p className="mt-2 text-white/40 text-sm px-6">
+          <p className="mt-2 text-white/40 text-sm px-6 font-Poppins ">
             Help us recommend better playmates for you. You can skip this anytime.
           </p>
         </div>
 
         {/* FORM */}
-        <div className="mt-10 space-y-5">
+        <div className="mt-10 space-y-5 font-Poppins ">
 
           <InputBoxStudent
             label="Education"
@@ -131,9 +138,9 @@ export default function StudentProfilePage() {
               router.push("/personalVerifictionFlow?step=8"); // or next onboarding step
             }}
             className="
-              w-full py-4 rounded-full font-semibold
+              w-full py-4 rounded-full  font-Poppins
               bg-gradient-to-r from-pink-500 to-orange-400
-              shadow-[0_0_30px_rgba(255,120,60,0.4)]
+            
             "
           >
             Save & Continue
@@ -141,7 +148,7 @@ export default function StudentProfilePage() {
 
           <button
             onClick={() => router.push("/dashboard")}
-            className="mt-4 text-xs text-white/40 w-full"
+            className="mt-4 text-md text-white/40 w-full font-Poppins "
           >
             Skip for now
           </button>

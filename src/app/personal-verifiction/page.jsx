@@ -1,15 +1,27 @@
 "use client";
-import React from "react";
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 
-export default function PersonalVerifictionFlow() {
-   const searchParams = useSearchParams();
+import React, { useState, useEffect } from "react";
 
-const initialStep = Number(searchParams.get("step")) || 1;
 
-const [step, setStep] = useState(initialStep);
+export default function PersonalVerification() {
+
+
+  const [step, setStep] = useState(1);
+
+  useEffect(() => {
+    const savedStep = sessionStorage.getItem("pq_step");
+    if (savedStep) {
+      setStep(Number(savedStep));
+      sessionStorage.removeItem("pq_step");
+    }
+  }, []);
+
+  
+
+
+
+
 
 
     const [data, setData] = useState({
@@ -175,22 +187,22 @@ function GenderStep({ value, onSelect, onNext }) {
     return (
         <div className="w-[340px] text-center">
 
-            <h1 className="text-3xl font-serif">
+            <h1 className="text-3xl font-Playfair Display">
                 What’s Your <span className="text-pink-500">Gender</span>
             </h1>
 
-            <p className="text-gray-400 mt-2">
+            <p className="text-gray-400 mt-2 font-Poppins">
                 Tell us about your gender
             </p>
 
-            <div className="mt-10 space-y-4">
+            <div className="mt-10 space-y-4 font-Poppins">
                 {genders.map((g) => (
                     <button
                         key={g}
                         onClick={() => onSelect(g)}
                         className={`w-full py-4 rounded-xl border transition
               ${value === g
-                                ? "border-pink-500 bg-white/5 shadow-[0_0_20px_rgba(236,72,153,0.4)]"
+                                ? "border-pink-500 bg-white/5 "
                                 : "border-gray-700"
                             }`}
                     >
@@ -202,7 +214,7 @@ function GenderStep({ value, onSelect, onNext }) {
             <button
                 disabled={!value}
                 onClick={onNext}
-                className="mt-10 w-full py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40"
+                className="mt-10 w-full py-4 font-Poppins rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40"
             >
                 Continue
             </button>
@@ -248,24 +260,24 @@ function AgeStep({ data, setData, onNext, onBack }) {
             {/* HEADER */}
             <div className="flex items-center gap-12 mb-3">
                 <button onClick={onBack} className="mt-6 mb-10 text-gray-400 text-3xl font-bold"> ← </button>
-                <h1 className="text-3xl font-serif">
+                <h1 className="text-3xl font-Playfair Display">
                     How <span className="text-pink-500">Old</span> Are You
                 </h1>
             </div>
 
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-400 text-sm font-Poppins ">
                 Please provide your age in years
             </p>
 
             {/* WHEEL */}
-            <div className="relative mt-12 h-[240px]">
+            <div className="relative mt-12 h-[240px] font-Poppins">
 
                 {/* fade overlays */}
                 <div className="absolute top-0 w-full h-20 bg-gradient-to-b from-black to-transparent z-20 pointer-events-none" />
                 <div className="absolute bottom-0 w-full h-20 bg-gradient-to-t from-black to-transparent z-20 pointer-events-none" />
 
                 {/* center highlight */}
-                <div className="absolute top-1/2 left-0 w-full h-[52px]
+                <div className="absolute top-1/2 left-0 w-full h-[52px] font-Poppins
                                -translate-y-1/2
                                  border-t border-b border-pink-500/40
                              bg-pink-500/5 rounded-xl z-10 pointer-events-none"
@@ -304,7 +316,7 @@ function AgeStep({ data, setData, onNext, onBack }) {
                     You’re {age}
                 </p>
 
-                <p className="text-xs text-gray-400 mt-2">
+                <p className="text-xs text-gray-400 mt-2 font-Poppins"> 
                     Is {month} {day}, {year} your birthday?
                     This can only be changed once.
                 </p>
@@ -312,7 +324,7 @@ function AgeStep({ data, setData, onNext, onBack }) {
                 <button
                     onClick={confirmDob}
                     className="mt-6 w-full py-4 rounded-full
-            bg-gradient-to-r from-pink-500 via-orange-400 to-pink-500
+            bg-gradient-to-r from-pink-500 via-orange-400 to-pink-500 font-Poppins
             font-semibold tracking-wide"
                 >
                     Continue
@@ -320,7 +332,7 @@ function AgeStep({ data, setData, onNext, onBack }) {
 
                 <button
                     onClick={onBack}
-                    className="mt-3 text-sm text-gray-400"
+                    className="mt-3 text-sm text-gray-400 font-Poppins "
                 >
                     Edit
                 </button>
@@ -446,23 +458,23 @@ function ParentConsentStep({ onNext, onBack }) {
             {/* CONTENT */}
             <div className="mt-24 text-center">
 
-                <h1 className="text-3xl font-serif">
-                    <span className="bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+                <h1 className="text-3xl font-Playfair Display">
+                    <span className="bg-gradient-to-r font-Playfair Display from-pink-500 to-orange-400 bg-clip-text text-transparent">
                         Parent Consent
                     </span>
                 </h1>
 
-                <p className="mt-6 text-gray-400 text-sm leading-relaxed">
+                <p className="mt-6 text-gray-400 text-sm leading-relaxed font-Poppins ">
                     To continue using Playmate, we need permission from a parent or
                     guardian. This helps us keep the experience safe and age-appropriate.
                 </p>
 
-                <p className="mt-4 text-gray-500 text-xs">
+                <p className="mt-4 text-gray-500 text-xs font-Poppins">
                     Your information is secure and never shared.
                 </p>
 
                 {/* CHECKBOX */}
-                <label className="mt-10 flex items-start gap-3 text-left text-sm cursor-pointer">
+                <label className="mt-10 flex items-start gap-3 text-left text-sm cursor-pointer font-Poppins">
 
                     <input
                         type="checkbox"
@@ -479,14 +491,14 @@ function ParentConsentStep({ onNext, onBack }) {
             </div>
 
             {/* FOOTER */}
-            <div className="absolute bottom-8 left-0 w-full px-6">
+            <div className="absolute bottom-8 left-0 w-full px-6 font-Poppins">
 
                 <button
                     disabled={!checked}
                     onClick={onNext}
                     className="w-full py-4 rounded-full
             bg-gradient-to-r from-pink-500 to-orange-400
-            font-semibold
+         
             disabled:opacity-40"
                 >
                     Give Consent
@@ -529,11 +541,11 @@ function LocationPermissionStep({ onNext, onBack }) {
                         <span className="text-4xl">📍</span>
                     </div>
 
-                    <h2 className="mt-4 font-bold text-lg text-black">
+                    <h2 className="mt-4 font-bold text-lg text-black font-Poppins">
                         Location
                     </h2>
 
-                    <p className="mt-2 text-sm text-gray-500">
+                    <p className="mt-2 text-sm text-gray-500 font-Poppins ">
                         Allow maps to access your location while you use the app?
                     </p>
 
@@ -541,7 +553,7 @@ function LocationPermissionStep({ onNext, onBack }) {
                         onClick={onNext}
                         className="mt-6 w-full py-3 rounded-full
               bg-gradient-to-r from-pink-500 to-orange-400
-              text-white font-semibold"
+              text-white font-Poppins "
                     >
                         Allow
                     </button>
@@ -563,7 +575,7 @@ function LocationPickerStep({ onNext, onBack }) {
     )}&output=embed`;
 
     return (
-        <div className="relative w-[360px] h-[640px] overflow-hidden bg-black">
+        <div className="relative w-[360px] h-[640px] overflow-hidden bg-black font-Poppins">
 
             {/* MAP */}
             <iframe
@@ -623,17 +635,17 @@ function PhotoStep({ onNext, onBack }) {
     }
 
     return (
-        <div className="w-[360px] text-center text-white">
+        <div className="w-[360px] text-center text-white py-16">
             <div className="flex items-center gap-12 mb-3">
                 <button onClick={onBack} className="mt-6 mb-10 text-gray-400 text-3xl font-bold"> ← </button>
 
                 {/* TITLE */}
-                <h1 className="text-3xl font-serif">
+                <h1 className="text-3xl font-Playfair Display">
                     Add a Profile{" "}
                     <span className="text-orange-400">Photo</span>
                 </h1>
             </div>
-            <p className="text-gray-400 mt-2 text-sm px-4">
+            <p className="text-gray-400 mt-2 text-sm px-4 font-Poppins ">
                 Add a photo to personalize your profile and make your experience
                 more engaging.
             </p>
@@ -677,7 +689,7 @@ function PhotoStep({ onNext, onBack }) {
             </div>
 
             {/* SMALL UPLOAD BOXES */}
-            <div className="grid grid-cols-2 gap-4 mt-10 px-4">
+            <div className="grid grid-cols-2 gap-4 mt-10 px-4 font-Poppins ">
 
                 {[1, 2].map((i) => (
                     <label
@@ -714,7 +726,7 @@ function PhotoStep({ onNext, onBack }) {
                 onClick={onNext}
                 className="mt-12 w-[90%] py-4 rounded-full
           bg-gradient-to-r from-pink-500 to-orange-400
-          font-semibold
+       font-Poppins
           disabled:opacity-40"
             >
                 Get Started
@@ -725,9 +737,10 @@ function PhotoStep({ onNext, onBack }) {
 
 // STEP 7 — STATUS
 
-import { useRouter } from "next/navigation";
-function StatusStep({ value, onSelect, onBack }) {
 
+import { useRouter } from "next/navigation";
+
+ function StatusStep({ value, onSelect, onBack }) {
   const router = useRouter();
 
   const options = [
@@ -739,45 +752,51 @@ function StatusStep({ value, onSelect, onBack }) {
     { label: "Other", icon: "⋯" },
   ];
 
-  // 👉 Decide page based on status
+  // 👉 Navigate based on selected status
   const handleNext = () => {
     if (!value) return;
 
     switch (value) {
       case "Student":
-        router.push("/personalVerifictionFlow/profile_setup/student");
+        router.push("/personal-verifiction/profile_setup/student");
         break;
 
       case "Working Professional":
-        router.push("/personalVerifictionFlow/profile_setup/working_professional");
+        router.push(
+          "/personal-verifiction/profile_setup/working_professional"
+        );
         break;
 
       case "Business Owner":
-        router.push("/personalVerifictionFlow/profile_setup/business_owner");
+        router.push("/personal-verifiction/profile_setup/business_owner");
         break;
 
       case "Self - Employed":
-        router.push("/personalVerifictionFlow/profile_setup/self_employed");
+        router.push("/personal-verifiction/profile_setup/self_employed");
         break;
 
       case "Freelancer":
-        router.push("/personalVerifictionFlow/profile_setup/freelancer");
+        router.push("/personal-verifiction/profile_setup/freelancer");
         break;
 
       default:
-        router.push("/personalVerifictionFlow/profile_setup/other");
+        router.push("/personal-verifiction/profile_setup/other");
     }
   };
 
   return (
     <div className="w-[360px] text-center text-white">
 
-      <div className="flex items-center gap-12 mb-3">
-        <button onClick={onBack} className="mt-6 mb-10 text-gray-400 text-3xl font-bold">
+      {/* TOP BAR */}
+      <div className="flex items-center gap-6 mb-6">
+        <button
+          onClick={onBack}
+          className="text-3xl text-gray-400 font-bold"
+        >
           ←
         </button>
 
-        <h1 className="text-3xl font-serif leading-tight">
+        <h1 className="text-2xl font-Playfair Display font-semibold leading-tight">
           What are you{" "}
           <span className="bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
             doing right now?
@@ -785,12 +804,12 @@ function StatusStep({ value, onSelect, onBack }) {
         </h1>
       </div>
 
-      <p className="text-gray-400 mt-2 text-sm px-6">
+      <p className="text-gray-400 text-sm px-4 font-Poppins">
         This helps us tailor your Playmate experience.
       </p>
 
       {/* OPTIONS */}
-      <div className="mt-5 space-y-3 px-4">
+      <div className="mt-6 space-y-3 px-2 font-Poppins">
         {options.map((opt) => {
           const active = value === opt.label;
 
@@ -800,19 +819,24 @@ function StatusStep({ value, onSelect, onBack }) {
               onClick={() => onSelect(opt.label)}
               className={`w-full flex items-center justify-between
                 px-4 py-4 rounded-xl border transition-all
-                ${active
-                  ? "border-pink-500 bg-white/5 shadow-[0_0_20px_rgba(236,72,153,0.35)]"
-                  : "border-gray-700 bg-white/2"
+                ${
+                  active
+                    ? "border-pink-500 bg-white/5"
+                    : "border-gray-700 bg-white/2"
                 }`}
             >
-              <div className="flex items-center gap-3 text-left">
+              <div className="flex items-center gap-3">
                 <span className="text-xl">{opt.icon}</span>
                 <span className="text-sm">{opt.label}</span>
               </div>
 
               <div
                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
-                  ${active ? "border-pink-500" : "border-gray-500"}`}
+                  ${
+                    active
+                      ? "border-pink-500"
+                      : "border-gray-500"
+                  }`}
               >
                 {active && (
                   <div className="w-2.5 h-2.5 rounded-full
@@ -831,19 +855,19 @@ function StatusStep({ value, onSelect, onBack }) {
         onClick={handleNext}
         className="mt-8 w-[90%] py-4 rounded-full
           bg-gradient-to-r from-pink-500 to-orange-400
-          font-semibold disabled:opacity-40"
+          font-Poppins disabled:opacity-40"
       >
         Continue
       </button>
 
       {/* SKIP */}
-      <button className="mt-4 text-xs text-gray-400">
+      <button className="mt-4 text-xs text-gray-400 font-Poppins">
         Skip for now
       </button>
-
     </div>
   );
 }
+
 
 // step 8   /   KYC
 
@@ -873,7 +897,7 @@ function KYC({ onNext, onSkip, onBack }) {
         "
       >
         {/* Title */}
-        <h1 className="text-3xl font-serif text-white">
+        <h1 className="text-3xl font-Playfair Display text-white">
           Start Your{" "}
           <span className="text-orange-400">
             KYC
@@ -908,7 +932,7 @@ function KYC({ onNext, onSkip, onBack }) {
           <button
             onClick={onNext}
             className="
-              px-9 py-3 rounded-full font-semibold text-white
+              px-9 py-3 rounded-full  text-white font-Poppins
               bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
               shadow-[0_0_28px_rgba(255,130,60,0.5)]
               hover:scale-[1.04]
@@ -943,7 +967,7 @@ function VerifyAadhaar({ onBack, onNext }) {
       {/* CONTENT */}
       <div className="mt-28 text-center">
 
-        <h1 className="text-3xl font-serif leading-tight">
+        <h1 className="text-3xl font-Playfair Display leading-tight">
           Enter Your{" "}
           <span className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] bg-clip-text text-transparent">
             Aadhar
@@ -1047,7 +1071,7 @@ function AthaarOTP({ onBack, onVerify,onNext, onResend }) {
       {/* CONTENT */}
       <div className="mt-28 text-center">
 
-        <h1 className="text-3xl font-serif leading-tight">
+        <h1 className="text-3xl font-Playfair Display leading-tight">
           Verification{" "}
           <span className="text-orange-400">
             Code
@@ -1139,7 +1163,7 @@ function FaceVerification({ onBack, onStart, onNext }) {
       <div className="mt-24 text-center">
 
         {/* TITLE */}
-        <h1 className="text-3xl font-serif">
+        <h1 className="text-3xl font-Playfair Display">
           <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
             Face
           </span>{" "}
@@ -1218,7 +1242,7 @@ function AlignFace({ onBack, onVerify , onNext }) {
       </button>
 
       {/* TITLE */}
-      <h1 className="mt-20 text-center text-3xl font-serif leading-tight">
+      <h1 className="mt-20 text-center text-3xl font-Playfair Display leading-tight">
         Align Your Face in the
         <br />
         Frame
@@ -1289,7 +1313,7 @@ function Success({ onBack, onDone }) {
       {/* CENTER CONTENT */}
       <div className="flex-1 flex flex-col justify-center items-center text-center">
 
-        <h1 className="text-4xl font-serif font-semibold
+        <h1 className="text-4xl font-Playfair Display font-semibold
           bg-gradient-to-r from-pink-400 to-orange-400
           bg-clip-text text-transparent">
           Congratulations!
@@ -1307,7 +1331,7 @@ function Success({ onBack, onDone }) {
           <button
             onClick={onDone}
             className="
-              w-full py-4 rounded-full font-semibold
+              w-full py-4 rounded-full font-Poppins
               bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
               shadow-[0_0_28px_rgba(255,130,60,0.5)]
             "
