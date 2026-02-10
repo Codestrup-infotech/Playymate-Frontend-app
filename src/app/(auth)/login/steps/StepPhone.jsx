@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import "react-phone-input-2/lib/style.css";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { Mail } from "lucide-react";
