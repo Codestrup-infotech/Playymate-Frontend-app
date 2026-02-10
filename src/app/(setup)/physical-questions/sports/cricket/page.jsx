@@ -179,7 +179,7 @@ export default function CricketPage() {
     <div className="min-h-screen py-16 bg-black flex items-center justify-center px-4 font-Poppins">
       <div className="w-full max-w-sm relative">
 
-    
+
         <button
           onClick={back}
           className="absolute -top-10 left-0 text-white text-2xl"
