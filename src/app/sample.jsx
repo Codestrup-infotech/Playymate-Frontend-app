@@ -1422,3 +1422,188 @@ export default function LoginFlow() {
 
 
 
+
+
+
+"use client";
+
+import { useState, useMemo } from "react";
+
+/* ---------------- QUESTIONS ---------------- */
+const QUESTIONS = [
+  {
+    title: "Your cricket involvement",
+    options: [
+      "Casual / recreational",
+      "Weekend matches",
+      "Regular practice",
+      "Competitive / tournaments",
+    ],
+  },
+  {
+    title: "Preferred cricket format",
+    options: [
+      "Box cricket",
+      "Turf cricket",
+      "Open ground cricket",
+      "Practice nets only",
+    ],
+  },
+  {
+    title: "Ball type",
+    options: ["Tennis ball", "Leather ball", "Both"],
+  },
+];
+
+export default function CricketStep() {
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState({});
+
+  const totalSteps = QUESTIONS.length;
+
+  /* ---------------- % CALCULATION ---------------- */
+  const percentage = useMemo(() => {
+    return Math.round(((step + 1) / totalSteps) * 100);
+  }, [step]);
+
+  const current = QUESTIONS[step];
+
+  const selectOption = (opt) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [step]: opt,
+    }));
+  };
+
+  const next = () => {
+    if (step < totalSteps - 1) {
+      setStep(step + 1);
+    }
+  };
+
+  const back = () => {
+    if (step > 0) setStep(step - 1);
+  };
+
+  return (
+    <div className="min-h-screen bg-black flex justify-center items-center px-4">
+      <div className="w-full max-w-sm relative">
+
+        {/* BACK */}
+        <button
+          onClick={back}
+          className="absolute -top-10 left-0 text-white text-2xl"
+        >
+          ←
+        </button>
+
+        {/* PROGRESS RING */}
+        <ProgressRing percent={percentage} />
+
+        {/* CARD */}
+        <div className="mt-10 bg-gradient-to-br from-[#1A43CA] to-[#1FCCF2]
+          rounded-3xl p-6 text-center shadow-2xl">
+
+          <p className="text-white text-sm font-semibold tracking-wide">
+            ✈️ CRICKET
+          </p>
+
+          <h2 className="mt-3 text-white text-lg font-semibold">
+            {current.title}
+          </h2>
+        </div>
+
+        {/* OPTIONS */}
+        <div className="mt-8 space-y-3">
+          {current.options.map((opt) => {
+            const active = answers[step] === opt;
+
+            return (
+              <button
+                key={opt}
+                onClick={() => selectOption(opt)}
+                className={`w-full py-3 rounded-xl border
+                  text-white font-medium transition-all
+                  ${
+                    active
+                      ? "bg-[#2468B6] border-[#1FCCF2]"
+                      : "border-pink-500/80 hover:bg-white/10"
+                  }`}
+              >
+                {opt}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* CONTINUE */}
+        <button
+          onClick={next}
+          disabled={!answers[step]}
+          className="mt-10 w-full py-3 rounded-full
+            bg-gradient-to-r from-pink-500 to-orange-500
+            text-white font-semibold
+            disabled:opacity-40"
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ================= PROGRESS RING ================= */
+
+function ProgressRing({ percent }) {
+  const radius = 32;
+  const stroke = 6;
+  const normalizedRadius = radius - stroke * 2;
+  const circumference = normalizedRadius * 2 * Math.PI;
+
+  const strokeDashoffset =
+    circumference - (percent / 100) * circumference;
+
+  return (
+    <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-10">
+      <svg height={radius * 2} width={radius * 2}>
+        {/* OUTER RING */}
+        <circle
+          stroke="#0f172a"
+          fill="transparent"
+          strokeWidth={stroke}
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+
+        {/* PROGRESS RING */}
+        <circle
+          stroke="#22c55e"
+          fill="transparent"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={`${circumference} ${circumference}`}
+          style={{
+            strokeDashoffset,
+            transition: "stroke-dashoffset 0.6s ease",
+          }}
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+      </svg>
+
+      {/* PERCENT TEXT */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-green-400 text-sm font-bold">
+          {percent}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+
