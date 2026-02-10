@@ -41,26 +41,26 @@ export default function OnboardingFlow() {
 
 function Landing({ onNext }) {
   return (
-    <div className="relative w-full h-screen  flex flex-col justify-center text-center items-center ">
+    <div className="relative w-full xl:h-screen lg:h-screen h-full flex flex-col justify-center text-center items-center space-y-20 xl:space-y-0 lg:space-y-0 ">
 
 
 
 
 
       <div className="flex flex-col justify-center items-center space-y-2">
-        <img src="/playymate-icon.png" className="w-52" />
-        <img src="/playymate-logo.png" className=" w-[500px] " />
+        <img src="/playymate-icon.png" className="xl:w-52 lg:w-52 w-40" />
+        <img src="/playymate-logo.png" className=" xl:w-[500px] lg:w-[500px] w-96 " />
 
       </div>
 
 
 
 
-      <div className="absolute bottom-12 w-full flex justify-center px-6">
+      <div className="xl:absolute xl:bottom-12 lg:absolute lg:bottom-12 w-full flex justify-center px-6">
         <button
           onClick={onNext}
           className="w-full max-w-sm rounded-full bg-gradient-to-r 
-          from-pink-500 to-orange-400 py-4 text-lg font-semibold"
+          from-pink-500 to-orange-400 py-4 text-lg  font-Poppins "
         >
           Get Started
         </button>
@@ -74,32 +74,117 @@ function Landing({ onNext }) {
 
 /* ---------------- LANGUAGE ---------------- */
 
+
+
+
+const languages = [
+  { name: "Arabic", code: "sa", flag: "https://flagcdn.com/w40/sa.png" },
+  { name: "Spanish", code: "es", flag: "https://flagcdn.com/w40/es.png" },
+  { name: "French", code: "fr", flag: "https://flagcdn.com/w40/fr.png" },
+  { name: "German", code: "de", flag: "https://flagcdn.com/w40/de.png" },
+  { name: "Hindi", code: "in", flag: "https://flagcdn.com/w40/in.png" },
+  { name: "Korean", code: "kr", flag: "https://flagcdn.com/w40/kr.png" },
+  { name: "Vietnamese", code: "vn", flag: "https://flagcdn.com/w40/vn.png" },
+];
+
+
 function Language({ onNext }) {
-  const [lang, setLang] = useState("English");
+  
+
+
+   const [lang, setLang] = useState("Hindi");
+  const [search, setSearch] = useState("");
+
+  const filtered = languages.filter((l) =>
+    l.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="w-[320px] p-6 rounded-3xl bg-gradient-to-br from-purple-900 to-black">
+    <div className=" py-16 ">
 
-      <h2 className="text-xl font-semibold">Choose the language</h2>
+    
 
-      <div className="mt-4 space-y-3">
-        {["English", "Hindi", "Spanish"].map((l) => (
-          <button
-            key={l}
-            onClick={() => setLang(l)}
-            className={`w-full rounded-xl border p-3 text-left ${lang === l
-              ? "border-pink-500 bg-pink-500/10"
-              : "border-white/20"
-              }`}
-          >
-            {l}
-          </button>
-        ))}
+
+
+
+    <div className="min-h-screen bg-black flex items-center justify-center text-center">
+      <div className="w-full max-w-sm">
+        <h2 className="text-4xl  font-semibold  italic text-white font-Playfair Display py-6">
+          Choose the language
+        </h2>
+        <p className="mt-1 text-md text-gray-400 font-Poppins">
+          Select your preferred language below. This helps us serve you better.
+        </p>
+
+        {/* You Selected */}
+        <div className="mt-6">
+          <p className="text-md text-white  font-Poppins text-start mb-2">You Selected</p>
+
+          <div className="p-[1px] rounded-xl bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]">
+            <div className="flex items-center justify-between rounded-xl bg-[#0B0B0F] px-4 py-3">
+              <div className="flex items-center gap-3">
+                <img
+                  src="https://flagcdn.com/w40/in.png"
+                  alt="India"
+                  className="w-6 h-6 rounded-full"
+                />
+                <span className="text-white font-Poppins">{lang}</span>
+              </div>
+              <span className="text-pink-500">✔</span>
+            </div>
+          </div>
+        </div>
+
+        {/* All Languages */}
+        <div className="mt-6">
+          <p className="text-md text-white  font-Poppins text-start  mb-2">All Languages</p>
+
+          <div className="p-[1px] rounded-xl bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] font-Poppins ">
+            <div className="rounded-xl bg-[#0B0B0F] p-3 space-y-2 max-h-80 overflow-y-auto  custom-scrollbar">
+              {/* Search */}
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search"
+                className="w-full mb-2 rounded-lg bg-black px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:outline-none"
+              />
+
+              {filtered.map((l) => (
+                <button
+                  key={l.name}
+                  onClick={() => setLang(l.name)}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/5"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={l.flag}
+                      alt={l.name}
+                      className="w-5 h-5 rounded-full"
+                    />
+                    <span className="text-sm text-white font-Poppins">
+                      {l.name}
+                    </span>
+                  </div>
+
+                  <span
+                    className={`w-4 h-4 rounded-full border ${
+                      lang === l.name
+                        ? "border-pink-500 bg-pink-500"
+                        : "border-white/20"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
+    </div>
+
 
       <button
         onClick={onNext}
-        className="mt-6 w-full rounded-full bg-gradient-to-r from-pink-500 to-orange-400 py-3 font-semibold"
+        className="mt-6 w-full rounded-full bg-gradient-to-r from-pink-500 to-orange-400 py-3 font-Poppins "
       >
         Continue
       </button>
@@ -114,7 +199,7 @@ function Welcome({ onNext }) {
     <div className="  flex  mt-20  flex-col space-y-4 justify-center text-center items-center ">
 
       <div className="   ">
-        <h1 className="text-4xl font-semibold">Welcome!</h1>
+        <h1 className="text-4xl font-semibold  font-Playfair Display italic ">Welcome!</h1>
         <p className="mt-2 text-gray-300 max-w-xs font-Poppins ">
           Sports, fitness, fun, food, and friends together.
         </p>
@@ -127,8 +212,8 @@ function Welcome({ onNext }) {
       <div className="  w-full flex justify-center px-6 pb-10">
         <button
           onClick={onNext}
-          className="w-full max-w-sm rounded-full bg-gradient-to-r 
-          from-pink-500 to-orange-400 py-3 text-lg font-semibold"
+          className="w-full max-w-sm rounded-full bg-gradient-to-r font-Poppins 
+          from-pink-500 to-orange-400 py-3 text-lg "
         >
           Get Started
         </button>
@@ -506,7 +591,7 @@ const slideUI = [
   const totalScreens = slides.length + 1;
 
   return (
-    <main className="min-h-screen bg-black flex items-center justify-center">
+    <main className="xl:min-h-screen py-4 lg:min-h-screen bg-black flex items-center justify-center">
       <div className="w-[450px] text-white">
 
         {/* SLIDER */}
@@ -519,7 +604,7 @@ const slideUI = [
             {slides.map((s, idx) => (
               <div key={idx} className="min-w-full text-center px-4">
                 <div
-                  className={`mx-auto w-[280px] h-[380px] rounded-3xl border-2 overflow-hidden ${s.border} ${s.glow}`}
+                  className={`mx-auto xl:w-[280px] xl:h-[380px] lg:w-[280px] lg:h-[380px] rounded-3xl border-2 overflow-hidden ${s.border} ${s.glow}`}
                 >
                   <img
                     src={s.img}
@@ -544,7 +629,7 @@ const slideUI = [
               <img
                 src="/playymate-icon.png"
                 alt="icon"
-                className="h-16 mb-4"
+                className="h-1 mb-4"
               />
 
               <div className="mx-auto w-[370px] h-[400px] rounded-3xl border-2 border-purple-500 shadow-xl shadow-purple-500/30  p-6 flex flex-col items-center justify-center"
@@ -570,7 +655,7 @@ const slideUI = [
 
                 <button
                   onClick={() => router.push("/login")}
-                  className="rounded-full bg-gradient-to-r from-pink-500 to-orange-400 px-8 py-3 text-white font-semibold shadow-lg shadow-pink-400/40"
+                  className="rounded-full bg-gradient-to-r from-pink-500 to-orange-400 px-8 py-3 text-white  font-Poppins "
                 >
                   Get Started
                 </button>
