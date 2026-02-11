@@ -211,7 +211,7 @@ const hobbies = [
 export default function HobbiesPage() {
   const router = useRouter();
   const [selected, setSelected] = useState([]);
-  const [step, setStep] = useState(1); // 1 = select hobbies, 2 = selected list
+  const [step, setStep] = useState(0); // 1 = select hobbies, 2 = selected list
 
   const toggleHobby = (name) => {
     setSelected((prev) => {
@@ -229,21 +229,60 @@ export default function HobbiesPage() {
     });
   };
 
-  useEffect(() => {
-    const saved = JSON.parse(sessionStorage.getItem("selectedHobbies") || "[]");
-    if (saved.length) setSelected(saved);
+  // useEffect(() => {
+  //   const saved = JSON.parse(sessionStorage.getItem("selectedHobbies") || "[]");
+  //   if (saved.length) setSelected(saved);
 
-    const savedStep = sessionStorage.getItem("hobby_step");
-    if (savedStep === "selected") setStep(2);
-  }, []);
+  //   const savedStep = sessionStorage.getItem("hobby_step");
+  //   if (savedStep === "selected") setStep(2);
+  // }, []);
 
+  // useEffect(() => {
+  //   sessionStorage.setItem("selectedHobbies", JSON.stringify(selected));
+  // }, [selected]);
+
+   // 🎬 Show GIF for 4 seconds
   useEffect(() => {
-    sessionStorage.setItem("selectedHobbies", JSON.stringify(selected));
-  }, [selected]);
+    if (step === 0) {
+      const timer = setTimeout(() => {
+        setStep(1);
+      }, 4000); // 4 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
 
   return (
     <div className="min-h-screen w-full bg-black flex justify-center items-center px-4">
       <div className="w-full max-w-6xl">
+
+      {/* STEP 0 - HOBBIES INTRO */}
+{step === 0 && (
+  <div className="relative h-screen w-full flex items-center justify-center overflow-hidden bg-black">
+
+    {/* Fullscreen GIF Background */}
+    <img
+      src="/Gif/hobbiesGif.gif"
+      alt="Hobbies Intro"
+      className="w-[300px] md:w-[420px] object-contain z-10"
+    />
+
+    {/* Bottom Dark Gradient */}
+    <div className="absolute bottom-0 left-0 w-full h-56 bg-gradient-to-t from-black/95 via-black/70 to-transparent z-20" />
+
+    {/* Text Overlay */}
+    <div className="absolute bottom-14 text-center z-30 px-4">
+      <h1 className="text-white text-3xl md:text-4xl font-bold tracking-wide">
+       What’s your hobby 
+      </h1>
+
+      <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+        vibe?
+      </h2>
+    </div>
+  </div>
+)}
+
 
         {/* STEP 1 */}
         {step === 1 && (

@@ -78,9 +78,50 @@ const goBackToSelectedSports = () => {
     }
   };
 
+   // 🎬 Show GIF for 3 seconds
+    useEffect(() => {
+      if (step === 0) {
+        const timer = setTimeout(() => {
+          setStep(1);
+        }, 4000); // 3 seconds
+  
+        return () => clearTimeout(timer);
+      }
+    }, [step]);
+
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
       <div className="w-full max-w-sm relative overflow-hidden ">
+
+        {/* STEP 0 - GIF INTRO */}
+
+          {step === 0 && (
+          <div className="relative h-screen w-full flex items-center justify-center overflow-hidden min-h-screen bg-black  px-4">
+
+            {/* GIF Image */}
+            <img
+              src="/Gif/sportGif.gif"
+              alt="Sports Intro"
+              className="w-[300px] md:w-[420px] object-contain z-10"
+            />
+
+            {/* Bottom Dark Gradient Overlay */}
+            <div className="absolute bottom-0 left-0 w-full h-44 bg-gradient-to-t from-black/90 to-transparent z-20" />
+
+            {/* Text */}
+            <div className="absolute bottom-10 text-center z-30">
+              <h1 className="text-white text-3xl md:text-4xl font-bold tracking-wide">
+                WANNA PLAY
+              </h1>
+
+              <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+                TOGETHER?
+              </h2>
+            </div>
+          </div>
+        )}
+
+
 
         {/* Progress Circle */}
         {step < 5 && (

@@ -19,7 +19,7 @@ const nostalgiaGames = [
 export default function NostalgiaGamePage() {
   const router = useRouter();
   const [selected, setSelected] = useState([]);
-  const [step, setStep] = useState(1); // 1 = select, 2 = confirm
+  const [step, setStep] = useState(0); // 1 = select, 2 = confirm
 
   const toggleGame = (name) => {
     setSelected((prev) => {
@@ -37,26 +37,50 @@ export default function NostalgiaGamePage() {
     });
   };
 
+  
+   // 🎬 Show GIF for 3 seconds
   useEffect(() => {
-    const saved = JSON.parse(
-      sessionStorage.getItem("selectedNostalgia") || "[]"
-    );
-    if (saved.length) setSelected(saved);
+    if (step === 0) {
+      const timer = setTimeout(() => {
+        setStep(1);
+      }, 4000); // 3 seconds
 
-    const savedStep = sessionStorage.getItem("nostalgia_step");
-    if (savedStep === "selected") setStep(2);
-  }, []);
-
-  useEffect(() => {
-    sessionStorage.setItem(
-      "selectedNostalgia",
-      JSON.stringify(selected)
-    );
-  }, [selected]);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
 
   return (
     <div className="min-h-screen w-full bg-black flex justify-center items-center px-4">
       <div className="w-full max-w-6xl">
+
+{/* STEP 0 - GIF INTRO */}
+
+          {step === 0 && (
+          <div className="relative h-screen w-full flex items-center justify-center overflow-hidden min-h-screen bg-black  px-4">
+
+            {/* GIF Image */}
+            <img
+              src="/Gif/nostalgiaGif.gif"
+              alt="Sports Intro"
+              className="w-[300px] md:w-[420px] object-contain z-10"
+            />
+
+            {/* Bottom Dark Gradient Overlay */}
+            <div className="absolute bottom-0 left-0 w-full h-44 bg-gradient-to-t from-black/90 to-transparent z-20" />
+
+            {/* Text */}
+            <div className="absolute bottom-10 text-center z-30">
+              <h1 className="text-white text-3xl md:text-4xl font-bold tracking-wide">
+              Back to Gully 
+              </h1>
+
+              <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+                Vibes
+              </h2>
+            </div>
+          </div>
+        )}
+
 
         {/* STEP 1 */}
         {step === 1 && (
