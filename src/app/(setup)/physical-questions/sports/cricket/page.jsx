@@ -1,150 +1,293 @@
-"use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 
-const slides = [
-  {
-    percent: 30,
-    title: "Your cricket involvement",
-    options: [
-      "Casual / recreational",
-      "Weekend matches",
-      "Regular practice",
-      "Competitive / tournaments",
-    ],
-   
-  },
-  {
-    percent: 60,
-    title: "Preferred cricket format",
-    options: [
-      "Box cricket",
-      "Turf cricket",
-      "Open ground cricket",
-      "Practice nets only",
-    ],
-  
-  },
-  {
-    percent: 100,
-    title: "Ball type",
-    options: ["Tennis ball", "Leather ball", "Both"],
-   
-  },
+
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
+
+/* ---------------- AUTO BACKGROUND COLORS ---------------- */
+const BG_COLORS = [
+  "from-[#1A43CA] to-[#1FCCF2]",
+  "from-[#AC57FE] to-[#6752F2]",
+  "from-[#FF9F27] to-[#FF5C24]",
 ];
+
 
 export default function CricketPage() {
   const router = useRouter();
+
+  const [questions, setQuestions] = useState([]);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
-
-  const current = slides[step];
-
-
-  // After "Preferences Saved Successfully"
-const goBackToSelectedSports = () => {
-  sessionStorage.setItem("pq_step", "selected");  // remember Step 2
-  router.push("/physical-questions");
-};
+  const [loading, setLoading] = useState(true);
 
 
-  const selectOption = (opt) => {
-    setAnswers((prev) => ({ ...prev, [current.title]: opt }));
+  const API_KEY = "API_KEY_FROM_BACKEND";
+
+
+
+  const MOCK_QUESTIONS = [
+    {
+      id: "q1",
+      question: "Your cricket involvement",
+      options: [
+        "Casual / recreational",
+        "Weekend matches",
+        "Regular practice",
+        "Competitive / tournaments",
+      ],
+      bgColor: "linear-gradient(135deg, #1A43CA, #1FCCF2)",
+    },
+    {
+      id: "q2",
+      question: "Preferred cricket format",
+      options: [
+        "Box cricket",
+        "Turf cricket",
+        "Open ground cricket",
+        "Practice nets only",
+      ],
+      bgColor: "linear-gradient(135deg, #C60385, #F43F5E)",
+    },
+    {
+      id: "q3",
+      question: "Ball type",
+      options: ["Tennis ball", "Leather ball", "Both"],
+      bgColor: "linear-gradient(135deg, #0F766E, #14B8A6)",
+    },
+  ];
+
+  /* ---------------- FETCH QUESTIONS ---------------- */
+  useEffect(() => {
+
+
+
+
+    // const fetchQuestions = async () => {
+    //   try {
+    //     const res = await axios.get(
+    //       " ",
+    //       {
+    //         headers: {
+    //           Authorization: `Bearer ${API_KEY}`,
+    //         },
+    //       }
+    //     );
+
+    //     setQuestions(res.data.questions); // admin-controlled
+    //   } catch (err) {
+    //     console.error("Failed to load questions", err);
+    //        setQuestions(MOCK_QUESTIONS); // ✅ fallback
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
+
+
+
+    const fetchQuestions = async () => {
+      try {
+        if (!API_URL) {
+          setQuestions(MOCK_QUESTIONS);
+          return;
+        }
+
+        const res = await axios.get(API_URL, {
+          headers: {
+            Authorization: `Bearer ${API_KEY}`,
+          },
+        });
+
+        setQuestions(res.data.questions);
+      } catch (err) {
+        setQuestions(MOCK_QUESTIONS);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+
+    fetchQuestions();
+  }, []);
+
+  const totalSteps = Array.isArray(questions) ? questions.length : 0;
+  const current = totalSteps > 0 ? questions[step] : null;
+
+
+
+  /* ---------------- PERCENTAGE ---------------- */
+  const percent = useMemo(() => {
+    if (!totalSteps) return 0;
+    return Math.round(((step + 1) / totalSteps) * 100);
+  }, [step, totalSteps]);
+
+  /* ---------------- ACTIONS ---------------- */
+  const selectOption = (option) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [current.id]: option,
+    }));
   };
 
-  const next = () => {
-    if (step < slides.length - 1) {
+  const next = async () => {
+    if (step < totalSteps - 1) {
       setStep(step + 1);
     } else {
-      setStep(3); // finish screen
+      // FINAL SUBMIT
+      try {
+        await axios.post(
+          "",
+          { answers },
+          {
+            headers: {
+              Authorization: `Bearer ${API_KEY}`,
+            },
+          }
+        );
+
+        router.push("/physical-questions"); // after save
+      } catch (err) {
+        console.error("Failed to submit answers", err);
+      }
     }
   };
 
-  return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4">
-      <div className="w-full max-w-sm relative overflow-hidden ">
+  const back = () => {
+    if (step > 0) {
+      setStep(step - 1);
+    } else {
+      setStep(0); // first screen stays safe
+    }
+  };
 
-        {/* Progress Circle */}
-        {step < 3 && (
-          <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-10 ">
-            <div className="w-14 h-14 rounded-full bg-black border-4 border-green-400 flex items-center justify-center text-green-400 font-bold">
-              {slides[step].percent}
-            </div>
-          </div>
-        )}
-
-        {/* Card */}
-        <div
-          className={`rounded-3xl p-6  shadow-2xl bg-gradient-to-br ${
-            step < 3 ? current.color : "from-black to-black "
-          }`}
-        >
-          {step < 3 ? (
-            <>
-
-<div className="bg-blue-500 rounded-2xl font-Poppins flex flex-col justify-center items-center text-center h-40  ">
-
-              <h3 className="text-white text-sm mb-4 font-semibold">🏏 CRICKET</h3>
-
-<hr className="w-60  border-sky-400 py-2" />
-
-              <h2 className="text-white text-xl font-semibold mb-6">
-                {current.title}
-              </h2>
-</div>
-
-
-
-              <div className="space-y-3 mt-8">
-                {current.options.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => selectOption(opt)}
-                    className={`w-full py-2 rounded-lg border transition
-                      ${
-                        answers[current.title] === opt
-                          ? "bg-[#2468B6] text-white font-Poppins"
-                          : "border-[#C60385] font-Poppins shadow-2xl text-white hover:bg-white/10"
-                      }`}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={next}
-                disabled={!answers[current.title]}
-                className="mt-8 w-full py-3 rounded-full font-Poppins bg-gradient-to-r from-pink-500 to-orange-500 text-white font-normal disabled:opacity-40"
-              >
-                Continue
-              </button>
-            </>
-          ) : (
-            // Finish Screen
-            <div className="flex flex-col items-center justify-center h-80 text-center   ">
-              <div className="w-16 h-16 rounded-full bg-[#cbcdcf] flex items-center justify-center mb-4">
-                <span className="text-4xl font-bold  text-white ">✓</span>
-              </div>
-              <h2 className="text-white text-4xl font-semibold   mb-4 ">
-                Preferences Saved Successfully
-              </h2>
-              <p className="text-gray-400 text-lg mb-6 font-Poppins ">
-                Your experience is now personalized for you.
-              </p>
-
-           <button
-  onClick={goBackToSelectedSports}
-  className="px-6 py-2 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 text-white font-Poppins font-normal"
->
-  Back to Your Selected Sports
-</button>
-
-
-            </div>
-          )}
-        </div>
+  if (!current) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        Loading questions...
       </div>
+    );
+  }
+
+
+  if (!current) return null;
+
+  const bg = BG_COLORS[step % BG_COLORS.length];
+
+  /* ---------------- UI ---------------- */
+  return (
+    <div className="min-h-screen py-16 bg-black flex items-center justify-center px-4 font-Poppins">
+      <div className="w-full max-w-sm relative">
+
+
+        <button
+          onClick={back}
+          className="absolute -top-10 left-0 text-white text-2xl"
+        >
+          ←
+        </button>
+
+        {/* PROGRESS RING */}
+        <ProgressRing percent={percent} />
+
+        {/* QUESTION CARD */}
+        <div
+          className={`mt-10 rounded-3xl p-10  text-center  shadow-2xl
+          bg-gradient-to-br ${bg}`}
+        >
+          <p className="text-white  text-sm font-semibold font-Poppins">
+            🏏 CRICKET
+          </p>
+          <div className={`mt-4 h-[0.5px] w-full bg-gradient-to-r ${bg}`} />
+
+
+          <h2 className="mt-3 text-white text-lg font-semibold font-Poppins">
+            {current.question}
+          </h2>
+        </div>
+
+        {/* OPTIONS */}
+        <div className="mt-8 space-y-3">
+          {current.options.map((opt) => {
+            const active = answers[current.id] === opt;
+
+            return (
+              <button
+                key={opt}
+                onClick={() => selectOption(opt)}
+                className={`w-full py-3 rounded-xl border transition
+                  ${active
+                    ? "bg-[#2468B6] text-white  border-[#1FCCF2]"
+                    : "border-pink-500/80 text-white hover:bg-white/10"
+                  }`}
+              >
+                {opt}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* CONTINUE */}
+        <button
+          onClick={next}
+          disabled={!answers[current.id]}
+          className="mt-10 w-full py-3 rounded-full
+            bg-gradient-to-r from-pink-500 to-orange-500
+            text-white
+            disabled:opacity-40"
+        >
+          {step === totalSteps - 1 ? "Save" : "Continue"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+function ProgressRing({ percent }) {
+  const radius = 40;
+  const stroke = 6;
+  const normalizedRadius = radius - stroke * 2;
+  const circumference = normalizedRadius * 2 * Math.PI;
+
+  const strokeDashoffset =
+    circumference - (percent / 100) * circumference;
+
+  return (
+    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#000000]  p-1 rounded-full z-10">
+
+      <svg height={radius * 2} width={radius * 2}>
+        <circle
+
+          strokeWidth={stroke}
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+
+        <circle
+          stroke="#3EE800"
+          fill="#1D93E1"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={`${circumference} ${circumference}`}
+          style={{
+            strokeDashoffset,
+            transition: "stroke-dashoffset 0.6s ease",
+          }}
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+      </svg>
+
+      <div className="absolute inset-0 flex items-center  justify-center">
+        <span className="text-white   text-sm font-medium  ">
+          {percent}%
+        </span>
+      </div>
+
+
     </div>
   );
 }

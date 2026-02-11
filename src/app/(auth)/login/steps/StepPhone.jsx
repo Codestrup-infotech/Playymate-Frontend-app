@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import PhoneInput from "react-phone-input-2";
-import "react-phone-input-2/lib/style.css";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { Mail } from "lucide-react";
@@ -223,23 +221,18 @@ export default function StepPhone({ onBackToWelcome }) {
                   </p>
 
                   <div className="py-6  flex justify-start items-start text-start bg-black text-black  ">
-                    <PhoneInput
-                      country={"in"}
-                      value={phone}
-                      onChange={setPhone}
-                      containerStyle={{ width: "100%" }}
-                      inputStyle={{
-                        width: "100%",
-                        backgroundColor: "#000",
-                        border: "1px solid #F16179 ",
-                        borderRadius: "1rem",
-                        color: "#fff",
-                        height: "48px",
-                        paddingLeft: "48px",
-
-                      }}
-
-                    />
+                   <div className="py-6 flex justify-start items-start w-full">
+  <div className="relative w-full">
+    
+    <input
+      type="tel"
+      value={phone}
+      onChange={(e) => setPhone(e.target.value)}
+      placeholder="🇮🇳 +91 | "
+      className="w-full h-[48px] bg-black text-white border border-[#F16179] rounded-[1rem] px-4 outline-none focus:ring-2 focus:ring-[#F16179]/50 transition-all"
+    />
+  </div>
+</div>
                   </div>
 
 
