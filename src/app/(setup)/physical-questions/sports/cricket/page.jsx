@@ -21,6 +21,8 @@ export default function CricketPage() {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
+  const [finished, setFinished] = useState(false);
+
 
 
   const API_KEY = "API_KEY_FROM_BACKEND";
@@ -134,7 +136,6 @@ export default function CricketPage() {
     if (step < totalSteps - 1) {
       setStep(step + 1);
     } else {
-      // FINAL SUBMIT
       try {
         await axios.post(
           "",
@@ -146,12 +147,13 @@ export default function CricketPage() {
           }
         );
 
-        router.push("/physical-questions"); // after save
+        setFinished(true); // ✅ show success screen
       } catch (err) {
         console.error("Failed to submit answers", err);
       }
     }
   };
+
 
   const back = () => {
     if (step > 0) {
@@ -173,6 +175,40 @@ export default function CricketPage() {
   if (!current) return null;
 
   const bg = BG_COLORS[step % BG_COLORS.length];
+
+  if (finished) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center px-4 font-Poppins">
+        <div className="text-center">
+
+          <div className="flex justify-center mb-6">
+            <img
+              src="/GIF/cricket.gif"
+              alt="Success"
+              className="w-24"
+            />
+          </div>
+
+          <h2 className="text-3xl font-semibold text-pink-500 mb-3">
+            Preferences Saved Successfully
+          </h2>
+
+          <p className="text-gray-400 mb-8">
+            Your experience is now personalized for you
+          </p>
+
+          <button
+            onClick={() => router.push("/physical-questions?step=1")}
+            className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 text-white"
+          >
+            Back to Sports
+          </button>
+
+        </div>
+      </div>
+    );
+  }
+
 
   /* ---------------- UI ---------------- */
   return (

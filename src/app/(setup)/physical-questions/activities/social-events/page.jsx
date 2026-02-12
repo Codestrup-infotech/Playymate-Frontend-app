@@ -101,8 +101,8 @@ export default function SocialEventPage() {
           ) : (
             // Finish Screen
             <div className="flex flex-col items-center justify-center h-80 text-center">
-              <div className="w-16 h-16 rounded-full bg-pink-500 flex items-center justify-center mb-4">
-                <span className="text-3xl text-white">✓</span>
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                <span className="text-3xl text-white"><img src="/GIF/friendship-day 1.png" alt="" /></span>
               </div>
 
               <h2 className="text-white text-3xl font-semibold mb-4">

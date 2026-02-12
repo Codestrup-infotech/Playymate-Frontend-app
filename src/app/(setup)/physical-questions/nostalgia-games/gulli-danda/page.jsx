@@ -123,8 +123,8 @@ const goBackToSelectedSports = () => {
           ) : (
             // Finish Screen
             <div className="flex flex-col items-center justify-center h-80 text-center   ">
-              <div className="w-16 h-16 rounded-full bg-[#cbcdcf] flex items-center justify-center mb-4">
-                <span className="text-4xl font-bold  text-white ">✓</span>
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                <span className="text-4xl font-bold  text-white "><img src="/GIF/running.gif" alt="" /></span>
               </div>
               <h2 className="text-white text-4xl font-semibold   mb-4 ">
                 Preferences Saved Successfully

@@ -207,7 +207,7 @@ export default function PhysicalPreferences() {
         )}
 
         {step === 3 && (
-          <HeightStep
+          <HeightPicker
             value={height}
             setValue={setHeight}
             onNext={() => setStep(4)}
@@ -448,27 +448,168 @@ function WeightRuler({ value, setValue }) {
   );
 }
 
-/* ---------------- REMAINING STEPS (STUBS) ---------------- */
+/* ---------------- STEP 2: Height (SCROLL LOGIC) ---------------- */
 
-function HeightStep({ value, onBack, onNext }) {
+
+
+ function HeightPicker({
+  initialValue = 160,
+  onChange,
+}) {
+  // CONFIG
+  const MIN = 100;
+  const MAX = 200;
+  const VISUAL_MIN = 80;
+  const VISUAL_MAX = 220;
+
+  const STEP_HEIGHT = 16;
+  const SCROLL_SENSITIVITY = 0.004;
+  const SPRING = 0.12;
+  const DAMPING = 0.82;
+
+  // SMOOTH STATE
+  const position = useRef(initialValue);
+  const velocity = useRef(0);
+  const raf = useRef(null);
+
+  const [height, setHeight] = useState(initialValue);
+
+  // PHYSICS LOOP
+  const animate = () => {
+    velocity.current *= DAMPING;
+    position.current += velocity.current;
+
+    if (position.current < MIN) {
+      velocity.current += (MIN - position.current) * SPRING;
+    }
+    if (position.current > MAX) {
+      velocity.current += (MAX - position.current) * SPRING;
+    }
+
+    const snapped = Math.round(position.current);
+    const clamped = Math.min(Math.max(snapped, MIN), MAX);
+
+    if (clamped !== height) {
+      setHeight(clamped);
+      if (onChange) onChange(clamped);
+    }
+
+    raf.current = requestAnimationFrame(animate);
+  };
+
+  // INPUT
+  useEffect(() => {
+    raf.current = requestAnimationFrame(animate);
+
+    const onWheel = (e) => {
+      e.preventDefault();
+      velocity.current += e.deltaY * SCROLL_SENSITIVITY;
+    };
+
+    let lastTouch = 0;
+
+    const onTouchStart = (e) => {
+      lastTouch = e.touches[0].clientY;
+    };
+
+    const onTouchMove = (e) => {
+      e.preventDefault();
+      const y = e.touches[0].clientY;
+      velocity.current += (lastTouch - y) * SCROLL_SENSITIVITY * 6;
+      lastTouch = y;
+    };
+
+    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("touchstart", onTouchStart, { passive: false });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+
+    return () => {
+      cancelAnimationFrame(raf.current);
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [height, onChange]);
+
+  // RULER OFFSET
+  const offset = (position.current - VISUAL_MIN) * STEP_HEIGHT;
+
   return (
-    <div className="text-center">
-      <div className="text-left text-xl mb-6 cursor-pointer" onClick={onBack}>←</div>
-      <h2 className="text-2xl mb-10">Height Step (Placeholder)</h2>
-      <button onClick={onNext} className="p-4 bg-orange-500 rounded-full">Next</button>
+    <div className="fixed inset-0 bg-black text-white flex items-center justify-center overflow-hidden select-none">
+      {/* VALUE */}
+      <div className="mr-20 flex items-baseline gap-2">
+        <span className="text-8xl font-black">{height}</span>
+        <span className="text-3xl text-gray-400">cm</span>
+      </div>
+
+      {/* RULER */}
+      <div className="relative h-screen w-40 flex items-center justify-end pointer-events-none">
+        {/* POINTER */}
+        <div className="absolute right-0 z-30 w-0 h-0 border-y-[12px] border-y-transparent border-r-[18px] border-r-pink-500 drop-shadow-[0_0_10px_#ec4899]" />
+
+        {/* TRACK */}
+        <div
+          className="flex flex-col will-change-transform"
+          style={{
+            transform: `translateY(calc(50% - ${offset}px))`,
+          }}
+        >
+          {Array.from(
+            { length: VISUAL_MAX - VISUAL_MIN + 1 },
+            (_, i) => VISUAL_MIN + i
+          ).map((val) => {
+            const isMajor = val % 5 === 0;
+            const outOfRange = val < MIN || val > MAX;
+
+            return (
+              <div
+                key={val}
+                className="flex items-center justify-end"
+                style={{ height: STEP_HEIGHT }}
+              >
+                {isMajor && (
+                  <span
+                    className={`mr-6 text-xl font-bold transition-all ${
+                      outOfRange
+                        ? "text-gray-700 blur-[1px] opacity-30"
+                        : height === val
+                        ? "text-white"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    {val}
+                  </span>
+                )}
+
+                <div
+                  className={`transition-all ${
+                    isMajor ? "h-[3px]" : "h-[1px]"
+                  } ${
+                    outOfRange
+                      ? "bg-gray-800 w-6 blur-[1px] opacity-30"
+                      : height === val
+                      ? "bg-white w-14"
+                      : "bg-gray-500 w-8"
+                  }`}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="absolute bottom-10 text-gray-600 text-xs tracking-widest uppercase">
+        Scroll or swipe to adjust
+      </div>
     </div>
   );
 }
 
-// function BloodStep({ value, onBack }) {
-//   return (
-//     <div className="text-center">
-//       <div className="text-left text-xl mb-6 cursor-pointer" onClick={onBack}>←</div>
-//       <h2 className="text-2xl mb-10">Blood Group: {value}</h2>
-//       <button className="p-4 bg-pink-500 rounded-full">Finish</button>
-//     </div>
-//   );
-// }
+  
+
+
+
+//Blood Group
 
 function BloodStep({ value, setValue, onBack }) {
   const [group, setGroup] = useState(value?.replace(/[+-]/, "") || "A");
@@ -569,7 +710,4 @@ function BloodStep({ value, setValue, onBack }) {
     </div>
   );
 }
-
-
-
 

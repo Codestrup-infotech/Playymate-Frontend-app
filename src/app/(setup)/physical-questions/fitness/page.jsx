@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 const slides = [
@@ -10,9 +10,9 @@ const slides = [
       "Beginner",
       "Intermediate",
       "Advanced",
-    
+
     ],
-   
+
   },
   {
     percent: 60,
@@ -23,15 +23,15 @@ const slides = [
       "3–4 days per week",
       "1–3 days per week",
     ],
-  
+
   },
   {
     percent: 100,
     title: "Do you have any medical conditions?",
     options: ["Yes", "No"],
-   
+
   },
-   {
+  {
     percent: 60,
     title: "If Yes, please select applicable conditions",
     options: [
@@ -40,30 +40,30 @@ const slides = [
       "Heart Condition",
       "Other",
     ],
-  
+
   },
- {
+  {
     percent: 100,
     title: "Are you currently taking any medication?",
     options: ["Yes", "No"],
-   
+
   },
 
 ];
 
 export default function FitnessPage() {
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(-1);
   const [answers, setAnswers] = useState({});
 
   const current = slides[step];
 
 
   // After "Preferences Saved Successfully"
-const goBackToSelectedSports = () => {
-  sessionStorage.setItem("pq_step", "selected");  // remember Step 2
-  router.push("/physical-questions");
-};
+  const goBackToSelectedSports = () => {
+    sessionStorage.setItem("pq_step", "selected");  // remember Step 2
+    router.push("/physical-questions");
+  };
 
 
   const selectOption = (opt) => {
@@ -78,16 +78,17 @@ const goBackToSelectedSports = () => {
     }
   };
 
-   // 🎬 Show GIF for 3 seconds
-    useEffect(() => {
-      if (step === 0) {
-        const timer = setTimeout(() => {
-          setStep(1);
-        }, 4000); // 3 seconds
-  
-        return () => clearTimeout(timer);
-      }
-    }, [step]);
+  // 🎬 Show GIF for 4 seconds
+  useEffect(() => {
+    if (step === -1) {
+      const timer = setTimeout(() => {
+        setStep(0); // first question
+      }, 4000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
@@ -95,27 +96,27 @@ const goBackToSelectedSports = () => {
 
         {/* STEP 0 - GIF INTRO */}
 
-          {step === 0 && (
-          <div className="relative h-screen w-full flex items-center justify-center overflow-hidden min-h-screen bg-black  px-4">
+        {/* INTRO GIF */}
+        {step === -1 && (
+          <div className="fixed inset-0 bg-black flex items-center justify-center z-50 overflow-hidden">
 
-            {/* GIF Image */}
+            {/* Fullscreen GIF */}
             <img
-              src="/Gif/sportGif.gif"
-              alt="Sports Intro"
+              src="/GIF/fitnessGif.gif"
+              alt="Fitness Intro"
               className="w-[300px] md:w-[420px] object-contain z-10"
             />
 
-            {/* Bottom Dark Gradient Overlay */}
-            <div className="absolute bottom-0 left-0 w-full h-44 bg-gradient-to-t from-black/90 to-transparent z-20" />
+            {/* Bottom Gradient */}
+            <div className="absolute bottom-0 left-0 w-full h-56 bg-gradient-to-t from-black/95 via-black/70 to-transparent z-10" />
 
             {/* Text */}
-            <div className="absolute bottom-10 text-center z-30">
-              <h1 className="text-white text-3xl md:text-4xl font-bold tracking-wide">
-                WANNA PLAY
+            <div className="absolute bottom-14 text-center z-20">
+              <h1 className="text-white text-2xl md:text-3xl font-bold tracking-wide">
+                How do you wanna flex your
               </h1>
-
-              <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
-                TOGETHER?
+              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+                fitness?
               </h2>
             </div>
           </div>
@@ -123,8 +124,9 @@ const goBackToSelectedSports = () => {
 
 
 
+
         {/* Progress Circle */}
-        {step < 5 && (
+        {step >= 0 && step < 5 && (
           <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-10 ">
             <div className="w-14 h-14 rounded-full bg-black border-4 border-green-400 flex items-center justify-center text-green-400 font-bold">
               {slides[step].percent}
@@ -134,23 +136,22 @@ const goBackToSelectedSports = () => {
 
         {/* Card */}
         <div
-          className={`rounded-3xl p-6  shadow-2xl bg-gradient-to-br ${
-            step < 5 ? current.color : "from-black to-black "
-          }`}
+          className={`rounded-3xl p-6  shadow-2xl bg-gradient-to-br ${step >= 0 && step < 5 ? current.color : "from-black to-black "
+            }`}
         >
-          {step < 5 ? (
+          {step >= 0 && step < 5 ? (
             <>
 
-<div className="bg-blue-500 rounded-2xl font-Poppins flex flex-col justify-center items-center text-center h-40  ">
+              <div className="bg-blue-500 rounded-2xl font-Poppins flex flex-col justify-center items-center text-center h-40  ">
 
-              <h3 className="text-white text-sm mb-4 font-semibold">💪️ FITNESS</h3>
+                <h3 className="text-white text-sm mb-4 font-semibold">💪️ FITNESS</h3>
 
-<hr className="w-60  border-sky-400 py-2" />
+                <hr className="w-60  border-sky-400 py-2" />
 
-              <h2 className="text-white text-xl font-semibold mb-6">
-                {current.title}
-              </h2>
-</div>
+                <h2 className="text-white text-xl font-semibold mb-6">
+                  {current.title}
+                </h2>
+              </div>
 
 
 
@@ -160,10 +161,9 @@ const goBackToSelectedSports = () => {
                     key={opt}
                     onClick={() => selectOption(opt)}
                     className={`w-full py-2 rounded-lg border transition
-                      ${
-                        answers[current.title] === opt
-                          ? "bg-[#2468B6] text-white font-Poppins"
-                          : "border-[#C60385] font-Poppins shadow-2xl text-white hover:bg-white/10"
+                      ${answers[current.title] === opt
+                        ? "bg-[#2468B6] text-white font-Poppins"
+                        : "border-[#C60385] font-Poppins shadow-2xl text-white hover:bg-white/10"
                       }`}
                   >
                     {opt}
@@ -192,12 +192,12 @@ const goBackToSelectedSports = () => {
                 Your experience is now personalized for you.
               </p>
 
-           <button
-  onClick={goBackToSelectedSports}
-  className="px-6 py-2 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 text-white font-Poppins font-normal"
->
-  Back to Your Selected Sports
-</button>
+              <button
+                onClick={goBackToSelectedSports}
+                className="px-6 py-2 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 text-white font-Poppins font-normal"
+              >
+                Back to Your Selected Sports
+              </button>
 
 
             </div>
