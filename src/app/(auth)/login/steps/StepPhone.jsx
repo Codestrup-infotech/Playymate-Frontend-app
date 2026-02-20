@@ -1,23 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { Mail } from "lucide-react";
 
-
 export default function StepPhone({ onBackToWelcome }) {
   const router = useRouter();
-
-  const DEV_SKIP_OTP = true; // set to false when backend OTP is ready
-
 
   const [step, setStep] = useState("phone"); // phone | phoneOtp | email | emailOtp
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState(["", "", "", ""]);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]); // 6 digit
   const [timer, setTimer] = useState(30);
   const [loading, setLoading] = useState(false);
+  const inputsRef = useRef([]);
 
   // ⏱️ 30s Timer for resend
   useEffect(() => {
@@ -30,7 +27,7 @@ export default function StepPhone({ onBackToWelcome }) {
 
   const resetOtpTimer = () => {
     setTimer(30);
-    setOtp(["", "", "", ""]);
+    setOtp(["", "", "", "", "", ""]);
   };
 
   // 📩 Send Phone OTP
@@ -40,20 +37,12 @@ export default function StepPhone({ onBackToWelcome }) {
       return;
     }
 
-
-
-    if (DEV_SKIP_OTP) {
-      // ✅ Fake success for UI testing
-      setStep("email");
-      setOtp(["", "", "", ""]);
-      return;
-    }
-
     try {
       setLoading(true);
-      await axios.post("http://localhost:3001/api/auth/send-phone-otp", { phone });
+      await axios.post("http://localhost:5000/api/v1/auth/phone/send-otp", { phone });
       resetOtpTimer();
       setStep("phoneOtp");
+      setTimeout(() => inputsRef.current[0]?.focus(), 100);
     } catch {
       alert("Failed to send OTP");
     } finally {
@@ -64,18 +53,16 @@ export default function StepPhone({ onBackToWelcome }) {
   // ✅ Verify Phone OTP
   const verifyPhoneOtp = async () => {
     const code = otp.join("");
-    if (code.length !== 4) return alert("Enter 4 digit OTP");
+    if (code.length !== 6) return alert("Enter 6 digit OTP");
 
-
-
-    try {
+    try {     
       setLoading(true);
-      await axios.post("http://localhost:3001/api/auth/verify-phone-otp", {
+      await axios.post("http://localhost:5000/api/v1/auth/phone/verify-otp", {
         phone,
         otp: code,
       });
+      setOtp(["", "", "", "", "", ""]);
       setStep("email");
-      setOtp(["", "", "", ""]);
     } catch {
       alert("Invalid OTP");
     } finally {
@@ -90,19 +77,12 @@ export default function StepPhone({ onBackToWelcome }) {
       return;
     }
 
-
-
-    if (DEV_SKIP_OTP) {
-      // ✅ Fake success for UI testing
-      setStep("emailOtp");
-      setOtp(["", "", "", ""]);
-      return;
-    }
     try {
       setLoading(true);
-      await axios.post("http://localhost:3001/api/auth/send-email-otp", { email });
+      await axios.post("http://localhost:5000/api/v1/auth/email/send-otp", { email });
       resetOtpTimer();
       setStep("emailOtp");
+      setTimeout(() => inputsRef.current[0]?.focus(), 100);
     } catch {
       alert("Failed to send email OTP");
     } finally {
@@ -113,21 +93,15 @@ export default function StepPhone({ onBackToWelcome }) {
   // 🔐 Verify Email OTP + Redirect
   const verifyEmailOtp = async () => {
     const code = otp.join("");
-    if (code.length !== 4) return alert("Enter 4 digit OTP");
-
-
-
-
-
+    if (code.length !== 6) return alert("Enter 6 digit OTP");
 
     try {
-      setLoading(true);
-      const res = await axios.post("http://localhost:3001/api/auth/verify-email-otp", {
+      setLoading(true); 
+      const res = await axios.post("http://localhost:5000/api/v1/auth/email/verify-otp", {
         email,
         otp: code,
       });
 
-      // Store JWT if backend returns
       if (res?.data?.token) {
         localStorage.setItem("token", res.data.token);
       }
@@ -140,291 +114,168 @@ export default function StepPhone({ onBackToWelcome }) {
     }
   };
 
-  const handleOtpChange = (v, i) => {
-    if (!/^\d?$/.test(v)) return;
+  // 🔢 OTP Input Handler (Auto Move)
+  const handleOtpChange = (value, index) => {
+    if (!/^\d?$/.test(value)) return;
+
     const copy = [...otp];
-    copy[i] = v;
+    copy[index] = value;
     setOtp(copy);
+
+    if (value && index < 5) {
+      inputsRef.current[index + 1]?.focus();
+    }
   };
 
-
-
-  const back = () => {
-    setOtp(["", "", "", ""]); // clear OTP when going back
-
-    if (step === "phoneOtp") setStep("phone");
-    else if (step === "email") setStep("phoneOtp");
-    else if (step === "emailOtp") setStep("email");
+  const handleOtpKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      inputsRef.current[index - 1]?.focus();
+    }
   };
-
-  const goTop = () => {
-    setStep("phone");        // always go to first screen
-    setOtp(["", "", "", ""]);
-    setTimer(30);
-  };
-
-
 
   return (
+    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 relative">
+      <button
+        onClick={onBackToWelcome}
+        className="absolute top-5 left-4 px-4 py-2 rounded-full 
+               bg-gradient-to-r from-pink-500 to-orange-400 
+               text-white text-sm font-semibold shadow-lg"
+      >
+        ← Back
+      </button>
 
+      <div className="w-full max-w-sm space-y-6">
 
-    <>
+        {/* ---------------- PHONE ---------------- */}
+        {step === "phone" && (
+          <>
+            <div className="flex flex-col space-y-6 text-center">
+              <h1 className="text-[32px] font-Playfair Display font-bold">
+                Login With
+                <span className="bg-gradient-to-r px-2 from-pink-400 to-orange-400 bg-clip-text text-transparent">
+                  Phone
+                </span>
+              </h1>
 
+              <p className="text-gray-400 max-w-xs text-[16px] font-Poppins">
+                We'll need your phone number to send an OTP for verification.
+              </p>
 
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="🇮🇳 +91 | "
+                className="w-full h-[48px] bg-black text-white font-Poppins border border-[#F16179] rounded-[1rem] px-4 outline-none focus:ring-2 focus:ring-[#F16179]/50 transition-all"
+              />
 
-      <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
+              <button
+                onClick={sendPhoneOtp}
+                disabled={loading}
+                className="w-full py-3 rounded-full font-Poppins bg-gradient-to-r from-pink-500 to-orange-400"
+              >
+                {loading ? "Sending..." : "Continue"}
+              </button>
+            </div>
+          </>
+        )}
 
+        {/* ---------------- OTP UI (Phone + Email Same UI) ---------------- */}
+        {(step === "phoneOtp" || step === "emailOtp") && (
+          <>
+            <div className="flex flex-col justify-center text-center space-y-3">
+              <h1 className="text-[32px] font-Playfair Display font-bold">
+                Enter
+                <span className="bg-gradient-to-r px-2 from-pink-400 to-orange-400 bg-clip-text text-transparent">
+                  Code
+                </span>
+              </h1>
+              <p className="text-gray-400 text-sm font-Poppins">
+                {step === "phoneOtp"
+                  ? `Please enter code we just sent to +${phone}`
+                  : `Please enter code sent to ${email}`}
+              </p>
+            </div>
 
-
-
-
-
-
-
-
-        <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 relative">
-
-          {/* 🔙 Back to Welcome (Colorful Button) */}
-          <button
-            onClick={onBackToWelcome}
-            className="absolute top-5 left-4 px-4 py-2 rounded-full 
-                   bg-gradient-to-r from-pink-500 to-orange-400 
-                   text-white text-sm font-semibold shadow-lg"
-          >
-            ← Back
-          </button>
-
-
-
-
-
-
-
-
-
-          <div className="w-full max-w-sm space-y-6">
-            {/* ---------------- PHONE ---------------- */}
-            {step === "phone" && (
-              <>
-                <div className="flex flex-col space-y-6 text-center justify-center ">
-                  <h1 className="text-[32px]   font-Playfair Display  font-bold  ">
-                    Login With
-
-                    <span className="bg-gradient-to-r px-2 from-pink-400 to-orange-400 bg-clip-text text-transparent">
-                      Phone </span>
-
-
-                  </h1>
-
-                  <p className="text-gray-400   max-w-xs text-[16px] font-Poppins font-normal ">
-                    We'll need your phone number to send an OTP for verification.
-                  </p>
-
-                  <div className="py-6  flex justify-start items-start text-start bg-black text-black  ">
-                   <div className="py-6 flex justify-start items-start w-full">
-  <div className="relative w-full">
-    
-    <input
-      type="tel"
-      value={phone}
-      onChange={(e) => setPhone(e.target.value)}
-      placeholder="🇮🇳 +91 | "
-      className="w-full h-[48px] bg-black text-white border border-[#F16179] rounded-[1rem] px-4 outline-none focus:ring-2 focus:ring-[#F16179]/50 transition-all"
-    />
-  </div>
-</div>
-                  </div>
-
-
-
-
-
-
-
-                  <button
-                    onClick={sendPhoneOtp}
-                    disabled={loading}
-                    className="w-full py-3 rounded-full font-Poppins font-normal bg-gradient-to-r  from-pink-500 to-orange-400"
-                  >
-                    {loading ? "Sending..." : "Continue"}
-                  </button> </div>
-              </>
-            )}
-
-            {/* ---------------- PHONE OTP ---------------- */}
-            {step === "phoneOtp" && (
-              <>
-                <div className="flex flex-col justify-center  text-center space-y-3">
-                  <h1 className=" font-bold font-Playfair Display text-[32px]">
-
-                    Enter
-                    <span className="bg-gradient-to-r px-2 from-pink-400 to-orange-400 bg-clip-text text-transparent">
-                      Code </span>
-
-                  </h1>
-                  <p className="text-gray-400 text-sm font-Poppins">
-                    Please enter code we just send to +{phone}
-                  </p>
-                </div>
-                {/* <div className="flex justify-center gap-4 py-6">
+            <div className="flex justify-center gap-4 py-6">
               {otp.map((o, i) => (
-                <input
+                <div
                   key={i}
-                  value={o}
-                  maxLength={1}
-                  onChange={(e) => handleOtpChange(e.target.value, i)}
-                  className="w-12 h-12 rounded-xl bg-black border border-[#EF3AFF] text-center text-xl   "
-                />
+                  className="p-[1px] rounded-xl bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]"
+                >
+                  <input
+                    ref={(el) => (inputsRef.current[i] = el)}
+                    value={o}
+                    maxLength={1}
+                    onChange={(e) => handleOtpChange(e.target.value, i)}
+                    onKeyDown={(e) => handleOtpKeyDown(e, i)}
+                    className="w-12 h-12 rounded-xl bg-black text-center text-xl text-white outline-none"
+                  />
+                </div>
               ))}
-            </div> */}
+            </div>
 
+            <button
+              onClick={step === "phoneOtp" ? verifyPhoneOtp : verifyEmailOtp}
+              disabled={loading}
+              className="w-full py-3 rounded-full font-Poppins bg-gradient-to-r from-pink-500 to-orange-400"
+            >
+              Verify
+            </button>
 
-
-                <div className="flex justify-center gap-4 py-6">
-                  {otp.map((o, i) => (
-                    <div
-                      key={i}
-                      className="p-[1px] rounded-xl bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]"
-                    >
-                      <input
-                        value={o}
-                        maxLength={1}
-                        onChange={(e) => handleOtpChange(e.target.value, i)}
-                        className="w-12 h-12 rounded-xl bg-black text-center text-xl text-white outline-none"
-                      />
-                    </div>
-                  ))}
-                </div>
-
-
-
-                <button
-                  onClick={verifyPhoneOtp}
-                  disabled={loading}
-                  className="w-full py-3 rounded-full font-Poppins font-normal bg-gradient-to-r from-pink-500 to-orange-400"
+            <p className="text-center text-sm text-gray-400">
+              {timer > 0 ? (
+                <>Resend OTP in <span className="text-red-400">{timer}s</span></>
+              ) : (
+                <span
+                  onClick={step === "phoneOtp" ? sendPhoneOtp : sendEmailOtp}
+                  className="text-white underline cursor-pointer"
                 >
-                  Verify
-                </button>
+                  Resend OTP
+                </span>
+              )}
+            </p>
+          </>
+        )}
 
-                <p className="text-center text-sm text-gray-400 font-Poppins ">
-                  {timer > 0 ? (
-                    <>Resend OTP in <span className="text-red-400">{timer}s</span></>
-                  ) : (
-                    <span
-                      onClick={sendPhoneOtp}
-                      className="text-white underline cursor-pointer"
-                    >
-                      Resend OTP
-                    </span>
-                  )}
-                </p>
-              </>
-            )}
+        {/* ---------------- EMAIL ---------------- */}
+        {step === "email" && (
+          <>
+            <div className="flex flex-col space-y-5 text-center">
+              <h1 className="text-[32px] font-Playfair Display font-bold">
+                Email
+                <span className="bg-gradient-to-r px-2 from-pink-400 to-orange-400 bg-clip-text text-transparent">
+                  Address
+                </span>
+              </h1>
 
-            {/* ---------------- EMAIL ---------------- */}
-            {step === "email" && (
-              <>
-                <div className="flex  flex-col space-y-5 justify-center text-center">
-                  <h1 className="text-[32px] font-Playfair Display font-bold">Email
+              <p className="text-gray-400 text-md font-Poppins">
+                We'll need your email to stay in touch.
+              </p>
+            </div>
 
-                    <span className="bg-gradient-to-r px-2 from-pink-400 to-orange-400 bg-clip-text text-transparent">
-                      Address </span>
+            <div className="w-full p-[1px] rounded-xl bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]">
+              <div className="relative">
+                <input
+                  className="w-full p-3 pl-10 rounded-xl bg-black font-Poppins text-white placeholder-gray-400 focus:outline-none"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
 
-                  </h1>
-                  <p className="text-gray-400 text-md font-Poppins">
-                    We'll need your email to stay in touch.
-                  </p> </div>
-
-
-
-<div className="w-full p-[1px] rounded-xl bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]">
-  <div className="relative">
-    <input
-      className="w-full p-3 pl-10 rounded-xl bg-black font-Poppins text-white placeholder-gray-400 focus:outline-none"
-      value={email}
-      onChange={(e) => setEmail(e.target.value)}
-      placeholder="Enter your email"
-    />
-
-    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-  </div>
-</div>
-
-
-
-
-
-
-                <button
-                  onClick={sendEmailOtp}
-                  disabled={loading}
-                  className="w-full py-3 rounded-full font-Poppins bg-gradient-to-r from-pink-500 to-orange-400"
-                >
-                  Continue
-                </button>
-              </>
-            )}
-
-            {/* ---------------- EMAIL OTP ---------------- */}
-            {step === "emailOtp" && (
-              <>
-
-              
-                <div className="flex flex-col justify-center text-center  space-y-3  ">
-                  <h1 className="text-[32px] font-Playfair Display font-bold">Enter
-
-                    <span className="bg-gradient-to-r px-2 from-pink-400 to-orange-400 bg-clip-text text-transparent">
-                      Code </span>
-
-                  </h1>
-                  <p className="text-gray-400 text-md font-Poppins ">
-                    Please enter code sent to  {email}
-                  </p>
-                </div>
-                
-              <div className="flex justify-center gap-4">
-  {otp.map((o, i) => (
-    <div
-      key={i}
-      className="p-[1px] rounded-xl bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]"
-    >
-      <input
-        value={o}
-        maxLength={1}
-        onChange={(e) => handleOtpChange(e.target.value, i)}
-        className="w-12 h-12 rounded-xl bg-black text-center text-xl text-white focus:outline-none"
-      />
-    </div>
-  ))}
-</div>
-
-
-                <button
-                  onClick={verifyEmailOtp}
-                  disabled={loading}
-                  className="w-full py-3 rounded-full font-Poppins bg-gradient-to-r from-pink-500 to-orange-400"
-                >
-                  Verify
-                </button>
-
-                <p className="text-center text-sm text-gray-400">
-                  {timer > 0 ? (
-                    <>Resend OTP in <span className="text-red-400">{timer}s</span></>
-                  ) : (
-                    <span
-                      onClick={sendEmailOtp}
-                      className="text-white underline cursor-pointer"
-                    >
-                      Resend OTP
-                    </span>
-                  )}
-                </p>
-              </>
-            )}
-          </div>
-        </div>
+            <button
+              onClick={sendEmailOtp}
+              disabled={loading}
+              className="w-full py-3 rounded-full font-Poppins bg-gradient-to-r from-pink-500 to-orange-400"
+            >
+              Continue
+            </button>
+          </>
+        )}
       </div>
-
-    </>
+    </div>
   );
 }
