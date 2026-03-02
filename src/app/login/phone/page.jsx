@@ -282,101 +282,76 @@ const sendPhoneOtp = async () => {
       // Mark phone as verified in session
       sessionStorage.setItem('phone_verified', 'true');
       
-      // If email is verified from backend response, set it in sessionStorage
-      if (emailVerified) {
-        sessionStorage.setItem('email_verified', 'true');
-      }
-      
       console.log('Phone verification response:', { nextStep, emailVerified, response: response?.data });
       
-      // Handle redirect based on next_required_step from backend
-      // The backend knows the user's progress and returns the correct step
-      // But sometimes backend returns EMAIL_VERIFICATION even when email is already verified
-      // So we check both nextStep and emailVerified
-      
-      // If email is already verified, we should check onboarding status and redirect to current step
-      if (emailVerified) {
-        // Get tokens first
-        try {
-          const completeResponse = await authService.completeLogin(flowId);
-          const tokens = completeResponse?.data?.data || completeResponse?.data || {};
-          const accessToken = tokens.access_token || tokens.accessToken;
-          const refreshToken = tokens.refresh_token || tokens.refreshToken;
-          
-          if (accessToken) {
-            authService.storeTokens({ accessToken, refreshToken });
-          }
-        } catch (e) {
-          console.error('Error completing login:', e);
-        }
-        
-        // If backend returns EMAIL_VERIFICATION but email is already verified,
-        // we should go to the next onboarding step
-        if (nextStep === 'EMAIL_VERIFICATION' || nextStep === 'EMAIL_OTP') {
-          // Since email is verified, check user's onboarding status
-          // and redirect to their current step
-          try {
-            const statusResponse = await userService.getOnboardingStatus();
-            const currentStep = statusResponse?.data?.data?.next_required_step;
-            const onboardingState = statusResponse?.data?.data?.onboarding_state;
-            
-            console.log('Checking onboarding status after phone verify:', { currentStep, onboardingState });
-            
-            if (currentStep && currentStep !== 'EMAIL_VERIFICATION' && currentStep !== 'EMAIL_OTP') {
-              const route = getRouteFromStep(currentStep);
-              if (route && route !== '/login' && route !== '/') {
-                authService.storeOnboardingResume({
-                  onboarding_state: currentStep,
-                  progress_percentage: calculateProgressPercentage(currentStep)
-                });
-                router.push(route);
-                return;
-              }
-            }
-            
-            // Default: go to name page since email is verified
-            router.push('/onboarding/name');
-            return;
-          } catch (statusErr) {
-            console.error('Error getting status:', statusErr);
-            // Default: go to name page
-            router.push('/onboarding/name');
-            return;
-          }
-        }
-        
-        // Otherwise use the nextStep from backend
-        if (nextStep) {
-          // If user is already completed, go to home
-          if (nextStep === 'ACTIVE_USER' || nextStep === 'COMPLETED' || nextStep === 'HOME' || nextStep === 'ACTIVE' || nextStep === 'DONE') {
-            router.push('/onboarding/home');
-            return;
-          }
-          
-          // For NAME_CAPTURE step, redirect to name page
-          if (nextStep === 'NAME_CAPTURE' || nextStep === 'NAME' || nextStep === 'BASIC_ACCOUNT' || nextStep === 'BASIC_ACCOUNT_CREATED') {
-            router.push('/onboarding/name');
-            return;
-          }
-          
-          const route = getRouteFromStep(nextStep);
-          if (route && route !== '/login' && route !== '/') {
-            authService.storeOnboardingResume({
-              onboarding_state: nextStep,
-              progress_percentage: calculateProgressPercentage(nextStep)
-            });
-            router.push(route);
-            return;
-          }
-        }
-        
-        // Default: go to name page
-        router.push('/onboarding/name');
+      // If email is not verified, redirect to email page (new user flow)
+      if (!emailVerified) {
+        router.push('/login/email');
         return;
       }
       
-      // Email not verified - go to email page
-      router.push("/login/email");
+      // If email is already verified (old user), we need to:
+      // 1. Call auth/complete to get JWT token
+      // 2. Use that token to get onboarding status
+      try {
+        // Step 1: Complete login to get JWT token
+        const completeResponse = await authService.completeLogin(flowId);
+        const tokens = completeResponse?.data?.data || completeResponse?.data || {};
+        const accessToken = tokens.access_token || tokens.accessToken;
+        const refreshToken = tokens.refresh_token || tokens.refreshToken;
+        
+        if (accessToken) {
+          authService.storeTokens({ accessToken, refreshToken });
+          // Now we have the token, can call onboarding status
+          const statusResponse = await userService.getOnboardingStatus();
+          const currentStep = statusResponse?.data?.data?.next_required_step;
+          const onboardingState = statusResponse?.data?.data?.onboarding_state;
+          const userState = statusResponse?.data?.data?.user_state;
+          
+          console.log('Onboarding status after phone verify:', { currentStep, onboardingState, userState });
+          
+          // Use the actual onboarding state to redirect
+          const redirectStep = currentStep || userState || nextStep;
+          
+          // Handle redirect based on the actual onboarding state
+          if (redirectStep) {
+            // If user is already completed, go to home
+            if (redirectStep === 'ACTIVE_USER' || redirectStep === 'COMPLETED' || 
+                redirectStep === 'HOME' || redirectStep === 'ACTIVE' || 
+                redirectStep === 'DONE' || redirectStep === 'EXTENDED_PROFILE_COMPLETED') {
+              router.push('/onboarding/home');
+              return;
+            }
+            
+            // For basic account steps (name not captured yet), go to name
+            if (redirectStep === 'NAME_CAPTURE' || redirectStep === 'NAME' || 
+                redirectStep === 'BASIC_ACCOUNT' || redirectStep === 'BASIC_ACCOUNT_CREATED') {
+              router.push('/onboarding/name');
+              return;
+            }
+            
+            // For all other onboarding steps, use the route mapping
+            const route = getRouteFromStep(redirectStep);
+            if (route && route !== '/login' && route !== '/') {
+              authService.storeOnboardingResume({
+                onboarding_state: redirectStep,
+                progress_percentage: calculateProgressPercentage(redirectStep)
+              });
+              router.push(route);
+              return;
+            }
+          }
+          
+          // Default: go to name page
+          router.push('/onboarding/name');
+          return;
+        }
+      } catch (completeErr) {
+        console.error('Error completing login:', completeErr);
+      }
+      
+      // If we couldn't get tokens, just go to name page
+      router.push('/onboarding/name');
     } catch (err) {
       setError(err.response?.data?.message || "Verification failed.");
     } finally {

@@ -47,11 +47,14 @@ export const stepRouteMap = {
   'kyc': '/onboarding/kyc',
   'KYC_INFO': '/onboarding/kyc',
   'KYC_DETAILS': '/onboarding/kyc',
-  
-  // KYC steps (from API documentation)
-  'VERIFICATION_PENDING': '/onboarding/kyc',
   'AADHAAR_VERIFIED': '/onboarding/kyc',
+  'VERIFICATION_PENDING': '/onboarding/kyc',
+  
+  // KYC liveness
   'FACE_LIVENESS_PASSED': '/onboarding/kyc/liveness',
+  'LIVENESS_VERIFIED': '/onboarding/kyc/liveness',
+  
+  // KYC completed
   'KYC_COMPLETED': '/onboarding/physical',
   
   // Physical profile steps
@@ -60,13 +63,14 @@ export const stepRouteMap = {
   'PHYSICAL': '/onboarding/physical',
   
   // Questionnaire steps
-  'QUESTIONNAIRE_STARTED': '/onboarding/physical',
+  'QUESTIONNAIRE_STARTED': '/onboarding/questionnaire',
   'QUESTIONNAIRE_COMPLETED': '/onboarding/home',
   'QUESTIONNAIRE': '/onboarding/questionnaire',
   'QUESTIONNAIRE_CATEGORY': '/onboarding/questionnaire',
   'QUESTIONNAIRE_COMPLETE': '/onboarding/home',
   
   // Extended profile
+  'EXTENDED_PROFILE_INTRO': '/onboarding/home',
   'EXTENDED_PROFILE_PENDING': '/onboarding/home',
   'EXTENDED_PROFILE_COMPLETED': '/onboarding/home',
   
