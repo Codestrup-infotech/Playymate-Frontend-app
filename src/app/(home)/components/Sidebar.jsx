@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Home, Calendar, User, ShoppingCart, Users, Trophy, HelpCircle, Compass, Flame, Zap, Menu, X, BookOpen } from "lucide-react";
+import { Home, Calendar, User, ShoppingCart, Users, Map, Trophy, HelpCircle, Compass, Flame, Zap, Menu, X, BookOpen ,Wallet } from "lucide-react";
 
 export default function Sidebar({ isOpen = true, onToggle }) {
   const pathname = usePathname();
@@ -19,6 +19,7 @@ export default function Sidebar({ isOpen = true, onToggle }) {
     { name: "Listings", icon: <Menu size={22} />, path: "/home/listings" },
     { name: "Explore", icon: <Compass size={22} />, path: "/home/explore" },
     { name: "Streak", icon: <Flame size={22} />, path: "/home/streak" },
+    { name: "Map", icon: <Map size={22} />, path: "/map" },
     { name: "Passport", icon: <BookOpen size={22} />, path: "/passport" },
     { name: "Shopping", icon: <ShoppingCart size={22} />, path: "/shopping" },
     { name: "Events", icon: <Calendar size={22} />, path: "/events" },
@@ -27,6 +28,7 @@ export default function Sidebar({ isOpen = true, onToggle }) {
     { name: "Community", icon: <Users size={22} />, path: "/community" },
     { name: "Bookings", icon: <Calendar size={22} />, path: "/bookings" },
     { name: "Help & Support", icon: <HelpCircle size={22} />, path: "/help" },
+    { name: "Wallet", icon: <Wallet size={22} />, path: "/wallet" },
     { name: "Profile", icon: <User size={22} />, path: "/home/profile" },
   ];
 

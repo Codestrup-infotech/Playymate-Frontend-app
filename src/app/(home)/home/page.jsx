@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
-import { MessageCircle, Heart, Send, ShoppingCart, MapPin, Users, Trophy, Image, X } from "lucide-react";
+import { MessageCircle, Heart, Send, ShoppingCart, MapPin, Users, Trophy, Image, X , Home, Compass, Plus, Grid3X3 , Wallet} from "lucide-react";
 
 export default function HomePage() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -23,6 +23,54 @@ export default function HomePage() {
       closeUploadModal();
     }
   };
+
+
+
+  // BottomNav Component
+function BottomNav() {
+  const [activeTab, setActiveTab] = useState("home");
+
+  const navItems = [
+    { name: "Home", icon: <Home size={22} />, active: true },
+    { name: "Search", icon: <Compass size={22} />, active: false },
+    { name: "Post", icon: <Plus size={24} />, active: true, isCenter: true },
+    { name: "Map", icon: <Grid3X3 size={22} />, active: false },
+    { name: "Wallet", icon: <Wallet size={22} />, active: false },
+  ];
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 bg-[#111111] border-t border-white/10 pb-safe">
+      <div className="flex items-center justify-around py-3 px-4">
+        {navItems.map((item) => (
+          <button
+            key={item.name}
+            onClick={() => setActiveTab(item.name.toLowerCase())}
+            className={`
+              flex flex-col items-center gap-1 transition-all duration-300
+              ${item.isCenter ? "relative -top-5" : ""}
+            `}
+          >
+            {item.isCenter ? (
+              <div className="w-14 h-14 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 flex items-center justify-center shadow-lg shadow-pink-500/30 hover:scale-105 active:scale-95 transition-transform">
+                <Plus size={28} className="text-white" />
+              </div>
+            ) : (
+              <div className={`
+                p-2 rounded-lg transition-colors
+                ${item.active ? "text-pink-500" : "text-gray-500"}
+              `}>
+                {item.icon}
+              </div>
+            )}
+            <span className={`text-xs ${item.active ? "text-pink-500" : "text-gray-500"}`}>
+              {item.name}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -296,6 +344,9 @@ export default function HomePage() {
         </div>
 
       </div>
+
+       {/* Bottom Navigation */}
+      <BottomNav />
     </div>
   );
 }

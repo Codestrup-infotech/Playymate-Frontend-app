@@ -102,7 +102,7 @@ export default function GymDetails() {
           onClose={() => setShowModal(false)}
           onBrowse={() => {
             setShowModal(false);
-            router.push("/booking");
+            router.push("/bookings");
           }}
         />
       )}
