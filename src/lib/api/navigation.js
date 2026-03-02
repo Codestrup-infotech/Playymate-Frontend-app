@@ -6,18 +6,25 @@
 import { userService } from '@/services/user';
 import { getOnboardingRedirect } from '@/lib/onboarding/stateMachine';
 
-// Step to route mapping
+// Step to route mapping - maps backend next_required_step values to frontend routes
 export const stepRouteMap = {
-  // Auth steps
-  'PHONE_OTP': '/login',
-  'PHONE_VERIFICATION': '/login/phone',
-  'EMAIL_OTP': '/login/email',
+  // Auth steps - mapping backend state names to frontend routes
+  'INIT': '/onboarding/name',
+  'PHONE_VERIFIED': '/onboarding/name',
   'EMAIL_VERIFICATION': '/login/email',
+  'EMAIL_VERIFIED': '/onboarding/name',
+  'EMAIL_OTP': '/login/email',
+  'PHONE_OTP': '/login/phone',
+  'PHONE_VERIFICATION': '/login/phone',
   'EMAIL_PASSWORD_SIGNUP': '/login',
   'SOCIAL_LOGIN': '/login',
   'AUTH_COMPLETE': '/login',
+  
+  // Basic account steps
   'NAME_CAPTURE': '/onboarding/name',
   'NAME': '/onboarding/name',
+  'BASIC_ACCOUNT': '/onboarding/name',
+  'BASIC_ACCOUNT_CREATED': '/onboarding/name',
   
   // Onboarding steps - using backend state names
   'GENDER_CAPTURED': '/onboarding/gender',
@@ -33,27 +40,37 @@ export const stepRouteMap = {
   'PROFILE_PHOTO': '/onboarding/photo',
   'ACTIVITY_INTENT_CAPTURED': '/onboarding/activity',
   'ACTIVITY_INTENT': '/onboarding/activity',
-  'PROFILE_DETAILS_CAPTURED': '/onboarding/details',
-  'PROFILE_DETAILS': '/onboarding/details',
+  'PROFILE_DETAILS_CAPTURED': '/onboarding/profile-details',
+  'PROFILE_DETAILS': '/onboarding/profile-details',
   
-  // KYC steps (from API documentation)
-  'VERIFICATION_PENDING': '/onboarding/kyc',
+  // New mappings for kyc flow (lowercase values from backend)
+  'kyc': '/onboarding/kyc',
+  'KYC_INFO': '/onboarding/kyc',
+  'KYC_DETAILS': '/onboarding/kyc',
   'AADHAAR_VERIFIED': '/onboarding/kyc',
+  'VERIFICATION_PENDING': '/onboarding/kyc',
+  
+  // KYC liveness
   'FACE_LIVENESS_PASSED': '/onboarding/kyc/liveness',
+  'LIVENESS_VERIFIED': '/onboarding/kyc/liveness',
+  
+  // KYC completed
   'KYC_COMPLETED': '/onboarding/physical',
   
   // Physical profile steps
   'PHYSICAL_PROFILE_CONSENT': '/onboarding/physical',
   'PHYSICAL_PROFILE_COMPLETED': '/onboarding/physical',
+  'PHYSICAL': '/onboarding/physical',
   
   // Questionnaire steps
-  'QUESTIONNAIRE_STARTED': '/onboarding/physical',
+  'QUESTIONNAIRE_STARTED': '/onboarding/questionnaire',
   'QUESTIONNAIRE_COMPLETED': '/onboarding/home',
-  'QUESTIONNAIRE': '/onboarding/physical',
-  'QUESTIONNAIRE_CATEGORY': '/onboarding/physical',
+  'QUESTIONNAIRE': '/onboarding/questionnaire',
+  'QUESTIONNAIRE_CATEGORY': '/onboarding/questionnaire',
   'QUESTIONNAIRE_COMPLETE': '/onboarding/home',
   
   // Extended profile
+  'EXTENDED_PROFILE_INTRO': '/onboarding/home',
   'EXTENDED_PROFILE_PENDING': '/onboarding/home',
   'EXTENDED_PROFILE_COMPLETED': '/onboarding/home',
   

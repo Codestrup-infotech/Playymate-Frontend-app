@@ -217,46 +217,77 @@ export default function EmailLogin() {
       
       console.log('Email verification response:', { nextStep, response: response?.data });
       
-      // Don't call completeLogin here - just redirect to name page
-      // The name page will handle calling completeLogin after name is entered
-      // This fixes the "Verification incomplete" error because the flow 
-      // expects name to be captured before tokens are issued
-      
-      // Handle redirect based on onboarding state
-      if (nextStep) {
-        // If user is already completed, go to home
-        if (nextStep === 'ACTIVE_USER' || nextStep === 'COMPLETED' || nextStep === 'HOME') {
-          // For completed users, try to complete login
-          try {
-            const completeResponse = await authService.completeLogin(flowId);
-            const tokens = completeResponse?.data?.data || completeResponse?.data || {};
-            const accessToken = tokens.access_token || tokens.accessToken;
-            const refreshToken = tokens.refresh_token || tokens.refreshToken;
-            if (accessToken) {
-              authService.storeTokens({ accessToken, refreshToken });
-            }
-          } catch (e) {
-            console.error('Error completing login for completed user:', e);
+      // After email verification, check if it's an old user or new user
+      // If nextStep indicates user is already completed (ACTIVE_USER, etc.), call auth/complete first
+      // For old users with completed onboarding, we need the JWT token
+      if (nextStep === 'ACTIVE_USER' || nextStep === 'COMPLETED' || 
+          nextStep === 'HOME' || nextStep === 'ACTIVE' || 
+          nextStep === 'DONE' || nextStep === 'EXTENDED_PROFILE_COMPLETED') {
+        // Old user with completed onboarding - need JWT token
+        try {
+          const completeResponse = await authService.completeLogin(flowId);
+          const tokens = completeResponse?.data?.data || completeResponse?.data || {};
+          const accessToken = tokens.access_token || tokens.accessToken;
+          const refreshToken = tokens.refresh_token || tokens.refreshToken;
+          if (accessToken) {
+            authService.storeTokens({ accessToken, refreshToken });
           }
-          router.push('/onboarding/home');
-          return;
+        } catch (e) {
+          console.error('Error completing login for completed user:', e);
         }
-        
-        // For NAME_CAPTURE step, redirect to name page (don't call completeLogin here)
-        if (nextStep === 'NAME_CAPTURE' || nextStep === 'NAME') {
-          router.push("/onboarding/name");
-          return;
-        }
-        
-        const route = getRouteFromStep(nextStep);
-        if (route && route !== '/login') {
-          router.push(route);
-          return;
-        }
+        router.push('/onboarding/home');
+        return;
       }
       
-      // Default to onboarding name page
-      router.push("/onboarding/name");
+      // For NAME_CAPTURE or basic steps, redirect to name page
+      // auth/complete will be called there after name is entered
+      if (nextStep === 'NAME_CAPTURE' || nextStep === 'NAME' || 
+          nextStep === 'BASIC_ACCOUNT' || nextStep === 'BASIC_ACCOUNT_CREATED') {
+        router.push('/onboarding/name');
+        return;
+      }
+      
+      // For other onboarding steps, we need to get JWT first
+      // This handles old users who have already passed the name step
+      try {
+        const completeResponse = await authService.completeLogin(flowId);
+        const tokens = completeResponse?.data?.data || completeResponse?.data || {};
+        const accessToken = tokens.access_token || tokens.accessToken;
+        const refreshToken = tokens.refresh_token || tokens.refreshToken;
+        
+        if (accessToken) {
+          authService.storeTokens({ accessToken, refreshToken });
+          
+          // Now get onboarding status with the token
+          const statusResponse = await userService.getOnboardingStatus();
+          const currentStep = statusResponse?.data?.data?.next_required_step;
+          const userState = statusResponse?.data?.data?.user_state;
+          
+          console.log('Onboarding status after email verify:', { currentStep, userState });
+          
+          const redirectStep = currentStep || userState || nextStep;
+          
+          if (redirectStep) {
+            if (redirectStep === 'ACTIVE_USER' || redirectStep === 'COMPLETED' || 
+                redirectStep === 'HOME' || redirectStep === 'ACTIVE' || 
+                redirectStep === 'DONE' || redirectStep === 'EXTENDED_PROFILE_COMPLETED') {
+              router.push('/onboarding/home');
+              return;
+            }
+            
+            const route = getRouteFromStep(redirectStep);
+            if (route && route !== '/login') {
+              router.push(route);
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error:', e);
+      }
+      
+      // Default: go to name page
+      router.push('/onboarding/name');
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.response?.data?.error || "Verification failed.";
       console.error('Email OTP verification error:', err.response?.data);

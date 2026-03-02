@@ -175,17 +175,17 @@ export default function CoachDetailsPage() {
 
       {/* Selected Slot Bar */}
       {selectedSlot && (
-        <div className="fixed bottom-24 left-6 right-6 bg-gradient-to-r from-pink-500 to-orange-500 p-4 rounded-xl text-center text-sm">
+        <div className="w-96 left-0 right-0 bg-gradient-to-r from-pink-500 to-orange-500 p-4 rounded-xl text-center text-sm">
           Selected: {selectedSlot}
         </div>
       )}
 
       {/* Confirm Button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-zinc-800 p-6">
+      <div className=" left-0 right-0 bg-black border-t border-zinc-800 p-6 text-center">
         <button
           disabled={!selectedSlot}
           onClick={() => setShowModal(true)}
-          className="w-full bg-gradient-to-r from-pink-500 to-orange-500 py-4 rounded-xl font-semibold text-lg disabled:opacity-40"
+          className=" bg-gradient-to-r from-pink-500 to-orange-500 py-4 px-10 rounded-xl font-semibold text-lg  disabled:opacity-40"
         >
           Confirm Booking
         </button>
@@ -197,7 +197,7 @@ export default function CoachDetailsPage() {
           venue={coach}
           slot={selectedSlot}
           onClose={() => setShowModal(false)}
-          onBrowse={() => router.push("/booking")}
+          onBrowse={() => router.push("/bookings")}
         />
       )}
     </div>
