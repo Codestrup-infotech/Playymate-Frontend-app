@@ -243,8 +243,14 @@ export default function EmailLogin() {
         }
         
         // For NAME_CAPTURE step, redirect to name page (don't call completeLogin here)
-        if (nextStep === 'NAME_CAPTURE' || nextStep === 'NAME') {
+        if (nextStep === 'NAME_CAPTURE' || nextStep === 'NAME' || nextStep === 'BASIC_ACCOUNT' || nextStep === 'BASIC_ACCOUNT_CREATED') {
           router.push("/onboarding/name");
+          return;
+        }
+        
+        // For COMPLETED states, go to home
+        if (nextStep === 'ACTIVE_USER' || nextStep === 'COMPLETED' || nextStep === 'HOME' || nextStep === 'ACTIVE' || nextStep === 'DONE') {
+          router.push('/onboarding/home');
           return;
         }
         

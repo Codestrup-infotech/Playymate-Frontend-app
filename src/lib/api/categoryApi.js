@@ -1,6 +1,6 @@
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "https://api-dev.playymate.com/api/v1";
+  "http://localhost:5000/api/v1";
 
 /* -------------------------------------------------------
    Helper: Handle API Response

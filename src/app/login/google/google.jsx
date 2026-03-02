@@ -5,7 +5,7 @@ import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://api-dev.playymate.com/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 export default function GoogleLogin({ onBack }) {
   const [isLoading, setIsLoading] = useState(false);

@@ -7,7 +7,7 @@
 import axios from "axios";
 import { getAuthToken } from "./client";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://api-dev.playymate.com/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 /**
  * Fetch all questions for a specific item within a category
