@@ -14,7 +14,7 @@ const FACEBOOK_APP_ID =
   process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || "your-facebook-app-id";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://api-dev.playymate.com/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "https://api-dev.playymate.com/api/v1";
 
 export default function LoginPage() {
   const router = useRouter();
