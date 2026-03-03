@@ -118,3 +118,46 @@
   background: linear-gradient(to bottom, #EF3AFF, #393935);
   border-radius: 9999px;
 }
+
+
+/* Animation for Outer Ring (6 Avatars) */
+@keyframes orbit-outer {
+  0%, 100% {
+    transform: rotate(var(--angle)) translate(150px) rotate(calc(var(--angle) * -1));
+  }
+  25% {
+    transform: rotate(calc(var(--angle) - 40deg)) translate(180px) rotate(calc((var(--angle) - 40deg) * -1));
+  }
+  50% {
+    transform: rotate(var(--angle)) translate(150px) rotate(calc(var(--angle) * -1));
+  }
+  75% {
+    transform: rotate(calc(var(--angle) + 40deg)) translate(180px) rotate(calc((var(--angle) + 40deg) * -1));
+  }
+}
+
+/* Animation for Inner Ring Edge (2 Avatars - Half in/Half out) */
+@keyframes orbit-inner {
+  0%, 100% {
+    transform: rotate(var(--angle)) translate(96px) rotate(calc(var(--angle) * -1));
+  }
+  25% {
+    transform: rotate(calc(var(--angle) - 40deg)) translate(110px) rotate(calc((var(--angle) - 40deg) * -1));
+  }
+  50% {
+    transform: rotate(var(--angle)) translate(96px) rotate(calc(var(--angle) * -1));
+  }
+  75% {
+    transform: rotate(calc(var(--angle) + 40deg)) translate(110px) rotate(calc((var(--angle) + 40deg) * -1));
+  }
+}
+
+.animate-orbit-outer {
+  animation: orbit-outer 7s ease-in-out infinite;
+}
+
+.animate-orbit-inner {
+  animation: orbit-inner 7s ease-in-out infinite;
+}
+
+

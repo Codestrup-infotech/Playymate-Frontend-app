@@ -252,6 +252,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, AlertCircle, Camera, X, CheckCircle } from 'lucide-react';
 import { userService } from '@/services/user';
+import { kycService } from '@/services/kyc';
 import { getErrorMessage } from '@/lib/api/errorMap';
 import { getRouteFromStep } from '@/lib/api/navigation';
 
@@ -490,8 +491,10 @@ export default function OnboardingProfilePhotoPage() {
 
       // Navigate based on next_required_step from the API response
       const nextStep = lastResponse?.data?.next_required_step || 'ACTIVITY_INTENT';
-      const route = getRouteFromStep(nextStep);
-      router.push(route);
+      
+      // Simple push to activity page after photo upload
+      // The activity page will handle KYC screen visibility check
+      router.push('/onboarding/activity');
 
     } catch (err) {
       console.error('Profile photo upload error:', err);
@@ -522,9 +525,9 @@ export default function OnboardingProfilePhotoPage() {
     }
   };
 
-  const handleSkip = () => {
-    router.push('/onboarding/activity');
-  };
+  // const handleSkip = () => {
+  //   router.push('/onboarding/activity');
+  // };
 
   // Show loading while checking status
   if (initialLoading) {
@@ -543,7 +546,7 @@ export default function OnboardingProfilePhotoPage() {
     <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-1">
           <button
             onClick={() => router.push('/onboarding/location')}
             className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -701,13 +704,13 @@ export default function OnboardingProfilePhotoPage() {
             )}
           </button>
 
-          <button
+          {/* <button
             type="button"
             onClick={handleSkip}
             className="w-full py-3 text-gray-400 text-sm hover:text-white transition-colors"
           >
             Skip for now
-          </button>
+          </button> */}
         </div>
       </div>
     </div>

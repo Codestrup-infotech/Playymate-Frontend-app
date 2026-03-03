@@ -9,7 +9,7 @@ export default function CafeBookingSuccess({
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
 
-      <div className="bg-gradient-to-br from-pink-500 to-orange-500 rounded-3xl p-10 w-[90%] max-w-md text-center text-white shadow-2xl">
+      <div className="bg-gradient-to-br   from-pink-500 to-orange-500 rounded-3xl p-10 w-[90%] max-w-md text-center text-white shadow-2xl">
 
         <div className="text-6xl mb-6">☕</div>
 

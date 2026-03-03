@@ -407,7 +407,8 @@ const sendPhoneOtp = async () => {
         <div style={{ textAlign: "center", marginBottom: "8px" }}>
           <h1 style={{ fontSize: "32px", fontWeight: "700", margin: 0, lineHeight: 1.2 }}>
             {step === "phone" ? (
-              <>Login With <span style={{ color: "#E8824A" }}>Phone</span></>
+              <>  Login With <span style={{ color: "#F472B6" }}>Phone</span></>   
+              
             ) : (
               <>Enter <span style={{ color: "#E8824A" }}>OTP</span></>
             )}
@@ -423,9 +424,9 @@ const sendPhoneOtp = async () => {
         {error && (
           <div
             style={{
-              background: "rgba(239,68,68,0.1)",
-              border: "1px solid rgba(239,68,68,0.6)",
-              color: "#f87171",
+              background: "#EC4899",
+              border: "#EC4899",
+              color: "#EC4899",
               padding: "12px 16px",
               borderRadius: "12px",
               fontSize: "14px",
@@ -445,7 +446,7 @@ const sendPhoneOtp = async () => {
               background: "#1a1a1a",
               borderRadius: "14px",
               border: "1.5px solid",
-              borderColor: "#d946ef",
+              borderColor: "#EC4899",
               padding: "0 16px",
               height: "58px",
               gap: "10px",

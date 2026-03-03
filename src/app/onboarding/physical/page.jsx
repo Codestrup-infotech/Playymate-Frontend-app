@@ -65,17 +65,68 @@ export default function PhysicalPreferences() {
   const [answerLoading, setAnswerLoading] = useState(false);
   const [answerError, setAnswerError] = useState(null);
 
-  // Submit answer to API
-  const submitAnswer = async (questionId, answerNumber = null, selectedOptionIds = null) => {
+  // Submit answer to API - handles all question types based on question_data
+  const submitAnswer = async (questionId, answer, questionData = null) => {
     try {
       setAnswerLoading(true);
       setAnswerError(null);
       
-      if (answerNumber !== null) {
-        await questionnaireService.submitNumberAnswer(questionId, answerNumber);
-      } else if (selectedOptionIds) {
-        await questionnaireService.submitSingleChoiceAnswer(questionId, selectedOptionIds);
+      // Get question type from questionData or determine from answer
+      const questionType = questionData?.question_type || 'number';
+      
+      let payload = {};
+      
+      // Handle based on question type from API
+      if (questionType === 'single_select') {
+        // For single select - MUST use selected_option_ids with option_id
+        let optionId = null;
+        
+        // Check if answer is already option_id
+        if (answer && typeof answer === 'string') {
+          const byId = questionData?.options?.find(opt => opt.option_id === answer);
+          if (byId) {
+            optionId = answer;
+          }
+        }
+        
+        // If not found by ID, try by label or value
+        if (!optionId) {
+          const byLabel = questionData?.options?.find(
+            opt => opt.label === answer || opt.value === answer
+          );
+          if (byLabel?.option_id) {
+            optionId = byLabel.option_id;
+          }
+        }
+        
+        if (optionId) {
+          payload.selected_option_ids = [optionId];
+        } else {
+          console.error("No option_id found for:", answer);
+          return false;
+        }
+      } else if (questionType === 'number') {
+        // For number - use answer_number
+        payload.answer_number = typeof answer === 'number' ? answer : parseInt(answer) || parseFloat(answer);
+      } else if (questionType === 'text') {
+        payload.answer_text = answer;
+      } else if (questionType === 'boolean') {
+        // For boolean - use answer_boolean
+        payload.answer_boolean = answer === true || answer === 'true' || answer === 1;
+      } else {
+        // Default fallback - try as single select
+        if (answer && typeof answer === 'string') {
+          const option = questionData?.options?.find(
+            opt => opt.label === answer || opt.value === answer
+          );
+          if (option?.option_id) {
+            payload.selected_option_ids = [option.option_id];
+          }
+        }
       }
+      
+      // Call the API with the payload
+      await questionnaireService.submitAnswer(questionId, payload);
       
       return true;
     } catch (err) {
@@ -183,7 +234,7 @@ export default function PhysicalPreferences() {
           onNext={async () => {
             const weightQuestion = basicMetricsQuestions.find(q => q.question_id === "weight");
             if (weightQuestion) {
-              await submitAnswer(weightQuestion.question_id, weight);
+              await submitAnswer(weightQuestion.question_id, weight, weightQuestion);
             }
             setStep(3);
           }}
@@ -202,7 +253,7 @@ export default function PhysicalPreferences() {
           onNext={async () => {
             const heightQuestion = basicMetricsQuestions.find(q => q.question_id === "height");
             if (heightQuestion) {
-              await submitAnswer(heightQuestion.question_id, height);
+              await submitAnswer(heightQuestion.question_id, height, heightQuestion);
             }
             setStep(4);
           }}
@@ -223,17 +274,8 @@ export default function PhysicalPreferences() {
             );
 
             if (bloodQuestion && blood) {
-              const selectedOption = bloodQuestion.options?.find(
-                opt => opt.value === blood || opt.label === blood
-              );
-
-              if (selectedOption) {
-                await submitAnswer(
-                  bloodQuestion.question_id,
-                  null,
-                  [selectedOption.option_id]
-                );
-              }
+              // Pass the blood value and questionData
+              await submitAnswer(bloodQuestion.question_id, blood, bloodQuestion);
             }
 
             setStep(5); // ✅ move to Fitness

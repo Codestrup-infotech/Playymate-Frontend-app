@@ -38,35 +38,59 @@ function buildVisibleSteps(questions, answers) {
 }
 
 export default function Fitness({ onBack, onComplete }) {
+  // State for all categories - fitness and medical
   const [questions, setQuestions] = useState([]);
+  const [allQuestions, setAllQuestions] = useState({
+    fitness: [],
+    medical: []
+  });
   const [answers, setAnswers] = useState({});
   const [stepIndex, setStepIndex] = useState(0);
   const [coins, setCoins] = useState(0);
   const [coinsEarned, setCoinsEarned] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState("loading");
+  const [currentCategory, setCurrentCategory] = useState('fitness');
 
   /* =====================================================
-     FETCH QUESTIONS
+     FETCH QUESTIONS - Get both fitness and medical categories dynamically
   ===================================================== */
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const res = await questionnaireService.getQuestions(
-          "fitness"
+        // Fetch all questions from the API
+        const res = await questionnaireService.getQuestions();
+        
+        // Handle both response formats (success and status)
+        const data = res.data?.data || res.data;
+        
+        // Get questions from the API response - dynamic based on API
+        const fitnessQuestions = data?.questions?.fitness || [];
+        const medicalQuestions = data?.questions?.medical || [];
+        
+        // Sort each category by flow_order
+        const sortedFitness = fitnessQuestions.sort(
+          (a, b) => (a.flow_order || 0) - (b.flow_order || 0)
         );
-
-        const fitnessQuestions =
-          res.data?.data?.questions?.fitness || [];
-
-        const sorted = fitnessQuestions.sort(
-          (a, b) => a.flow_order - b.flow_order
+        const sortedMedical = medicalQuestions.sort(
+          (a, b) => (a.flow_order || 0) - (b.flow_order || 0)
         );
-
-        setQuestions(sorted);
+        
+        setAllQuestions({
+          fitness: sortedFitness,
+          medical: sortedMedical
+        });
+        
+        // Start with fitness questions first
+        setQuestions(sortedFitness);
+        setCurrentCategory('fitness');
         setPhase("questions");
       } catch (err) {
         console.error("Failed to load fitness questions:", err);
+        // Fallback to empty arrays
+        setAllQuestions({ fitness: [], medical: [] });
+        setQuestions([]);
+        setPhase("questions");
       } finally {
         setLoading(false);
       }
@@ -78,12 +102,22 @@ export default function Fitness({ onBack, onComplete }) {
   const visibleSteps = buildVisibleSteps(questions, answers);
   const current = visibleSteps[stepIndex];
 
-  const progress =
-    visibleSteps.length > 0
-      ? Math.round(
-          ((stepIndex + 1) / visibleSteps.length) * 100
-        )
-      : 0;
+  // Calculate total progress across both fitness and medical categories
+  const totalQuestions = allQuestions.fitness.length + allQuestions.medical.length;
+  
+  // Calculate current position across all categories
+  let currentProgress = 0;
+  if (currentCategory === 'fitness') {
+    // In fitness category - progress based on stepIndex in fitness
+    currentProgress = stepIndex + 1;
+  } else if (currentCategory === 'medical') {
+    // In medical category - progress = fitness.length + stepIndex + 1
+    currentProgress = allQuestions.fitness.length + stepIndex + 1;
+  }
+  
+  const progress = totalQuestions > 0
+    ? Math.round((currentProgress / totalQuestions) * 100)
+    : 0;
 
   /* =====================================================
      SET ANSWER
@@ -118,6 +152,11 @@ export default function Fitness({ onBack, onComplete }) {
       return Array.isArray(val) && val.length > 0;
     }
 
+    // Handle boolean type (used in medical questions)
+    if (current.question_type === "boolean") {
+      return val !== undefined && val !== null;
+    }
+
     return val !== undefined && val !== null;
   };
 
@@ -129,30 +168,92 @@ export default function Fitness({ onBack, onComplete }) {
 
     const qId = current.question_id;
     const answer = answers[qId];
+    const questionType = current.question_type;
 
-   let payload = {};
+    console.log("Submitting answer:", { qId, answer, questionType, options: current.options });
 
-    if (current.question_type === "single_choice") {
-      const selected = current.options.find(
-        (opt) => opt.label === answer
-      );
-      payload.selected_option_ids = [selected.option_id];
+    let payload = {};
+
+    // Handle single select - use selected_option_ids with option_id
+    if (questionType === "single_select" || questionType === "single_choice" || questionType === "single") {
+      let optionIdToSend = null;
+      
+      // First, check if answer is already an option_id
+      if (answer && typeof answer === 'string') {
+        const byId = current.options?.find(opt => opt.option_id === answer);
+        if (byId) {
+          optionIdToSend = answer;
+        }
+      }
+      
+      // If not found by ID, try by label or value
+      if (!optionIdToSend) {
+        const byLabel = current.options?.find(
+          (opt) => opt.label === answer || opt.value === answer
+        );
+        if (byLabel?.option_id) {
+          optionIdToSend = byLabel.option_id;
+        }
+      }
+      
+      if (optionIdToSend) {
+        payload.selected_option_ids = [optionIdToSend];
+      } else {
+        console.error("No option_id found:", answer, "Options:", current.options);
+        // Send empty to trigger error or use the raw answer
+        payload.selected_option_ids = [];
+      }
     }
-
-    if (current.question_type === "multi_choice") {
-      payload.selected_option_ids = current.options
-        .filter((opt) =>
-          answer.includes(opt.label)
-        )
-        .map((opt) => opt.option_id);
+    // Handle multi select
+    else if (questionType === "multi_select" || questionType === "multi_choice" || questionType === "multi") {
+      const selectedIds = (answer || []).map(a => {
+        // Check if already option_id
+        const byId = current.options?.find(opt => opt.option_id === a);
+        if (byId) return a;
+        // Find by label/value
+        const byLabel = current.options?.find(opt => opt.label === a || opt.value === a);
+        return byLabel?.option_id || a;
+      }).filter(Boolean);
+      
+      if (selectedIds.length > 0) {
+        payload.selected_option_ids = selectedIds;
+      }
     }
-
-    if (current.question_type === "boolean") {
-      payload.answer_boolean = answer === true;
+    // Handle boolean - MUST use answer_boolean (not selected_option_ids)
+    else if (questionType === "boolean") {
+      // Convert answer to actual boolean
+      if (answer === true) {
+        payload.answer_boolean = true;
+      } else if (answer === false) {
+        payload.answer_boolean = false;
+      } else if (answer === "true" || answer === "1") {
+        payload.answer_boolean = true;
+      } else if (answer === "false" || answer === "0") {
+        payload.answer_boolean = false;
+      } else {
+        // Try to find option_id for Yes/No
+        const boolOption = current.options?.find(
+          opt => opt.label === answer || opt.value === answer
+        );
+        if (boolOption?.option_id) {
+          payload.selected_option_ids = [boolOption.option_id];
+        } else {
+          // Default to false
+          payload.answer_boolean = false;
+        }
+      }
     }
-
-    if (current.question_type === "text") {
+    // Handle text
+    else if (questionType === "text") {
       payload.answer_text = answer;
+    }
+    // Handle number
+    else if (questionType === "number") {
+      payload.answer_number = typeof answer === 'number' ? answer : parseInt(answer) || parseFloat(answer);
+    }
+    else {
+      console.error("Unknown question type:", questionType);
+      payload.selected_option_ids = answer ? [answer] : [];
     }
 
     try {
@@ -176,11 +277,23 @@ export default function Fitness({ onBack, onComplete }) {
         return;
       }
 
-      /* NEXT STEP */
+      /* NEXT STEP - Handle category transition (fitness -> medical) */
       if (stepIndex < visibleSteps.length - 1) {
+        // More questions in current category
         setStepIndex((i) => i + 1);
       } else {
-        setPhase("success");
+        // Current category complete - check if we need to transition to medical
+        if (currentCategory === 'fitness' && allQuestions.medical.length > 0) {
+          // Transition to medical questions
+          setCurrentCategory('medical');
+          setQuestions(allQuestions.medical);
+          setStepIndex(0);
+          // Clear answers for medical questions
+          setAnswers({});
+        } else {
+          // All categories complete
+          setPhase("success");
+        }
       }
     } catch (err) {
       console.error("Submit error:", err);
@@ -193,7 +306,7 @@ export default function Fitness({ onBack, onComplete }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black text-white">
-        Loading Fitness...
+        Loading Physical Profile...
       </div>
     );
   }
@@ -206,8 +319,11 @@ export default function Fitness({ onBack, onComplete }) {
       <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white text-center">
         <div className="text-5xl mb-4">🎉</div>
         <h2 className="text-2xl font-bold mb-2">
-          Fitness Profile Completed!
+          Physical Profile Completed!
         </h2>
+        <p className="mb-4 text-gray-400">
+          You answered {allQuestions.fitness.length + allQuestions.medical.length} questions
+        </p>
         <p className="mb-4 text-gray-400">
           You earned {coins} coins
         </p>
@@ -237,6 +353,13 @@ export default function Fitness({ onBack, onComplete }) {
           ←
         </div>
       )}
+
+      {/* CATEGORY INDICATOR */}
+      <div className="mb-4 text-center">
+        <span className="inline-block px-3 py-1 bg-white/10 rounded-full text-sm">
+          {currentCategory === 'fitness' ? '💪 Fitness Level' : '🏥 Medical Information'}
+        </span>
+      </div>
 
       {/* PROGRESS */}
       <div className="mb-6">
@@ -342,9 +465,10 @@ export default function Fitness({ onBack, onComplete }) {
         onClick={submitAnswer}
         className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[85%] py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40"
       >
-        {stepIndex < visibleSteps.length - 1
-          ? "Continue"
-          : "Finish 🎉"}
+        {/* Check if this is the last question across all categories */}
+        {currentCategory === 'medical' && stepIndex >= allQuestions.medical.length - 1
+          ? "Finish 🎉"
+          : "Continue"}
       </button>
     </div>
   );

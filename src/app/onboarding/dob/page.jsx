@@ -302,7 +302,7 @@ export default function OnboardingDOBPage() {
     }
   };
 
-  const handleSkip = () => router.push('/onboarding/location');
+  // const handleSkip = () => router.push('/onboarding/location');
 
   if (initialLoading) {
     return (
@@ -431,12 +431,12 @@ export default function OnboardingDOBPage() {
             >
               Continue
             </button>
-            <button
+            {/* <button
               onClick={handleSkip}
               className="w-full py-3 text-gray-400 text-sm hover:text-white transition-colors"
             >
               Skip for now
-            </button>
+            </button> */}
           </div>
         )}
 

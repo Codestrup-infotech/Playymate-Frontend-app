@@ -199,10 +199,10 @@ export default function OnboardingNamePage() {
     }
   };
 
-  const handleSkip = () => {
-    // Skip to next step
-    router.push('/onboarding/gender');
-  };
+  // const handleSkip = () => {
+  //   // Skip to next step
+  //   router.push('/onboarding/gender');
+  // };
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
@@ -282,13 +282,13 @@ export default function OnboardingNamePage() {
             </button>
           </form>
 
-          <button
+          {/* <button
             type="button"
             onClick={handleSkip}
             className="w-full py-3 text-gray-400 text-sm hover:text-white transition-colors"
           >
             Skip for now
-          </button>
+          </button> */}
         </div>
       </div>
     </div>
