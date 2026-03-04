@@ -225,6 +225,51 @@ export default function OnboardingDOBPage() {
 
   const handleSubmit = async () => {
     const dob = `${selectedYear}-${String(selectedMonth).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}`;
+    
+    // Compute local age for immediate redirect decision
+    const computedAge = computeAge();
+    const isUnder18 = computedAge < 18;
+    const isAdult = computedAge >= 18;
+    
+    console.log('Computed age:', computedAge, 'Under 18:', isUnder18, 'Adult:', isAdult);
+    
+    // If user is under 18, redirect to parent consent (still save DOB first)
+    if (isUnder18) {
+      try {
+        setLoading(true);
+        clearError();
+        
+        // Save DOB first
+        const response = await userService.updateDOB(dob);
+        console.log('DOB saved for minor user, response:', response.data);
+        
+        // Check API response for consent_required flag
+        const responseData = response?.data;
+        const consentRequired = responseData?.consent_required;
+        const nextStep = responseData?.next_required_step;
+        
+        console.log('Minor user - consent_required:', consentRequired, 'next_step:', nextStep);
+        
+        // If API indicates parent consent is needed, redirect there
+        if (consentRequired || nextStep === 'PARENT_CONSENT') {
+          console.log('API indicates parent consent required - redirecting to parent-consent');
+          router.push('/onboarding/parent-consent');
+          return;
+        }
+        
+        // Fallback: still redirect to parent consent based on local age
+        console.log('Redirecting to parent consent (fallback)');
+        router.push('/onboarding/parent-consent');
+        return;
+      } catch (err) {
+        console.error('DOB save error for minor:', err);
+        // Even if API fails, redirect to parent consent based on local age
+        router.push('/onboarding/parent-consent');
+        return;
+      }
+    }
+    
+    // For adults (18+), proceed with normal flow
     try {
       setLoading(true);
       clearError();
@@ -235,14 +280,10 @@ export default function OnboardingDOBPage() {
       const responseData = response?.data;
       const data = responseData?.data;
       const ageGroup = data?.age_group;
-      const isAdult = ageGroup === '18_plus' || ageGroup === 'ADULT';
-      const isMinor = ageGroup === '13_17' || ageGroup === '16_17' || ageGroup === 'UNDER_18';
-
-      console.log('Age group:', ageGroup, 'Is adult:', isAdult, 'Is minor:', isMinor);
-
-      // For minors (< 18), always require parent consent first
-      if (isMinor) {
-        console.log('User is a minor - redirecting to parent consent');
+      
+      // Use local age check for routing - if locally under 18, go to parent consent
+      if (isUnder18) {
+        console.log('User is under 18 - redirecting to parent consent');
         router.push('/onboarding/parent-consent');
         return;
       }

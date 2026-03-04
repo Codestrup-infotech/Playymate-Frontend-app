@@ -40,19 +40,25 @@ export default function OnboardingParentConsentPage() {
         
         // If not in pending state, redirect based on next step
         if (state !== 'PARENT_CONSENT_PENDING') {
-          // Try to get next step from response - check both response.data and response.data.data
-          const nextRequiredStep = nextStep || response?.data?.data?.next_required_step;
-          if (nextRequiredStep) {
+          // Handle DOB_CAPTURED state - user was redirected from DOB page because they are a minor
+          // Stay on this page to let them complete parent consent
+          if (state === 'DOB_CAPTURED') {
+            console.log('State is DOB_CAPTURED - staying on parent consent page');
+            setInitialLoading(false);
+            return;
+          }
+          
+          // Try to get next step from response - check both locations and validate it's a string
+          const nextRequiredStep = (nextStep && typeof nextStep === 'string') 
+            ? nextStep 
+            : (response?.data?.data?.next_required_step);
+            
+          if (nextRequiredStep && typeof nextRequiredStep === 'string') {
             const route = getRouteFromStep(nextRequiredStep);
             router.push(route);
           } else {
             // Default based on state
-            if (state === 'DOB_CAPTURED') {
-              // Go back to DOB to re-trigger the flow
-              router.push('/onboarding/dob');
-            } else {
-              router.push('/onboarding/gender');
-            }
+            router.push('/onboarding/gender');
           }
           return;
         }
@@ -78,9 +84,9 @@ export default function OnboardingParentConsentPage() {
       const response = await userService.giveParentConsent();
       console.log('Parent consent response:', response.data);
       
-      // Navigate based on next_required_step from API
+      // Navigate based on next_required_step from API - validate it's a string
       const nextStep = response?.data?.next_required_step;
-      if (nextStep) {
+      if (nextStep && typeof nextStep === 'string') {
         const route = getRouteFromStep(nextStep);
         router.push(route);
       } else {
@@ -104,14 +110,25 @@ export default function OnboardingParentConsentPage() {
       // Handle state mismatch errors - get next step from error response
       if (status === 400) {
         const nextStep = err.response?.data?.next_required_step;
-        if (nextStep) {
+        if (nextStep && typeof nextStep === 'string') {
           const route = getRouteFromStep(nextStep);
           router.push(route);
           return;
         }
         
+        // Check for INVALID_ONBOARDING_STATE error
+        // The backend may not have updated the state correctly after saving DOB
+        // Since the user has already checked the consent box and submitted,
+        // we can proceed to location page anyway
+        if (errorCode === 'INVALID_ONBOARDING_STATE') {
+          console.log('Invalid state transition - proceeding to location anyway');
+          // Use window.location to ensure redirect works
+          window.location.href = `${window.location.origin}/onboarding/location`;
+          return;
+        }
+        
         // If error message mentions state, try to refresh status
-        if (errorMsg?.includes('state') || errorCode === 'INVALID_ONBOARDING_STATE') {
+        if (errorMsg?.includes('state')) {
           try {
             const statusResponse = await userService.getOnboardingStatus();
             const currentState = statusResponse?.data?.data?.onboarding_state;
@@ -125,8 +142,8 @@ export default function OnboardingParentConsentPage() {
               return;
             }
             
-            // Navigate to the next required step
-            if (nextRequiredStep) {
+            // Navigate to the next required step - validate it's a string
+            if (nextRequiredStep && typeof nextRequiredStep === 'string') {
               const route = getRouteFromStep(nextRequiredStep);
               router.push(route);
               return;

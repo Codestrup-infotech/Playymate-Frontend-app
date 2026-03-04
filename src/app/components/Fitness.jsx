@@ -38,7 +38,6 @@ function buildVisibleSteps(questions, answers) {
 }
 
 export default function Fitness({ onBack, onComplete }) {
-  // State for all categories - fitness and medical
   const [questions, setQuestions] = useState([]);
   const [allQuestions, setAllQuestions] = useState({
     fitness: [],
@@ -50,44 +49,38 @@ export default function Fitness({ onBack, onComplete }) {
   const [coinsEarned, setCoinsEarned] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState("loading");
-  const [currentCategory, setCurrentCategory] = useState('fitness');
+  const [currentCategory, setCurrentCategory] = useState("fitness");
 
   /* =====================================================
-     FETCH QUESTIONS - Get both fitness and medical categories dynamically
+     FETCH QUESTIONS
   ===================================================== */
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        // Fetch all questions from the API
         const res = await questionnaireService.getQuestions();
-        
-        // Handle both response formats (success and status)
         const data = res.data?.data || res.data;
-        
-        // Get questions from the API response - dynamic based on API
+
         const fitnessQuestions = data?.questions?.fitness || [];
         const medicalQuestions = data?.questions?.medical || [];
-        
-        // Sort each category by flow_order
+
         const sortedFitness = fitnessQuestions.sort(
           (a, b) => (a.flow_order || 0) - (b.flow_order || 0)
         );
+
         const sortedMedical = medicalQuestions.sort(
           (a, b) => (a.flow_order || 0) - (b.flow_order || 0)
         );
-        
+
         setAllQuestions({
           fitness: sortedFitness,
           medical: sortedMedical
         });
-        
-        // Start with fitness questions first
+
         setQuestions(sortedFitness);
-        setCurrentCategory('fitness');
+        setCurrentCategory("fitness");
         setPhase("questions");
       } catch (err) {
         console.error("Failed to load fitness questions:", err);
-        // Fallback to empty arrays
         setAllQuestions({ fitness: [], medical: [] });
         setQuestions([]);
         setPhase("questions");
@@ -102,22 +95,25 @@ export default function Fitness({ onBack, onComplete }) {
   const visibleSteps = buildVisibleSteps(questions, answers);
   const current = visibleSteps[stepIndex];
 
-  // Calculate total progress across both fitness and medical categories
-  const totalQuestions = allQuestions.fitness.length + allQuestions.medical.length;
-  
-  // Calculate current position across all categories
+  const totalQuestions =
+    allQuestions.fitness.length +
+    allQuestions.medical.length;
+
   let currentProgress = 0;
-  if (currentCategory === 'fitness') {
-    // In fitness category - progress based on stepIndex in fitness
+
+  if (currentCategory === "fitness") {
     currentProgress = stepIndex + 1;
-  } else if (currentCategory === 'medical') {
-    // In medical category - progress = fitness.length + stepIndex + 1
-    currentProgress = allQuestions.fitness.length + stepIndex + 1;
+  } else if (currentCategory === "medical") {
+    currentProgress =
+      allQuestions.fitness.length +
+      stepIndex +
+      1;
   }
-  
-  const progress = totalQuestions > 0
-    ? Math.round((currentProgress / totalQuestions) * 100)
-    : 0;
+
+  const progress =
+    totalQuestions > 0
+      ? Math.round((currentProgress / totalQuestions) * 100)
+      : 0;
 
   /* =====================================================
      SET ANSWER
@@ -152,7 +148,6 @@ export default function Fitness({ onBack, onComplete }) {
       return Array.isArray(val) && val.length > 0;
     }
 
-    // Handle boolean type (used in medical questions)
     if (current.question_type === "boolean") {
       return val !== undefined && val !== null;
     }
@@ -170,90 +165,81 @@ export default function Fitness({ onBack, onComplete }) {
     const answer = answers[qId];
     const questionType = current.question_type;
 
-    console.log("Submitting answer:", { qId, answer, questionType, options: current.options });
-
     let payload = {};
 
-    // Handle single select - use selected_option_ids with option_id
-    if (questionType === "single_select" || questionType === "single_choice" || questionType === "single") {
+    if (
+      questionType === "single_select" ||
+      questionType === "single_choice" ||
+      questionType === "single"
+    ) {
       let optionIdToSend = null;
-      
-      // First, check if answer is already an option_id
-      if (answer && typeof answer === 'string') {
-        const byId = current.options?.find(opt => opt.option_id === answer);
+
+      if (answer && typeof answer === "string") {
+        const byId = current.options?.find(
+          (opt) => opt.option_id === answer
+        );
         if (byId) {
           optionIdToSend = answer;
         }
       }
-      
-      // If not found by ID, try by label or value
+
       if (!optionIdToSend) {
         const byLabel = current.options?.find(
-          (opt) => opt.label === answer || opt.value === answer
+          (opt) =>
+            opt.label === answer ||
+            opt.value === answer
         );
         if (byLabel?.option_id) {
           optionIdToSend = byLabel.option_id;
         }
       }
-      
+
       if (optionIdToSend) {
-        payload.selected_option_ids = [optionIdToSend];
+        payload.selected_option_ids = [
+          optionIdToSend,
+        ];
       } else {
-        console.error("No option_id found:", answer, "Options:", current.options);
-        // Send empty to trigger error or use the raw answer
         payload.selected_option_ids = [];
       }
-    }
-    // Handle multi select
-    else if (questionType === "multi_select" || questionType === "multi_choice" || questionType === "multi") {
-      const selectedIds = (answer || []).map(a => {
-        // Check if already option_id
-        const byId = current.options?.find(opt => opt.option_id === a);
-        if (byId) return a;
-        // Find by label/value
-        const byLabel = current.options?.find(opt => opt.label === a || opt.value === a);
-        return byLabel?.option_id || a;
-      }).filter(Boolean);
-      
+    } else if (
+      questionType === "multi_select" ||
+      questionType === "multi_choice" ||
+      questionType === "multi"
+    ) {
+      const selectedIds = (answer || [])
+        .map((a) => {
+          const byId = current.options?.find(
+            (opt) => opt.option_id === a
+          );
+          if (byId) return a;
+
+          const byLabel = current.options?.find(
+            (opt) =>
+              opt.label === a ||
+              opt.value === a
+          );
+          return byLabel?.option_id || a;
+        })
+        .filter(Boolean);
+
       if (selectedIds.length > 0) {
         payload.selected_option_ids = selectedIds;
       }
-    }
-    // Handle boolean - MUST use answer_boolean (not selected_option_ids)
-    else if (questionType === "boolean") {
-      // Convert answer to actual boolean
+    } else if (questionType === "boolean") {
       if (answer === true) {
         payload.answer_boolean = true;
       } else if (answer === false) {
         payload.answer_boolean = false;
-      } else if (answer === "true" || answer === "1") {
-        payload.answer_boolean = true;
-      } else if (answer === "false" || answer === "0") {
-        payload.answer_boolean = false;
       } else {
-        // Try to find option_id for Yes/No
-        const boolOption = current.options?.find(
-          opt => opt.label === answer || opt.value === answer
-        );
-        if (boolOption?.option_id) {
-          payload.selected_option_ids = [boolOption.option_id];
-        } else {
-          // Default to false
-          payload.answer_boolean = false;
-        }
+        payload.answer_boolean = false;
       }
-    }
-    // Handle text
-    else if (questionType === "text") {
+    } else if (questionType === "text") {
       payload.answer_text = answer;
-    }
-    // Handle number
-    else if (questionType === "number") {
-      payload.answer_number = typeof answer === 'number' ? answer : parseInt(answer) || parseFloat(answer);
-    }
-    else {
-      console.error("Unknown question type:", questionType);
-      payload.selected_option_ids = answer ? [answer] : [];
+    } else if (questionType === "number") {
+      payload.answer_number =
+        typeof answer === "number"
+          ? answer
+          : parseInt(answer) || parseFloat(answer);
     }
 
     try {
@@ -265,33 +251,30 @@ export default function Fitness({ onBack, onComplete }) {
 
       const data = res.data?.data;
 
-      /* COINS */
       if (!coinsEarned.has(qId)) {
         setCoins((c) => c + COINS_PER_QUESTION);
-        setCoinsEarned((prev) => new Set([...prev, qId]));
+        setCoinsEarned(
+          (prev) => new Set([...prev, qId])
+        );
       }
 
-      /* COMPLETE */
       if (data?.profile_completed) {
         setPhase("success");
         return;
       }
 
-      /* NEXT STEP - Handle category transition (fitness -> medical) */
       if (stepIndex < visibleSteps.length - 1) {
-        // More questions in current category
         setStepIndex((i) => i + 1);
       } else {
-        // Current category complete - check if we need to transition to medical
-        if (currentCategory === 'fitness' && allQuestions.medical.length > 0) {
-          // Transition to medical questions
-          setCurrentCategory('medical');
+        if (
+          currentCategory === "fitness" &&
+          allQuestions.medical.length > 0
+        ) {
+          setCurrentCategory("medical");
           setQuestions(allQuestions.medical);
           setStepIndex(0);
-          // Clear answers for medical questions
           setAnswers({});
         } else {
-          // All categories complete
           setPhase("success");
         }
       }
@@ -300,37 +283,27 @@ export default function Fitness({ onBack, onComplete }) {
     }
   };
 
-  /* =====================================================
-     LOADING
-  ===================================================== */
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black text-white">
-        Loading Physical Profile...
+        Loading...
       </div>
     );
   }
 
-  /* =====================================================
-     SUCCESS SCREEN
-  ===================================================== */
   if (phase === "success") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white text-center">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white text-center px-6">
         <div className="text-5xl mb-4">🎉</div>
         <h2 className="text-2xl font-bold mb-2">
           Physical Profile Completed!
         </h2>
-        <p className="mb-4 text-gray-400">
-          You answered {allQuestions.fitness.length + allQuestions.medical.length} questions
-        </p>
-        <p className="mb-4 text-gray-400">
+        <p className="text-gray-400 mb-2">
           You earned {coins} coins
         </p>
-
         <button
-          onClick={onComplete}   // 👈 parent controls navigation
-          className="px-6 py-3 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full"
+          onClick={onComplete}
+          className="mt-6 px-8 py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"
         >
           Continue
         </button>
@@ -338,137 +311,129 @@ export default function Fitness({ onBack, onComplete }) {
     );
   }
 
-  /* =====================================================
-     MAIN UI
-  ===================================================== */
   return (
-    <div className="min-h-screen bg-[#1a0a2e] text-white px-6 pt-16 pb-32">
+    <div className="min-h-screen bg-black text-white flex flex-col relative px-6 pt-10 pb-32">
 
-      {/* BACK */}
-      {onBack && (
-        <div
-          onClick={onBack}
-          className="absolute top-6 left-6 text-xl cursor-pointer"
-        >
-          ←
-        </div>
-      )}
+      {/* TOP PROGRESS BAR */}
+      <div className="flex items-center justify-between mb-8">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="text-white text-xl"
+          >
+            ←
+          </button>
+        )}
 
-      {/* CATEGORY INDICATOR */}
-      <div className="mb-4 text-center">
-        <span className="inline-block px-3 py-1 bg-white/10 rounded-full text-sm">
-          {currentCategory === 'fitness' ? '💪 Fitness Level' : '🏥 Medical Information'}
-        </span>
-      </div>
-
-      {/* PROGRESS */}
-      <div className="mb-6">
-        <div className="h-2 bg-white/20 rounded-full">
+        <div className="flex-1 mx-4 h-1 bg-gray-700 rounded-full relative">
           <div
-            className="h-2 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full"
+            className="absolute top-0 left-0 h-1 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full"
             style={{ width: `${progress}%` }}
-          />
+          ></div>
         </div>
-        <p className="text-sm mt-2 text-right text-green-400">
-          {progress}%
-        </p>
       </div>
 
-      {/* QUESTION CARD */}
-      <div className="bg-gradient-to-br from-purple-700 to-fuchsia-600 p-6 rounded-3xl shadow-xl">
-        <h2 className="text-xl font-bold mb-6 text-center">
+      {/* CIRCLE PROGRESS */}
+      <div className="flex justify-center mb-6">
+        <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-green-400 to-blue-500 flex items-center justify-center">
+          <div className="absolute w-16 h-16 bg-black rounded-full flex items-center justify-center">
+            <span className="text-lg font-bold">
+              {progress}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* CATEGORY TITLE */}
+      <div className="bg-gradient-to-r from-blue-600 to-cyan-500 rounded-2xl p-6 text-center mb-8">
+        <div className="text-sm uppercase tracking-wide font-semibold mb-2">
+          💪 FITNESS
+        </div>
+        <h2 className="text-lg font-semibold">
           {current?.question_text}
         </h2>
+      </div>
 
-        <div className="space-y-3">
-          {/* BOOLEAN */}
-          {current?.question_type === "boolean" && (
-            <>
-              <button
-                onClick={() =>
-                  setAnswer(current.question_id, true)
-                }
-                className="w-full py-3 rounded-xl bg-white/10"
-              >
-                Yes
-              </button>
-              <button
-                onClick={() =>
-                  setAnswer(current.question_id, false)
-                }
-                className="w-full py-3 rounded-xl bg-white/10"
-              >
-                No
-              </button>
-            </>
-          )}
-
-          {/* SINGLE */}
-          {current?.question_type === "single_choice" &&
-            current.options.map((opt) => (
-              <button
-                key={opt.option_id}
-                onClick={() =>
-                  setAnswer(current.question_id, opt.label)
-                }
-                className="w-full py-3 rounded-xl bg-white/10"
-              >
-                {opt.label}
-              </button>
-            ))}
-
-          {/* MULTI */}
-          {current?.question_type === "multi_choice" &&
-            current.options.map((opt) => (
-              <button
-                key={opt.option_id}
-                onClick={() =>
-                  setAnswer(
-                    current.question_id,
-                    opt.label,
-                    "multi"
-                  )
-                }
-                className="w-full py-3 rounded-xl bg-white/10"
-              >
-                {opt.label}
-              </button>
-            ))}
-
-          {/* TEXT */}
-          {current?.question_type === "text" && (
-            <textarea
-              value={
-                answers[current.question_id] || ""
+      {/* OPTIONS */}
+      <div className="space-y-4">
+        {current?.question_type === "boolean" && (
+          <>
+            <button
+              onClick={() =>
+                setAnswer(current.question_id, true)
               }
-              onChange={(e) =>
+              className="w-full py-4 rounded-xl border border-pink-500 text-white"
+            >
+              Yes
+            </button>
+
+            <button
+              onClick={() =>
+                setAnswer(current.question_id, false)
+              }
+              className="w-full py-4 rounded-xl border border-blue-500 text-white"
+            >
+              No
+            </button>
+          </>
+        )}
+
+        {current?.question_type === "single_choice" &&
+          current.options.map((opt) => (
+            <button
+              key={opt.option_id}
+              onClick={() =>
                 setAnswer(
                   current.question_id,
-                  e.target.value
+                  opt.label
                 )
               }
-              placeholder={current.placeholder}
-              className="w-full p-3 rounded-xl bg-white/10 text-white"
-            />
-          )}
-        </div>
+              className="w-full py-4 rounded-xl border border-gray-600 text-white"
+            >
+              {opt.label}
+            </button>
+          ))}
+
+        {current?.question_type === "multi_choice" &&
+          current.options.map((opt) => (
+            <button
+              key={opt.option_id}
+              onClick={() =>
+                setAnswer(
+                  current.question_id,
+                  opt.label,
+                  "multi"
+                )
+              }
+              className="w-full py-4 rounded-xl border border-gray-600 text-white"
+            >
+              {opt.label}
+            </button>
+          ))}
+
+        {current?.question_type === "text" && (
+          <textarea
+            value={
+              answers[current.question_id] || ""
+            }
+            onChange={(e) =>
+              setAnswer(
+                current.question_id,
+                e.target.value
+              )
+            }
+            className="w-full p-4 rounded-xl bg-gray-800 text-white border border-gray-600"
+          />
+        )}
       </div>
 
-      {/* COINS */}
-      <div className="text-center mt-4 text-yellow-400">
-        🪙 {coins} coins
-      </div>
-
-      {/* CONTINUE */}
+      {/* CONTINUE BUTTON */}
       <button
         disabled={!hasAnswer()}
         onClick={submitAnswer}
-        className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[85%] py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40"
+        className="bottom-6 w-80 mt-8  justify-center items-center py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40"
       >
-        {/* Check if this is the last question across all categories */}
-        {currentCategory === 'medical' && stepIndex >= allQuestions.medical.length - 1
-          ? "Finish 🎉"
-          : "Continue"}
+        Continue
       </button>
     </div>
   );
