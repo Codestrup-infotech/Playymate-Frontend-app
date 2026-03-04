@@ -1,6 +1,33 @@
 import api from '../lib/api/client';
 
 export const authService = {
+
+
+  // ============ LOGIN CONFIG ============
+
+getLoginScreen: async (screenType, platform = "web") => {
+  console.log("Fetching login screen:", screenType);
+
+  const response = await api.get(
+    `/auth/login-config/screens/${screenType}?platform=${platform}`
+  );
+
+  return response;
+},
+
+getAllLoginScreens: async (platform = "web") => {
+  console.log("Fetching all login screens");
+
+  const response = await api.get(
+    `/auth/login-config/screens?platform=${platform}`
+  );
+
+  return response;
+},
+
+
+
+
   // ============ PHONE OTP ============
 
 

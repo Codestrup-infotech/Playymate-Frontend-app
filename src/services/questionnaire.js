@@ -13,6 +13,17 @@ export const questionnaireService = {
 
   // ============ PHYSICAL PROFILE QUESTIONS ============
   
+  async getOnboardingScreen(type = "physical_intro", platform = "web") {
+    return api.get("/onboarding/screens", {
+      params: {
+        type,
+        platform,
+      },
+    });
+  },
+
+
+
   // Get physical profile questions - fetches all categories at once
   getQuestions: (categoryKey = null, sessionId = null) => {
     const params = {};
