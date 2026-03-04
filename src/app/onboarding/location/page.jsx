@@ -265,9 +265,9 @@ export default function OnboardingLocationPage() {
   };
 
   // Handle skip
-  const handleSkip = () => {
-    router.push('/onboarding/photo');
-  };
+  // const handleSkip = () => {
+  //   router.push('/onboarding/photo');
+  // };
 
   // Map URL
   const mapUrl = coords
@@ -277,7 +277,9 @@ export default function OnboardingLocationPage() {
     : `https://www.google.com/maps?q=India&output=embed`;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <> 
+    <div className='bg-black flex justify-center items-center'> 
+    <div className="min-h-screen w-96 bg-black text-white flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 p-4">
         <button
@@ -295,9 +297,9 @@ export default function OnboardingLocationPage() {
       <div className="flex-1 flex flex-col">
         {/* Title */}
         <div className="px-4 text-center mb-4">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 mb-3">
+          {/* <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 mb-3">
             <MapPin className="w-7 h-7 text-white" />
-          </div>
+          </div> */}
           <h1 className="text-2xl font-bold">
             Where are you{' '}
             <span className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent">
@@ -412,7 +414,7 @@ export default function OnboardingLocationPage() {
         </div>
 
         {/* Skip Button */}
-        <div className="p-4">
+        {/* <div className="p-4">
           <button
             type="button"
             onClick={handleSkip}
@@ -420,8 +422,9 @@ export default function OnboardingLocationPage() {
           >
             Skip for now
           </button>
-        </div>
+        </div> */}
       </div>
-    </div>
+    </div> </div>
+    </>
   );
 }

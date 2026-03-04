@@ -1403,11 +1403,11 @@ case "intro": {
   else highlightIdx = [0, 2];
 
   return (
-    <div className="relative min-h-screen py-10 flex flex-col justify-center items-center text-center px-4">
+    <div className="relative  py-10 flex flex-col justify-center items-center text-center px-4">
 
       {/* Image Card */}
       <div
-        className={`w-[280px] h-[380px] rounded-3xl border-2 ${color.border} ${color.shadow} overflow-hidden`}
+        className={`w-[250px] h-[316px] rounded-3xl border-2 ${color.border} ${color.shadow} overflow-hidden`}
       >
         <img
           src={image_url}

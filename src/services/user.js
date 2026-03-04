@@ -53,7 +53,7 @@ api.post("/api/v1/auth/signup/email-password", {
 
   // Get profile role config (form fields) by role - NEW ENDPOINT
   getProfileRoleConfig: (role) => 
-    api.get('/users/profile-role-config'),
+    role ? api.get(`/users/profile-role-config/${role}`) : api.get('/users/profile-role-config'),
 
   // ============ PROFILE DETAILS ============
   setProfileDetails: (roleType, details) => 

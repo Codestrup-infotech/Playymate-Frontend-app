@@ -20,42 +20,72 @@ export default function PhysicalPreferences() {
   const [apiFetched, setApiFetched] = useState(false);
 
   // Fetch onboarding screen data on mount
-  useEffect(() => {
-    const fetchScreenData = async () => {
-      try {
-        setLoading(true);
+  // useEffect(() => {
+  //   const fetchScreenData = async () => {
+  //     try {
+  //       setLoading(true);
         
-        // API: GET /api/v1/onboarding/screens?type=physical_intro
-        const response = await api.get("/onboarding/screens", {
-          params: { type: "physical_intro" },
-        });
+  //       // API: GET /api/v1/onboarding/screens?type=physical_intro
+  //       const response = await api.get("/onboarding/screens", {
+  //         params: { type: "physical_intro" },
+  //       });
         
-        if (response.data?.data?.screens?.[0]) {
-          setScreenData(response.data.data.screens[0]);
-        }
+  //       if (response.data?.data?.screens?.[0]) {
+  //         setScreenData(response.data.data.screens[0]);
+  //       }
         
-        // After API success, wait 3 seconds then auto-proceed
-        setApiFetched(true);
-        setTimeout(() => {
-          setIntroAgree(true); // Auto-check the consent checkbox
-          setLoading(false);
-          // Auto-trigger the continue after checking checkbox
-          setTimeout(() => {
-            goNext();
-          }, 500); // Small delay to ensure checkbox is checked
-        }, 3000);
+  //       // After API success, wait 3 seconds then auto-proceed
+  //       setApiFetched(true);
+  //       setTimeout(() => {
+  //         setIntroAgree(true); // Auto-check the consent checkbox
+  //         setLoading(false);
+  //         // Auto-trigger the continue after checking checkbox
+  //         setTimeout(() => {
+  //           goNext();
+  //         }, 500); // Small delay to ensure checkbox is checked
+  //       }, 3000);
         
-      } catch (err) {
-        console.error("Failed to fetch screen data:", err);
-        // Wait 5 seconds before showing error to give backend time to respond
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        setError(err.message || "Failed to load screen data");
-        setLoading(false);
-      }
-    };
+  //     } catch (err) {
+  //       console.error("Failed to fetch screen data:", err);
+  //       // Wait 5 seconds before showing error to give backend time to respond
+  //       await new Promise(resolve => setTimeout(resolve, 5000));
+  //       setError(err.message || "Failed to load screen data");
+  //       setLoading(false);
+  //     }
+  //   };
 
-    fetchScreenData();
-  }, []);
+  //   fetchScreenData();
+  // }, []);
+
+ useEffect(() => {
+  const fetchScreenData = async () => {
+    try {
+      setLoading(true);
+
+      const response = await questionnaireService.getOnboardingScreen(
+        "physical_intro",
+        "mobile"
+      );
+
+      if (response.data?.data?.screens?.[0]) {
+        setScreenData(response.data.data.screens[0]);
+      }
+
+      setLoading(false);
+
+      // show GIF loader for 3 sec
+   setTimeout(() => {
+  setShowLoader(false);
+}, 3000);
+    } catch (err) {
+      console.error("Failed to fetch screen:", err);
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  fetchScreenData();
+}, []);
 
   const [introAgree, setIntroAgree] = useState(false);
   const [weightAgree, setWeightAgree] = useState(false);
@@ -64,18 +94,69 @@ export default function PhysicalPreferences() {
   const [consentError, setConsentError] = useState(null);
   const [answerLoading, setAnswerLoading] = useState(false);
   const [answerError, setAnswerError] = useState(null);
-
-  // Submit answer to API
-  const submitAnswer = async (questionId, answerNumber = null, selectedOptionIds = null) => {
+const [showLoader, setShowLoader] = useState(true);
+  // Submit answer to API - handles all question types based on question_data
+  const submitAnswer = async (questionId, answer, questionData = null) => {
     try {
       setAnswerLoading(true);
       setAnswerError(null);
       
-      if (answerNumber !== null) {
-        await questionnaireService.submitNumberAnswer(questionId, answerNumber);
-      } else if (selectedOptionIds) {
-        await questionnaireService.submitSingleChoiceAnswer(questionId, selectedOptionIds);
+      // Get question type from questionData or determine from answer
+      const questionType = questionData?.question_type || 'number';
+      
+      let payload = {};
+      
+      // Handle based on question type from API
+      if (questionType === 'single_select') {
+        // For single select - MUST use selected_option_ids with option_id
+        let optionId = null;
+        
+        // Check if answer is already option_id
+        if (answer && typeof answer === 'string') {
+          const byId = questionData?.options?.find(opt => opt.option_id === answer);
+          if (byId) {
+            optionId = answer;
+          }
+        }
+        
+        // If not found by ID, try by label or value
+        if (!optionId) {
+          const byLabel = questionData?.options?.find(
+            opt => opt.label === answer || opt.value === answer
+          );
+          if (byLabel?.option_id) {
+            optionId = byLabel.option_id;
+          }
+        }
+        
+        if (optionId) {
+          payload.selected_option_ids = [optionId];
+        } else {
+          console.error("No option_id found for:", answer);
+          return false;
+        }
+      } else if (questionType === 'number') {
+        // For number - use answer_number
+        payload.answer_number = typeof answer === 'number' ? answer : parseInt(answer) || parseFloat(answer);
+      } else if (questionType === 'text') {
+        payload.answer_text = answer;
+      } else if (questionType === 'boolean') {
+        // For boolean - use answer_boolean
+        payload.answer_boolean = answer === true || answer === 'true' || answer === 1;
+      } else {
+        // Default fallback - try as single select
+        if (answer && typeof answer === 'string') {
+          const option = questionData?.options?.find(
+            opt => opt.label === answer || opt.value === answer
+          );
+          if (option?.option_id) {
+            payload.selected_option_ids = [option.option_id];
+          }
+        }
       }
+      
+      // Call the API with the payload
+      await questionnaireService.submitAnswer(questionId, payload);
       
       return true;
     } catch (err) {
@@ -161,17 +242,19 @@ export default function PhysicalPreferences() {
     </div>
   ) : (
     <>
-      {step === 1 && (
-        <Intro
-          agree={introAgree}
-          setAgree={setIntroAgree}
-          onNext={goNext}
-          disabled={nextDisabled || consentLoading}
-          screenData={screenData}
-          loading={consentLoading}
-          error={consentError}
-        />
-      )}
+     {step === 1 && showLoader ? (
+  <IntroLoader image={screenData?.image_url} />
+) : step === 1 ? (
+  <Intro
+    agree={introAgree}
+    setAgree={setIntroAgree}
+    onNext={goNext}
+    disabled={nextDisabled}
+    screenData={screenData}
+    loading={consentLoading}
+    error={consentError}
+  />
+) : null}
 
       {step === 2 && (
         <WeightStep
@@ -183,7 +266,7 @@ export default function PhysicalPreferences() {
           onNext={async () => {
             const weightQuestion = basicMetricsQuestions.find(q => q.question_id === "weight");
             if (weightQuestion) {
-              await submitAnswer(weightQuestion.question_id, weight);
+              await submitAnswer(weightQuestion.question_id, weight, weightQuestion);
             }
             setStep(3);
           }}
@@ -202,7 +285,7 @@ export default function PhysicalPreferences() {
           onNext={async () => {
             const heightQuestion = basicMetricsQuestions.find(q => q.question_id === "height");
             if (heightQuestion) {
-              await submitAnswer(heightQuestion.question_id, height);
+              await submitAnswer(heightQuestion.question_id, height, heightQuestion);
             }
             setStep(4);
           }}
@@ -223,17 +306,8 @@ export default function PhysicalPreferences() {
             );
 
             if (bloodQuestion && blood) {
-              const selectedOption = bloodQuestion.options?.find(
-                opt => opt.value === blood || opt.label === blood
-              );
-
-              if (selectedOption) {
-                await submitAnswer(
-                  bloodQuestion.question_id,
-                  null,
-                  [selectedOption.option_id]
-                );
-              }
+              // Pass the blood value and questionData
+              await submitAnswer(bloodQuestion.question_id, blood, bloodQuestion);
             }
 
             setStep(5); // ✅ move to Fitness
@@ -259,31 +333,109 @@ export default function PhysicalPreferences() {
 
 /* ---------------- STEP 1: INTRO ---------------- */
 
+// function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }) {
+//   // Use API data from GET /api/v1/onboarding/screens?type=physical_intro
+//   // API Response: { screens: [{ title, description, media, cta_buttons }] }
+//   const title = screenData?.title || "Physical Profile";
+//   const description = screenData?.description || "Help us understand your physical attributes";
+  
+//   // Static values (not in API response)
+//   const securityNote = "Your information is secure and never shared";
+//   const checkboxLabel = "I understand and agree to answer questions about my physical activity preferences";
+  
+//   // Get CTA button label from API or use default
+//   const ctaLabel = screenData?.cta_buttons?.[0]?.label || "Continue";
+
+//   return (
+//     <div className="flex flex-col justify-between py-10 ">
+//       <div className="text-white text-xl cursor-pointer mb-6 ">←</div>
+//       <div className="rounded-2xl border border-blue-500/40 bg-[#1c1c1c] py-12 px-4 text-center">
+//         <h2 className="text-4xl font-bold mb-5 bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+//           {title}
+//         </h2>
+//         <p className="text-sm text-gray-300 mb-5 font-Poppins ">
+//           {description}
+//         </p>
+
+//         <p className="text-[14px] font-Poppins text-gray-400 mb-4 ">{securityNote}</p>
+
+//         <label className="flex items-start gap-3 text-xs text-gray-300 text-left font-Poppins">
+//           <input
+//             type="checkbox"
+//             checked={agree}
+//             onChange={(e) => setAgree(e.target.checked)}
+//             className="mt-1 accent-pink-500"
+//           />
+//           <span>{checkboxLabel}</span>
+//         </label>
+
+
+//       </div>
+
+//       <div>
+//         <p className="font-Poppins text-center text-[#697586] py-6">By continuing, you agree to Playmate’s Term & Privacy Policy.</p>
+//       </div>
+
+//       {error && (
+//         <p className="font-Poppins text-center text-red-400 py-2 text-sm">{error}</p>
+//       )}
+
+//       <button
+//         onClick={onNext}
+//         disabled={disabled}
+//         className={`w-full py-4 rounded-full transition font-Poppins ${disabled
+//             ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+//             : "bg-gradient-to-r from-pink-500 to-orange-400 text-white"
+//           }`}
+//       >
+//         {loading ? "Loading..." : ctaLabel}
+//       </button>
+//     </div>
+//   );
+// }
+
+
+function IntroLoader({ image }) {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-black">
+      <img
+        src={image}
+        alt="loading"
+        className="w-48 h-48 object-contain rounded-xl"
+      />
+    </div>
+  );
+}
+
+
 function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }) {
-  // Use API data from GET /api/v1/onboarding/screens?type=physical_intro
-  // API Response: { screens: [{ title, description, media, cta_buttons }] }
   const title = screenData?.title || "Physical Profile";
-  const description = screenData?.description || "Help us understand your physical attributes";
-  
-  // Static values (not in API response)
+  const description =
+    screenData?.description || "Help us understand your physical attributes";
+
   const securityNote = "Your information is secure and never shared";
-  const checkboxLabel = "I understand and agree to answer questions about my physical activity preferences";
-  
-  // Get CTA button label from API or use default
-  const ctaLabel = screenData?.cta_buttons?.[0]?.label || "Continue";
+
+  const checkboxLabel =
+    "I understand and agree to answer questions about my physical activity preferences";
 
   return (
-    <div className="flex flex-col justify-between py-10 ">
-      <div className="text-white text-xl cursor-pointer mb-6 ">←</div>
+    <div className="flex flex-col justify-between py-10">
+      
+      <div className="text-white text-xl cursor-pointer mb-6">←</div>
+
       <div className="rounded-2xl border border-blue-500/40 bg-[#1c1c1c] py-12 px-4 text-center">
+
         <h2 className="text-4xl font-bold mb-5 bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
           {title}
         </h2>
-        <p className="text-sm text-gray-300 mb-5 font-Poppins ">
+
+        <p className="text-sm text-gray-300 mb-5 font-Poppins">
           {description}
         </p>
 
-        <p className="text-[14px] font-Poppins text-gray-400 mb-4 ">{securityNote}</p>
+        <p className="text-[14px] text-gray-400 mb-4 font-Poppins">
+          {securityNote}
+        </p>
 
         <label className="flex items-start gap-3 text-xs text-gray-300 text-left font-Poppins">
           <input
@@ -295,31 +447,26 @@ function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }
           <span>{checkboxLabel}</span>
         </label>
 
-
-      </div>
-
-      <div>
-        <p className="font-Poppins text-center text-[#697586] py-6">By continuing, you agree to Playmate’s Term & Privacy Policy.</p>
       </div>
 
       {error && (
-        <p className="font-Poppins text-center text-red-400 py-2 text-sm">{error}</p>
+        <p className="text-center text-red-400 py-2 text-sm">{error}</p>
       )}
 
       <button
         onClick={onNext}
         disabled={disabled}
-        className={`w-full py-4 rounded-full transition font-Poppins ${disabled
+        className={`w-full py-4 rounded-full transition font-Poppins ${
+          disabled
             ? "bg-gray-700 text-gray-400 cursor-not-allowed"
             : "bg-gradient-to-r from-pink-500 to-orange-400 text-white"
-          }`}
+        }`}
       >
-        {loading ? "Loading..." : ctaLabel}
+        {loading ? "Loading..." : "Continue"}
       </button>
     </div>
   );
 }
-
 /* ---------------- STEP 2: WEIGHT (SCROLL LOGIC) ---------------- */
 
 

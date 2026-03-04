@@ -1,35 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  getCategories,
+  startQuestionnaireSession,
   getCategoryIntro,
   getCategoryItems,
-  startQuestionnaireSession,
-  getCategoryItems as fetchItems,
+  getItemQuestions,
+  submitAnswer,
+  saveSelection,
 } from "@/lib/api/categoryApi";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
 export default function CategorySelection() {
+  const router = useRouter();
+
   const [sessionId, setSessionId] = useState(null);
+  const [currentCategoryKey, setCurrentCategoryKey] = useState(null);
 
-  const [categories, setCategories] = useState([]);
-  const [categoryIndex, setCategoryIndex] = useState(0);
-
-  const [items, setItems] = useState([]);
-  const [selectedItems, setSelectedItems] = useState([]);
+  const [introData, setIntroData] = useState(null);
+  const [itemsData, setItemsData] = useState(null);
 
   const [questions, setQuestions] = useState([]);
   const [currentItemKey, setCurrentItemKey] = useState(null);
   const [qIndex, setQIndex] = useState(0);
 
   const [screen, setScreen] = useState("loading");
-  const [progress, setProgress] = useState(0);
+  const [showPopup, setShowPopup] = useState(false);
 
-  const currentCategory = categories?.[categoryIndex];
+  const token =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem("accessToken")
+      : null;
 
-  /* ---------------- INIT ---------------- */
+  /* ================= INIT ================= */
 
   useEffect(() => {
     initialize();
@@ -38,259 +41,402 @@ export default function CategorySelection() {
   async function initialize() {
     try {
       setScreen("loading");
-
-      const session = await startQuestionnaireSession(
-        localStorage.getItem("access_token"),
-        true
-      );
-
+      
+      const session = await startQuestionnaireSession(token, false);
       setSessionId(session.session_id);
-
-      const categoryData = await getCategories("preference");
-      setCategories(categoryData);
-
-      setScreen("intro");
+      setCurrentCategoryKey(session.current_category_key);
+      
+      // Load the first category intro
+      await loadIntro(session.current_category_key);
     } catch (err) {
-      console.error(err);
+      console.error("Initialize error:", err);
+      setScreen("error");
     }
   }
 
-  /* ---------------- CATEGORY INTRO ---------------- */
+  /* ================= INTRO ================= */
 
-  useEffect(() => {
-    if (currentCategory && sessionId) {
-      loadCategoryIntro(currentCategory.key);
-    }
-  }, [categoryIndex, sessionId]);
-
-  async function loadCategoryIntro(categoryKey) {
-    setScreen("intro");
-
-    await new Promise((resolve) =>
-      setTimeout(resolve, 4000)
-    );
-
-    const data = await getCategoryItems(
-      categoryKey,
-      sessionId
-    );
-
-    setItems(data.items);
-    setScreen("items");
-  }
-
-  /* ---------------- ITEM SELECTION ---------------- */
-
-  function toggleItem(key) {
-    if (selectedItems.includes(key)) {
-      setSelectedItems((prev) =>
-        prev.filter((k) => k !== key)
-      );
-    } else {
-      setSelectedItems((prev) => [...prev, key]);
+  async function loadIntro(categoryKey) {
+    try {
+      const intro = await getCategoryIntro(categoryKey);
+      setIntroData(intro);
+      setScreen("intro");
+      
+      // Don't auto-load items - show "Continue" button instead
+      // This ensures user sees the intro content
+    } catch (err) {
+      console.error("Intro error:", err);
+      // If intro fails, still load items
+      loadItems(categoryKey);
     }
   }
 
-  async function saveSelection() {
-    const response = await fetch(
-      `${BASE_URL}/questionnaire/selection`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem(
-            "access_token"
-          )}`,
-        },
-        body: JSON.stringify({
-          session_id: sessionId,
-          category_key: currentCategory.key,
-          selected_items: selectedItems,
-        }),
-      }
-    );
-
-    const json = await response.json();
-
-    if (json.status === "success") {
-      loadQuestions(selectedItems[0]);
-    }
+  // Manual continue from intro - explicit user action
+  function handleIntroContinue() {
+    loadItems(currentCategoryKey);
   }
 
-  /* ---------------- QUESTIONS ---------------- */
+  /* ================= LOAD ITEMS ================= */
 
-  async function loadQuestions(itemKey) {
-    setCurrentItemKey(itemKey);
-
-    const res = await fetch(
-      `${BASE_URL}/questionnaire/items/${itemKey}/questions?session_id=${sessionId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem(
-            "access_token"
-          )}`,
-        },
-      }
-    );
-
-    const json = await res.json();
-
-    setQuestions(json.data.questions);
-    setQIndex(0);
-    setScreen("questions");
-  }
-
-  async function submitAnswer(optionId) {
-    const question = questions[qIndex];
-
-    await fetch(
-      `${BASE_URL}/questionnaire/answer`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem(
-            "access_token"
-          )}`,
-        },
-        body: JSON.stringify({
-          session_id: sessionId,
-          item_key: currentItemKey,
-          question_id: question.question_id,
-          selected_option_ids: [optionId],
-        }),
-      }
-    );
-
-    if (qIndex < questions.length - 1) {
-      setQIndex((prev) => prev + 1);
-      setProgress(
-        Math.round(
-          ((qIndex + 2) / questions.length) * 100
-        )
-      );
-    } else {
+  async function loadItems(categoryKey) {
+    try {
+      const data = await getCategoryItems(categoryKey, sessionId);
+      setItemsData(data);
+      setScreen("items");
+    } catch (err) {
+      console.error("Failed to load items:", err);
+      // Show error but still allow user to see items
+      setItemsData({ items: [], category_title: categoryKey, max_selection: 0 });
       setScreen("items");
     }
   }
 
-  /* ---------------- CATEGORY THEME ---------------- */
+  /* ================= ITEM CLICK ================= */
 
-  const categoryThemes = {
-    sports:
-      "bg-gradient-to-r from-pink-500 to-orange-400",
-    hobbies:
-      "bg-gradient-to-r from-blue-500 to-yellow-400",
-    music:
-      "bg-gradient-to-r from-purple-500 to-pink-400",
-  };
+  async function handleItemClick(itemKey) {
+    try {
+      // First, set the current item key (this is crucial for the context)
+      setCurrentItemKey(itemKey);
+      console.log('Item clicked:', itemKey);
 
-  const theme =
-    categoryThemes[currentCategory?.key] ||
-    "bg-gradient-to-r from-indigo-500 to-cyan-500";
+      // CRITICAL: Call saveSelection BEFORE getting questions
+      // This sets the session's current_item_key to this item
+      const selectionRes = await saveSelection(token, sessionId, currentCategoryKey, itemKey);
+      console.log('Save selection response:', selectionRes);
 
-  /* ---------------- RENDER ---------------- */
+      // Now fetch questions - this will set the session context for this item
+      const data = await getItemQuestions(token, itemKey, sessionId);
+      console.log('Questions response:', data);
+
+      // Handle different response structures
+      let questionsList = [];
+      if (data.questions) {
+        questionsList = data.questions;
+      } else if (Array.isArray(data)) {
+        questionsList = data;
+      } else if (data.data?.questions) {
+        questionsList = data.data.questions;
+      }
+      
+      console.log('Questions list:', questionsList);
+      
+      setQuestions(questionsList);
+      setQIndex(0);
+      setScreen("questions");
+    } catch (err) {
+      console.error("Question error:", err);
+    }
+  }
+
+  /* ================= SUBMIT ANSWER ================= */
+
+  async function handleAnswer(optionId) {
+    // Safety check
+    if (!questions || questions.length === 0 || !questions[qIndex]) {
+      console.error('No questions available');
+      setScreen("items");
+      return;
+    }
+    
+    const question = questions[qIndex];
+
+    // Store session info in local variables at the start to avoid state issues
+    const sessionIdAtCompletion = sessionId;
+    const categoryKeyAtCompletion = currentCategoryKey;
+    const itemKeyAtCompletion = currentItemKey;
+    
+    try {
+      // CRITICAL: Ensure we use the correct currentItemKey that was set when loading questions
+      // This item_key must match what was used in getItemQuestions
+      console.log('Submitting answer with:', {
+        session_id: sessionIdAtCompletion,
+        category_key: categoryKeyAtCompletion,
+        item_key: itemKeyAtCompletion,
+        question_id: question.question_id
+      });
+      
+      const submitRes = await submitAnswer(token, {
+        session_id: sessionIdAtCompletion,
+        category_key: categoryKeyAtCompletion,
+        item_key: itemKeyAtCompletion,
+        question_id: question.question_id,
+        selected_option_ids: [optionId],
+      });
+      
+      console.log('Submit answer response:', submitRes);
+
+      // Check if item is complete based on response
+      const isItemComplete = submitRes?.item_complete === true;
+      const isCategoryComplete = submitRes?.category_complete === true;
+      const nextAction = submitRes?.next_action;
+      const nextCategoryKey = submitRes?.next_category_key;
+      
+      console.log('Item complete from response:', isItemComplete);
+      console.log('Category complete from response:', isCategoryComplete);
+      console.log('Next action:', nextAction);
+      console.log('Next category key:', nextCategoryKey);
+
+      // Next question inside same item (if item not complete yet)
+      if (!isItemComplete && qIndex < questions.length - 1) {
+        setQIndex((prev) => prev + 1);
+        return;
+      }
+
+      // ===== ITEM COMPLETED - All questions answered =====
+      console.log('All questions answered for item:', itemKeyAtCompletion);
+      console.log('Session info - sessionId:', sessionIdAtCompletion, 'categoryKey:', categoryKeyAtCompletion);
+      
+      // Show popup after item completed
+      setShowPopup(true);
+      setTimeout(() => setShowPopup(false), 1500);
+
+      // Use the submitAnswer response directly to determine next steps
+      // This is more reliable than calling getCategoryItems
+      if (isCategoryComplete && nextCategoryKey) {
+        console.log('Category complete! Moving to next category:', nextCategoryKey);
+        
+        // Move to next category
+        setCurrentCategoryKey(nextCategoryKey);
+        
+        // Load intro for next category
+        try {
+          const nextIntro = await getCategoryIntro(nextCategoryKey);
+          console.log('Next category intro:', nextIntro);
+          setIntroData(nextIntro);
+        } catch (introErr) {
+          console.error('Failed to load next intro:', introErr);
+        }
+        setScreen("intro");
+        return;
+      }
+      
+      if (isCategoryComplete && !nextCategoryKey) {
+        console.log('All categories complete! Going to home');
+        router.push("/home");
+        return;
+      }
+
+      // If category is not complete, refresh the items list
+      console.log('Category not complete, refreshing category data...');
+      
+      // Small delay to ensure backend processes everything
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log('Calling getCategoryItems with:', { categoryKey: categoryKeyAtCompletion, sessionId: sessionIdAtCompletion });
+      
+      const refreshed = await getCategoryItems(
+        categoryKeyAtCompletion,
+        sessionIdAtCompletion
+      );
+
+      console.log('Raw refresh response:', refreshed);
+
+      console.log('Refreshed category data:', refreshed);
+
+      // Check various fields to determine completion status
+      const selectedCount = refreshed.selected_count;
+      const completedCount = refreshed.completed_count;
+      const maxSelection = refreshed.max_selection;
+      const completedItems = refreshed.completed_items || [];
+      const categoryComplete = refreshed.category_complete;
+
+      console.log('Counts - Selected:', selectedCount, 'Completed:', completedCount, 'Max:', maxSelection);
+      console.log('Completed items:', completedItems);
+      console.log('Category complete:', categoryComplete);
+
+      // Check if we have completed enough items (either via selected_count or completed_count)
+      const effectiveCompletedCount = completedCount || completedItems.length || 0;
+      
+      // ===== CASE 1: Category NOT complete =====
+      // Either we haven't selected max items yet, or category is not complete
+      if (!categoryComplete && effectiveCompletedCount < maxSelection) {
+        console.log('Category not complete, showing items');
+        setItemsData(refreshed);
+        setScreen("items");
+        return;
+      }
+
+      // ===== CASE 2: Category Complete =====
+      if (categoryComplete === true) {
+        const nextCategoryKey = refreshed.next_category_key;
+        console.log('Category complete, next category:', nextCategoryKey);
+
+        // 🔥 ALL CATEGORIES FINISHED → GO TO HOME
+        if (!nextCategoryKey) {
+          console.log('No more categories, going to home');
+          router.push("/home");
+          return;
+        }
+
+        // Move to next category
+        setCurrentCategoryKey(nextCategoryKey);
+
+        // Load intro for next category
+        const nextIntro = await getCategoryIntro(nextCategoryKey);
+        console.log('Next category intro:', nextIntro);
+        setIntroData(nextIntro);
+        setScreen("intro");
+
+        // Don't auto-load items - let user tap Continue
+        return;
+      }
+
+      // Fallback: If we've completed at least 1 item and max is reached, try next category
+      if (effectiveCompletedCount >= maxSelection) {
+        const nextCategoryKey = refreshed.next_category_key;
+        if (nextCategoryKey) {
+          console.log('Max items completed, moving to next category:', nextCategoryKey);
+          setCurrentCategoryKey(nextCategoryKey);
+          const nextIntro = await getCategoryIntro(nextCategoryKey);
+          setIntroData(nextIntro);
+          setScreen("intro");
+          return;
+        }
+      }
+
+      // Default: return to items screen
+      console.log('Default: showing items screen');
+      setItemsData(refreshed);
+      setScreen("items");
+    } catch (err) {
+      console.error("Submit answer error:", err);
+      alert("Failed to save answer. Please try again.");
+    }
+  }
+
+  /* ================= UI ================= */
 
   if (screen === "loading") {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
-        Loading...
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-pulse text-pink-500 text-xl mb-2">Loading...</div>
+          <p className="text-gray-400 text-sm">Setting up your preferences</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "error") {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4">
+        <div className="text-red-500 text-5xl mb-4">⚠️</div>
+        <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
+        <p className="text-gray-400 text-center mb-6">Failed to load questionnaire. Please try again.</p>
+        <button
+          onClick={() => initialize()}
+          className="px-8 py-3 bg-pink-500 rounded-full text-white font-semibold"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 relative">
 
-      {/* ITEMS SCREEN */}
-      {screen === "items" && (
-        <div className="w-full max-w-md space-y-6">
-          <h1 className="text-center text-2xl font-semibold">
-            {currentCategory?.name}
+      {/* INTRO */}
+      {screen === "intro" && introData && (
+        <div className="max-w-md w-full text-center space-y-6">
+          <h1 className="text-3xl font-bold">
+            {introData?.intro?.title_text}
           </h1>
 
-          {items.map((item) => (
-            <button
-              key={item.key}
-              onClick={() => toggleItem(item.key)}
-              className={`w-full py-4 rounded-xl border transition ${
-                selectedItems.includes(item.key)
-                  ? "border-pink-500 bg-pink-500/10"
-                  : "border-gray-600 hover:bg-white/5"
-              }`}
-            >
-              {item.name}
-            </button>
-          ))}
+          {introData?.intro?.media_url && (
+            <img
+              src={introData.intro.media_url}
+              alt="intro"
+              className="w-full rounded-lg"
+            />
+          )}
 
+          {introData?.intro?.subtitle_text && (
+            <p className="text-gray-300">
+              {introData.intro.subtitle_text}
+            </p>
+          )}
+
+          {/* Continue button - user must tap to proceed */}
           <button
-            onClick={saveSelection}
-            className="w-full py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-black font-semibold"
+            onClick={handleIntroContinue}
+            className="w-full py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-black font-semibold text-lg"
           >
-            Continue
+            Get Started
           </button>
         </div>
       )}
 
-      {/* QUESTIONS SCREEN */}
-      {screen === "questions" && questions.length > 0 && (
-        <div className="w-full max-w-md space-y-6">
+      {/* ITEMS */}
+      {screen === "items" && itemsData && (
+        <div className="max-w-md w-full space-y-4">
 
-          {/* Progress Circle */}
-          <div className="flex justify-center">
-            <div className="relative w-20 h-20">
-              <svg className="w-20 h-20">
-                <circle
-                  cx="40"
-                  cy="40"
-                  r="35"
-                  stroke="gray"
-                  strokeWidth="5"
-                  fill="none"
-                />
-                <circle
-                  cx="40"
-                  cy="40"
-                  r="35"
-                  stroke="lime"
-                  strokeWidth="5"
-                  fill="none"
-                  strokeDasharray={220}
-                  strokeDashoffset={
-                    220 - (220 * progress) / 100
-                  }
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                {progress}%
-              </div>
-            </div>
-          </div>
+          <h2 className="text-2xl font-semibold text-center">
+            {itemsData.category_title}
+          </h2>
 
-          {/* Question Card */}
-          <div
-            className={`rounded-2xl p-6 text-center ${theme}`}
-          >
-            <h2 className="text-lg font-semibold mb-4">
-              {questions[qIndex].question_text}
-            </h2>
-          </div>
+          <p className="text-center text-gray-400">
+            Select up to {itemsData.max_selection}{" "}
+            {itemsData.category_title}
+          </p>
 
-          {/* Options */}
-          {questions[qIndex].options.map((opt) => (
+          {itemsData.items.map((item) => (
             <button
-              key={opt.option_id}
-              onClick={() =>
-                submitAnswer(opt.option_id)
-              }
-              className="w-full py-3 rounded-xl border border-pink-500 hover:bg-pink-500/10"
+              key={item.key}
+              disabled={item.disabled || item.status === "completed"}
+              onClick={() => handleItemClick(item.key)}
+              className={`w-full py-3 rounded-lg border transition
+                ${
+                  item.disabled || item.status === "completed"
+                    ? "bg-gray-700 border-gray-600 opacity-60 cursor-not-allowed"
+                    : "border-pink-500 hover:bg-pink-500/20"
+                }`}
             >
-              {opt.label}
+              {item.icon || '🏃'} {item.title || item.name || item.key}
             </button>
           ))}
 
-          <button className="w-full mt-6 py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-black font-semibold">
-            Continue
+        </div>
+      )}
+
+      {/* QUESTIONS */}
+      {screen === "questions" && questions && questions.length > 0 && (
+        <div className="max-w-md w-full space-y-6">
+          {questions[qIndex] ? (
+            <>
+              <div className="p-6 rounded-xl bg-gradient-to-r from-pink-500 to-orange-400 text-black text-center">
+                {questions[qIndex].question_text}
+              </div>
+
+              {questions[qIndex].options && questions[qIndex].options.map((opt) => (
+                <button
+                  key={opt.option_id}
+                  onClick={() => handleAnswer(opt.option_id)}
+                  className="w-full py-3 border border-pink-500 rounded-lg"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </>
+          ) : (
+            <div className="text-center text-gray-400">
+              No questions available for this item
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* No questions available */}
+      {screen === "questions" && (!questions || questions.length === 0) && (
+        <div className="max-w-md w-full text-center space-y-4">
+          <p className="text-gray-400">No questions available for this item</p>
+          <button
+            onClick={() => {
+              setScreen("items");
+            }}
+            className="px-6 py-3 bg-pink-500 rounded-full"
+          >
+            Back to Items
           </button>
         </div>
       )}

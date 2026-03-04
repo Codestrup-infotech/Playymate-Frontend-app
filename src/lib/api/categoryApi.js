@@ -2,79 +2,44 @@ const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "https://api-dev.playymate.com/api/v1";
 
-/* -------------------------------------------------------
-   Helper: Handle API Response
-------------------------------------------------------- */
+/* ======================================================
+   HANDLE RESPONSE (Supports success OR status format)
+====================================================== */
 
 async function handleResponse(response) {
   const data = await response.json();
 
-  if (!response.ok || data.status !== "success") {
+  const isSuccess =
+    data.success === true ||
+    data.status === "success";
+
+  if (!response.ok || !isSuccess) {
+    console.error("API ERROR RESPONSE:", data);
     throw new Error(
-      data?.message || "API request failed"
+      data?.message ||
+      data?.error ||
+      "API request failed"
     );
   }
 
-  return data.data;
+  return data.data || data;
 }
 
 function authHeaders(token) {
+  if (!token) {
+    throw new Error("Authentication token missing");
+  }
+
   return {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
   };
 }
 
-/* -------------------------------------------------------
-   6.4 Get Categories
-------------------------------------------------------- */
-
-export async function getCategories(
-  categoryType = "preference"
-) {
-  const res = await fetch(
-    `${BASE_URL}/questionnaire/categories?category_type=${categoryType}`
-  );
-
-  const data = await handleResponse(res);
-  return data.categories || [];
-}
-
-/* -------------------------------------------------------
-   6.5 Get Category Intro
-------------------------------------------------------- */
-
-export async function getCategoryIntro(categoryKey) {
-  const res = await fetch(
-    `${BASE_URL}/questionnaire/categories/${categoryKey}/intro`
-  );
-
-  const data = await handleResponse(res);
-  return data.intro;
-}
-
-/* -------------------------------------------------------
-   6.6 Get Category Items
-------------------------------------------------------- */
-
-export async function getCategoryItems(
-  categoryKey,
-  sessionId = null
-) {
-  const query = sessionId
-    ? `?session_id=${sessionId}`
-    : "";
-
-  const res = await fetch(
-    `${BASE_URL}/questionnaire/categories/${categoryKey}/items${query}`
-  );
-
-  return await handleResponse(res);
-}
-
-/* -------------------------------------------------------
-   6.7 Start Questionnaire Session
-------------------------------------------------------- */
+/* ======================================================
+   START SESSION
+   POST /questionnaire/session/start
+====================================================== */
 
 export async function startQuestionnaireSession(
   token,
@@ -94,33 +59,66 @@ export async function startQuestionnaireSession(
   return await handleResponse(res);
 }
 
-/* -------------------------------------------------------
-   6.8 Get Session Status
-------------------------------------------------------- */
+/* ======================================================
+   GET CATEGORY INTRO
+   GET /questionnaire/categories/:categoryKey/intro
+====================================================== */
 
-export async function getSessionStatus(
-  token,
-  sessionId
-) {
+export async function getCategoryIntro(categoryKey) {
   const res = await fetch(
-    `${BASE_URL}/questionnaire/session/status?session_id=${sessionId}`,
-    {
-      headers: authHeaders(token),
-    }
+    `${BASE_URL}/questionnaire/categories/${categoryKey}/intro`
   );
 
   return await handleResponse(res);
 }
 
-/* -------------------------------------------------------
-   6.9 Save Selection
-------------------------------------------------------- */
+/* ======================================================
+   GET CATEGORY ITEMS
+   GET /questionnaire/categories/:categoryKey/items
+====================================================== */
 
+export async function getCategoryItems(
+  categoryKey,
+  sessionId
+) {
+  const res = await fetch(
+    `${BASE_URL}/questionnaire/categories/${categoryKey}/items?session_id=${sessionId}`
+  );
+
+  return await handleResponse(res);
+}
+
+/* ======================================================
+   SAVE SELECTION (VERY IMPORTANT FOR ITERATIVE MODE)
+   POST /questionnaire/selection
+====================================================== */
+
+// export async function saveSelection(
+//   token,
+//   sessionId,
+//   categoryKey,
+//   selectedItems
+// ) {
+//   const res = await fetch(
+//     `${BASE_URL}/questionnaire/selection`,
+//     {
+//       method: "POST",
+//       headers: authHeaders(token),
+//       body: JSON.stringify({
+//         session_id: sessionId,
+//         category_key: categoryKey,
+//         selected_items: selectedItems,
+//       }),
+//     }
+//   );
+
+//   return await handleResponse(res);
+// }
 export async function saveSelection(
   token,
   sessionId,
   categoryKey,
-  selectedItems
+  itemKey
 ) {
   const res = await fetch(
     `${BASE_URL}/questionnaire/selection`,
@@ -130,17 +128,17 @@ export async function saveSelection(
       body: JSON.stringify({
         session_id: sessionId,
         category_key: categoryKey,
-        selected_items: selectedItems,
+        selected_item_keys: [itemKey], // ✅ EXACT MATCH
       }),
     }
   );
 
   return await handleResponse(res);
 }
-
-/* -------------------------------------------------------
-   6.10 Get Item Questions
-------------------------------------------------------- */
+/* ======================================================
+   GET ITEM QUESTIONS
+   GET /questionnaire/items/:itemKey/questions
+====================================================== */
 
 export async function getItemQuestions(
   token,
@@ -157,9 +155,10 @@ export async function getItemQuestions(
   return await handleResponse(res);
 }
 
-/* -------------------------------------------------------
-   6.11 Submit Answer
-------------------------------------------------------- */
+/* ======================================================
+   SUBMIT ANSWER
+   POST /questionnaire/answer
+====================================================== */
 
 export async function submitAnswer(
   token,
@@ -177,9 +176,9 @@ export async function submitAnswer(
   return await handleResponse(res);
 }
 
-/* -------------------------------------------------------
-   6.12 Complete Category (Coin Reward)
-------------------------------------------------------- */
+/* ======================================================
+   COMPLETE CATEGORY (Optional - Future)
+====================================================== */
 
 export async function completeCategory(
   token,
@@ -201,9 +200,9 @@ export async function completeCategory(
   return await handleResponse(res);
 }
 
-/* -------------------------------------------------------
-   6.13 Complete Questionnaire
-------------------------------------------------------- */
+/* ======================================================
+   COMPLETE QUESTIONNAIRE (Optional - Future)
+====================================================== */
 
 export async function completeQuestionnaire(
   token,
@@ -217,40 +216,6 @@ export async function completeQuestionnaire(
       body: JSON.stringify({
         session_id: sessionId,
       }),
-    }
-  );
-
-  return await handleResponse(res);
-}
-
-/* -------------------------------------------------------
-   6.14 Get Reward Status
-------------------------------------------------------- */
-
-export async function getRewardStatus(token) {
-  const res = await fetch(
-    `${BASE_URL}/questionnaire/reward-status`,
-    {
-      headers: authHeaders(token),
-    }
-  );
-
-  return await handleResponse(res);
-}
-
-/* -------------------------------------------------------
-   6.15 Get Onboarding Ledger
-------------------------------------------------------- */
-
-export async function getOnboardingLedger(
-  token,
-  page = 1,
-  limit = 20
-) {
-  const res = await fetch(
-    `${BASE_URL}/questionnaire/wallet/gold-coins/onboarding-ledger?page=${page}&limit=${limit}`,
-    {
-      headers: authHeaders(token),
     }
   );
 
