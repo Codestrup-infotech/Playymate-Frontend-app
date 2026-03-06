@@ -212,7 +212,7 @@ export default function CategorySelection() {
       
       if (isCategoryComplete && !nextCategoryKey) {
         console.log('All categories complete! Going to home');
-        router.push("/home");
+        router.push("/onboarding/experience");
         return;
       }
 
@@ -264,7 +264,7 @@ export default function CategorySelection() {
         // 🔥 ALL CATEGORIES FINISHED → GO TO HOME
         if (!nextCategoryKey) {
           console.log('No more categories, going to home');
-          router.push("/home");
+          router.push("/onboading/experience");
           return;
         }
 

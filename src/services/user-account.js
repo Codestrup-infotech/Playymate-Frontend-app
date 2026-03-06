@@ -1,9 +1,7 @@
 import api from "./api";
 
 export const userAccountService = {
-  // Get user by ID
-  getUserById: (userId) =>
-    api.get(`/api/v1/users/${userId}`),
+  getUserById: (userId) => api.get(`/users/${userId}`),
 };
 
 export default userAccountService;
