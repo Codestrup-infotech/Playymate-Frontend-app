@@ -629,7 +629,7 @@ export default function OnboardingNamePage() {
                 )}
             </h1>
 
-            <p className="mt-2 text-gray-400 text-sm">
+            <p className="mt-2 text-gray-400 text-sm font-Poppins">
               {nameScreen?.subtitle}
             </p>
 
@@ -639,13 +639,13 @@ export default function OnboardingNamePage() {
           <form onSubmit={handleSubmit} className="space-y-4">
 
             {error && (
-              <div className="flex items-center justify-center gap-2 text-red-400 text-sm py-2">
+              <div className="flex items-center justify-center font-Poppins gap-2 text-red-400 text-sm py-2">
                 <AlertCircle className="w-4 h-4" />
                 <span>{error}</span>
               </div>
             )}
 
-            <div className="relative">
+            <div className="relative font-Poppins">
               <input
                 type="text"
                 value={name}
@@ -664,7 +664,7 @@ export default function OnboardingNamePage() {
             <button
               type="submit"
               disabled={loading || isSubmitting || !name.trim()}
-              className="w-full py-4 rounded-full font-semibold bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-4 rounded-full font-normal font-Poppins  bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading || isSubmitting ? (
                 <>

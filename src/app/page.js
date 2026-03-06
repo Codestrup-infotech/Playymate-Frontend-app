@@ -1171,8 +1171,8 @@ case "intro": {
   ];
 
   return (
-    <div className="flex flex-col space-y-4 justify-center text-center items-center py-9  ">
-      <div className="py-6">
+    <div className="flex flex-col space-y-4 justify-center text-center items-center pt-9 ">
+      <div className="">
         <h1 className="text-4xl font-semibold italic">
           {title || "Welcome!"}
         </h1>
@@ -1286,18 +1286,18 @@ case "intro": {
         })}
       </div>
 
-      <div className="w-80 flex justify-center px-6 pb-10 gap-4 font-Poppins font-normal ">
+      <div className=" flex justify-center px-6 pb-10 gap-4 font-Poppins font-normal ">
         {!isFirst && (
           <button
             onClick={onBack}
-            className="px-6 py-3 rounded-full border border-gray-700 text-gray-400"
+            className="px-10 py-3  rounded-full border border-gray-700 text-gray-400"
           >
             Back
           </button>
         )}
         <button
           onClick={onNext}
-          className="flex-1 max-w-sm rounded-full bg-gradient-to-r from-pink-500 to-orange-400 py-3 text-white"
+          className="flex-1 px-9 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 py-3 text-white"
         >
           {cta?.text || "Get Started"}
         </button>

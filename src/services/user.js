@@ -71,12 +71,6 @@ export const userService = {
   revokeParentConsent: () => api.post('/users/parent/consent/revoke'),
 
   // ============ KYC ============
-  // Aadhaar Verification
-  sendAadhaarOTP: (aadhaarNumber) => 
-    api.post('/kyc/aadhaar/otp/send', { aadhaar_number: aadhaarNumber }),
-  
-  verifyAadhaarOTP: (otp, referenceId) => 
-    api.post('/kyc/aadhaar/otp/verify', { otp, reference_id: referenceId }),
 
   // Face Verification
   verifyFace: (imageData) => 

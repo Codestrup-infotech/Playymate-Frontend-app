@@ -64,22 +64,22 @@ export const stepRouteMap = {
   
   // Questionnaire steps
   'QUESTIONNAIRE_STARTED': '/onboarding/questionnaire',
-  'QUESTIONNAIRE_COMPLETED': '/onboarding/home',
+  'QUESTIONNAIRE_COMPLETED': '/home',
   'QUESTIONNAIRE': '/onboarding/questionnaire',
   'QUESTIONNAIRE_CATEGORY': '/onboarding/questionnaire',
-  'QUESTIONNAIRE_COMPLETE': '/onboarding/home',
+  'QUESTIONNAIRE_COMPLETE': '/home',
   
   // Extended profile
-  'EXTENDED_PROFILE_INTRO': '/onboarding/home',
-  'EXTENDED_PROFILE_PENDING': '/onboarding/home',
-  'EXTENDED_PROFILE_COMPLETED': '/onboarding/home',
+  'EXTENDED_PROFILE_INTRO': '/home',
+  'EXTENDED_PROFILE_PENDING': '/home',
+  'EXTENDED_PROFILE_COMPLETED': '/home',
   
-  // Final state
-  'COMPLETED': '/onboarding/home',
-  'ACTIVE': '/onboarding/home',
-  'ACTIVE_USER': '/onboarding/home',
-  'HOME': '/onboarding/home',
-  'DONE': '/onboarding/home',
+  // Final state - all completed states should go to /home
+  'COMPLETED': '/home',
+  'ACTIVE': '/home',
+  'ACTIVE_USER': '/home',
+  'HOME': '/home',
+  'DONE': '/home',
 };
 
 // Reverse mapping - route to step
