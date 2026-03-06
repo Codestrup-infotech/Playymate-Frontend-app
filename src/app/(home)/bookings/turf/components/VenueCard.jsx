@@ -4,7 +4,7 @@ import { Star, MapPin, Users } from "lucide-react";
 
 export default function VenueCard({ venue }) {
   return (
-    <Link href={`/booking/turf/${venue.id}`}>
+    <Link href={`/bookings/turf/${venue.id}`}>
       <div className="bg-zinc-900 rounded-3xl overflow-hidden shadow-lg">
 
         {/* Image */}

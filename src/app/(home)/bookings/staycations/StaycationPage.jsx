@@ -18,7 +18,7 @@ export default function StaycationsPage() {
           key={item.id}
           data={item}
           onClick={() =>
-            router.push(`/booking/staycations/${item.id}`)
+            router.push(`/bookings/staycations/${item.id}`)
           }
         />
       ))}

@@ -44,7 +44,7 @@ function LiveSidebar({ isOpen }) {
     { name: "Live Matches", icon: <Play size={20} />, path: "/home/livestream" },
     { name: "Highlights", icon: <Zap size={20} />, path: "/home/explore" },
     { name: "Chat Rooms", icon: <MessageCircle size={20} />, path: "/community" },
-    { name: "Profile", icon: <User size={20} />, path: "/home/profile" },
+    { name: "Profile", icon: <User size={20} />, path: "/home/profile/${user.id}" },
   ];
 
   return (

@@ -18,7 +18,7 @@ export default function CoachPage() {
           key={coach.id}
           coach={coach}
           onSelect={(coach) =>
-            router.push(`/booking/coaching/${coach.id}`)
+            router.push(`/bookings/coaching/${coach.id}`)
           }
         />
       ))}

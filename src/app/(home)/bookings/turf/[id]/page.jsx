@@ -209,7 +209,7 @@ export default function TurfDetails() {
     onClose={() => setShowModal(false)}
     onBrowse={() => {
       setShowModal(false);
-      router.push("/booking");
+      router.push("/bookings");
     }}
   />
 )} 

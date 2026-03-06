@@ -469,7 +469,7 @@ if (session.categories_progress?.length) {
       
       if (isCategoryComplete && !nextCategoryKey) {
         console.log('All categories complete! Going to home');
-        router.push("/home");
+        router.push("/onboarding/experience");
         return;
       }
 
@@ -531,7 +531,7 @@ if (session.categories_progress?.length) {
         // 🔥 ALL CATEGORIES FINISHED → GO TO HOME
         if (!nextCategoryKey) {
           console.log('No more categories, going to home');
-          router.push("/home");
+          router.push("/onboading/experience");
           return;
         }
 

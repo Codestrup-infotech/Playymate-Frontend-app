@@ -111,7 +111,7 @@ export default function StaycationDetails() {
     onClose={() => setShowModal(false)}
     onBrowse={() => {
       setShowModal(false);  // close modal first
-      router.push("/booking");
+      router.push("/bookings");
     }}
   />
 )}
