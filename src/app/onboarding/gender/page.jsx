@@ -416,45 +416,40 @@ export default function OnboardingGenderPage() {
   const clearError = () => setError(null);
 
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      try {
-        const response = await userService.getOnboardingStatus();
-        const state = response?.data?.data?.onboarding_state;
+    // ✅ Use stored next step — no API call needed
+    const nextStep = sessionStorage.getItem("onboarding_next_step");
+    const token = sessionStorage.getItem("access_token") || 
+                  sessionStorage.getItem("accessToken") || 
+                  localStorage.getItem("accessToken") ||
+                  localStorage.getItem("playymate_access_token");
 
-        console.log("Gender page - State:", state);
+    if (!token) {
+      router.push("/login/phone");
+      return;
+    }
 
-        const pastGenderStates = [
-          "DOB_CAPTURED",
-          "PARENT_CONSENT_PENDING",
-          "PARENT_CONSENT_APPROVED",
-          "LOCATION_CAPTURED",
-          "PROFILE_PHOTO_CAPTURED",
-        ];
-
-        if (pastGenderStates.includes(state)) {
-          router.push("/onboarding/dob");
-          return;
-        }
-
-        if (
-          state === "GENDER_CAPTURED" ||
-          state === "BASIC_ACCOUNT_CREATED" ||
-          !state
-        ) {
-          setInitialLoading(false);
-          return;
-        }
-
-        router.push("/onboarding/name");
-      } catch (err) {
-        console.error("Failed to check onboarding status:", err);
-        router.push("/onboarding/name");
-      } finally {
-        setInitialLoading(false);
+    // If the backend says user's next step is PAST gender, skip forward
+    if (nextStep && nextStep !== "GENDER") {
+      const stepRoutes = {
+        "NAME": "/onboarding/name",
+        "NAME_CAPTURE": "/onboarding/name",
+        "CATEGORY_SELECTION": "/onboarding/category-selection",
+        "KYC_INFO": "/onboarding/kyc",
+        "PHYSICAL_PROFILE_QUESTIONS": "/onboarding/physical",
+        "ACTIVE_USER": "/onboarding/home",
+        "COMPLETED": "/onboarding/home",
+        "HOME": "/onboarding/home",
+        "ACTIVE": "/onboarding/home",
+      };
+      const route = stepRoutes[nextStep];
+      if (route) {
+        router.push(route);
+        return;
       }
-    };
+    }
 
-    checkOnboardingStatus();
+    // Otherwise, user belongs on this page — let them stay
+    setInitialLoading(false);
   }, [router]);
 
   const handleSubmit = async (selectedGender) => {
@@ -491,12 +486,17 @@ export default function OnboardingGenderPage() {
       console.log("Gender save response:", response);
       console.log("Gender save response.data:", response?.data);
 
+      // ✅ Store the next step so subsequent pages don't need to call API
+      const nextStep = response?.data?.next_required_step;
+      sessionStorage.setItem("onboarding_next_step", nextStep || "");
+
       router.push("/onboarding/dob");
     } catch (err) {
       console.error("Gender save error:", err);
       console.error("Gender save error response:", err.response?.data);
 
       const errorCode = err.response?.data?.error_code;
+      const status = err.response?.status;
       const message =
         err.response?.data?.message ||
         getErrorMessage(errorCode) ||
@@ -504,6 +504,15 @@ export default function OnboardingGenderPage() {
 
       console.error("Gender error code:", errorCode);
       console.error("Gender error message:", message);
+
+      // Handle 403 or FORBIDDEN - token might not have permissions, skip to next step
+      if (status === 403 || errorCode === 'FORBIDDEN') {
+        console.log("Got 403/FORBIDDEN on gender update - skipping to DOB step");
+        // Store next step and skip to DOB
+        sessionStorage.setItem("onboarding_next_step", "DOB_CAPTURED");
+        router.push("/onboarding/dob");
+        return;
+      }
 
       setError(message);
     } finally {

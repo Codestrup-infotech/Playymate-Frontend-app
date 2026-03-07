@@ -89,6 +89,9 @@ export default function LivenessPage() {
         const complete = await kycService.completeKYC();
         const nextStep = complete?.data?.next_required_step;
 
+        // ✅ Store the next step
+        sessionStorage.setItem("onboarding_next_step", nextStep || "");
+
         setStep("success");
 
         setTimeout(() => {

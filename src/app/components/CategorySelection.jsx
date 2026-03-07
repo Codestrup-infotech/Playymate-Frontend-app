@@ -29,7 +29,7 @@ export default function CategorySelection() {
 
   const token =
     typeof window !== "undefined"
-      ? sessionStorage.getItem("accessToken")
+      ? sessionStorage.getItem("access_token")
       : null;
 
   /* ================= INIT ================= */
@@ -87,7 +87,7 @@ export default function CategorySelection() {
       console.error("Failed to load items:", err);
       // Show error but still allow user to see items
       setItemsData({ items: [], category_title: categoryKey, max_selection: 0 });
-      setScreen("items");
+      setScreen("items")
     }
   }
 
@@ -369,42 +369,48 @@ export default function CategorySelection() {
 
       {/* ITEMS */}
       {screen === "items" && itemsData && (
-        <div className="max-w-md w-full space-y-4">
 
-          <h2 className="text-2xl font-semibold text-center">
+<div className="flex flex-col space-y-6  "> 
+  <h2 className="text-2xl font-semibold text-center">
             {itemsData.category_title}
+           
           </h2>
 
-          <p className="text-center text-gray-400">
-            Select up to {itemsData.max_selection}{" "}
-            {itemsData.category_title}
+          {/* <p className="text-2xl font-semibold text-center">  {itemsData.category_description}</p> */}
+
+          <p className="text-center text-gray-400 font-Poppins">
+            Select up to <span className="text-white font-Poppins"> {itemsData.max_selection}{" "}
+            {itemsData.category_title}  </span>
           </p>
 
+        <div className=" grid grid-rows-2 grid-flow-col  gap-4 pt-10 font-Poppins">
           {itemsData.items.map((item) => (
             <button
               key={item.key}
               disabled={item.disabled || item.status === "completed"}
               onClick={() => handleItemClick(item.key)}
-              className={`w-full py-3 rounded-lg border transition
+              className={`w-52 py-3 rounded-lg border transition
                 ${
                   item.disabled || item.status === "completed"
                     ? "bg-gray-700 border-gray-600 opacity-60 cursor-not-allowed"
-                    : "border-pink-500 hover:bg-pink-500/20"
+                    : "border-pink-500 hover:bg-pink-500"
                 }`}
             >
               {item.icon || '🏃'} {item.title || item.name || item.key}
             </button>
           ))}
 
-        </div>
+        </div> </div>
       )}
 
       {/* QUESTIONS */}
       {screen === "questions" && questions && questions.length > 0 && (
-        <div className="max-w-md w-full space-y-6">
+        <div className="max-w-md flex flex-col justify-center items-center w-full space-y-6">
           {questions[qIndex] ? (
             <>
-              <div className="p-6 rounded-xl bg-gradient-to-r from-pink-500 to-orange-400 text-black text-center">
+   {itemsData.items_title}
+              <div className="p-6 w-96 rounded-xl  bg-gradient-to-r from-[#1B5CD1] to-[#1EB9EC] text-lg text-white font-Poppins text-center">
+                
                 {questions[qIndex].question_text}
               </div>
 
@@ -412,7 +418,7 @@ export default function CategorySelection() {
                 <button
                   key={opt.option_id}
                   onClick={() => handleAnswer(opt.option_id)}
-                  className="w-full py-3 border border-pink-500 rounded-lg"
+                  className="w-96 py-3 border border-pink-500 hover:bg-[#e28010] font-Poppins rounded-lg"
                 >
                   {opt.label}
                 </button>

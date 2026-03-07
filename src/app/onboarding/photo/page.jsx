@@ -274,44 +274,38 @@ export default function OnboardingProfilePhotoPage() {
 
   // Check onboarding status on mount
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      try {
-        const response = await userService.getOnboardingStatus();
-        const state = response?.data?.data?.onboarding_state;
-        
-        // If already past profile photo, redirect to next step
-        const validStates = ['PROFILE_PHOTO_CAPTURED', 'ACTIVITY_INTENT_CAPTURED', 'PROFILE_DETAILS_CAPTURED'];
-        if (validStates.includes(state)) {
-          const nextStep = response?.data?.next_required_step;
-          if (nextStep) {
-            const route = getRouteFromStep(nextStep);
-            router.push(route);
-          } else {
-            router.push('/onboarding/activity');
-          }
-          return;
-        }
-        
-        // Must be in LOCATION_CAPTURED state to proceed
-        if (state !== 'LOCATION_CAPTURED') {
-          const nextStep = response?.data?.next_required_step;
-          if (nextStep) {
-            const route = getRouteFromStep(nextStep);
-            router.push(route);
-          } else {
-            router.push('/onboarding/location');
-          }
-          return;
-        }
-      } catch (err) {
-        console.error('Failed to check onboarding status:', err);
-        // Continue anyway - let user try to upload
-      } finally {
-        setInitialLoading(false);
-      }
-    };
+    // ✅ Use stored next step — no API call needed
+    const nextStep = sessionStorage.getItem("onboarding_next_step");
+    const token = sessionStorage.getItem("access_token") || 
+                  sessionStorage.getItem("accessToken") || 
+                  localStorage.getItem("accessToken") ||
+                  localStorage.getItem("playymate_access_token");
 
-    checkOnboardingStatus();
+    if (!token) {
+      router.push("/login/phone");
+      return;
+    }
+
+    // If the backend says user's next step is PAST photo, skip forward
+    if (nextStep && nextStep !== "PROFILE_PHOTO_CAPTURED" && nextStep !== "LOCATION_CAPTURED") {
+      const stepRoutes = {
+        "KYC_INFO": "/onboarding/kyc",
+        "KYC_COMPLETED": "/onboarding/physical",
+        "PHYSICAL_PROFILE_QUESTIONS": "/onboarding/physical",
+        "ACTIVE_USER": "/onboarding/home",
+        "COMPLETED": "/onboarding/home",
+        "HOME": "/onboarding/home",
+        "ACTIVE": "/onboarding/home",
+      };
+      const route = stepRoutes[nextStep];
+      if (route) {
+        router.push(route);
+        return;
+      }
+    }
+
+    // Otherwise, user belongs on this page — let them stay
+    setInitialLoading(false);
   }, [router]);
 
   const handleFileSelect = (e, index) => {
@@ -505,6 +499,23 @@ export default function OnboardingProfilePhotoPage() {
       // Handle authentication errors
       if (status === 401) {
         window.location.href = '/login';
+        return;
+      }
+
+      // Handle 403 or FORBIDDEN - skip to next step (user already has photo set)
+      if (status === 403 || errorCode === 'FORBIDDEN') {
+        console.log("Got 403/FORBIDDEN on photo upload - skipping to next step");
+        const nextStep = sessionStorage.getItem("onboarding_next_step");
+        if (nextStep && nextStep !== "PROFILE_PHOTO_CAPTURED") {
+          const route = getRouteFromStep(nextStep);
+          if (route) {
+            router.push(route);
+            return;
+          }
+        }
+        // Default skip to KYC
+        sessionStorage.setItem("onboarding_next_step", "KYC_COMPLETED");
+        router.push('/onboarding/kyc');
         return;
       }
 

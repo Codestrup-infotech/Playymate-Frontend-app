@@ -61,6 +61,10 @@ export const stepRouteMap = {
   'PHYSICAL_PROFILE_CONSENT': '/onboarding/physical',
   'PHYSICAL_PROFILE_COMPLETED': '/onboarding/physical',
   'PHYSICAL': '/onboarding/physical',
+  'PHYSICAL_PROFILE_QUESTIONS': '/onboarding/physical',
+  
+  // Category selection
+  'CATEGORY_SELECTION': '/onboarding/category-selection',
   
   // Questionnaire steps
   'QUESTIONNAIRE_STARTED': '/onboarding/questionnaire',

@@ -172,37 +172,41 @@ export default function OnboardingDOBPage() {
   const clearError = () => setError(null);
 
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      try {
-        const response = await userService.getOnboardingStatus();
-        const state = response?.data?.data?.onboarding_state;
-        
-        console.log('DOB page - State:', state);
+    // ✅ Use stored next step — no API call needed
+    const nextStep = sessionStorage.getItem("onboarding_next_step");
+    const token = sessionStorage.getItem("access_token") || 
+                  sessionStorage.getItem("accessToken") || 
+                  localStorage.getItem("accessToken") ||
+                  localStorage.getItem("playymate_access_token");
 
-        // If state is already past DOB, redirect to location
-        const pastDOBStates = ['PARENT_CONSENT_PENDING', 'PARENT_CONSENT_APPROVED', 'LOCATION_CAPTURED', 'PROFILE_PHOTO_CAPTURED'];
-        if (pastDOBStates.includes(state)) {
-          router.push('/onboarding/location');
-          return;
-        }
+    if (!token) {
+      router.push("/login/phone");
+      return;
+    }
 
-        // If state is DOB_CAPTURED or GENDER_CAPTURED (user just came from gender), stay on this page
-        if (state === 'DOB_CAPTURED' || state === 'GENDER_CAPTURED') {
-          setInitialLoading(false);
-          return;
-        }
-
-        // For any other state (including null, undefined), redirect to gender
-        router.push('/onboarding/gender');
-      } catch (err) {
-        console.error('Failed to check onboarding status:', err);
-        // On error, redirect to gender
-        router.push('/onboarding/gender');
-      } finally {
-        setInitialLoading(false);
+    // If the backend says user's next step is PAST dob, skip forward
+    if (nextStep && nextStep !== "DOB_CAPTURED" && nextStep !== "DOB") {
+      const stepRoutes = {
+        "PARENT_CONSENT_PENDING": "/onboarding/parent-consent",
+        "PARENT_CONSENT_APPROVED": "/onboarding/location",
+        "LOCATION_CAPTURED": "/onboarding/photo",
+        "PROFILE_PHOTO_CAPTURED": "/onboarding/kyc",
+        "KYC_COMPLETED": "/onboarding/physical",
+        "PHYSICAL_PROFILE_QUESTIONS": "/onboarding/physical",
+        "ACTIVE_USER": "/onboarding/home",
+        "COMPLETED": "/onboarding/home",
+        "HOME": "/onboarding/home",
+        "ACTIVE": "/onboarding/home",
+      };
+      const route = stepRoutes[nextStep];
+      if (route) {
+        router.push(route);
+        return;
       }
-    };
-    checkOnboardingStatus();
+    }
+
+    // Otherwise, user belongs on this page — let them stay
+    setInitialLoading(false);
   }, [router]);
 
   const computeAge = () => {
@@ -324,6 +328,24 @@ export default function OnboardingDOBPage() {
       const errorCode = err.response?.data?.error_code;
       const status = err.response?.status;
       const errorMsg = err.response?.data?.message;
+      
+      // Handle 403 or FORBIDDEN - skip to next step (user already has DOB set)
+      if (status === 403 || errorCode === 'FORBIDDEN') {
+        console.log("Got 403/FORBIDDEN on DOB update - checking next step from session");
+        const nextStep = sessionStorage.getItem("onboarding_next_step");
+        // If next step is past DOB, go there; otherwise default to location
+        if (nextStep && nextStep !== "DOB_CAPTURED" && nextStep !== "DOB") {
+          const route = getRouteFromStep(nextStep);
+          if (route) {
+            router.push(route);
+            return;
+          }
+        }
+        // Default skip to location
+        sessionStorage.setItem("onboarding_next_step", "LOCATION_CAPTURED");
+        router.push('/onboarding/location');
+        return;
+      }
       
       // Handle state mismatch errors
       if (status === 400) {

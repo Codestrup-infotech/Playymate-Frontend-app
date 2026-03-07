@@ -52,37 +52,37 @@ export default function KYCPage() {
   /* ================= CHECK STATUS ================= */
 
   useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const res = await userService.getOnboardingStatus();
-        const state = res?.data?.data?.onboarding_state;
-        const nextStep = res?.data?.next_required_step;
+    // ✅ Use stored next step — no API call needed
+    const nextStep = sessionStorage.getItem("onboarding_next_step");
+    const token = sessionStorage.getItem("access_token") || 
+                  sessionStorage.getItem("accessToken") || 
+                  localStorage.getItem("accessToken") ||
+                  localStorage.getItem("playymate_access_token");
 
-        const completedStates = [
-          "KYC_COMPLETED",
-          "PHYSICAL_PROFILE_CONSENT",
-          "PHYSICAL_PROFILE_COMPLETED",
-          "QUESTIONNAIRE_COMPLETE",
-          "COMPLETED",
-          "ACTIVE",
-        ];
+    if (!token) {
+      router.push("/login/phone");
+      return;
+    }
 
-        if (completedStates.includes(state)) {
-          if (nextStep) {
-            const route = getRouteFromStep(nextStep);
-            if (route) {
-              router.push(route);
-              return;
-            }
-          }
-          router.push("/onboarding/physical");
-        }
-      } catch (err) {
-        console.error(err);
+    // If the backend says user's next step is PAST KYC, skip forward
+    if (nextStep && nextStep !== "KYC_INFO" && nextStep !== "KYC_COMPLETED") {
+      const stepRoutes = {
+        "PHYSICAL_PROFILE_CONSENT": "/onboarding/physical",
+        "PHYSICAL_PROFILE_COMPLETED": "/onboarding/physical",
+        "PHYSICAL_PROFILE_QUESTIONS": "/onboarding/physical",
+        "QUESTIONNAIRE_STARTED": "/onboarding/questionnaire",
+        "QUESTIONNAIRE_COMPLETED": "/onboarding/home",
+        "ACTIVE_USER": "/onboarding/home",
+        "COMPLETED": "/onboarding/home",
+        "HOME": "/onboarding/home",
+        "ACTIVE": "/onboarding/home",
+      };
+      const route = stepRoutes[nextStep];
+      if (route) {
+        router.push(route);
+        return;
       }
-    };
-
-    checkStatus();
+    }
   }, [router]);
 
   /* ================= FETCH SCREEN VISIBILITY ================= */

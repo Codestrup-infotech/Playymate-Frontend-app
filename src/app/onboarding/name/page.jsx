@@ -358,6 +358,8 @@ export default function OnboardingNamePage() {
     const checkOnboardingStatus = async () => {
       const accessToken =
         localStorage.getItem("accessToken") ||
+        sessionStorage.getItem("accessToken") ||
+        sessionStorage.getItem("access_token") ||
         localStorage.getItem("playymate_access_token");
 
       const authFlowId = sessionStorage.getItem("auth_flow_id");
@@ -381,31 +383,33 @@ export default function OnboardingNamePage() {
         return;
       }
 
+      // ✅ Use stored next step — no API call needed
       if (accessToken) {
-        try {
-          const statusResponse = await userService.getOnboardingStatus();
-
-          const nextStep =
-            statusResponse?.data?.data?.next_required_step;
-
-          const onboardingState =
-            statusResponse?.data?.data?.onboarding_state;
-
-          console.log("Onboarding status:", {
-            nextStep,
-            onboardingState,
-          });
-
-          if (nextStep && nextStep !== "NAME") {
-            const route = getRouteFromStep(nextStep);
-
-            if (route) {
-              router.push(route);
-              return;
-            }
+        const storedNextStep = sessionStorage.getItem("onboarding_next_step");
+        
+        // Also try to get from API if stored step is not available
+        if (!storedNextStep) {
+          try {
+            const statusResponse = await userService.getOnboardingStatus();
+            const nextStep = statusResponse?.data?.data?.next_required_step;
+            // Store it for future use
+            sessionStorage.setItem("onboarding_next_step", nextStep || "");
+          } catch (err) {
+            console.error("Error checking onboarding status:", err);
           }
-        } catch (err) {
-          console.error("Error checking onboarding status:", err);
+        }
+
+        const nextStep = storedNextStep || sessionStorage.getItem("onboarding_next_step");
+
+        console.log("Onboarding next step:", nextStep);
+
+        if (nextStep && nextStep !== "NAME" && nextStep !== "NAME_CAPTURE") {
+          const route = getRouteFromStep(nextStep);
+
+          if (route) {
+            router.push(route);
+            return;
+          }
         }
       }
 
@@ -522,6 +526,9 @@ export default function OnboardingNamePage() {
       }
 
       const nextStep = response?.data?.next_required_step;
+
+      // ✅ Store the next step so subsequent pages don't need to call API
+      sessionStorage.setItem("onboarding_next_step", nextStep || "");
 
       const hasValidNextStep =
         nextStep && typeof nextStep === "string" && nextStep.trim() !== "";

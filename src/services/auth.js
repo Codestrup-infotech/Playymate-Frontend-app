@@ -85,27 +85,34 @@ sendPhoneOTP: async (phone) => {
       sessionStorage.removeItem('accessToken');
       sessionStorage.removeItem('refreshToken');
       
-      // Store ONLY in sessionStorage - tokens will be cleared when browser tab is closed
+      // Store in sessionStorage
       sessionStorage.setItem('accessToken', tokens.accessToken);
       sessionStorage.setItem('refreshToken', tokens.refreshToken);
       
-      console.log('Tokens stored in sessionStorage only - will be cleared on tab close');
+      // ✅ ALSO store in localStorage - app auth guards/middleware check localStorage
+      // (Google login also stores here)
+      localStorage.setItem('accessToken', tokens.accessToken);
+      localStorage.setItem('refreshToken', tokens.refreshToken);
+      
+      console.log('Tokens stored in both sessionStorage and localStorage');
     }
   },
   getAccessToken: () => {
     if (typeof window !== 'undefined') {
-      // Only check sessionStorage - tokens should only be stored there now
-      return sessionStorage.getItem('accessToken');
+      // Check sessionStorage first, then localStorage (for phone login)
+      return sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
     }
     return null;
   },
 
   clearTokens: () => {
-    // Clear ONLY sessionStorage tokens
+    // Clear both sessionStorage and localStorage tokens
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('accessToken');
       sessionStorage.removeItem('refreshToken');
-      console.log('Session tokens cleared (tab close behavior)');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      console.log('Tokens cleared from both sessionStorage and localStorage');
     }
   },
 

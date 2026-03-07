@@ -18,59 +18,40 @@ export default function OnboardingParentConsentPage() {
 
   // Check onboarding status on mount
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      try {
-        const response = await userService.getOnboardingStatus();
-        const state = response?.data?.data?.onboarding_state;
-        const nextStep = response?.data?.next_required_step;
-        
-        console.log('Parent consent - Current state:', state, 'Next step:', nextStep);
-        
-        // If already approved, redirect to location
-        if (state === 'PARENT_CONSENT_APPROVED') {
-          router.push('/onboarding/location');
-          return;
-        }
-        
-        // If location already captured, go to profile photo
-        if (state === 'LOCATION_CAPTURED' || state === 'PROFILE_PHOTO_CAPTURED') {
-          router.push('/onboarding/photo');
-          return;
-        }
-        
-        // If not in pending state, redirect based on next step
-        if (state !== 'PARENT_CONSENT_PENDING') {
-          // Handle DOB_CAPTURED state - user was redirected from DOB page because they are a minor
-          // Stay on this page to let them complete parent consent
-          if (state === 'DOB_CAPTURED') {
-            console.log('State is DOB_CAPTURED - staying on parent consent page');
-            setInitialLoading(false);
-            return;
-          }
-          
-          // Try to get next step from response - check both locations and validate it's a string
-          const nextRequiredStep = (nextStep && typeof nextStep === 'string') 
-            ? nextStep 
-            : (response?.data?.data?.next_required_step);
-            
-          if (nextRequiredStep && typeof nextRequiredStep === 'string') {
-            const route = getRouteFromStep(nextRequiredStep);
-            router.push(route);
-          } else {
-            // Default based on state
-            router.push('/onboarding/gender');
-          }
-          return;
-        }
-      } catch (err) {
-        console.error('Failed to check onboarding status:', err);
-        // Continue anyway - let user try to give consent
-      } finally {
-        setInitialLoading(false);
-      }
-    };
+    // ✅ Use stored next step — no API call needed
+    const nextStep = sessionStorage.getItem("onboarding_next_step");
+    const token = sessionStorage.getItem("access_token") || 
+                  sessionStorage.getItem("accessToken") || 
+                  localStorage.getItem("accessToken") ||
+                  localStorage.getItem("playymate_access_token");
 
-    checkOnboardingStatus();
+    if (!token) {
+      router.push("/login/phone");
+      return;
+    }
+
+    // If the backend says user's next step is PAST parent consent, skip forward
+    if (nextStep && nextStep !== "PARENT_CONSENT_PENDING" && nextStep !== "PARENT_CONSENT") {
+      const stepRoutes = {
+        "PARENT_CONSENT_APPROVED": "/onboarding/location",
+        "LOCATION_CAPTURED": "/onboarding/photo",
+        "PROFILE_PHOTO_CAPTURED": "/onboarding/kyc",
+        "KYC_COMPLETED": "/onboarding/physical",
+        "PHYSICAL_PROFILE_QUESTIONS": "/onboarding/physical",
+        "ACTIVE_USER": "/onboarding/home",
+        "COMPLETED": "/onboarding/home",
+        "HOME": "/onboarding/home",
+        "ACTIVE": "/onboarding/home",
+      };
+      const route = stepRoutes[nextStep];
+      if (route) {
+        router.push(route);
+        return;
+      }
+    }
+
+    // Otherwise, user belongs on this page — let them stay
+    setInitialLoading(false);
   }, [router]);
 
   const handleConsent = async () => {
@@ -84,8 +65,11 @@ export default function OnboardingParentConsentPage() {
       const response = await userService.giveParentConsent();
       console.log('Parent consent response:', response.data);
       
-      // Navigate based on next_required_step from API - validate it's a string
+      // ✅ Store the next step
       const nextStep = response?.data?.next_required_step;
+      sessionStorage.setItem("onboarding_next_step", nextStep || "");
+      
+      // Navigate based on next_required_step from API - validate it's a string
       if (nextStep && typeof nextStep === 'string') {
         const route = getRouteFromStep(nextStep);
         router.push(route);
@@ -138,135 +122,111 @@ export default function OnboardingParentConsentPage() {
             
             // If already approved, go to location
             if (currentState === 'PARENT_CONSENT_APPROVED') {
-              router.push('/onboarding/location');
-              return;
-            }
-            
-            // Navigate to the next required step - validate it's a string
-            if (nextRequiredStep && typeof nextRequiredStep === 'string') {
-              const route = getRouteFromStep(nextRequiredStep);
-              router.push(route);
-              return;
-            }
-            
-            // Default fallback based on current state
-            if (currentState === 'LOCATION_CAPTURED') {
-              router.push('/onboarding/photo');
+              window.location.href = `${window.location.origin}/onboarding/location`;
               return;
             }
           } catch (statusErr) {
             console.error('Error fetching status:', statusErr);
           }
         }
+      }
+      
+      const message =
+        getErrorMessage(errorCode) ||
+        errorMsg ||
+        'Failed to submit consent. Please try again.';
         
-        setError(errorMsg || 'Invalid state. Please try again or go back to previous step.');
-        return;
-      }
-      
-      // Handle specific error messages from backend
-      if (errorMsg) {
-        setError(errorMsg);
-        return;
-      }
-      
-      const message = getErrorMessage(errorCode) || 'Failed to save parent consent. Please try again.';
       setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Show loading while checking status
   if (initialLoading) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-        <div className="w-full max-w-sm">
-          <div className="flex items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
-          </div>
-        </div>
+        <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <button
-            onClick={() => router.push('/onboarding/dob')}
-            className="p-2 rounded-full hover:bg-white/10 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-pink-500 to-orange-400 w-[40%]" />
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#111113] text-white flex flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-3 p-4">
+        <button onClick={() => router.back()} className="text-white">
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        <h1 className="text-xl font-semibold">Parent Consent</h1>
+      </div>
 
-        {/* Content */}
-        <div className="space-y-6">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 mb-4">
-              <Shield className="w-10 h-10 text-white" />
+      <div className="flex-1 flex flex-col items-center justify-center px-6">
+        <div className="w-full max-w-sm">
+          {/* Icon */}
+          <div className="flex justify-center mb-8">
+            <div className="w-20 h-20 bg-pink-500/20 rounded-full flex items-center justify-center">
+              <Shield className="w-10 h-10 text-pink-500" />
             </div>
-            <h1 className="text-3xl font-Playfair Display font-bold">
-              Parent
-              <span className="bg-gradient-to-r px-2 from-pink-400 to-orange-400 bg-clip-text text-transparent">
-                Consent
-              </span>
-            </h1>
-            <p className="mt-4 text-gray-400 text-sm leading-relaxed font-Poppins">
-              To continue using Playmate, we need permission from a parent or
-              guardian. This helps us keep the experience safe and age-appropriate.
-            </p>
-            <p className="mt-4 text-gray-500 text-xs font-Poppins">
-              Your information is secure and never shared.
-            </p>
           </div>
 
-          {error && (
-            <div className="flex items-center justify-center gap-2 text-red-400 text-sm py-2">
-              <AlertCircle className="w-4 h-4" />
-              <span>{error}</span>
-            </div>
-          )}
+          {/* Title */}
+          <h2 className="text-2xl font-bold text-center mb-4">
+            Parent/Guardian Consent Required
+          </h2>
+          
+          {/* Description */}
+          <p className="text-gray-400 text-center mb-8">
+            Since you are under 13 years of age, we need consent from your parent or guardian to continue using Playymate.
+          </p>
 
-          {/* CHECKBOX */}
-          <label className="flex items-start gap-3 text-left text-sm cursor-pointer font-Poppins mt-8">
+          {/* Requirements */}
+          <div className="bg-gray-800/50 rounded-xl p-4 mb-8">
+            <h3 className="font-semibold mb-3">What parents need to know:</h3>
+            <ul className="text-gray-400 text-sm space-y-2">
+              <li>• Playymate is a platform for sports activities</li>
+              <li>• We collect basic profile information</li>
+              <li>• Location data for nearby activities</li>
+              <li>• Profile photo for verification</li>
+            </ul>
+          </div>
+
+          {/* Checkbox */}
+          <label className="flex items-start gap-3 mb-8 cursor-pointer">
             <input
               type="checkbox"
               checked={checked}
               onChange={(e) => setChecked(e.target.checked)}
-              className="mt-1 accent-pink-500 w-5 h-5"
+              className="w-5 h-5 mt-1 rounded border-gray-600 bg-gray-800 text-pink-500 focus:ring-pink-500"
             />
-            <span>
-              I am parent or legal guardian and I give consent
+            <span className="text-gray-300 text-sm">
+              My parent/guardian has reviewed the information above and consents to my participation in Playymate.
             </span>
           </label>
-        </div>
 
-        {/* FOOTER */}
-        <div className="absolute bottom-8 left-0 w-full px-6 font-Poppins">
+          {/* Error */}
+          {error && (
+            <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-lg mb-4 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm">{error}</span>
+            </div>
+          )}
+
+          {/* Button */}
           <button
-            disabled={!checked || loading}
             onClick={handleConsent}
-            className="w-full py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40 flex items-center justify-center"
+            disabled={!checked || loading}
+            className={`w-full py-4 rounded-xl font-semibold transition-all ${
+              checked && !loading
+                ? 'bg-gradient-to-r from-pink-500 to-orange-400 text-white'
+                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+            }`}
           >
             {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Saving...
-              </>
+              <Loader2 className="w-6 h-6 animate-spin mx-auto" />
             ) : (
-              'Give Consent'
+              'Submit Consent'
             )}
           </button>
-
-          <p className="mt-4 text-center text-xs text-gray-500">
-            By continuing, you agree to Playmate's Terms & Privacy Policy.
-          </p>
         </div>
       </div>
     </div>
