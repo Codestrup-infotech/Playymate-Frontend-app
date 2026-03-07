@@ -823,6 +823,19 @@ export default function PhoneLogin() {
     }
   };
 
+  const handleKeyDown = (e, index) => {
+  if (e.key === "Backspace") {
+    const updated = [...otp];
+
+    if (otp[index]) {
+      updated[index] = "";
+      setOtp(updated);
+    } else if (index > 0) {
+      inputsRef.current[index - 1]?.focus();
+    }
+  }
+};
+
   if (loadingConfig) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white">
@@ -867,7 +880,7 @@ export default function PhoneLogin() {
               )}
           </h1>
 
-          <p className="text-gray-400 mt-3 text-sm">
+          <p className="text-gray-400 mt-3  font-Poppins text-sm">
             {currentScreen?.subtitle
               ?.replace("{phone}", `+91 ${phone}`)}
           </p>
@@ -883,7 +896,7 @@ export default function PhoneLogin() {
 
         {/* PHONE INPUT */}
         {step === "phone" && (
-          <div className="flex items-center bg-[#1a1a1a] rounded-xl px-4 h-14 gap-3 border border-gray-700">
+          <div className="flex items-center  font-Poppins bg-[#1a1a1a] rounded-xl px-4 h-14 gap-3 border border-gray-700">
 
             <span className="text-xl">🇮🇳</span>
 
@@ -922,14 +935,15 @@ export default function PhoneLogin() {
                   onChange={(e) =>
                     handleOtpChange(e.target.value, i)
                   }
-                  className="w-12 h-14 text-center bg-[#1a1a1a] rounded-xl border border-gray-600 text-lg"
+                   onKeyDown={(e) => handleKeyDown(e, i)}
+                  className="w-12 h-14 text-center bg-[#1a1a1a] font-Poppins rounded-xl border border-gray-600 text-lg"
                 />
               ))}
 
             </div>
 
             {/* Resend */}
-            <div className="text-center text-sm text-gray-400 mt-4">
+            <div className="text-center text-sm text-gray-400 mt-4 font-Poppins">
 
               {timer > 0 ? (
                 <span>
@@ -961,7 +975,7 @@ export default function PhoneLogin() {
           step === "phone" ? sendPhoneOtp : verifyPhoneOtp
         }
         disabled={loading}
-        className="w-full max-w-md mx-auto py-4 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-500 font-semibold"
+        className="w-full max-w-md  font-Poppins mx-auto py-4 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-500 font-semibold"
       >
         {loading
           ? "Loading..."

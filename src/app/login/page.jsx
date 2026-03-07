@@ -459,9 +459,14 @@ export default function LoginPage() {
           if (
             nextStep === "ACTIVE_USER" ||
             nextStep === "COMPLETED" ||
-            nextStep === "HOME"
+            nextStep === "HOME" ||
+            nextStep === "DONE" ||
+            nextStep === "ACTIVE" ||
+            nextStep === "QUESTIONNAIRE_COMPLETED" ||
+            nextStep === "QUESTIONNAIRE_COMPLETE" ||
+            nextStep === "EXTENDED_PROFILE_COMPLETED"
           ) {
-            router.push("/onboarding/home");
+            router.push("/home");
             return;
           }
 
@@ -481,7 +486,7 @@ export default function LoginPage() {
             }
           }
 
-          router.push("/onboarding/home");
+          router.push("/home");
         } catch (err) {
           console.error("Session check failed:", err);
         }
@@ -657,9 +662,9 @@ export default function LoginPage() {
             
              </div>
 
-        {/* RIGHT SIDE */}
-        <div className="pt-20 w-full max-w-sm">
-        <div className="text-center mb-8">
+        {/* RIGHT SIDE */} 
+        <div className="pt-14  flex flex-col justify-center items-center  font-Playfair Display ">
+        <div className="text-center max-w-md mb-8">
   <h2 className="text-3xl font-bold mb-2">
     {screenConfig?.title &&
       screenConfig.title.split(" ").map((word, index) => {
@@ -680,16 +685,16 @@ export default function LoginPage() {
       })}
   </h2>
 
-            <p className="text-md">
+            <p className="text-md text-slate-400 font-Poppins ">
               {screenConfig?.subtitle }
             
             </p>
           </div>
-
+<div className="w-96 "> 
           {/* PHONE BUTTON */}
           <button
             onClick={() => router.push("/login/phone")}
-            className="btn-main w-full mb-4 flex items-center gap-4 px-8 py-3"
+            className="btn-main  mb-4 flex items-center font-Poppins font-normal gap-4 px-8 py-3"
           >
             <img
               src="/loginAvatars/mobile.png"
@@ -704,7 +709,7 @@ export default function LoginPage() {
           <button
             onClick={handleGoogleLogin}
             disabled={isLoadingGoogle}
-            className="btn-outline w-full mb-4 flex items-center gap-4 px-8 py-3"
+            className="btn-outline mb-4 flex  items-center  font-Poppins font-normal gap-4 px-8 py-3"
           >
             <img
               src="/loginAvatars/google.png"
@@ -720,7 +725,7 @@ export default function LoginPage() {
           <button
             onClick={handleFacebookLoginClick}
             disabled={isLoadingFacebook}
-            className="btn-outline w-full flex items-center gap-4 px-8 py-3"
+            className="btn-outline  flex items-center  font-Poppins font-normal gap-4 px-8 py-3"
           >
             <img
               src="/loginAvatars/facebook.png"
@@ -731,8 +736,8 @@ export default function LoginPage() {
               ? "Processing..."
               : "Continue with Facebook"}
           </button>
-
-          <p className="text-sm text-gray-400 mt-6 text-center">
+</div>
+          <p className="text-sm text-gray-400 mt-6 text-center  font-Poppins font-normal">
             Create account?{" "}
             <span
                onClick={() => router.push("/onboarding/create-account")}

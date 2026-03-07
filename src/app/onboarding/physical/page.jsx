@@ -76,7 +76,7 @@ export default function PhysicalPreferences() {
       // show GIF loader for 3 sec
    setTimeout(() => {
   setShowLoader(false);
-}, 3000);
+}, 6000);
     } catch (err) {
       console.error("Failed to fetch screen:", err);
       setError(err.message);
@@ -397,13 +397,15 @@ const [showLoader, setShowLoader] = useState(true);
 
 function IntroLoader({ image }) {
   return (
+    <> 
+    
     <div className="flex items-center justify-center min-h-screen bg-black">
       <img
         src={image}
         alt="loading"
-        className="w-48 h-48 object-contain rounded-xl"
+        className="w-80 h-80 object-contain rounded-xl"
       />
-    </div>
+    </div> </>
   );
 }
 
@@ -456,7 +458,7 @@ function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }
       <button
         onClick={onNext}
         disabled={disabled}
-        className={`w-full py-4 rounded-full transition font-Poppins ${
+        className={`w-full py-4 rounded-full transition mt-10 font-Poppins ${
           disabled
             ? "bg-gray-700 text-gray-400 cursor-not-allowed"
             : "bg-gradient-to-r from-pink-500 to-orange-400 text-white"

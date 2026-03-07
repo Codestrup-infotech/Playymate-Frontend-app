@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
+  getQuestionnaireSession,
   startQuestionnaireSession,
   getCategoryIntro,
   getCategoryItems,
@@ -26,6 +27,13 @@ export default function CategorySelection() {
 
   const [screen, setScreen] = useState("loading");
   const [showPopup, setShowPopup] = useState(false);
+  
+  // Popup states for dynamic messages
+  const [noQuestionsPopup, setNoQuestionsPopup] = useState(null); // { itemName, itemKey }
+  const [itemCompletedPopup, setItemCompletedPopup] = useState(null); // { itemName, itemKey }
+
+  // Track completed categories for visual indication
+  const [completedCategories, setCompletedCategories] = useState([]);
 
   const token =
     typeof window !== "undefined"
@@ -38,19 +46,223 @@ export default function CategorySelection() {
     initialize();
   }, []);
 
-  async function initialize() {
+  // async function initialize() {
+  //   try {
+  //     setScreen("loading");
+      
+  //     console.log('=== INITIALIZE QUESTIONNAIRE ===');
+  //     console.log('Token available:', !!token);
+  //     console.log('Token value:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+      
+  //     // STEP 1: Try to get existing session (resume from where user left off)
+  //     let session = null;
+      
+  //     try {
+  //       console.log('Calling getQuestionnaireSession...');
+  //       const response = await getQuestionnaireSession(token);
+  //       console.log('API Response raw:', response);
+  //       console.log('Response type:', typeof response);
+  //       console.log('Response keys:', response ? Object.keys(response) : 'N/A');
+        
+  //       // getQuestionnaireSession returns null if no session, or session object
+  //       session = response;
+        
+  //       if (session) {
+  //         console.log('✅ Existing session found:', session);
+  //         console.log('Session ID:', session.session_id);
+  //         console.log('Current category key:', session.current_category_key);
+  //       } else {
+  //         console.log('❌ No active session found, will start new');
+  //       }
+  //     } catch (err) {
+  //       console.log('❌ No existing session error:', err.message);
+  //       console.log('Error details:', err);
+  //       // No existing session - will start new one below
+  //     }
+      
+  //     // STEP 2: If we have an existing session, resume from it
+  //     if (session && session.session_id) {
+  //       console.log('>>> RESUMING EXISTING SESSION');
+  //       setSessionId(session.session_id);
+  //       setCurrentCategoryKey(session.current_category_key);
+        
+  //       // Track completed categories
+  //       if (session.completed_categories) {
+  //         setCompletedCategories(
+  //           session.completed_categories.map(c => c.category_key)
+  //         );
+  //       }
+        
+  //       // Check what stage user is in
+  //       const currentStage = session.current_stage;
+  //       const currentItem = session.current_item_key;
+        
+  //       console.log('=== RESUMING QUESTIONNAIRE ===');
+  //       console.log('Current category key:', session.current_category_key);
+  //       console.log('Current item key:', currentItem);
+  //       console.log('Current stage:', currentStage);
+  //       console.log('Completed categories:', session.completed_categories);
+  //       console.log('==============================');
+        
+  //       // If user was in the middle of answering questions for an item
+  //       if (currentItem && currentStage === 'answering_questions') {
+  //         console.log('User was answering questions for item:', currentItem);
+  //         // Resume the questions for this item
+  //         await resumeItemQuestions(session.current_category_key, currentItem);
+  //         return;
+  //       }
+        
+  //       // Otherwise, load the current category (intro or items)
+  //       // This is key - we load the CURRENT category, not the first one
+  //       console.log('Loading intro for category:', session.current_category_key);
+  //       await loadIntro(session.current_category_key);
+  //       return;
+  //     }
+      
+  //     // STEP 3: No existing session - start fresh
+  //     console.log('>>> STARTING NEW SESSION');
+  //     console.log('Starting new questionnaire session');
+  //     session = await startQuestionnaireSession(token, false);
+  //     console.log('New session created:', session);
+  //     console.log('New session current_category_key:', session.current_category_key);
+  //     setSessionId(session.session_id);
+  //     setCurrentCategoryKey(session.current_category_key);
+      
+  //     // Load the first category intro
+  //     await loadIntro(session.current_category_key);
+  //   } catch (err) {
+  //     console.error("Initialize error:", err);
+  //     setScreen("error");
+  //   }
+  // }
+async function initialize() {
+  try {
+    setScreen("loading");
+
+    console.log("=== INITIALIZE QUESTIONNAIRE ===");
+
+    let session = null;
+
+    /* ===============================
+       STEP 1: CHECK EXISTING SESSION
+    =============================== */
+
     try {
-      setScreen("loading");
-      
-      const session = await startQuestionnaireSession(token, false);
-      setSessionId(session.session_id);
-      setCurrentCategoryKey(session.current_category_key);
-      
-      // Load the first category intro
-      await loadIntro(session.current_category_key);
+      console.log("Checking existing session...");
+      session = await getQuestionnaireSession(token);
+
+      if (session) {
+        console.log("Existing session found:", session);
+      } else {
+        console.log("No existing session");
+      }
     } catch (err) {
-      console.error("Initialize error:", err);
-      setScreen("error");
+      console.log("Session check failed:", err.message);
+    }
+
+    /* ===============================
+       STEP 2: RESUME EXISTING SESSION
+    =============================== */
+
+    if (session && session.session_id) {
+      console.log(">>> RESUMING SESSION");
+
+      setSessionId(session.session_id);
+
+    let categoryToLoad = session.current_category_key;
+
+if (session.categories_progress?.length) {
+
+  const completedKeys = session.categories_progress
+    .filter(c => c.completed === true)
+    .map(c => c.category_key);
+
+  setCompletedCategories(completedKeys);
+
+  // find next incomplete category
+  const nextCategory = session.categories_progress.find(
+    c => c.completed === false
+  );
+
+  if (nextCategory) {
+    categoryToLoad = nextCategory.category_key;
+  }
+}
+
+      setCurrentCategoryKey(categoryToLoad);
+
+      const currentStage = session.current_stage;
+      const currentItem = session.current_item_key;
+
+      console.log("Resume info:", {
+        categoryToLoad,
+        currentStage,
+        currentItem,
+      });
+
+      /* Resume question if user was answering */
+      if (currentItem && currentStage === "answering_questions") {
+        await resumeItemQuestions(categoryToLoad, currentItem);
+        return;
+      }
+
+      /* Otherwise load category intro */
+      await loadIntro(categoryToLoad);
+      return;
+    }
+
+    /* ===============================
+       STEP 3: START NEW SESSION
+    =============================== */
+
+    console.log(">>> STARTING NEW SESSION");
+
+    const newSession = await startQuestionnaireSession(token, false);
+
+    setSessionId(newSession.session_id);
+    setCurrentCategoryKey(newSession.current_category_key);
+
+    await loadIntro(newSession.current_category_key);
+
+  } catch (err) {
+    console.error("Initialize error:", err);
+    setScreen("error");
+  }
+}
+  /* ================= RESUME ITEM QUESTIONS ================= */
+  
+  async function resumeItemQuestions(categoryKey, itemKey) {
+    try {
+      setCurrentCategoryKey(categoryKey);
+      setCurrentItemKey(itemKey);
+      
+      // Get category items first (to show which item was being answered)
+      const itemsRes = await getCategoryItems(categoryKey, sessionId);
+      setItemsData(itemsRes);
+      
+      // Get questions for the item
+      const data = await getItemQuestions(token, itemKey, sessionId);
+      
+      let questionsList = [];
+      if (data.questions) {
+        questionsList = data.questions;
+      } else if (Array.isArray(data)) {
+        questionsList = data;
+      } else if (data.data?.questions) {
+        questionsList = data.data.questions;
+      }
+      
+      // Check if there's a current_question_index in the session
+      const session = await getQuestionnaireSession(token);
+      const qIndex = session.current_question_index || 0;
+      
+      setQuestions(questionsList);
+      setQIndex(qIndex);
+      setScreen("questions");
+    } catch (err) {
+      console.error('Failed to resume item questions:', err);
+      // Fallback to loading intro
+      await loadIntro(categoryKey);
     }
   }
 
@@ -87,14 +299,41 @@ export default function CategorySelection() {
       console.error("Failed to load items:", err);
       // Show error but still allow user to see items
       setItemsData({ items: [], category_title: categoryKey, max_selection: 0 });
-      setScreen("items");
+      setScreen("items")
     }
+  }
+
+  // Handle back from questions - show completed item popup if applicable
+  function handleBackToItems() {
+    // Check if current item was completed (no questions or all questions answered)
+    if (currentItemKey && itemsData?.items) {
+      const currentItem = itemsData.items.find(i => i.key === currentItemKey);
+      if (currentItem && currentItem.status === 'completed') {
+        const itemDisplayName = getItemDisplayName(currentItem);
+        setItemCompletedPopup({
+          itemName: itemDisplayName,
+          itemKey: currentItemKey
+        });
+        // Auto-hide popup after 2 seconds
+        setTimeout(() => setItemCompletedPopup(null), 2000);
+      }
+    }
+    setScreen("items");
   }
 
   /* ================= ITEM CLICK ================= */
 
+  // Helper function to get item display name from API response
+  function getItemDisplayName(item) {
+    return item.title || item.name || item.key;
+  }
+
   async function handleItemClick(itemKey) {
     try {
+      // Get the item data from itemsData to find the display name
+      const clickedItem = itemsData?.items?.find(i => i.key === itemKey);
+      const itemDisplayName = clickedItem ? getItemDisplayName(clickedItem) : itemKey;
+      
       // First, set the current item key (this is crucial for the context)
       setCurrentItemKey(itemKey);
       console.log('Item clicked:', itemKey);
@@ -119,6 +358,18 @@ export default function CategorySelection() {
       }
       
       console.log('Questions list:', questionsList);
+      
+      // CHECK: If no questions for this item, show popup and disable the button
+      if (!questionsList || questionsList.length === 0) {
+        console.log('No questions for this item:', itemDisplayName);
+        setNoQuestionsPopup({
+          itemName: itemDisplayName,
+          itemKey: itemKey
+        });
+        // Auto-hide popup after 2 seconds
+        setTimeout(() => setNoQuestionsPopup(null), 2000);
+        return; // Don't proceed to questions screen
+      }
       
       setQuestions(questionsList);
       setQIndex(0);
@@ -171,10 +422,16 @@ export default function CategorySelection() {
       const nextAction = submitRes?.next_action;
       const nextCategoryKey = submitRes?.next_category_key;
       
-      console.log('Item complete from response:', isItemComplete);
-      console.log('Category complete from response:', isCategoryComplete);
-      console.log('Next action:', nextAction);
-      console.log('Next category key:', nextCategoryKey);
+      // DEBUG: Log all values from response
+      console.log('=== DEBUG: Category Completion ===');
+      console.log('Full submitRes:', JSON.stringify(submitRes, null, 2));
+      console.log('isItemComplete:', isItemComplete);
+      console.log('isCategoryComplete:', isCategoryComplete);
+      console.log('nextAction:', nextAction);
+      console.log('nextCategoryKey:', nextCategoryKey);
+      console.log('qIndex:', qIndex);
+      console.log('questions.length:', questions.length);
+      console.log('=================================');
 
       // Next question inside same item (if item not complete yet)
       if (!isItemComplete && qIndex < questions.length - 1) {
@@ -232,6 +489,16 @@ export default function CategorySelection() {
       console.log('Raw refresh response:', refreshed);
 
       console.log('Refreshed category data:', refreshed);
+
+      // DEBUG: Log all fields
+      console.log('=== DEBUG: After getCategoryItems ===');
+      console.log('selected_count:', refreshed.selected_count);
+      console.log('completed_count:', refreshed.completed_count);
+      console.log('max_selection:', refreshed.max_selection);
+      console.log('completed_items:', refreshed.completed_items);
+      console.log('category_complete:', refreshed.category_complete);
+      console.log('next_category_key:', refreshed.next_category_key);
+      console.log('=====================================');
 
       // Check various fields to determine completion status
       const selectedCount = refreshed.selected_count;
@@ -320,7 +587,7 @@ export default function CategorySelection() {
   if (screen === "error") {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4">
-        <div className="text-red-500 text-5xl mb-4">⚠️</div>
+        <div className="text-red-500 text-5xl mb-4"></div>
         <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
         <p className="text-gray-400 text-center mb-6">Failed to load questionnaire. Please try again.</p>
         <button
@@ -338,21 +605,21 @@ export default function CategorySelection() {
 
       {/* INTRO */}
       {screen === "intro" && introData && (
-        <div className="max-w-md w-full text-center space-y-6">
-          <h1 className="text-3xl font-bold">
+        <div className="max-w-md w-full flex flex-col  text-center justify-center items-center space-y-6">
+          {/* <h1 className="text-2xl mb-8 font-bold text-white text-md font-Playfair Display ">
             {introData?.intro?.title_text}
-          </h1>
+          </h1> */}
 
           {introData?.intro?.media_url && (
             <img
               src={introData.intro.media_url}
               alt="intro"
-              className="w-full rounded-lg"
+              className="w-80 h-96 rounded-2xl "
             />
           )}
 
           {introData?.intro?.subtitle_text && (
-            <p className="text-gray-300">
+            <p className="text-white text-md font-Playfair Display ">
               {introData.intro.subtitle_text}
             </p>
           )}
@@ -360,7 +627,7 @@ export default function CategorySelection() {
           {/* Continue button - user must tap to proceed */}
           <button
             onClick={handleIntroContinue}
-            className="w-full py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-black font-semibold text-lg"
+            className="w-80 text-white py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full font-Poppins font-semibold text-lg"
           >
             Get Started
           </button>
@@ -369,42 +636,69 @@ export default function CategorySelection() {
 
       {/* ITEMS */}
       {screen === "items" && itemsData && (
-        <div className="max-w-md w-full space-y-4">
 
-          <h2 className="text-2xl font-semibold text-center">
+<div className="flex flex-col space-y-6  "> 
+  <h2 className="text-2xl font-semibold text-center">
             {itemsData.category_title}
+           
           </h2>
 
-          <p className="text-center text-gray-400">
-            Select up to {itemsData.max_selection}{" "}
-            {itemsData.category_title}
+          {/* <p className="text-2xl font-semibold text-center">  {itemsData.category_description}</p> */}
+
+          <p className="text-center text-gray-400 font-Poppins">
+            Select up to <span className="text-white font-Poppins"> {itemsData.max_selection}{" "}
+            {itemsData.category_title}  </span>
           </p>
 
+        <div className=" grid grid-rows-2 grid-flow-col  gap-4 pt-10 font-Poppins">
           {itemsData.items.map((item) => (
             <button
               key={item.key}
               disabled={item.disabled || item.status === "completed"}
               onClick={() => handleItemClick(item.key)}
-              className={`w-full py-3 rounded-lg border transition
+              className={`w-52 py-3 rounded-lg border transition
                 ${
                   item.disabled || item.status === "completed"
                     ? "bg-gray-700 border-gray-600 opacity-60 cursor-not-allowed"
-                    : "border-pink-500 hover:bg-pink-500/20"
+                    : "border-pink-500 hover:bg-pink-500"
                 }`}
             >
               {item.icon || '🏃'} {item.title || item.name || item.key}
             </button>
           ))}
 
+        </div> 
+        
+        {/* POPUP: No questions for selected item */}
+        {noQuestionsPopup && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-orange-500 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse">
+            <p className="font-semibold">
+              No questions under {noQuestionsPopup.itemName}. Choose another!
+            </p>
+          </div>
+        )}
+        
+        {/* POPUP: Item completed - choose next */}
+        {itemCompletedPopup && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse">
+            <p className="font-semibold">
+              {itemCompletedPopup.itemName} is completed! Choose next item.
+            </p>
+          </div>
+        )}
+        
         </div>
       )}
 
+
       {/* QUESTIONS */}
       {screen === "questions" && questions && questions.length > 0 && (
-        <div className="max-w-md w-full space-y-6">
+        <div className="max-w-md flex flex-col justify-center items-center w-full space-y-6">
           {questions[qIndex] ? (
             <>
-              <div className="p-6 rounded-xl bg-gradient-to-r from-pink-500 to-orange-400 text-black text-center">
+   {itemsData.items_title}
+              <div className="p-6 w-96 rounded-xl  bg-gradient-to-r from-[#1B5CD1] to-[#1EB9EC] text-lg text-white font-Poppins text-center">
+                
                 {questions[qIndex].question_text}
               </div>
 
@@ -412,11 +706,19 @@ export default function CategorySelection() {
                 <button
                   key={opt.option_id}
                   onClick={() => handleAnswer(opt.option_id)}
-                  className="w-full py-3 border border-pink-500 rounded-lg"
+                  className="w-96 py-3 border border-pink-500 hover:bg-[#e28010] font-Poppins rounded-lg"
                 >
                   {opt.label}
                 </button>
               ))}
+              
+              {/* Back button to return to items */}
+              <button
+                onClick={() => handleBackToItems()}
+                className="mt-4 text-gray-400 hover:text-white text-sm"
+              >
+                ← Back to Items
+              </button>
             </>
           ) : (
             <div className="text-center text-gray-400">
@@ -432,12 +734,30 @@ export default function CategorySelection() {
           <p className="text-gray-400">No questions available for this item</p>
           <button
             onClick={() => {
-              setScreen("items");
+              handleBackToItems();
             }}
             className="px-6 py-3 bg-pink-500 rounded-full"
           >
             Back to Items
           </button>
+        </div>
+      )}
+      
+      {/* POPUP: No questions for selected item (when back from questions screen) */}
+      {noQuestionsPopup && screen !== "items" && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-orange-500 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse">
+          <p className="font-semibold">
+            No questions under {noQuestionsPopup.itemName}. Choose another!
+          </p>
+        </div>
+      )}
+      
+      {/* POPUP: Item completed - choose next (when back from questions screen) */}
+      {itemCompletedPopup && screen !== "items" && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse">
+          <p className="font-semibold">
+            {itemCompletedPopup.itemName} is completed! Choose next item.
+          </p>
         </div>
       )}
     </div>
