@@ -101,48 +101,88 @@ const [showLoader, setShowLoader] = useState(true);
       setAnswerLoading(true);
       setAnswerError(null);
       
+      console.log(`[submitAnswer] Submitting answer for: ${questionId}`, { answer, questionData });
+      
       // Get question type from questionData or determine from answer
       const questionType = questionData?.question_type || 'number';
+      
+      console.log(`[submitAnswer] Question type: ${questionType}`);
       
       let payload = {};
       
       // Handle based on question type from API
-      if (questionType === 'single_select') {
+      if (questionType === 'single_select' || questionId === 'blood_group') {
         // For single select - MUST use selected_option_ids with option_id
+        // Blood group uses format: selected_option_ids: ["opt_a+"]
         let optionId = null;
         
+        // First, check if answer is already in option_id format (e.g., "opt_a+")
+        if (answer && typeof answer === 'string' && answer.startsWith('opt_')) {
+          optionId = answer;
+          console.log(`[submitAnswer] Answer is already option_id: ${optionId}`);
+        }
+        
         // Check if answer is already option_id
-        if (answer && typeof answer === 'string') {
+        if (!optionId && answer && typeof answer === 'string') {
           const byId = questionData?.options?.find(opt => opt.option_id === answer);
           if (byId) {
             optionId = answer;
+            console.log(`[submitAnswer] Found option by ID: ${optionId}`);
           }
         }
         
-        // If not found by ID, try by label or value
-        if (!optionId) {
+        // If not found by ID, try by label or value (e.g., "A+" -> "opt_a+")
+        if (!optionId && answer && typeof answer === 'string') {
+          // Normalize: "A+" -> "a+" for comparison
+          const normalizedAnswer = answer.toLowerCase().replace(/\s+/g, '');
+          
           const byLabel = questionData?.options?.find(
-            opt => opt.label === answer || opt.value === answer
+            opt => 
+              opt.label?.toLowerCase().replace(/\s+/g, '') === normalizedAnswer ||
+              opt.value?.toLowerCase().replace(/\s+/g, '') === normalizedAnswer
           );
           if (byLabel?.option_id) {
             optionId = byLabel.option_id;
+            console.log(`[submitAnswer] Found option by label/value: ${optionId} from ${answer}`);
+          }
+        }
+        
+        // Special handling for blood group - map "A+" to "opt_a+", etc.
+        if (!optionId && questionId === 'blood_group' && answer && typeof answer === 'string') {
+          // Map blood group values to option_ids
+          const bloodGroupMap = {
+            'A+': 'opt_a+', 'A-': 'opt_a-',
+            'B+': 'opt_b+', 'B-': 'opt_b-',
+            'AB+': 'opt_ab+', 'AB-': 'opt_ab-',
+            'O+': 'opt_o+', 'O-': 'opt_o-',
+            'unknown': 'opt_unknown'
+          };
+          const mappedOptionId = bloodGroupMap[answer];
+          if (mappedOptionId) {
+            optionId = mappedOptionId;
+            console.log(`[submitAnswer] Mapped blood group: ${answer} -> ${optionId}`);
           }
         }
         
         if (optionId) {
           payload.selected_option_ids = [optionId];
+          console.log(`[submitAnswer] Final payload:`, payload);
         } else {
-          console.error("No option_id found for:", answer);
+          console.error(`[submitAnswer] No option_id found for: ${answer}`, { options: questionData?.options });
           return false;
         }
-      } else if (questionType === 'number') {
-        // For number - use answer_number
+      } else if (questionType === 'number' || questionType === 'range') {
+        // For number/range - use answer_number
+        // Height is in cm or in, Weight is in kg
         payload.answer_number = typeof answer === 'number' ? answer : parseInt(answer) || parseFloat(answer);
+        console.log(`[submitAnswer] Number/Range payload:`, payload);
       } else if (questionType === 'text') {
         payload.answer_text = answer;
+        console.log(`[submitAnswer] Text payload:`, payload);
       } else if (questionType === 'boolean') {
         // For boolean - use answer_boolean
         payload.answer_boolean = answer === true || answer === 'true' || answer === 1;
+        console.log(`[submitAnswer] Boolean payload:`, payload);
       } else {
         // Default fallback - try as single select
         if (answer && typeof answer === 'string') {
@@ -153,14 +193,19 @@ const [showLoader, setShowLoader] = useState(true);
             payload.selected_option_ids = [option.option_id];
           }
         }
+        console.log(`[submitAnswer] Default fallback payload:`, payload);
       }
       
       // Call the API with the payload
-      await questionnaireService.submitAnswer(questionId, payload);
+      console.log(`[submitAnswer] Calling API for ${questionId} with payload:`, payload);
+      const response = await questionnaireService.submitAnswer(questionId, payload);
+      
+      console.log(`[submitAnswer] Success for ${questionId}:`, response.data);
       
       return true;
     } catch (err) {
-      console.error(`Failed to submit ${questionId} answer:`, err);
+      console.error(`[submitAnswer] Failed to submit ${questionId} answer:`, err);
+      console.error(`[submitAnswer] Error response:`, err.response?.data);
       setAnswerError(err.response?.data?.message || `Failed to submit ${questionId} answer`);
       return false;
     } finally {
@@ -181,17 +226,23 @@ const [showLoader, setShowLoader] = useState(true);
         setConsentError(null);
         
         // Call consent API
+        console.log('[goNext] Submitting consent...');
         await questionnaireService.submitConsent(true);
+        console.log('[goNext] Consent submitted successfully');
         
         // Fetch basic metrics questions from API after consent
         setQuestionsLoading(true);
         try {
+          console.log('[goNext] Fetching basic_metrics questions...');
           const questionsRes = await questionnaireService.getQuestions('basic_metrics');
+          console.log('[goNext] Questions response:', questionsRes.data);
+          
           const questions = questionsRes.data?.data?.questions?.basic_metrics || [];
           // Sort by flow_order
           const sortedQuestions = questions.sort((a, b) => a.flow_order - b.flow_order);
           setBasicMetricsQuestions(sortedQuestions);
-          
+          console.log('[goNext] Basic metrics questions loaded:', sortedQuestions.map(q => q.question_id));
+           
           // Set default values from API range_config if available
           const weightQuestion = sortedQuestions.find(q => q.question_id === 'weight');
           const heightQuestion = sortedQuestions.find(q => q.question_id === 'height');
@@ -199,13 +250,15 @@ const [showLoader, setShowLoader] = useState(true);
           if (weightQuestion?.range_config) {
             const { min, max } = weightQuestion.range_config;
             setWeight(Math.round((min + max) / 2)); // Set to middle value
+            console.log('[goNext] Weight range:', weightQuestion.range_config);
           }
           if (heightQuestion?.range_config) {
             const { min, max } = heightQuestion.range_config;
             setHeight(Math.round((min + max) / 2)); // Set to middle value
+            console.log('[goNext] Height range:', heightQuestion.range_config);
           }
         } catch (qErr) {
-          console.error('Failed to fetch questions:', qErr);
+          console.error('[goNext] Failed to fetch questions:', qErr);
         } finally {
           setQuestionsLoading(false);
         }
@@ -213,7 +266,7 @@ const [showLoader, setShowLoader] = useState(true);
         // After successful consent, proceed to next step
         setStep((s) => s + 1);
       } catch (err) {  
-        console.error("Failed to submit consent:", err);
+        console.error("[goNext] Failed to submit consent:", err);
         setConsentError(err.response?.data?.message || "Failed to submit consent. Please try again.");
         // Still allow user to proceed even if consent fails (for demo purposes)
         setStep((s) => s + 1);
@@ -265,8 +318,10 @@ const [showLoader, setShowLoader] = useState(true);
           questionData={basicMetricsQuestions.find(q => q.question_id === "weight")}
           onNext={async () => {
             const weightQuestion = basicMetricsQuestions.find(q => q.question_id === "weight");
+            console.log('[WeightStep onNext] Submitting weight:', weight);
             if (weightQuestion) {
-              await submitAnswer(weightQuestion.question_id, weight, weightQuestion);
+              const success = await submitAnswer(weightQuestion.question_id, weight, weightQuestion);
+              console.log('[WeightStep onNext] Weight submission result:', success);
             }
             setStep(3);
           }}
@@ -284,8 +339,10 @@ const [showLoader, setShowLoader] = useState(true);
           questionData={basicMetricsQuestions.find(q => q.question_id === "height")}
           onNext={async () => {
             const heightQuestion = basicMetricsQuestions.find(q => q.question_id === "height");
+            console.log('[HeightStep onNext] Submitting height:', height);
             if (heightQuestion) {
-              await submitAnswer(heightQuestion.question_id, height, heightQuestion);
+              const success = await submitAnswer(heightQuestion.question_id, height, heightQuestion);
+              console.log('[HeightStep onNext] Height submission result:', success);
             }
             setStep(4);
           }}
@@ -305,9 +362,11 @@ const [showLoader, setShowLoader] = useState(true);
               q => q.question_id === "blood_group"
             );
 
+            console.log('[BloodStep onComplete] Submitting blood group:', blood);
             if (bloodQuestion && blood) {
               // Pass the blood value and questionData
-              await submitAnswer(bloodQuestion.question_id, blood, bloodQuestion);
+              const success = await submitAnswer(bloodQuestion.question_id, blood, bloodQuestion);
+              console.log('[BloodStep onComplete] Blood group submission result:', success);
             }
 
             setStep(5); // ✅ move to Fitness
@@ -543,7 +602,7 @@ function WeightStep({
         }}
       >
         {/* Back arrow */}
-        <div
+        {/* <div
           onClick={onBack}
           style={{
             alignSelf: "flex-start",
@@ -554,7 +613,7 @@ function WeightStep({
           }}
         >
           ←
-        </div>
+        </div> */}
 
         {/* Title */}
         <h2

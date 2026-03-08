@@ -764,23 +764,23 @@ function ScreenRenderer({ screen, onNext, onBack, isFirst, isLast, screens, curr
       );
 
       return (
-        <div className="py-16">
+        <div className="">
           <div className="min-h-screen bg-black flex items-center justify-center text-center">
-            <div className="w-full max-w-sm">
-              <h2 className="text-4xl font-semibold italic text-white font-Playfair Display py-6">
+            <div className="w-80 ">
+              <h2 className="text-3xl font-semibold italic text-white font-Playfair Display py-1">
                 {title || "Choose the language"}
               </h2>
-              <p className="mt-1 text-md text-gray-400 font-Poppins">
+              <p className="mt-1 text-sm text-gray-400 font-Poppins">
                 {subtitle || "Select your preferred language below."}
               </p>
 
               {/* Selected Language */}
-              <div className="mt-6">
+              <div className="mt-4">
                 <p className="text-md text-white font-Poppins text-start mb-2">
                   You Selected
                 </p>
-                <div className="p-[1px] rounded-xl bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]">
-                  <div className="flex items-center justify-between rounded-xl bg-[#0B0B0F] px-4 py-3">
+                <div className="p-[1px] rounded-xl bg-gradient-to-r from-[#EF3AFF] to-[#B601FD]">
+                  <div className="flex items-center justify-between rounded-xl bg-[#0B0B0F] px-4 py-2">
                     <div className="flex items-center gap-3">
                       <img
                         src={
@@ -788,9 +788,9 @@ function ScreenRenderer({ screen, onNext, onBack, isFirst, isLast, screens, curr
                             ?.flag || "https://flagcdn.com/w40/us.png"
                         }
                         alt={selectedLang}
-                        className="w-6 h-6 rounded-full"
+                        className="w-6 h-6 rounded-full "
                       />
-                      <span className="text-white font-Poppins">
+                      <span className="text-white text-[14px] font-Poppins">
                         {languages.find((l) => l.value === selectedLang)?.label || selectedLang}
                       </span>
                     </div>
@@ -804,19 +804,20 @@ function ScreenRenderer({ screen, onNext, onBack, isFirst, isLast, screens, curr
                 <p className="text-md text-white font-Poppins text-start mb-2">
                   All Languages
                 </p>
-                <div className="p-[1px] rounded-xl bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] font-Poppins">
-                  <div className="rounded-xl bg-[#0B0B0F] p-3 space-y-2 max-h-80 overflow-y-auto custom-scrollbar">
+                 <div className=" rounded-xl  border border-[#BA01FD] font-Poppins"> 
+                <div className=" rounded-xl p-1  font-Poppins">
+                  <div className="rounded-xl bg-[#000000] space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
                     <input
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Search"
-                      className="w-full mb-2 rounded-lg bg-black px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:outline-none"
+                      className="w-full mb-2 sticky top-0 bottom-0   bg-black px-3 py-2 text-sm text-white placeholder-gray-500 border border-b-white/10 border-t-0 border-l-0 border-r-0 focus:outline-none"
                     />
                     {filtered.map((l) => (
                       <button
                         key={l.value}
                         onClick={() => setSelectedLang(l.value)}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/5"
+                        className="w-full flex items-center justify-between  px-3 py-2 rounded-lg hover:bg-white/5"
                       >
                         <div className="flex items-center gap-3">
                           <img
@@ -838,7 +839,7 @@ function ScreenRenderer({ screen, onNext, onBack, isFirst, isLast, screens, curr
                       </button>
                     ))}
                   </div>
-                </div>
+                </div></div>
               </div>
 
               <div className="mt-6 flex gap-4">
@@ -1163,11 +1164,59 @@ function ScreenRenderer({ screen, onNext, onBack, isFirst, isLast, screens, curr
 
 case "intro": {
   const data = [
-    { size: 350, color: "#a855f7", duration: 30, images: ["https://picsum.photos/id/102/60"], segments: 3, gap: 30 },
-    { size: 280, color: "#06b6d4", duration: 25, images: ["https://picsum.photos/id/103/60", "https://picsum.photos/id/104/60"], segments: 2, gap: 40 },
-    { size: 220, color: "#eab308", duration: 20, images: ["https://picsum.photos/id/106/60"], segments: 3, gap: 50 },
-    { size: 160, color: "#f97316", duration: 15, images: ["https://picsum.photos/id/107/80"], segments: 1, gap: 0 },
-    { size: 110, color: "#ef4444", duration: 12, images: ["https://picsum.photos/id/108/40"], segments: 2, gap: 30 }
+   {
+  size: 350,
+  color: "#a855f7",
+  duration: 30,
+  startAngle: -30,
+  images: [
+    { src: "https://picsum.photos/id/102/60", angleOffset: 0 },
+    { src: "https://picsum.photos/id/110/60", angleOffset: 120 },
+    { src: "https://picsum.photos/id/112/60", angleOffset: 240 },
+  ],
+  segments: 3,
+  gap: 30
+},
+    {
+      size: 280,
+      color: "#06b6d4",
+      duration: 25,
+      startAngle: 60,
+      images: [
+        { src: "https://picsum.photos/id/103/60", angleOffset: 0 },
+        { src: "https://picsum.photos/id/104/60", angleOffset: 180 }
+      ],
+      segments: 2,
+      gap: 40
+    },
+    {
+      size: 220,
+      color: "#eab308",
+      duration: 20,
+      startAngle: -80,
+      images: [{ src: "https://picsum.photos/id/106/60", angleOffset: 0 }],
+      segments: 3,
+      gap: 50
+    },
+    {
+      size: 160,
+      color: "#f97316",
+      duration: 15,
+      startAngle: 45,
+      images: [{ src: "https://picsum.photos/id/107/80", angleOffset: 0 }],
+      segments: 1,
+      gap: 0
+    },
+    {
+      size: 110,
+      color: "#ef4444",
+      duration: 12,
+      startAngle: 150,
+      images: [{ src: "https://picsum.photos/id/108/40", angleOffset: 0 }],
+      
+      segments: 2,
+      gap: 30
+    }
   ];
 
   return (
@@ -1183,15 +1232,15 @@ case "intro": {
         )}
       </div>
 
-      <style>{`
+       <style>{`
         @keyframes rotate-main {
-          from { transform: translate(-50%, -50%) rotate(0deg); }
-          to   { transform: translate(-50%, -50%) rotate(360deg); }
+          from { transform: translate(-50%, -50%) rotate(var(--start-angle,0deg)); }
+          to   { transform: translate(-50%, -50%) rotate(calc(var(--start-angle,0deg) + 360deg)); }
         }
 
         @keyframes counter-rotate {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(-360deg); }
+          from { transform: rotate(calc(var(--start-angle,0deg) * -1)); }
+          to   { transform: rotate(calc(var(--start-angle,0deg) * -1 - 360deg)); }
         }
 
         .canvas {
@@ -1211,29 +1260,28 @@ case "intro": {
 
         .orbit-img-box {
           position: absolute;
-          top: 0;
           left: 50%;
           transform: translateX(-50%);
-          /* This container stays upright via counter-rotation */
           animation: counter-rotate linear infinite;
         }
 
         .orbit-img {
           border-radius: 50%;
           object-fit: cover;
-          border: none;
-          background: transparent;
         }
       `}</style>
 
       <div className="canvas">
         {data.map((ring, idx) => {
+
           const r = ring.size / 2;
           const circumference = 2 * Math.PI * (r - 6);
-          const dash = ring.segments === 1 
-            ? "none" 
-            : `${(circumference / ring.segments) - ring.gap} ${ring.gap}`;
-          
+
+          const dash =
+            ring.segments === 1
+              ? "none"
+              : `${circumference / ring.segments - ring.gap} ${ring.gap}`;
+
           const imgSize = ring.size < 200 ? 45 : 35;
 
           return (
@@ -1244,10 +1292,11 @@ case "intro": {
                 width: ring.size,
                 height: ring.size,
                 animationDuration: `${ring.duration}s`,
-                // Higher z-index for smaller (later) rings to prevent overlap
-                zIndex: idx + 1, 
+                "--start-angle": `${ring.startAngle}deg`,
+                zIndex: idx + 1
               }}
             >
+
               <svg width={ring.size} height={ring.size} viewBox={`0 0 ${ring.size} ${ring.size}`}>
                 <circle
                   cx={r}
@@ -1261,26 +1310,38 @@ case "intro": {
                 />
               </svg>
 
-              {ring.images.map((src, imgIdx) => (
+              {ring.images.map((img, imgIdx) => (
                 <div
                   key={imgIdx}
-                  className="orbit-img-box"
                   style={{
-                    width: imgSize,
-                    height: imgSize,
-                    animationDuration: `${ring.duration}s`,
-                    // Position the image exactly on the stroke path
-                    top: `calc(50% - ${r - 6}px - ${imgSize / 2}px)`,
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    width: 0,
+                    height: 0,
+                    transform: `rotate(${img.angleOffset}deg)`
                   }}
                 >
-                  <img
-                    src={src}
-                    alt=""
-                    className="orbit-img"
-                    style={{ width: imgSize, height: imgSize }}
-                  />
+                  <div
+                    className="orbit-img-box"
+                    style={{
+                      width: imgSize,
+                      height: imgSize,
+                      top: -(r - 6) - imgSize / 2,
+                      animationDuration: `${ring.duration}s`,
+                      "--start-angle": `${ring.startAngle + img.angleOffset}deg`
+                    }}
+                  >
+                    <img
+                      src={img.src}
+                      alt=""
+                      className="orbit-img"
+                      style={{ width: imgSize, height: imgSize }}
+                    />
+                  </div>
                 </div>
               ))}
+
             </div>
           );
         })}
@@ -1502,17 +1563,21 @@ case "intro": {
         "radial-gradient(circle at center, #000000, #000000, #000000, #140521, #140521)",
     }}
   >
-    <h2 className="font-Playfair text-[30px] font-semibold mb-4">
-      {title || (
-        <>
-          Build Your Perfect{" "}
-          <span className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent">
-            Playymate
-          </span>{" "}
-          Experience!
-        </>
-      )}
-    </h2>
+   <h2 className="font-Playfair text-[30px] font-bold mb-4">
+  {title &&
+    title.split(" ").map((word, index) => (
+      <span
+        key={index}
+        className={
+          index === 3
+            ? "bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent"
+            : ""
+        }
+      >
+        {word + " "}
+      </span>
+    ))}
+</h2>
 
     {subtitle && (
       <p className="text-gray-300 text-sm mb-10 font-Poppins">

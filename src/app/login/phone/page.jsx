@@ -767,7 +767,25 @@ export default function PhoneLogin() {
             redirectStep === "COMPLETED" ||
             redirectStep === "HOME"
           ) {
-            router.push("/onboarding/home");
+            router.push("/home");
+            return;
+          }
+
+          // If user has completed questionnaire, redirect to experience
+          if (
+            redirectStep === "QUESTIONNAIRE_COMPLETED" ||
+            redirectStep === "QUESTIONNAIRE_COMPLETE"
+          ) {
+            router.push("/onboarding/experience");
+            return;
+          }
+
+          // If user has completed experience, redirect to home
+          if (
+            redirectStep === "EXPERIENCE_COMPLETED" ||
+            redirectStep === "EXPERIENCE_COMPLETE"
+          ) {
+            router.push("/home");
             return;
           }
 
@@ -847,18 +865,18 @@ export default function PhoneLogin() {
   const currentScreen = step === "phone" ? phoneScreen : otpScreen;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col justify-between px-6 py-12">
+    <div className="min-h-screen bg-black text-white flex flex-col  justify-center items-center space-y-20 px-6">
 
       {/* Back */}
       <button
         onClick={() => router.back()}
-        className="text-xl"
+        className="text-xl  mr-80 "
       >
         ←
       </button>
 
       {/* Content */}
-      <div className="max-w-md w-full mx-auto">
+      <div className="flex  flex-col justify-center items-center w-full mx-auto">
 
         {/* Title */}
         <div className="text-center mb-8">
@@ -870,7 +888,7 @@ export default function PhoneLogin() {
                 index === 2 ? (
                   <span
                     key={index}
-                    className="bg-gradient-to-r from-fuchsia-500 to-orange-500 bg-clip-text text-transparent"
+                    className="bg-gradient-to-br from-[#EF3AFF] via-[#FF8319] to-[#FF8319] bg-clip-text text-transparent"
                   >
                     {" " + word}
                   </span>
@@ -880,7 +898,7 @@ export default function PhoneLogin() {
               )}
           </h1>
 
-          <p className="text-gray-400 mt-3  font-Poppins text-sm">
+          <p className="text-gray-400 mt-3   font-Poppins text-sm">
             {currentScreen?.subtitle
               ?.replace("{phone}", `+91 ${phone}`)}
           </p>
@@ -896,7 +914,7 @@ export default function PhoneLogin() {
 
         {/* PHONE INPUT */}
         {step === "phone" && (
-          <div className="flex items-center  font-Poppins bg-[#1a1a1a] rounded-xl px-4 h-14 gap-3 border border-gray-700">
+          <div className="flex items-center  w-96 font-Poppins bg-[#1a1a1a] rounded-xl px-4 h-14 gap-3 border border-pink-500 ">
 
             <span className="text-xl">🇮🇳</span>
 
@@ -916,7 +934,7 @@ export default function PhoneLogin() {
               placeholder={
                 phoneScreen?.input_placeholders?.phone
               }
-              className="flex-1 bg-transparent outline-none text-white"
+              className="flex-1 bg-transparent  outline-none text-white"
             />
           </div>
         )}
@@ -975,7 +993,7 @@ export default function PhoneLogin() {
           step === "phone" ? sendPhoneOtp : verifyPhoneOtp
         }
         disabled={loading}
-        className="w-full max-w-md  font-Poppins mx-auto py-4 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-500 font-semibold"
+        className="w-full max-w-sm font-Poppins mx-auto py-4 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-500 font-semibold"
       >
         {loading
           ? "Loading..."

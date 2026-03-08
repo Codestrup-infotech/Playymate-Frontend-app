@@ -347,7 +347,7 @@ export default function OnboardingDOBPage() {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#111113' }}>
+      <div className=" flex  items-center justify-center" style={{ backgroundColor: '#111113' }}>
         <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
       </div>
     );
@@ -358,12 +358,12 @@ export default function OnboardingDOBPage() {
 
   return (
     <div
-      className="min-h-screen text-white flex flex-col items-center justify-start px-6 pt-10"
+      className="min-h-screen text-white flex flex-col items-center justify-start px-6 pt-6 "
       style={{ backgroundColor: '#111113' }}
     >
-      <div className="w-full max-w-sm flex flex-col min-h-screen">
+      <div className="w-full max-w-sm flex flex-col space-y-8">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
+        {/* <div className="flex items-center gap-3 mb-8">
           <button
             onClick={() => router.push('/onboarding/gender')}
             className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -373,17 +373,17 @@ export default function OnboardingDOBPage() {
           <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-pink-500 to-orange-400 w-[30%]" />
           </div>
-        </div>
+        </div> */}
 
         {/* Title */}
-        <div className="text-center mb-6">
+        <div className="text-center ">
           <h1 className="text-3xl font-bold tracking-tight">
             How{' '}
             <span style={{ fontStyle: 'italic', fontWeight: 400 }}>Old</span>{' '}
             <span
               style={{
                 background: 'linear-gradient(90deg, #e8506a, #c0392b)',
-                WebkitBackgroundClip: 'text',
+                WebkitBackgroundClip: 'text  ',
                 WebkitTextFillColor: 'transparent',
                 fontWeight: 700,
               }}
@@ -391,7 +391,7 @@ export default function OnboardingDOBPage() {
               Are You
             </span>
           </h1>
-          <p className="mt-1 text-gray-400 text-sm">Please Provide your age in Years</p>
+          <p className="mt-1 text-gray-400 text-sm font-Poppins">Please Provide your age in Years</p>
         </div>
 
         {error && (
@@ -402,7 +402,7 @@ export default function OnboardingDOBPage() {
         )}
 
         {/* Drum Pickers */}
-        <div className="flex-1 flex items-center">
+        <div className="flex-1 flex items-center font-Poppins ">
           <div
             className="w-full rounded-2xl overflow-hidden"
             style={{
@@ -450,10 +450,10 @@ export default function OnboardingDOBPage() {
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="w-full py-4 rounded-full font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-4 rounded-full font-Poppins font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50"
               style={{ background: 'linear-gradient(90deg, #e8506a, #e8923a)' }}
             >
-              {loading ? <><Loader2 className="w-5 h-5 animate-spin" />Saving...</> : 'Continue'}
+              {loading ? <><Loader2 className="w-5 h-5 animate-spin font-Poppins " />Saving...</> : 'Continue'}
             </button>
             <button
               onClick={() => setShowConfirm(false)}
@@ -463,25 +463,20 @@ export default function OnboardingDOBPage() {
             </button>
           </div>
         ) : (
-          <div className="mt-6 space-y-3">
+        
             <button
               onClick={handleContinuePress}
               disabled={loading}
-              className="w-full py-4 rounded-full font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full font-Poppins py-4 rounded-full font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50"
               style={{ background: 'linear-gradient(90deg, #e8506a, #e8923a)' }}
             >
               Continue
             </button>
-            {/* <button
-              onClick={handleSkip}
-              className="w-full py-3 text-gray-400 text-sm hover:text-white transition-colors"
-            >
-              Skip for now
-            </button> */}
-          </div>
+         
+        
         )}
 
-        <div className="pb-8" />
+        <div/>
       </div>
     </div>
   );

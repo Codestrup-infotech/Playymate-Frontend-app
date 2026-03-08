@@ -19,15 +19,22 @@ export default function Page() {
         const nextStep = data.next_required_step;
         const onboardingState = data.onboarding_state;
 
-        // If user has completed onboarding, redirect to home
+        // If user has completed questionnaire, redirect to experience
+        if (nextStep === 'QUESTIONNAIRE_COMPLETED' || nextStep === 'QUESTIONNAIRE_COMPLETE' ||
+            onboardingState === 'QUESTIONNAIRE_COMPLETED' || onboardingState === 'QUESTIONNAIRE_COMPLETE') {
+          router.push("/onboarding/experience");
+          return;
+        }
+
+        // If user has completed all onboarding including experience, redirect to home
         const completedSteps = [
           "ACTIVE_USER",
           "COMPLETED",
           "HOME",
           "DONE",
           "ACTIVE",
-          "QUESTIONNAIRE_COMPLETED",
-          "QUESTIONNAIRE_COMPLETE",
+          "EXPERIENCE_COMPLETED",
+          "EXPERIENCE_COMPLETE",
           "EXTENDED_PROFILE_COMPLETED",
           "EXTENDED_PROFILE_INTRO",
           "EXTENDED_PROFILE_PENDING",

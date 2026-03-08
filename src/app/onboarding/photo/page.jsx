@@ -546,7 +546,7 @@ export default function OnboardingProfilePhotoPage() {
     <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-1">
+        {/* <div className="flex items-center gap-3 mb-1">
           <button
             onClick={() => router.push('/onboarding/location')}
             className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -556,7 +556,7 @@ export default function OnboardingProfilePhotoPage() {
           <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-pink-500 to-orange-400 w-[60%]" />
           </div>
-        </div>
+        </div> */}
 
         {/* Content */}
         <div className="space-y-6">
@@ -628,7 +628,7 @@ export default function OnboardingProfilePhotoPage() {
           </div>
 
           {/* Two smaller photo slots */}
-          <div className="flex gap-4 justify-center pt-2">
+          <div className="flex gap-4 justify-center pt-2 font-Poppins ">
             {[1, 2].map((index) => (
               <div key={index} className="relative">
                 {photoPreviews[index] ? (
@@ -687,7 +687,7 @@ export default function OnboardingProfilePhotoPage() {
           <button
             onClick={handleSubmit}
             disabled={loading || uploading}
-            className="w-full py-4 rounded-full font-semibold bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-4 rounded-full font-Poppins font-normal bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {uploading ? (
               <>

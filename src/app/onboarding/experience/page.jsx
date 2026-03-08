@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import experienceService from "@/services/experience";
+import { userService } from "@/services/user";
 
 export default function CompleteExperience() {
 
@@ -19,26 +20,51 @@ export default function CompleteExperience() {
   // FETCH API SCREENS
   useEffect(() => {
 
-    const fetchScreens = async () => {
+   const checkOnboardingStatus = async () => {
+  try {
+    const statusResponse = await userService.getOnboardingStatus();
+    const data = statusResponse?.data?.data || {};
+    const nextStep = data.next_required_step;
+    const onboardingState = data.onboarding_state;
 
-      try {
+    const completedSteps = [
+      "ACTIVE_USER",
+      "COMPLETED",
+      "HOME",
+      "DONE",
+      "ACTIVE",
+      "EXPERIENCE_COMPLETED",
+      "EXPERIENCE_COMPLETE",
+      "EXTENDED_PROFILE_COMPLETED",
+      "EXTENDED_PROFILE_INTRO",
+      "EXTENDED_PROFILE_PENDING",
+    ];
 
-        const res = await experienceService.getScreens();
+    if (
+      completedSteps.includes(nextStep) ||
+      completedSteps.includes(onboardingState)
+    ) {
+      router.push("/home");
+      return;
+    }
+  } catch (err) {
+    console.error("Failed to check onboarding status:", err);
+  }
 
-        const apiScreens = res?.data?.data?.screens || [];
+  try {
+    const res = await experienceService.getScreens();
+    const apiScreens = res?.data?.data?.screens || [];
+    setScreens(apiScreens);
+  } catch (error) {
+    console.error("Failed to fetch screens:", error);
+  }
 
-        setScreens(apiScreens);
+  setPageLoading(false);
+};
 
-      } catch (error) {
-        console.error("Failed to fetch screens:", error);
-      }
+    checkOnboardingStatus();
 
-      setPageLoading(false);
-    };
-
-    fetchScreens();
-
-  }, []);
+  }, [router]);
 
   // SELECT OPTION
   const selectOption = (questionKey, value, type) => {
@@ -78,32 +104,40 @@ export default function CompleteExperience() {
   const handleNext = async () => {
     setLoading(true);
   
-    try {
-  
-      const responses = Object.entries(answers).map(([key, value]) => ({
-        question_key: key,
-        answer: value
-      }));
-  
-      const payload = {
-        screen_key: currentScreen.screen_key,
-        responses
-      };
-  
-      console.log("Submitting payload:", payload);
-  
-      await experienceService.saveAnswers(payload);
-  
-      if (step < screens.length - 1) {
-        setStep(step + 1);
-        setAnswers({});
-      } else {
-        router.push("/home");
-      }
-  
-    } catch (error) {
-      console.error("Submit error:", error.response?.data || error);
-    }
+  try {
+
+  const responses = Object.entries(answers).map(([key, value]) => ({
+    question_key: key,
+    answer: value
+  }));
+
+  // 🔍 Debug logs
+  console.log("=== RESPONSES ===");
+  console.log(responses);
+
+  const payload = {
+    screen_key: currentScreen.screen_key,
+    responses
+  };
+
+  console.log("=== PAYLOAD OBJECT ===");
+  console.log(payload);
+
+  console.log("=== PAYLOAD JSON ===");
+  console.log(JSON.stringify(payload, null, 2));
+
+  await experienceService.saveAnswers(payload);
+
+  if (step < screens.length - 1) {
+    setStep(step + 1);
+    setAnswers({});
+  } else {
+    router.push("/home");
+  }
+
+} catch (error) {
+  console.error("Submit error:", error.response?.data || error);
+}
   
     setLoading(false);
   };

@@ -27,6 +27,39 @@ getAllLoginScreens: async (platform = "web") => {
 
 
 
+// ============ ONBOARDING CONFIG ============
+
+getOnboardingScreen: async (screenKey, platform = "web") => {
+  console.log("Fetching onboarding screen:", screenKey);
+
+  const response = await api.get(
+  `/api/v1/onboarding/config/screens/${screenKey}?platform=${platform}`
+);
+
+  return response;
+},
+
+getAllOnboardingScreens: async (platform = "web") => {
+  console.log("Fetching all onboarding screens");
+
+  const response = await api.get(
+    `/api/v1/onboarding/config/screens?platform=${platform}`
+  );
+
+  return response;
+},
+
+getOnboardingScreenKeys: async () => {
+  console.log("Fetching onboarding screen keys");
+
+  const response = await api.get(
+    `/api/v1/onboarding/config/keys`
+  );
+
+  return response;
+},
+
+
 
   // ============ PHONE OTP ============
 

@@ -462,11 +462,20 @@ export default function LoginPage() {
             nextStep === "HOME" ||
             nextStep === "DONE" ||
             nextStep === "ACTIVE" ||
-            nextStep === "QUESTIONNAIRE_COMPLETED" ||
-            nextStep === "QUESTIONNAIRE_COMPLETE" ||
+            nextStep === "EXPERIENCE_COMPLETED" ||
+            nextStep === "EXPERIENCE_COMPLETE" ||
             nextStep === "EXTENDED_PROFILE_COMPLETED"
           ) {
             router.push("/home");
+            return;
+          }
+
+          // If user has completed questionnaire, redirect to experience
+          if (
+            nextStep === "QUESTIONNAIRE_COMPLETED" ||
+            nextStep === "QUESTIONNAIRE_COMPLETE"
+          ) {
+            router.push("/onboarding/experience");
             return;
           }
 

@@ -1,7 +1,10 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+
 export default function PaymentPage() {
   const params = useSearchParams();
   const router = useRouter();
@@ -11,18 +14,13 @@ export default function PaymentPage() {
 
   return (
     <div className="bg-black text-white min-h-screen p-6">
-<div className="flex items-center mb-6">
-  <button
-    onClick={() => router.back()}
-    className="mr-3"
-  >
-    <ArrowLeft size={22} />
-  </button>
+      <div className="flex items-center mb-6">
+        <button onClick={() => router.back()} className="mr-3">
+          <ArrowLeft size={22} />
+        </button>
+        <h1 className="text-xl font-semibold">Wallet</h1>
+      </div>
 
-  <h1 className="text-xl font-semibold">
-    Wallet
-  </h1>
-</div>
       <h1 className="text-xl mb-6">Payment</h1>
 
       <div className="bg-zinc-900 p-6 rounded-2xl mb-6">
@@ -37,9 +35,7 @@ export default function PaymentPage() {
       </div>
 
       <button
-        onClick={() =>
-          router.push(`/wallet/success?diamonds=${diamonds}`)
-        }
+        onClick={() => router.push(`/wallet/success?diamonds=${diamonds}`)}
         className="bg-gradient-to-r from-pink-500 to-orange-500 w-full py-3 rounded-xl"
       >
         Confirm purchase ₹{amount}

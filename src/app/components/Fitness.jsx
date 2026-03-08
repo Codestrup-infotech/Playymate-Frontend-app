@@ -443,6 +443,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { questionnaireService } from "@/services/questionnaire";
+import { startQuestionnaireSession } from "@/lib/api/categoryApi";
 
 const COINS_PER_QUESTION = 10;
 
@@ -656,11 +657,16 @@ export default function Fitness({ onBack, onComplete }) {
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
+        console.log('[Fitness] Fetching all questions...');
         const res  = await questionnaireService.getQuestions();
         const data = res.data?.data || res.data;
+        console.log('[Fitness] Questions response:', data);
 
         const fitnessQuestions = data?.questions?.fitness || [];
         const medicalQuestions = data?.questions?.medical || [];
+
+        console.log('[Fitness] Fitness questions:', fitnessQuestions.map(q => ({ id: q.question_id, type: q.question_type })));
+        console.log('[Fitness] Medical questions:', medicalQuestions.map(q => ({ id: q.question_id, type: q.question_type })));
 
         const sortedFitness = fitnessQuestions.sort(
           (a, b) => (a.flow_order || 0) - (b.flow_order || 0)
@@ -674,8 +680,18 @@ export default function Fitness({ onBack, onComplete }) {
         setCurrentCategory("fitness");
         setPhase("questions");
 
+        // Check if required questions are present
+        const requiredQuestions = ['fitness_level', 'workout_frequency', 'has_medical_conditions'];
+        const allQ = [...sortedFitness, ...sortedMedical];
+        const missing = requiredQuestions.filter(rq => !allQ.find(q => q.question_id === rq));
+        if (missing.length > 0) {
+          console.warn('[Fitness] Missing required questions:', missing);
+        } else {
+          console.log('[Fitness] All required questions found!');
+        }
+
       } catch (err) {
-        console.error("Failed to load fitness questions:", err);
+        console.error("[Fitness] Failed to load fitness questions:", err);
         setAllQuestions({ fitness: [], medical: [] });
         setQuestions([]);
         setPhase("questions");
@@ -748,6 +764,8 @@ export default function Fitness({ onBack, onComplete }) {
     const questionType = current.question_type;
     let   payload      = {};
 
+    console.log(`[Fitness.submitAnswer] Submitting: ${qId}`, { answer, questionType, options: current.options });
+
     if (
       questionType === "single_select" ||
       questionType === "single_choice" ||
@@ -767,7 +785,19 @@ export default function Fitness({ onBack, onComplete }) {
         if (byLabel?.option_id) optionIdToSend = byLabel.option_id;
       }
 
+      // Special handling for fitness_level, workout_frequency
+      if (!optionIdToSend && answer && typeof answer === "string") {
+        const normalizedAnswer = answer.toLowerCase().replace(/\s+/g, '');
+        const byNormalized = current.options?.find(
+          (opt) => 
+            opt.label?.toLowerCase().replace(/\s+/g, '') === normalizedAnswer ||
+            opt.value?.toLowerCase().replace(/\s+/g, '') === normalizedAnswer
+        );
+        if (byNormalized?.option_id) optionIdToSend = byNormalized.option_id;
+      }
+
       payload.selected_option_ids = optionIdToSend ? [optionIdToSend] : [];
+      console.log(`[Fitness.submitAnswer] Single select payload:`, payload);
 
     } else if (
       questionType === "multi_select" ||
@@ -786,23 +816,29 @@ export default function Fitness({ onBack, onComplete }) {
         .filter(Boolean);
 
       if (selectedIds.length > 0) payload.selected_option_ids = selectedIds;
+      console.log(`[Fitness.submitAnswer] Multi select payload:`, payload);
 
     } else if (questionType === "boolean") {
       payload.answer_boolean = answer === true;
+      console.log(`[Fitness.submitAnswer] Boolean payload:`, payload);
 
     } else if (questionType === "text") {
       payload.answer_text = answer;
+      console.log(`[Fitness.submitAnswer] Text payload:`, payload);
 
-    } else if (questionType === "number") {
+    } else if (questionType === "number" || questionType === "range") {
       payload.answer_number =
         typeof answer === "number"
           ? answer
           : parseInt(answer) || parseFloat(answer);
+      console.log(`[Fitness.submitAnswer] Number/Range payload:`, payload);
     }
 
     try {
+      console.log(`[Fitness.submitAnswer] Calling API for ${qId} with payload:`, payload);
       const res  = await questionnaireService.submitAnswer(qId, payload);
       const data = res.data?.data;
+      console.log(`[Fitness.submitAnswer] Success for ${qId}:`, data);
 
       if (!coinsEarned.has(qId)) {
         setCoins((c) => c + COINS_PER_QUESTION);
@@ -810,6 +846,7 @@ export default function Fitness({ onBack, onComplete }) {
       }
 
       if (data?.profile_completed) {
+        console.log(`[Fitness.submitAnswer] Profile completed! Full response:`, data);
         setPhase("success");
         return;
       }
@@ -828,7 +865,8 @@ export default function Fitness({ onBack, onComplete }) {
       }
 
     } catch (err) {
-      console.error("Submit error:", err);
+      console.error(`[Fitness.submitAnswer] Error for ${qId}:`, err);
+      console.error(`[Fitness.submitAnswer] Error response:`, err.response?.data);
     }
   };
 
@@ -853,7 +891,21 @@ export default function Fitness({ onBack, onComplete }) {
         <h2 className="text-2xl font-bold mb-2">Physical Profile Completed!</h2>
         <p className="text-gray-400 mb-2">You earned {coins} coins</p>
         <button
-          onClick={onComplete}
+          onClick={async () => {
+            try {
+              // Get token from sessionStorage
+              const token = sessionStorage.getItem('accessToken');
+              if (token) {
+                console.log('[Fitness] Starting questionnaire session...');
+                await startQuestionnaireSession(token, false);
+                console.log('[Fitness] Questionnaire session started!');
+              }
+            } catch (err) {
+              console.error('[Fitness] Error starting session:', err);
+            }
+            // Then navigate to questionnaire
+            onComplete();
+          }}
           className="mt-6 px-8 py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"
         >
           Continue
