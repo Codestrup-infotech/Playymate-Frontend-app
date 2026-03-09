@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Settings, Share2, MessageCircle, Users, Heart, MapPin } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Settings, Share2, MessageCircle, Users, Heart, MapPin, Pencil } from "lucide-react";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("Posts");
 
   const tabs = ["Posts", "Reels", "Events", "Community"];
@@ -33,6 +35,13 @@ export default function ProfilePage() {
             </h1>
 
             <div className="flex gap-3">
+              <button 
+                onClick={() => router.push("/home/profile/edit")}
+                className="px-5 py-2 rounded-lg bg-[#252542] hover:bg-[#2d2d52] transition-colors flex items-center gap-2"
+              >
+                <Pencil size={18} />
+                Edit Profile
+              </button>
               <button className="px-5 py-2 rounded-lg bg-[#252542] hover:bg-[#2d2d52] transition-colors flex items-center gap-2">
                 <Share2 size={18} />
                 Share
@@ -136,11 +145,11 @@ export default function ProfilePage() {
           </div>
 
           {/* GALLERY GRID */}
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-6">
+          <div className="grid grid-cols-3 gap-1 mt-6">
             {gallery.map((img, i) => (
               <div
                 key={i}
-                className="aspect-square bg-[#252542] rounded-xl overflow-hidden hover:scale-105 transition-transform cursor-pointer"
+                className="aspect-square bg-[#252542] overflow-hidden hover:opacity-80 transition-opacity cursor-pointer relative"
               >
                 <img
                   src={img}

@@ -347,7 +347,7 @@ export default function OnboardingLocationPage() {
             <div className="bg-black/90 backdrop-blur rounded-xl p-3 space-y-3">
               {/* Search Input */}
               <div className="relative">
-                <div className="flex items-center gap-2 border border-pink-500/40 rounded-lg px-3 py-2 bg-black/50">
+                {/* <div className="flex items-center gap-2 border border-pink-500/40 rounded-lg px-3 py-2 bg-black/50">
                   <span className="text-gray-400">🔍</span>
                   <input
                     ref={inputRef}
@@ -368,7 +368,7 @@ export default function OnboardingLocationPage() {
                       ✕
                     </button>
                   )}
-                </div>
+                </div> */}
 
                 {/* Predictions */}
                 {predictions.length > 0 && (

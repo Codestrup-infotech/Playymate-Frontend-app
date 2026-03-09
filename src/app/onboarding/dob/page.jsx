@@ -459,7 +459,7 @@ export default function OnboardingDOBPage() {
         {/* Confirm Sheet */}
         {showConfirm ? (
           <div
-            className="mt-6 rounded-2xl p-5 text-center"
+            className="mt-6 rounded-2xl p-5 text-center font-Poppins"
             style={{
               background: 'linear-gradient(160deg, #1e1e22, #18181c)',
               border: '1px solid rgba(255,255,255,0.08)',

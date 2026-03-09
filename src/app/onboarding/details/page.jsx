@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { userService } from "@/services/user";
 
-export default function DetailsPage() {
+function DetailsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -21,6 +21,37 @@ export default function DetailsPage() {
       roleLabel={roleLabel}
       onBack={handleBack}
     />
+  );
+}
+
+function DetailsPageLoading() {
+  return (
+    <div className="bg-black">
+      <div className="w-[390px] py-8 text-white mx-auto">
+        <div className="flex gap-6 mb-6 pt-6">
+          <div className="text-3xl text-gray-400 font-bold">←</div>
+          <div className="flex flex-col space-y-3">
+            <div className="h-8 w-48 bg-gray-800 rounded animate-pulse"></div>
+          </div>
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="space-y-2">
+              <div className="h-4 w-24 bg-gray-800 rounded animate-pulse"></div>
+              <div className="h-12 w-full bg-gray-800 rounded-xl animate-pulse"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function DetailsPage() {
+  return (
+    <Suspense fallback={<DetailsPageLoading />}>
+      <DetailsPageContent />
+    </Suspense>
   );
 }
 

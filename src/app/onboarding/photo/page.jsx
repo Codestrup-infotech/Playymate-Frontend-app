@@ -578,7 +578,7 @@ export default function OnboardingProfilePhotoPage() {
                 Photo
               </span>
             </h1>
-            <p className="mt-2 text-gray-400 text-sm">
+            <p className="mt-2 text-gray-400 text-sm font-Poppins ">
               Add a photo to personalize your profile and make your experience more engaging.
             </p>
           </div>

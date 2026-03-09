@@ -1,443 +1,393 @@
+
+
 // "use client";
 
-// import { useState, useEffect } from "react";
-// import { questionnaireService } from "@/services/questionnaire";
+// import React, { useState, useEffect, useRef } from "react";
+// import { useRouter, useSearchParams } from "next/navigation";
+// import {
+//   Loader2,
+//   Shield,
+//   Smartphone,
+//   Fingerprint,
+//   Building2,
+//   Clock,
+//   CheckCircle,
+//   AlertCircle,
+//   ArrowRight,
+//   X,
+// } from "lucide-react";
+// import { v4 as uuidv4 } from "uuid";
+// import { kycService } from "@/services/kyc";
+// import { userService } from "@/services/user";
+// import { getRouteFromStep } from "@/lib/api/navigation";
 
-// const COINS_PER_QUESTION = 10;
+// const STEPS = {
+//   INTRO: "intro",
+//   POLLING: "polling",
+//   SUCCESS: "success",
+//   ERROR: "error",
+// };
 
-// /* =====================================================
-//    CONDITIONAL VISIBILITY
-// ===================================================== */
-// function buildVisibleSteps(questions, answers) {
-//   return questions.filter((q) => {
-//     if (!q.conditional_on) return true;
+// export default function KYCPage() {
+//   const router = useRouter();
+//   const searchParams = useSearchParams();
 
-//     const { question_id, condition_type, condition_value } =
-//       q.conditional_on;
+//   const verificationIdFromUrl = searchParams.get("verification_id");
+//   const statusFromUrl = searchParams.get("status");
 
-//     const prevAnswer = answers[question_id];
-
-//     if (prevAnswer === undefined || prevAnswer === null) {
-//       return false;
-//     }
-
-//     if (condition_type === "equals") {
-//       return String(prevAnswer) === String(condition_value);
-//     }
-
-//     if (condition_type === "contains") {
-//       const arr = Array.isArray(prevAnswer)
-//         ? prevAnswer
-//         : [prevAnswer];
-
-//       return arr.includes(condition_value);
-//     }
-
-//     return true;
+//   const [step, setStep] = useState(STEPS.INTRO);
+//   const [loading, setLoading] = useState(false);
+//   const [error, setError] = useState("");
+//   const [verificationId, setVerificationId] = useState("");
+//   const [aadhaarData, setAadhaarData] = useState(null);
+//   // Track which KYC screens are enabled
+//   const [screensEnabled, setScreensEnabled] = useState({
+//     aadhaar: true,
+//     liveness: true,
 //   });
-// }
 
-// export default function Fitness({ onBack, onComplete }) {
-//   const [questions, setQuestions] = useState([]);
-//   const [allQuestions, setAllQuestions] = useState({
-//     fitness: [],
-//     medical: []
-//   });
-//   const [answers, setAnswers] = useState({});
-//   const [stepIndex, setStepIndex] = useState(0);
-//   const [coins, setCoins] = useState(0);
-//   const [coinsEarned, setCoinsEarned] = useState(new Set());
-//   const [loading, setLoading] = useState(true);
-//   const [phase, setPhase] = useState("loading");
-//   const [currentCategory, setCurrentCategory] = useState("fitness");
+//   const pollingRef = useRef(null);
+//   const DEV_MODE = process.env.NEXT_PUBLIC_KYC_DEV_MODE === "true";
 
-//   /* =====================================================
-//      FETCH QUESTIONS
-//   ===================================================== */
+//   /* ================= CHECK STATUS ================= */
+
 //   useEffect(() => {
-//     const fetchQuestions = async () => {
+//     const checkStatus = async () => {
 //       try {
-//         const res = await questionnaireService.getQuestions();
-//         const data = res.data?.data || res.data;
+//         const res = await userService.getOnboardingStatus();
+//         const state = res?.data?.data?.onboarding_state;
+//         const nextStep = res?.data?.next_required_step;
 
-//         const fitnessQuestions = data?.questions?.fitness || [];
-//         const medicalQuestions = data?.questions?.medical || [];
+//         const completedStates = [
+//           "KYC_COMPLETED",
+//           "PHYSICAL_PROFILE_CONSENT",
+//           "PHYSICAL_PROFILE_COMPLETED",
+//           "QUESTIONNAIRE_COMPLETE",
+//           "COMPLETED",
+//           "ACTIVE",
+//         ];
 
-//         const sortedFitness = fitnessQuestions.sort(
-//           (a, b) => (a.flow_order || 0) - (b.flow_order || 0)
-//         );
-
-//         const sortedMedical = medicalQuestions.sort(
-//           (a, b) => (a.flow_order || 0) - (b.flow_order || 0)
-//         );
-
-//         setAllQuestions({
-//           fitness: sortedFitness,
-//           medical: sortedMedical
-//         });
-
-//         setQuestions(sortedFitness);
-//         setCurrentCategory("fitness");
-//         setPhase("questions");
+//         if (completedStates.includes(state)) {
+//           if (nextStep) {
+//             const route = getRouteFromStep(nextStep);
+//             if (route) {
+//               router.push(route);
+//               return;
+//             }
+//           }
+//           router.push("/onboarding/physical");
+//         }
 //       } catch (err) {
-//         console.error("Failed to load fitness questions:", err);
-//         setAllQuestions({ fitness: [], medical: [] });
-//         setQuestions([]);
-//         setPhase("questions");
-//       } finally {
-//         setLoading(false);
+//         console.error(err);
 //       }
 //     };
 
-//     fetchQuestions();
+//     checkStatus();
+//   }, [router]);
+
+//   /* ================= FETCH SCREEN VISIBILITY ================= */
+
+//   useEffect(() => {
+//     const fetchScreenVisibility = async () => {
+//       try {
+//         const res = await kycService.getKycScreens();
+//         const { screens } = res.data?.data || {};
+//         if (screens) {
+//           setScreensEnabled({
+//             aadhaar: screens.aadhaar?.enabled ?? true,
+//             liveness: screens.liveness?.enabled ?? true,
+//           });
+//         }
+//       } catch (err) {
+//         console.error('Failed to fetch KYC screen visibility:', err);
+//         // Default to both enabled
+//       }
+//     };
+
+//     fetchScreenVisibility();
 //   }, []);
 
-//   const visibleSteps = buildVisibleSteps(questions, answers);
-//   const current = visibleSteps[stepIndex];
+//   /* ================= HANDLE DIGILOCKER REDIRECT ================= */
 
-//   const totalQuestions =
-//     allQuestions.fitness.length +
-//     allQuestions.medical.length;
+//   useEffect(() => {
+//     if (verificationIdFromUrl && statusFromUrl) {
+//       handleRedirect(verificationIdFromUrl, statusFromUrl);
+//     }
+//   }, [verificationIdFromUrl, statusFromUrl]);
 
-//   let currentProgress = 0;
+//   const handleRedirect = async (vid, status) => {
+//     setVerificationId(vid);
 
-//   if (currentCategory === "fitness") {
-//     currentProgress = stepIndex + 1;
-//   } else if (currentCategory === "medical") {
-//     currentProgress =
-//       allQuestions.fitness.length +
-//       stepIndex +
-//       1;
-//   }
-
-//   const progress =
-//     totalQuestions > 0
-//       ? Math.round((currentProgress / totalQuestions) * 100)
-//       : 0;
-
-//   /* =====================================================
-//      SET ANSWER
-//   ===================================================== */
-//   const setAnswer = (questionId, value, type) => {
-//     setAnswers((prev) => {
-//       if (type === "multi") {
-//         const existing = prev[questionId] || [];
-
-//         return {
-//           ...prev,
-//           [questionId]: existing.includes(value)
-//             ? existing.filter((v) => v !== value)
-//             : [...existing, value],
-//         };
-//       }
-
-//       return { ...prev, [questionId]: value };
-//     });
+//     if (status === "verified" || status === "AUTHENTICATED") {
+//       await fetchDocument(vid);
+//     } else if (status === "pending") {
+//       startPolling(vid);
+//     } else {
+//       setError("Verification failed.");
+//       setStep(STEPS.ERROR);
+//     }
 //   };
 
-//   const hasAnswer = () => {
-//     if (!current) return false;
+//   /* ================= START DIGILOCKER ================= */
 
-//     const val = answers[current.question_id];
-
-//     if (current.question_type === "text") {
-//       return val && val.trim().length > 0;
-//     }
-
-//     if (current.question_type === "multi_choice") {
-//       return Array.isArray(val) && val.length > 0;
-//     }
-
-//     if (current.question_type === "boolean") {
-//       return val !== undefined && val !== null;
-//     }
-
-//     return val !== undefined && val !== null;
-//   };
-
-//   /* =====================================================
-//      SUBMIT ANSWER
-//   ===================================================== */
-//   const submitAnswer = async () => {
-//     if (!current) return;
-
-//     const qId = current.question_id;
-//     const answer = answers[qId];
-//     const questionType = current.question_type;
-
-//     let payload = {};
-
-//     if (
-//       questionType === "single_select" ||
-//       questionType === "single_choice" ||
-//       questionType === "single"
-//     ) {
-//       let optionIdToSend = null;
-
-//       if (answer && typeof answer === "string") {
-//         const byId = current.options?.find(
-//           (opt) => opt.option_id === answer
-//         );
-//         if (byId) {
-//           optionIdToSend = answer;
-//         }
-//       }
-
-//       if (!optionIdToSend) {
-//         const byLabel = current.options?.find(
-//           (opt) =>
-//             opt.label === answer ||
-//             opt.value === answer
-//         );
-//         if (byLabel?.option_id) {
-//           optionIdToSend = byLabel.option_id;
-//         }
-//       }
-
-//       if (optionIdToSend) {
-//         payload.selected_option_ids = [
-//           optionIdToSend,
-//         ];
-//       } else {
-//         payload.selected_option_ids = [];
-//       }
-//     } else if (
-//       questionType === "multi_select" ||
-//       questionType === "multi_choice" ||
-//       questionType === "multi"
-//     ) {
-//       const selectedIds = (answer || [])
-//         .map((a) => {
-//           const byId = current.options?.find(
-//             (opt) => opt.option_id === a
-//           );
-//           if (byId) return a;
-
-//           const byLabel = current.options?.find(
-//             (opt) =>
-//               opt.label === a ||
-//               opt.value === a
-//           );
-//           return byLabel?.option_id || a;
-//         })
-//         .filter(Boolean);
-
-//       if (selectedIds.length > 0) {
-//         payload.selected_option_ids = selectedIds;
-//       }
-//     } else if (questionType === "boolean") {
-//       if (answer === true) {
-//         payload.answer_boolean = true;
-//       } else if (answer === false) {
-//         payload.answer_boolean = false;
-//       } else {
-//         payload.answer_boolean = false;
-//       }
-//     } else if (questionType === "text") {
-//       payload.answer_text = answer;
-//     } else if (questionType === "number") {
-//       payload.answer_number =
-//         typeof answer === "number"
-//           ? answer
-//           : parseInt(answer) || parseFloat(answer);
-//     }
-
+//   const handleStart = async () => {
 //     try {
-//       const res =
-//         await questionnaireService.submitAnswer(
-//           qId,
-//           payload
-//         );
+//       setLoading(true);
 
-//       const data = res.data?.data;
+//       const vid = uuidv4();
+//       setVerificationId(vid);
 
-//       if (!coinsEarned.has(qId)) {
-//         setCoins((c) => c + COINS_PER_QUESTION);
-//         setCoinsEarned(
-//           (prev) => new Set([...prev, qId])
-//         );
-//       }
-
-//       if (data?.profile_completed) {
-//         setPhase("success");
+//       if (DEV_MODE) {
+//         startPolling(vid);
 //         return;
 //       }
 
-//       if (stepIndex < visibleSteps.length - 1) {
-//         setStepIndex((i) => i + 1);
-//       } else {
-//         if (
-//           currentCategory === "fitness" &&
-//           allQuestions.medical.length > 0
-//         ) {
-//           setCurrentCategory("medical");
-//           setQuestions(allQuestions.medical);
-//           setStepIndex(0);
-//           setAnswers({});
-//         } else {
-//           setPhase("success");
-//         }
-//       }
+//       const redirectUrl =
+//         process.env.NEXT_PUBLIC_DIGILOCKER_REDIRECT_URI ||
+//         "playymate://kyc-callback";
+
+//       const res = await kycService.digilockerCreateUrl(
+//         vid,
+//         ["AADHAAR"],
+//         redirectUrl,
+//         "verification"
+//       );
+
+//       const consentUrl = res.data?.data?.consent_url;
+//       window.location.href = consentUrl;
 //     } catch (err) {
-//       console.error("Submit error:", err);
+//       setError("Failed to start verification.");
+//       setStep(STEPS.ERROR);
+//     } finally {
+//       setLoading(false);
 //     }
 //   };
 
-//   if (loading) {
-//     return (
-//       <div className="flex items-center justify-center min-h-screen bg-black text-white">
-//         Loading...
-//       </div>
-//     );
-//   }
+//   /* ================= POLLING ================= */
 
-//   if (phase === "success") {
-//     return (
-//       <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white text-center px-6">
-//         <div className="text-5xl mb-4">🎉</div>
-//         <h2 className="text-2xl font-bold mb-2">
-//           Physical Profile Completed!
-//         </h2>
-//         <p className="text-gray-400 mb-2">
-//           You earned {coins} coins
-//         </p>
-//         <button
-//           onClick={onComplete}
-//           className="mt-6 px-8 py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"
-//         >
-//           Continue
-//         </button>
-//       </div>
-//     );
-//   }
+//   const startPolling = (vid) => {
+//     setStep(STEPS.POLLING);
+
+//     let attempts = 0;
+
+//     pollingRef.current = setInterval(async () => {
+//       attempts++;
+//       if (attempts > 40) {
+//         clearInterval(pollingRef.current);
+//         setError("Timeout.");
+//         setStep(STEPS.ERROR);
+//         return;
+//       }
+
+//       try {
+//         const res = await kycService.digilockerStatus(vid);
+//         const status = res.data?.data?.status;
+
+//         if (status === "AUTHENTICATED" || status === "verified") {
+//           clearInterval(pollingRef.current);
+//           await fetchDocument(vid);
+//         }
+//       } catch {}
+//     }, 3000);
+//   };
+
+//   const fetchDocument = async (vid) => {
+//     try {
+//       if (DEV_MODE) {
+//         setAadhaarData({
+//           name: "Demo User",
+//           aadhaar_number: "XXXXXX1234",
+//         });
+//       } else {
+//         const res = await kycService.digilockerDocument("AADHAAR", vid);
+//         setAadhaarData(res.data?.data);
+//       }
+      
+//       // Check if liveness is enabled
+//       if (screensEnabled.liveness) {
+//         // Go to liveness verification
+//         router.push("/onboarding/kyc/liveness");
+//       } else {
+//         // Liveness disabled - complete KYC directly
+//         try {
+//           if (!DEV_MODE) {
+//             await kycService.completeKYC();
+//           }
+//           router.push("/onboarding/physical");
+//         } catch (err) {
+//           console.error('Error completing KYC:', err);
+//           router.push("/onboarding/physical");
+//         }
+//       }
+//     } catch {
+//       // Even on error, check liveness status before navigating
+//       if (screensEnabled.liveness) {
+//         router.push("/onboarding/kyc/liveness");
+//       } else {
+//         router.push("/onboarding/physical");
+//       }
+//     }
+//   };
+
+//   /* ================= SKIP ================= */
+
+//   const handleSkip = async () => {
+//     try {
+//       if (!DEV_MODE) {
+//         await kycService.skipAadhaar();
+//       }
+
+//       // Check if liveness is enabled
+//       if (screensEnabled.liveness) {
+//         router.push("/onboarding/kyc/liveness");
+//       } else {
+//         // Liveness disabled - complete KYC directly
+//         try {
+//           if (!DEV_MODE) {
+//             await kycService.completeKYC();
+//           }
+//           router.push("/onboarding/physical");
+//         } catch (err) {
+//           console.error('Error completing KYC:', err);
+//           router.push("/onboarding/physical");
+//         }
+//       }
+//     } catch {
+//       // On error, check liveness status before navigating
+//       if (screensEnabled.liveness) {
+//         router.push("/onboarding/kyc/liveness");
+//       } else {
+//         router.push("/onboarding/physical");
+//       }
+//     }
+//   };
+
+//   /* ================= SUCCESS CONTINUE ================= */
+
+//   const proceedToLiveness = () => {
+//     // Check if liveness is enabled
+//     if (screensEnabled.liveness) {
+//       router.push("/onboarding/kyc/liveness");
+//     } else {
+//       // Liveness disabled - complete KYC directly
+//       router.push("/onboarding/physical");
+//     }
+//   };
+
+//   /* ================= UI ================= */
 
 //   return (
-//     <div className="min-h-screen bg-black text-white flex flex-col relative px-6 pt-10 pb-32">
+//     <div className="min-h-screen bg-black flex items-center justify-center px-4">
+//       <div className="max-w-md w-full bg-gray-900/50 p-6 rounded-2xl">
 
-//       {/* TOP PROGRESS BAR */}
-//       <div className="flex items-center justify-between mb-8">
-//         {onBack && (
-//           <button
-//             onClick={onBack}
-//             className="text-white text-xl"
-//           >
-//             ←
-//           </button>
-//         )}
-
-//         <div className="flex-1 mx-4 h-1 bg-gray-700 rounded-full relative">
-//           <div
-//             className="absolute top-0 left-0 h-1 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full"
-//             style={{ width: `${progress}%` }}
-//           ></div>
-//         </div>
-//       </div>
-
-//       {/* CIRCLE PROGRESS */}
-//       <div className="flex justify-center mb-6">
-//         <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-green-400 to-blue-500 flex items-center justify-center">
-//           <div className="absolute w-16 h-16 bg-black rounded-full flex items-center justify-center">
-//             <span className="text-lg font-bold">
-//               {progress}
-//             </span>
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* CATEGORY TITLE */}
-//       <div className="bg-gradient-to-r from-blue-600 to-cyan-500 rounded-2xl p-6 text-center mb-8">
-//         <div className="text-sm uppercase tracking-wide font-semibold mb-2">
-//           💪 FITNESS
-//         </div>
-//         <h2 className="text-lg font-semibold">
-//           {current?.question_text}
-//         </h2>
-//       </div>
-
-//       {/* OPTIONS */}
-//       <div className="space-y-4">
-//         {current?.question_type === "boolean" && (
+//         {step === STEPS.INTRO && (
 //           <>
-//             <button
-//               onClick={() =>
-//                 setAnswer(current.question_id, true)
-//               }
-//               className="w-full py-4 rounded-xl border border-pink-500 text-white"
-//             >
-//               Yes
-//             </button>
+//             <div className="text-center mb-6">
+//               <Shield className="w-12 h-12 text-pink-500 mx-auto mb-3" />
+//               <h2 className="text-xl text-white font-bold">
+//                 Verify Your Identity
+//               </h2>
+//             </div>
 
-//             <button
-//               onClick={() =>
-//                 setAnswer(current.question_id, false)
-//               }
-//               className="w-full py-4 rounded-xl border border-blue-500 text-white"
-//             >
-//               No
-//             </button>
+//             {/* Aadhaar button - only show if aadhaar is enabled */}
+//             {screensEnabled.aadhaar && (
+//               <>
+//                 <button
+//                   onClick={handleStart}
+//                   className="w-full py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-xl text-white font-semibold mb-3"
+//                 >
+//                   {loading ? <Loader2 className="animate-spin mx-auto" /> : "Continue with DigiLocker"}
+//                 </button>
+
+//                 <button
+//                   onClick={handleSkip}
+//                   className="w-full py-3 border border-gray-700 text-gray-400 rounded-xl"
+//                 >
+//                   Skip for Now
+//                 </button>
+//               </>
+//             )}
+
+//             {/* If aadhaar is disabled, directly go to liveness */}
+//             {!screensEnabled.aadhaar && screensEnabled.liveness && (
+//               <button
+//                 onClick={() => router.push("/onboarding/kyc/liveness")}
+//                 className="w-full py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-xl text-white font-semibold"
+//               >
+//                 Continue to Face Verification
+//               </button>
+//             )}
+
+//             {/* If both are disabled (shouldn't happen based on photo page logic), complete KYC */}
+//             {!screensEnabled.aadhaar && !screensEnabled.liveness && (
+//               <button
+//                 onClick={async () => {
+//                   try {
+//                     if (!DEV_MODE) {
+//                       await kycService.completeKYC();
+//                     }
+//                     router.push("/onboarding/physical");
+//                   } catch (err) {
+//                     console.error('Error completing KYC:', err);
+//                     router.push("/onboarding/physical");
+//                   }
+//                 }}
+//                 className="w-full py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-xl text-white font-semibold"
+//               >
+//                 Continue
+//               </button>
+//             )}
 //           </>
 //         )}
 
-//         {current?.question_type === "single_choice" &&
-//           current.options.map((opt) => (
-//             <button
-//               key={opt.option_id}
-//               onClick={() =>
-//                 setAnswer(
-//                   current.question_id,
-//                   opt.label
-//                 )
-//               }
-//               className="w-full py-4 rounded-xl border border-gray-600 text-white"
-//             >
-//               {opt.label}
-//             </button>
-//           ))}
+//         {step === STEPS.POLLING && (
+//           <div className="text-center text-white">
+//             <Loader2 className="animate-spin mx-auto mb-3" />
+//             Verifying Aadhaar...
+//           </div>
+//         )}
 
-//         {current?.question_type === "multi_choice" &&
-//           current.options.map((opt) => (
-//             <button
-//               key={opt.option_id}
-//               onClick={() =>
-//                 setAnswer(
-//                   current.question_id,
-//                   opt.label,
-//                   "multi"
-//                 )
-//               }
-//               className="w-full py-4 rounded-xl border border-gray-600 text-white"
-//             >
-//               {opt.label}
-//             </button>
-//           ))}
+//         {step === STEPS.SUCCESS && (
+//           <>
+//             <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+//             <p className="text-white text-center mb-4">
+//               Aadhaar Verified Successfully
+//             </p>
+//             {screensEnabled.liveness ? (
+//               <button
+//                 onClick={proceedToLiveness}
+//                 className="w-full py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-xl text-white font-semibold"
+//               >
+//                 Continue to Face Verification
+//               </button>
+//             ) : (
+//               <button
+//                 onClick={() => router.push("/onboarding/physical")}
+//                 className="w-full py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-xl text-white font-semibold"
+//               >
+//                 Continue
+//               </button>
+//             )}
+//           </>
+//         )}
 
-//         {current?.question_type === "text" && (
-//           <textarea
-//             value={
-//               answers[current.question_id] || ""
-//             }
-//             onChange={(e) =>
-//               setAnswer(
-//                 current.question_id,
-//                 e.target.value
-//               )
-//             }
-//             className="w-full p-4 rounded-xl bg-gray-800 text-white border border-gray-600"
-//           />
+//         {step === STEPS.ERROR && (
+//           <>
+//             <X className="w-12 h-12 text-red-500 mx-auto mb-3" />
+//             <p className="text-red-400 text-center mb-4">{error}</p>
+//             <button
+//               onClick={() => setStep(STEPS.INTRO)}
+//               className="w-full py-3 bg-gray-700 rounded-xl text-white"
+//             >
+//               Try Again
+//             </button>
+//           </>
 //         )}
 //       </div>
-
-//       {/* CONTINUE BUTTON */}
-//       <button
-//         disabled={!hasAnswer()}
-//         onClick={submitAnswer}
-//         className="bottom-6 w-80 mt-8  justify-center items-center py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40"
-//       >
-//         Continue
-//       </button>
 //     </div>
 //   );
 // }
+
 
 "use client";
 

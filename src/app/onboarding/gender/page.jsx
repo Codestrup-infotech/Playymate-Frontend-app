@@ -561,7 +561,7 @@ export default function OnboardingGenderPage() {
             </span>
           </h1>
 
-          <p className="mt-2 text-gray-400 text-sm">
+          <p className="mt-2 text-gray-400 text-sm font-Poppins">
             Tell Us about your Gender
           </p>
         </div>
@@ -575,7 +575,7 @@ export default function OnboardingGenderPage() {
         )}
 
         {/* Gender Options */}
-        <div className="mt-8 flex flex-col gap-4">
+        <div className="mt-8 flex flex-col gap-4   font-Poppins font-normal">
           {GENDER_OPTIONS.map((option) => (
             <button
               key={option.id}
@@ -586,13 +586,13 @@ export default function OnboardingGenderPage() {
                 flex items-center justify-center gap-3
                 text-lg font-semibold
                 rounded-2xl
-                bg-gradient-to-br from-[#1e1e22] to-[#18181c]
+                bg-gradient-to-br from-[#1e1e22] to-[#18181c] hover:bg-gradient-to-br  hover:from-[#EB4694] hover:to-[#E1314A]
                 border
                 transition-all duration-200
                 shadow-lg
                 ${
                   gender === option.id
-                    ? "border-pink-500 ring-1 ring-pink-500/50 scale-[1.02]"
+                    ? "border-pink-500 ring-1  ring-pink-500/50 scale-[1.02]"
                     : "border-[#2a2a30] hover:border-pink-500/60 hover:brightness-110"
                 }
                 active:scale-[0.98]

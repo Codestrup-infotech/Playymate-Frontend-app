@@ -136,13 +136,7 @@ export default function SearchPage() {
           </div>
 
           {/* RESULTS GRID (WEB) */}
-          <div
-            className={`grid gap-6 ${
-              view === "list"
-                ? "grid-cols-1"
-                : "grid-cols-1 md:grid-cols-2"
-            }`}
-          >
+          <div className="grid grid-cols-2 gap-4">
             {results.map((item) => (
               <div
                 key={item.title}
@@ -152,44 +146,44 @@ export default function SearchPage() {
                   <img
                     src={item.image}
                     alt={item.title}
-                    className="w-full h-56 object-cover"
+                    className="w-full h-32 object-cover"
                   />
 
                   {item.live && (
-                    <span className="absolute top-4 left-4 bg-red-500 px-4 py-1 rounded-full text-sm font-medium">
+                    <span className="absolute top-2 left-2 bg-red-500 px-2 py-0.5 rounded-full text-xs font-medium">
                       Live
                     </span>
                   )}
                 </div>
 
-                <div className="p-5">
+                <div className="p-3">
                   <div className="flex justify-between">
                     <div>
-                      <h3 className="text-lg font-semibold">
+                      <h3 className="text-sm font-semibold">
                         {item.title}
                       </h3>
-                      <p className="text-gray-400 text-sm mt-1 flex items-center gap-1">
-                        <MapPin size={14} />
+                      <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1">
+                        <MapPin size={12} />
                         {item.location}
                       </p>
                     </div>
 
-                    <span className="flex items-center gap-1 text-yellow-400 font-medium">
-                      <Star size={16} fill="currentColor" />
+                    <span className="flex items-center gap-1 text-yellow-400 font-medium text-xs">
+                      <Star size={14} fill="currentColor" />
                       {item.rating}
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center mt-5">
-                    <p className="text-xl font-semibold">
+                  <div className="flex justify-between items-center mt-3">
+                    <p className="text-base font-semibold">
                       ₹{item.price.toLocaleString()}
-                      <span className="text-gray-400 text-sm ml-1 font-normal">
+                      <span className="text-gray-400 text-xs ml-1 font-normal">
                         /session
                       </span>
                     </p>
 
-                    <button className="px-6 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-orange-500 font-semibold hover:opacity-90 transition-opacity">
-                      Book Now
+                    <button className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-orange-500 text-xs font-semibold hover:opacity-90 transition-opacity">
+                      Book
                     </button>
                   </div>
                 </div>

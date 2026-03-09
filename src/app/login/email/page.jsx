@@ -1179,6 +1179,19 @@ export default function EmailLogin() {
     }
   };
 
+  const handleKeyDown = (e, index) => {
+  if (e.key === "Backspace") {
+    const updated = [...otp];
+
+    if (otp[index]) {
+      updated[index] = "";
+      setOtp(updated);
+    } else if (index > 0) {
+      inputsRef.current[index - 1]?.focus();
+    }
+  }
+};
+
   if (loadingConfig) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white">
@@ -1274,6 +1287,7 @@ export default function EmailLogin() {
                   onChange={(e) =>
                     handleOtpChange(e.target.value, i)
                   }
+                   onKeyDown={(e) => handleKeyDown(e, i)}
                   className={`w-12 h-14 text-center rounded-xl bg-[#1a1a1a] text-white text-lg font-['Poppins'] outline-none ${
                     digit
                       ? "border border-pink-500"
