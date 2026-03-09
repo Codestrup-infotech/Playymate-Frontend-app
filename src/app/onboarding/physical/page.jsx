@@ -57,35 +57,33 @@ export default function PhysicalPreferences() {
   //   fetchScreenData();
   // }, []);
 
- useEffect(() => {
-  const fetchScreenData = async () => {
-    try {
-      setLoading(true);
-
-      const response = await questionnaireService.getOnboardingScreen(
-        "physical_intro",
-        "mobile"
-      );
-
-      if (response.data?.data?.screens?.[0]) {
-        setScreenData(response.data.data.screens[0]);
+  useEffect(() => {
+    const fetchScreenData = async () => {
+      try {
+        setLoading(true);
+  
+        const response =
+          await questionnaireService.getPhysicalProfileConsentScreen();
+  
+        if (response.data?.data) {
+          setScreenData(response.data.data);
+        }
+  
+        setLoading(false);
+  
+        // Show loader GIF
+        setTimeout(() => {
+          setShowLoader(false);
+        }, 3000);
+      } catch (err) {
+        console.error("Failed to fetch screen:", err);
+        setError(err.message);
+        setLoading(false);
       }
-
-      setLoading(false);
-
-      // show GIF loader for 3 sec
-   setTimeout(() => {
-  setShowLoader(false);
-}, 6000);
-    } catch (err) {
-      console.error("Failed to fetch screen:", err);
-      setError(err.message);
-      setLoading(false);
-    }
-  };
-
-  fetchScreenData();
-}, []);
+    };
+  
+    fetchScreenData();
+  }, []);
 
   const [introAgree, setIntroAgree] = useState(false);
   const [weightAgree, setWeightAgree] = useState(false);
@@ -315,10 +313,9 @@ const [showLoader, setShowLoader] = useState(true);
           agree={weightAgree}
           setAgree={setWeightAgree}
           setValue={setWeight}
-          questionData={basicMetricsQuestions.find(q => q.question_id === "weight")}
+          questionData={basicMetricsQuestions.find(q => q.question_id?.toLowerCase().includes("weight"))}
           onNext={async () => {
-            const weightQuestion = basicMetricsQuestions.find(q => q.question_id === "weight");
-            console.log('[WeightStep onNext] Submitting weight:', weight);
+            const weightQuestion = basicMetricsQuestions.find(q => q.question_id?.toLowerCase().includes("weight"));
             if (weightQuestion) {
               const success = await submitAnswer(weightQuestion.question_id, weight, weightQuestion);
               console.log('[WeightStep onNext] Weight submission result:', success);
@@ -336,10 +333,9 @@ const [showLoader, setShowLoader] = useState(true);
           setValue={setHeight}
           agree={heightAgree}
           setAgree={setHeightAgree}
-          questionData={basicMetricsQuestions.find(q => q.question_id === "height")}
+          questionData={basicMetricsQuestions.find(q => q.question_id?.toLowerCase().includes("height"))}
           onNext={async () => {
-            const heightQuestion = basicMetricsQuestions.find(q => q.question_id === "height");
-            console.log('[HeightStep onNext] Submitting height:', height);
+            const heightQuestion = basicMetricsQuestions.find(q => q.question_id?.toLowerCase().includes("height"));
             if (heightQuestion) {
               const success = await submitAnswer(heightQuestion.question_id, height, heightQuestion);
               console.log('[HeightStep onNext] Height submission result:', success);
@@ -355,11 +351,13 @@ const [showLoader, setShowLoader] = useState(true);
         <BloodStep
           value={blood}
           setValue={setBlood}
-          questionData={basicMetricsQuestions.find(q => q.question_id === "blood_group")}
+          questionData={basicMetricsQuestions.find(q =>
+            q.question_id?.toLowerCase().includes("blood")
+          )}
           onBack={() => setStep(3)}
           onComplete={async () => {
             const bloodQuestion = basicMetricsQuestions.find(
-              q => q.question_id === "blood_group"
+              q => q.question_id?.toLowerCase().includes("blood")
             );
 
             console.log('[BloodStep onComplete] Submitting blood group:', blood);
@@ -470,23 +468,45 @@ function IntroLoader({ image }) {
 
 
 function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }) {
-  const title = screenData?.title || "Physical Profile";
-  const description =
-    screenData?.description || "Help us understand your physical attributes";
 
-  const securityNote = "Your information is secure and never shared";
+  const title = screenData?.title || "Physical Profile";
+  const description = screenData?.description;
+
+  const securityNote =
+    screenData?.privacy_assurance ||
+    "Your information is secure and never shared";
 
   const checkboxLabel =
-    "I understand and agree to answer questions about my physical activity preferences";
+    screenData?.consent_checkbox_text ||
+    "I understand and agree to answer questions";
+
+  const ctaText = screenData?.cta_text || "Continue";
+
+  const gradientStart = screenData?.title_gradient_start || "#FF6B6B";
+  const gradientEnd = screenData?.title_gradient_end || "#FFA726";
+
+  const cardBackground = screenData?.card_background || "#1c1c1c";
+  const borderGradient = screenData?.card_border_gradient || "#4A47A3";
 
   return (
     <div className="flex flex-col justify-between py-10">
-      
+
       <div className="text-white text-xl cursor-pointer mb-6">←</div>
 
-      <div className="rounded-2xl border border-blue-500/40 bg-[#1c1c1c] py-12 px-4 text-center">
+      <div
+        className="rounded-2xl border py-12 px-4 text-center"
+        style={{
+          background: cardBackground,
+          borderColor: borderGradient
+        }}
+      >
 
-        <h2 className="text-4xl font-bold mb-5 bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+        <h2
+          className="text-4xl font-bold mb-5 bg-clip-text text-transparent"
+          style={{
+            backgroundImage: `linear-gradient(to right, ${gradientStart}, ${gradientEnd})`
+          }}
+        >
           {title}
         </h2>
 
@@ -523,7 +543,7 @@ function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }
             : "bg-gradient-to-r from-pink-500 to-orange-400 text-white"
         }`}
       >
-        {loading ? "Loading..." : "Continue"}
+        {loading ? "Loading..." : ctaText}
       </button>
     </div>
   );
@@ -617,18 +637,29 @@ function WeightStep({
 
         {/* Title */}
         <h2
-          style={{
-            fontFamily: "'Playfair Display', serif",
-            fontSize: 30,
-            fontWeight: 600,
-            textAlign: "center",
-            marginBottom: 24,
-            marginTop: 4,
-            letterSpacing: "-0.3px",
-          }}
-        >
-          {questionText}
-        </h2>
+  style={{
+    fontFamily: "'Playfair Display', serif",
+    fontSize: 30,
+    fontWeight: 600,
+    textAlign: "center",
+    marginBottom: 24,
+    marginTop: 4,
+    letterSpacing: "-0.3px",
+  }}
+>
+  {questionText?.split(" ").map((word, index) => (
+    <span
+      key={index}
+      className={
+        index === 3
+          ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
+          : ""
+      }
+    >
+      {word + " "}
+    </span>
+  ))}
+</h2>
 
         {/* Unit toggle — Lbs left, Kg right, Kg active by default */}
         <div
@@ -1060,18 +1091,29 @@ function HeightStep({ value,
 
         {/* Title */}
         <h2
-          style={{
-            fontFamily: "'Playfair Display', serif",
-            fontSize: 30,
-            fontWeight: 600,
-            textAlign: "center",
-            marginBottom: 28,
-            marginTop: 4,
-            letterSpacing: "-0.3px",
-          }}
-        >
-          {questionText}
-        </h2>
+  style={{
+    fontFamily: "'Playfair Display', serif",
+    fontSize: 30,
+    fontWeight: 600,
+    textAlign: "center",
+    marginBottom: 28,
+    marginTop: 4,
+    letterSpacing: "-0.3px",
+  }}
+>
+  {questionText?.split(" ").map((word, index) => (
+    <span
+      key={index}
+      className={
+        index === 3
+          ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
+          : ""
+      }
+    >
+      {word + " "}
+    </span>
+  ))}
+</h2>
 
         {/* Unit toggle */}
         <div
@@ -1447,10 +1489,20 @@ function BloodStep({ value, setValue, onBack, onComplete, questionData }) {
       </div>
 
       {/* TITLE */}
-      <h2 className="text-3xl text-center mb-6 font-semibold font-Playfair Display ">
-        What’s your <span className="text-orange-400">Blood</span><br />
-        <span className="text-orange-400">Group</span>
-      </h2>
+      <h2 className="text-3xl text-center mb-6 font-semibold font-Playfair Display">
+  {questionText?.split(" ").map((word, index) => (
+    <span
+      key={index}
+      className={
+        index === 3
+          ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
+          : ""
+      }
+    >
+      {word + " "}
+    </span>
+  ))}
+</h2>
 
       {/* GROUP SELECTOR */}
       <div className="flex justify-center mb-10 font-Poppins ">
