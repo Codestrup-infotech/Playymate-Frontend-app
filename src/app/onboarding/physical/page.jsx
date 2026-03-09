@@ -1,3 +1,358 @@
+// "use client";
+
+// import { useState, useRef, useEffect } from "react";
+// import { useRouter } from "next/navigation";
+// import api from "../../../services/api";
+// import { questionnaireService } from "../../../services/questionnaire";
+// import React from "react";
+// import Fitness from "@/app/components/Fitness";
+// export default function PhysicalPreferences() {
+//   const router = useRouter();
+//   const [step, setStep] = useState(1);
+//   const [weight, setWeight] = useState(62);
+//   const [height, setHeight] = useState(160);
+//   const [blood, setBlood] = useState("A+");
+//   const [screenData, setScreenData] = useState(null);
+//   const [basicMetricsQuestions, setBasicMetricsQuestions] = useState([]);
+//   const [questionsLoading, setQuestionsLoading] = useState(false);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [apiFetched, setApiFetched] = useState(false);
+
+ 
+//  useEffect(() => {
+//   const fetchScreenData = async () => {
+//     try {
+//       setLoading(true);
+
+//       const response = await questionnaireService.getOnboardingScreen(
+//         "physical_intro",
+//         "mobile"
+//       );
+
+//       if (response.data?.data?.screens?.[0]) {
+//         setScreenData(response.data.data.screens[0]);
+//       }
+
+//       setLoading(false);
+
+//       // show GIF loader for 3 sec
+//    setTimeout(() => {
+//   setShowLoader(false);
+// }, 6000);
+//     } catch (err) {
+//       console.error("Failed to fetch screen:", err);
+//       setError(err.message);
+//       setLoading(false);
+//     }
+//   };
+
+//   fetchScreenData();
+// }, []);
+
+//   const [introAgree, setIntroAgree] = useState(false);
+//   const [weightAgree, setWeightAgree] = useState(false);
+//   const [heightAgree, setHeightAgree] = useState(false);
+//   const [consentLoading, setConsentLoading] = useState(false);
+//   const [consentError, setConsentError] = useState(null);
+//   const [answerLoading, setAnswerLoading] = useState(false);
+//   const [answerError, setAnswerError] = useState(null);
+// const [showLoader, setShowLoader] = useState(true);
+//   // Submit answer to API - handles all question types based on question_data
+//   const submitAnswer = async (questionId, answer, questionData = null) => {
+//     try {
+//       setAnswerLoading(true);
+//       setAnswerError(null);
+      
+//       console.log(`[submitAnswer] Submitting answer for: ${questionId}`, { answer, questionData });
+      
+//       // Get question type from questionData or determine from answer
+//       const questionType = questionData?.question_type || 'number';
+      
+//       console.log(`[submitAnswer] Question type: ${questionType}`);
+      
+//       let payload = {};
+      
+//       // Handle based on question type from API
+//       if (questionType === 'single_select' || questionId === 'blood_group') {
+//         // For single select - MUST use selected_option_ids with option_id
+//         // Blood group uses format: selected_option_ids: ["opt_a+"]
+//         let optionId = null;
+        
+//         // First, check if answer is already in option_id format (e.g., "opt_a+")
+//         if (answer && typeof answer === 'string' && answer.startsWith('opt_')) {
+//           optionId = answer;
+//           console.log(`[submitAnswer] Answer is already option_id: ${optionId}`);
+//         }
+        
+//         // Check if answer is already option_id
+//         if (!optionId && answer && typeof answer === 'string') {
+//           const byId = questionData?.options?.find(opt => opt.option_id === answer);
+//           if (byId) {
+//             optionId = answer;
+//             console.log(`[submitAnswer] Found option by ID: ${optionId}`);
+//           }
+//         }
+        
+//         // If not found by ID, try by label or value (e.g., "A+" -> "opt_a+")
+//         if (!optionId && answer && typeof answer === 'string') {
+//           // Normalize: "A+" -> "a+" for comparison
+//           const normalizedAnswer = answer.toLowerCase().replace(/\s+/g, '');
+          
+//           const byLabel = questionData?.options?.find(
+//             opt => 
+//               opt.label?.toLowerCase().replace(/\s+/g, '') === normalizedAnswer ||
+//               opt.value?.toLowerCase().replace(/\s+/g, '') === normalizedAnswer
+//           );
+//           if (byLabel?.option_id) {
+//             optionId = byLabel.option_id;
+//             console.log(`[submitAnswer] Found option by label/value: ${optionId} from ${answer}`);
+//           }
+//         }
+        
+//         // Special handling for blood group - map "A+" to "opt_a+", etc.
+//         if (!optionId && questionId === 'blood_group' && answer && typeof answer === 'string') {
+//           // Map blood group values to option_ids
+//           const bloodGroupMap = {
+//             'A+': 'opt_a+', 'A-': 'opt_a-',
+//             'B+': 'opt_b+', 'B-': 'opt_b-',
+//             'AB+': 'opt_ab+', 'AB-': 'opt_ab-',
+//             'O+': 'opt_o+', 'O-': 'opt_o-',
+//             'unknown': 'opt_unknown'
+//           };
+//           const mappedOptionId = bloodGroupMap[answer];
+//           if (mappedOptionId) {
+//             optionId = mappedOptionId;
+//             console.log(`[submitAnswer] Mapped blood group: ${answer} -> ${optionId}`);
+//           }
+//         }
+        
+//         if (optionId) {
+//           payload.selected_option_ids = [optionId];
+//           console.log(`[submitAnswer] Final payload:`, payload);
+//         } else {
+//           console.error(`[submitAnswer] No option_id found for: ${answer}`, { options: questionData?.options });
+//           return false;
+//         }
+//       } else if (questionType === 'number' || questionType === 'range') {
+//         // For number/range - use answer_number
+//         // Height is in cm or in, Weight is in kg
+//         payload.answer_number = typeof answer === 'number' ? answer : parseInt(answer) || parseFloat(answer);
+//         console.log(`[submitAnswer] Number/Range payload:`, payload);
+//       } else if (questionType === 'text') {
+//         payload.answer_text = answer;
+//         console.log(`[submitAnswer] Text payload:`, payload);
+//       } else if (questionType === 'boolean') {
+//         // For boolean - use answer_boolean
+//         payload.answer_boolean = answer === true || answer === 'true' || answer === 1;
+//         console.log(`[submitAnswer] Boolean payload:`, payload);
+//       } else {
+//         // Default fallback - try as single select
+//         if (answer && typeof answer === 'string') {
+//           const option = questionData?.options?.find(
+//             opt => opt.label === answer || opt.value === answer
+//           );
+//           if (option?.option_id) {
+//             payload.selected_option_ids = [option.option_id];
+//           }
+//         }
+//         console.log(`[submitAnswer] Default fallback payload:`, payload);
+//       }
+      
+//       // Call the API with the payload
+//       console.log(`[submitAnswer] Calling API for ${questionId} with payload:`, payload);
+//       const response = await questionnaireService.submitAnswer(questionId, payload);
+      
+//       console.log(`[submitAnswer] Success for ${questionId}:`, response.data);
+      
+//       return true;
+//     } catch (err) {
+//       console.error(`[submitAnswer] Failed to submit ${questionId} answer:`, err);
+//       console.error(`[submitAnswer] Error response:`, err.response?.data);
+//       setAnswerError(err.response?.data?.message || `Failed to submit ${questionId} answer`);
+//       return false;
+//     } finally {
+//       setAnswerLoading(false);
+//     }
+//   };
+
+//   const nextDisabled =
+//     (step === 1 && !introAgree) ||
+//     (step === 2 && !weightAgree) ||
+//     (step === 3 && !heightAgree);
+
+//   const goNext = async () => {
+//     // If on step 1 (intro), submit consent first
+//     if (step === 1 && introAgree) {
+//       try {
+//         setConsentLoading(true);
+//         setConsentError(null);
+        
+//         // Call consent API
+//         console.log('[goNext] Submitting consent...');
+//         await questionnaireService.submitConsent(true);
+//         console.log('[goNext] Consent submitted successfully');
+        
+//         // Fetch basic metrics questions from API after consent
+//         setQuestionsLoading(true);
+//         try {
+//           console.log('[goNext] Fetching basic_metrics questions...');
+//           const questionsRes = await questionnaireService.getQuestions('basic_metrics');
+//           console.log('[goNext] Questions response:', questionsRes.data);
+          
+//           const questions = questionsRes.data?.data?.questions?.basic_metrics || [];
+//           // Sort by flow_order
+//           const sortedQuestions = questions.sort((a, b) => a.flow_order - b.flow_order);
+//           setBasicMetricsQuestions(sortedQuestions);
+//           console.log('[goNext] Basic metrics questions loaded:', sortedQuestions.map(q => q.question_id));
+           
+//           // Set default values from API range_config if available
+//           const weightQuestion = sortedQuestions.find(q => q.question_id === 'weight');
+//           const heightQuestion = sortedQuestions.find(q => q.question_id === 'height');
+          
+//           if (weightQuestion?.range_config) {
+//             const { min, max } = weightQuestion.range_config;
+//             setWeight(Math.round((min + max) / 2)); // Set to middle value
+//             console.log('[goNext] Weight range:', weightQuestion.range_config);
+//           }
+//           if (heightQuestion?.range_config) {
+//             const { min, max } = heightQuestion.range_config;
+//             setHeight(Math.round((min + max) / 2)); // Set to middle value
+//             console.log('[goNext] Height range:', heightQuestion.range_config);
+//           }
+//         } catch (qErr) {
+//           console.error('[goNext] Failed to fetch questions:', qErr);
+//         } finally {
+//           setQuestionsLoading(false);
+//         }
+        
+//         // After successful consent, proceed to next step
+//         setStep((s) => s + 1);
+//       } catch (err) {  
+//         console.error("[goNext] Failed to submit consent:", err);
+//         setConsentError(err.response?.data?.message || "Failed to submit consent. Please try again.");
+//         // Still allow user to proceed even if consent fails (for demo purposes)
+//         setStep((s) => s + 1);
+//       } finally {
+//         setConsentLoading(false);
+//       }
+//     } else if (!nextDisabled) {
+//       setStep((s) => s + 1);
+//     }
+//   };
+
+//   const goBack = () => {
+//     setStep((s) => s - 1);
+//   };
+
+
+//   return (
+//     <div className="min-h-screen bg-black text-white flex justify-center items-center px-4 overflow-hidden">
+     
+     
+//      <div className="w-full max-w-sm">
+
+//   {loading ? (
+//     <div className="flex justify-center items-center min-h-[400px]">
+//       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+//     </div>
+//   ) : (
+//     <>
+//      {step === 1 && showLoader ? (
+//   <IntroLoader image={screenData?.image_url} />
+// ) : step === 1 ? (
+//   <Intro
+//     agree={introAgree}
+//     setAgree={setIntroAgree}
+//     onNext={goNext}
+//     disabled={nextDisabled}
+//     screenData={screenData}
+//     loading={consentLoading}
+//     error={consentError}
+//   />
+// ) : null}
+
+//       {step === 2 && (
+//         <WeightStep
+//           value={weight}
+//           agree={weightAgree}
+//           setAgree={setWeightAgree}
+//           setValue={setWeight}
+//           questionData={basicMetricsQuestions.find(q => q.question_id === "weight")}
+//           onNext={async () => {
+//             const weightQuestion = basicMetricsQuestions.find(q => q.question_id === "weight");
+//             console.log('[WeightStep onNext] Submitting weight:', weight);
+//             if (weightQuestion) {
+//               const success = await submitAnswer(weightQuestion.question_id, weight, weightQuestion);
+//               console.log('[WeightStep onNext] Weight submission result:', success);
+//             }
+//             setStep(3);
+//           }}
+//           onBack={() => setStep(1)}
+//           disabled={nextDisabled}
+//         />
+//       )}
+
+//       {step === 3 && (
+//         <HeightStep
+//           value={height}
+//           setValue={setHeight}
+//           agree={heightAgree}
+//           setAgree={setHeightAgree}
+//           questionData={basicMetricsQuestions.find(q => q.question_id === "height")}
+//           onNext={async () => {
+//             const heightQuestion = basicMetricsQuestions.find(q => q.question_id === "height");
+//             console.log('[HeightStep onNext] Submitting height:', height);
+//             if (heightQuestion) {
+//               const success = await submitAnswer(heightQuestion.question_id, height, heightQuestion);
+//               console.log('[HeightStep onNext] Height submission result:', success);
+//             }
+//             setStep(4);
+//           }}
+//           onBack={() => setStep(2)}
+//           disabled={nextDisabled}
+//         />
+//       )}
+
+//       {step === 4 && (
+//         <BloodStep
+//           value={blood}
+//           setValue={setBlood}
+//           questionData={basicMetricsQuestions.find(q => q.question_id === "blood_group")}
+//           onBack={() => setStep(3)}
+//           onComplete={async () => {
+//             const bloodQuestion = basicMetricsQuestions.find(
+//               q => q.question_id === "blood_group"
+//             );
+
+//             console.log('[BloodStep onComplete] Submitting blood group:', blood);
+//             if (bloodQuestion && blood) {
+//               // Pass the blood value and questionData
+//               const success = await submitAnswer(bloodQuestion.question_id, blood, bloodQuestion);
+//               console.log('[BloodStep onComplete] Blood group submission result:', success);
+//             }
+
+//             setStep(5); // ✅ move to Fitness
+//           }}
+//         />
+//       )}
+
+//       {step === 5 && (
+//         <Fitness
+//           onBack={() => setStep(4)}
+//           onComplete={() => {
+//             router.push("/onboarding/questionnaire");
+//           }}
+//         />
+//       )}
+//     </>
+//   )}
+
+// </div>
+//     </div>
+//   );
+// }
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -6,12 +361,24 @@ import api from "../../../services/api";
 import { questionnaireService } from "../../../services/questionnaire";
 import React from "react";
 import Fitness from "@/app/components/Fitness";
+import PhysicalTopProgress from "@/app/components/PhysicalTopProgress";
+
+
+
+
 export default function PhysicalPreferences() {
   const router = useRouter();
+
+  const TOTAL_STEPS = 5;
+
   const [step, setStep] = useState(1);
   const [weight, setWeight] = useState(62);
   const [height, setHeight] = useState(160);
   const [blood, setBlood] = useState("A+");
+
+  const [pendingCoins, setPendingCoins] = useState(0);
+  const progress = Math.round(((step - 1) / TOTAL_STEPS) * 100);
+
   const [screenData, setScreenData] = useState(null);
   const [basicMetricsQuestions, setBasicMetricsQuestions] = useState([]);
   const [questionsLoading, setQuestionsLoading] = useState(false);
@@ -19,194 +386,125 @@ export default function PhysicalPreferences() {
   const [error, setError] = useState(null);
   const [apiFetched, setApiFetched] = useState(false);
 
-  // Fetch onboarding screen data on mount
-  // useEffect(() => {
-  //   const fetchScreenData = async () => {
-  //     try {
-  //       setLoading(true);
-        
-  //       // API: GET /api/v1/onboarding/screens?type=physical_intro
-  //       const response = await api.get("/onboarding/screens", {
-  //         params: { type: "physical_intro" },
-  //       });
-        
-  //       if (response.data?.data?.screens?.[0]) {
-  //         setScreenData(response.data.data.screens[0]);
-  //       }
-        
-  //       // After API success, wait 3 seconds then auto-proceed
-  //       setApiFetched(true);
-  //       setTimeout(() => {
-  //         setIntroAgree(true); // Auto-check the consent checkbox
-  //         setLoading(false);
-  //         // Auto-trigger the continue after checking checkbox
-  //         setTimeout(() => {
-  //           goNext();
-  //         }, 500); // Small delay to ensure checkbox is checked
-  //       }, 3000);
-        
-  //     } catch (err) {
-  //       console.error("Failed to fetch screen data:", err);
-  //       // Wait 5 seconds before showing error to give backend time to respond
-  //       await new Promise(resolve => setTimeout(resolve, 5000));
-  //       setError(err.message || "Failed to load screen data");
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   fetchScreenData();
-  // }, []);
-
- useEffect(() => {
-  const fetchScreenData = async () => {
-    try {
-      setLoading(true);
-
-      const response = await questionnaireService.getOnboardingScreen(
-        "physical_intro",
-        "mobile"
-      );
-
-      if (response.data?.data?.screens?.[0]) {
-        setScreenData(response.data.data.screens[0]);
-      }
-
-      setLoading(false);
-
-      // show GIF loader for 3 sec
-   setTimeout(() => {
-  setShowLoader(false);
-}, 6000);
-    } catch (err) {
-      console.error("Failed to fetch screen:", err);
-      setError(err.message);
-      setLoading(false);
-    }
-  };
-
-  fetchScreenData();
-}, []);
-
   const [introAgree, setIntroAgree] = useState(false);
   const [weightAgree, setWeightAgree] = useState(false);
   const [heightAgree, setHeightAgree] = useState(false);
+
   const [consentLoading, setConsentLoading] = useState(false);
   const [consentError, setConsentError] = useState(null);
+
   const [answerLoading, setAnswerLoading] = useState(false);
   const [answerError, setAnswerError] = useState(null);
-const [showLoader, setShowLoader] = useState(true);
-  // Submit answer to API - handles all question types based on question_data
+
+  const [showLoader, setShowLoader] = useState(true);
+
+  useEffect(() => {
+    const fetchScreenData = async () => {
+      try {
+        setLoading(true);
+
+        const response = await questionnaireService.getOnboardingScreen(
+          "physical_intro",
+          "mobile"
+        );
+
+        if (response.data?.data?.screens?.[0]) {
+          setScreenData(response.data.data.screens[0]);
+        }
+
+        setLoading(false);
+
+        setTimeout(() => {
+          setShowLoader(false);
+        }, 6000);
+      } catch (err) {
+        console.error("Failed to fetch screen:", err);
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchScreenData();
+  }, []);
+
   const submitAnswer = async (questionId, answer, questionData = null) => {
     try {
       setAnswerLoading(true);
       setAnswerError(null);
-      
-      console.log(`[submitAnswer] Submitting answer for: ${questionId}`, { answer, questionData });
-      
-      // Get question type from questionData or determine from answer
-      const questionType = questionData?.question_type || 'number';
-      
-      console.log(`[submitAnswer] Question type: ${questionType}`);
-      
+
+      const questionType = questionData?.question_type || "number";
+
       let payload = {};
-      
-      // Handle based on question type from API
-      if (questionType === 'single_select' || questionId === 'blood_group') {
-        // For single select - MUST use selected_option_ids with option_id
-        // Blood group uses format: selected_option_ids: ["opt_a+"]
+
+      if (questionType === "single_select" || questionId === "blood_group") {
         let optionId = null;
-        
-        // First, check if answer is already in option_id format (e.g., "opt_a+")
-        if (answer && typeof answer === 'string' && answer.startsWith('opt_')) {
+
+        if (answer && typeof answer === "string" && answer.startsWith("opt_")) {
           optionId = answer;
-          console.log(`[submitAnswer] Answer is already option_id: ${optionId}`);
         }
-        
-        // Check if answer is already option_id
-        if (!optionId && answer && typeof answer === 'string') {
-          const byId = questionData?.options?.find(opt => opt.option_id === answer);
-          if (byId) {
-            optionId = answer;
-            console.log(`[submitAnswer] Found option by ID: ${optionId}`);
-          }
+
+        if (!optionId && answer && typeof answer === "string") {
+          const byId = questionData?.options?.find(
+            (opt) => opt.option_id === answer
+          );
+          if (byId) optionId = answer;
         }
-        
-        // If not found by ID, try by label or value (e.g., "A+" -> "opt_a+")
-        if (!optionId && answer && typeof answer === 'string') {
-          // Normalize: "A+" -> "a+" for comparison
-          const normalizedAnswer = answer.toLowerCase().replace(/\s+/g, '');
-          
+
+        if (!optionId && answer && typeof answer === "string") {
+          const normalizedAnswer = answer.toLowerCase().replace(/\s+/g, "");
+
           const byLabel = questionData?.options?.find(
-            opt => 
-              opt.label?.toLowerCase().replace(/\s+/g, '') === normalizedAnswer ||
-              opt.value?.toLowerCase().replace(/\s+/g, '') === normalizedAnswer
+            (opt) =>
+              opt.label?.toLowerCase().replace(/\s+/g, "") ===
+                normalizedAnswer ||
+              opt.value?.toLowerCase().replace(/\s+/g, "") === normalizedAnswer
           );
-          if (byLabel?.option_id) {
-            optionId = byLabel.option_id;
-            console.log(`[submitAnswer] Found option by label/value: ${optionId} from ${answer}`);
-          }
+
+          if (byLabel?.option_id) optionId = byLabel.option_id;
         }
-        
-        // Special handling for blood group - map "A+" to "opt_a+", etc.
-        if (!optionId && questionId === 'blood_group' && answer && typeof answer === 'string') {
-          // Map blood group values to option_ids
+
+        if (!optionId && questionId === "blood_group") {
           const bloodGroupMap = {
-            'A+': 'opt_a+', 'A-': 'opt_a-',
-            'B+': 'opt_b+', 'B-': 'opt_b-',
-            'AB+': 'opt_ab+', 'AB-': 'opt_ab-',
-            'O+': 'opt_o+', 'O-': 'opt_o-',
-            'unknown': 'opt_unknown'
+            "A+": "opt_a+",
+            "A-": "opt_a-",
+            "B+": "opt_b+",
+            "B-": "opt_b-",
+            "AB+": "opt_ab+",
+            "AB-": "opt_ab-",
+            "O+": "opt_o+",
+            "O-": "opt_o-",
+            unknown: "opt_unknown",
           };
-          const mappedOptionId = bloodGroupMap[answer];
-          if (mappedOptionId) {
-            optionId = mappedOptionId;
-            console.log(`[submitAnswer] Mapped blood group: ${answer} -> ${optionId}`);
-          }
+
+          optionId = bloodGroupMap[answer];
         }
-        
-        if (optionId) {
-          payload.selected_option_ids = [optionId];
-          console.log(`[submitAnswer] Final payload:`, payload);
-        } else {
-          console.error(`[submitAnswer] No option_id found for: ${answer}`, { options: questionData?.options });
-          return false;
-        }
-      } else if (questionType === 'number' || questionType === 'range') {
-        // For number/range - use answer_number
-        // Height is in cm or in, Weight is in kg
-        payload.answer_number = typeof answer === 'number' ? answer : parseInt(answer) || parseFloat(answer);
-        console.log(`[submitAnswer] Number/Range payload:`, payload);
-      } else if (questionType === 'text') {
+
+        if (optionId) payload.selected_option_ids = [optionId];
+      } else if (questionType === "number" || questionType === "range") {
+        payload.answer_number =
+          typeof answer === "number"
+            ? answer
+            : parseInt(answer) || parseFloat(answer);
+      } else if (questionType === "text") {
         payload.answer_text = answer;
-        console.log(`[submitAnswer] Text payload:`, payload);
-      } else if (questionType === 'boolean') {
-        // For boolean - use answer_boolean
-        payload.answer_boolean = answer === true || answer === 'true' || answer === 1;
-        console.log(`[submitAnswer] Boolean payload:`, payload);
-      } else {
-        // Default fallback - try as single select
-        if (answer && typeof answer === 'string') {
-          const option = questionData?.options?.find(
-            opt => opt.label === answer || opt.value === answer
-          );
-          if (option?.option_id) {
-            payload.selected_option_ids = [option.option_id];
-          }
-        }
-        console.log(`[submitAnswer] Default fallback payload:`, payload);
+      } else if (questionType === "boolean") {
+        payload.answer_boolean =
+          answer === true || answer === "true" || answer === 1;
       }
-      
-      // Call the API with the payload
-      console.log(`[submitAnswer] Calling API for ${questionId} with payload:`, payload);
-      const response = await questionnaireService.submitAnswer(questionId, payload);
-      
-      console.log(`[submitAnswer] Success for ${questionId}:`, response.data);
-      
+
+    const coins = response.data?.data?.reward?.pending_coins;
+
+if (coins !== undefined) {
+  setPendingCoins(coins);
+}
+
       return true;
     } catch (err) {
-      console.error(`[submitAnswer] Failed to submit ${questionId} answer:`, err);
-      console.error(`[submitAnswer] Error response:`, err.response?.data);
-      setAnswerError(err.response?.data?.message || `Failed to submit ${questionId} answer`);
+      console.error(err);
+      setAnswerError(
+        err.response?.data?.message ||
+          `Failed to submit ${questionId} answer`
+      );
       return false;
     } finally {
       setAnswerLoading(false);
@@ -219,56 +517,57 @@ const [showLoader, setShowLoader] = useState(true);
     (step === 3 && !heightAgree);
 
   const goNext = async () => {
-    // If on step 1 (intro), submit consent first
     if (step === 1 && introAgree) {
       try {
         setConsentLoading(true);
         setConsentError(null);
-        
-        // Call consent API
-        console.log('[goNext] Submitting consent...');
+
         await questionnaireService.submitConsent(true);
-        console.log('[goNext] Consent submitted successfully');
-        
-        // Fetch basic metrics questions from API after consent
+
         setQuestionsLoading(true);
+
         try {
-          console.log('[goNext] Fetching basic_metrics questions...');
-          const questionsRes = await questionnaireService.getQuestions('basic_metrics');
-          console.log('[goNext] Questions response:', questionsRes.data);
-          
-          const questions = questionsRes.data?.data?.questions?.basic_metrics || [];
-          // Sort by flow_order
-          const sortedQuestions = questions.sort((a, b) => a.flow_order - b.flow_order);
+          const questionsRes =
+            await questionnaireService.getQuestions("basic_metrics");
+
+          const questions =
+            questionsRes.data?.data?.questions?.basic_metrics || [];
+
+          const sortedQuestions = questions.sort(
+            (a, b) => a.flow_order - b.flow_order
+          );
+
           setBasicMetricsQuestions(sortedQuestions);
-          console.log('[goNext] Basic metrics questions loaded:', sortedQuestions.map(q => q.question_id));
-           
-          // Set default values from API range_config if available
-          const weightQuestion = sortedQuestions.find(q => q.question_id === 'weight');
-          const heightQuestion = sortedQuestions.find(q => q.question_id === 'height');
-          
+
+          const weightQuestion = sortedQuestions.find(
+            (q) => q.question_id === "weight"
+          );
+          const heightQuestion = sortedQuestions.find(
+            (q) => q.question_id === "height"
+          );
+
           if (weightQuestion?.range_config) {
             const { min, max } = weightQuestion.range_config;
-            setWeight(Math.round((min + max) / 2)); // Set to middle value
-            console.log('[goNext] Weight range:', weightQuestion.range_config);
+            setWeight(Math.round((min + max) / 2));
           }
+
           if (heightQuestion?.range_config) {
             const { min, max } = heightQuestion.range_config;
-            setHeight(Math.round((min + max) / 2)); // Set to middle value
-            console.log('[goNext] Height range:', heightQuestion.range_config);
+            setHeight(Math.round((min + max) / 2));
           }
         } catch (qErr) {
-          console.error('[goNext] Failed to fetch questions:', qErr);
+          console.error(qErr);
         } finally {
           setQuestionsLoading(false);
         }
-        
-        // After successful consent, proceed to next step
+
         setStep((s) => s + 1);
-      } catch (err) {  
-        console.error("[goNext] Failed to submit consent:", err);
-        setConsentError(err.response?.data?.message || "Failed to submit consent. Please try again.");
-        // Still allow user to proceed even if consent fails (for demo purposes)
+      } catch (err) {
+        console.error(err);
+        setConsentError(
+          err.response?.data?.message ||
+            "Failed to submit consent."
+        );
         setStep((s) => s + 1);
       } finally {
         setConsentLoading(false);
@@ -282,177 +581,112 @@ const [showLoader, setShowLoader] = useState(true);
     setStep((s) => s - 1);
   };
 
+ return (
+  <div className="min-h-screen flex flex-col justify-center items-center bg-black text-white px-4 overflow-hidden">
 
-  return (
-    <div className="min-h-screen bg-black text-white flex justify-center items-center px-4 overflow-hidden">
-     
-     
-     <div className="w-full max-w-sm">
+    {step >= 2 && (
+      <div className="w-96">
+        <PhysicalTopProgress progress={progress} pendingCoins={pendingCoins} />
+      </div>
+    )}
 
-  {loading ? (
-    <div className="flex justify-center items-center min-h-[400px]">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+    <div className="w-full max-w-sm">
+      {loading ? (
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+        </div>
+      ) : (
+        <>
+          {step === 1 && showLoader ? (
+            <IntroLoader image={screenData?.image_url} />
+          ) : step === 1 ? (
+            <Intro
+              agree={introAgree}
+              setAgree={setIntroAgree}
+              onNext={goNext}
+              disabled={nextDisabled}
+              screenData={screenData}
+              loading={consentLoading}
+              error={consentError}
+            />
+          ) : null}
+
+          {step === 2 && (
+            <WeightStep
+              value={weight}
+              agree={weightAgree}
+              setAgree={setWeightAgree}
+              setValue={setWeight}
+              questionData={basicMetricsQuestions.find(
+                (q) => q.question_id === "weight"
+              )}
+              onNext={async () => {
+                const q = basicMetricsQuestions.find(
+                  (q) => q.question_id === "weight"
+                );
+                if (q) await submitAnswer(q.question_id, weight, q);
+                setStep(3);
+              }}
+              onBack={() => setStep(1)}
+              disabled={nextDisabled}
+            />
+          )}
+
+          {step === 3 && (
+            <HeightStep
+              value={height}
+              setValue={setHeight}
+              agree={heightAgree}
+              setAgree={setHeightAgree}
+              questionData={basicMetricsQuestions.find(
+                (q) => q.question_id === "height"
+              )}
+              onNext={async () => {
+                const q = basicMetricsQuestions.find(
+                  (q) => q.question_id === "height"
+                );
+                if (q) await submitAnswer(q.question_id, height, q);
+                setStep(4);
+              }}
+              onBack={() => setStep(2)}
+              disabled={nextDisabled}
+            />
+          )}
+
+          {step === 4 && (
+            <BloodStep
+              value={blood}
+              setValue={setBlood}
+              questionData={basicMetricsQuestions.find(
+                (q) => q.question_id === "blood_group"
+              )}
+              onBack={() => setStep(3)}
+              onComplete={async () => {
+                const q = basicMetricsQuestions.find(
+                  (q) => q.question_id === "blood_group"
+                );
+                if (q && blood)
+                  await submitAnswer(q.question_id, blood, q);
+
+                setStep(5);
+              }}
+            />
+          )}
+
+          {step === 5 && (
+            <Fitness
+              onBack={() => setStep(4)}
+              onComplete={() => {
+                router.push("/onboarding/questionnaire");
+              }}
+            />
+          )}
+        </>
+      )}
     </div>
-  ) : (
-    <>
-     {step === 1 && showLoader ? (
-  <IntroLoader image={screenData?.image_url} />
-) : step === 1 ? (
-  <Intro
-    agree={introAgree}
-    setAgree={setIntroAgree}
-    onNext={goNext}
-    disabled={nextDisabled}
-    screenData={screenData}
-    loading={consentLoading}
-    error={consentError}
-  />
-) : null}
-
-      {step === 2 && (
-        <WeightStep
-          value={weight}
-          agree={weightAgree}
-          setAgree={setWeightAgree}
-          setValue={setWeight}
-          questionData={basicMetricsQuestions.find(q => q.question_id === "weight")}
-          onNext={async () => {
-            const weightQuestion = basicMetricsQuestions.find(q => q.question_id === "weight");
-            console.log('[WeightStep onNext] Submitting weight:', weight);
-            if (weightQuestion) {
-              const success = await submitAnswer(weightQuestion.question_id, weight, weightQuestion);
-              console.log('[WeightStep onNext] Weight submission result:', success);
-            }
-            setStep(3);
-          }}
-          onBack={() => setStep(1)}
-          disabled={nextDisabled}
-        />
-      )}
-
-      {step === 3 && (
-        <HeightStep
-          value={height}
-          setValue={setHeight}
-          agree={heightAgree}
-          setAgree={setHeightAgree}
-          questionData={basicMetricsQuestions.find(q => q.question_id === "height")}
-          onNext={async () => {
-            const heightQuestion = basicMetricsQuestions.find(q => q.question_id === "height");
-            console.log('[HeightStep onNext] Submitting height:', height);
-            if (heightQuestion) {
-              const success = await submitAnswer(heightQuestion.question_id, height, heightQuestion);
-              console.log('[HeightStep onNext] Height submission result:', success);
-            }
-            setStep(4);
-          }}
-          onBack={() => setStep(2)}
-          disabled={nextDisabled}
-        />
-      )}
-
-      {step === 4 && (
-        <BloodStep
-          value={blood}
-          setValue={setBlood}
-          questionData={basicMetricsQuestions.find(q => q.question_id === "blood_group")}
-          onBack={() => setStep(3)}
-          onComplete={async () => {
-            const bloodQuestion = basicMetricsQuestions.find(
-              q => q.question_id === "blood_group"
-            );
-
-            console.log('[BloodStep onComplete] Submitting blood group:', blood);
-            if (bloodQuestion && blood) {
-              // Pass the blood value and questionData
-              const success = await submitAnswer(bloodQuestion.question_id, blood, bloodQuestion);
-              console.log('[BloodStep onComplete] Blood group submission result:', success);
-            }
-
-            setStep(5); // ✅ move to Fitness
-          }}
-        />
-      )}
-
-      {step === 5 && (
-        <Fitness
-          onBack={() => setStep(4)}
-          onComplete={() => {
-            router.push("/onboarding/questionnaire");
-          }}
-        />
-      )}
-    </>
-  )}
-
-</div>
-    </div>
-  );
+  </div>
+); 
 }
-
-/* ---------------- STEP 1: INTRO ---------------- */
-
-// function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }) {
-//   // Use API data from GET /api/v1/onboarding/screens?type=physical_intro
-//   // API Response: { screens: [{ title, description, media, cta_buttons }] }
-//   const title = screenData?.title || "Physical Profile";
-//   const description = screenData?.description || "Help us understand your physical attributes";
-  
-//   // Static values (not in API response)
-//   const securityNote = "Your information is secure and never shared";
-//   const checkboxLabel = "I understand and agree to answer questions about my physical activity preferences";
-  
-//   // Get CTA button label from API or use default
-//   const ctaLabel = screenData?.cta_buttons?.[0]?.label || "Continue";
-
-//   return (
-//     <div className="flex flex-col justify-between py-10 ">
-//       <div className="text-white text-xl cursor-pointer mb-6 ">←</div>
-//       <div className="rounded-2xl border border-blue-500/40 bg-[#1c1c1c] py-12 px-4 text-center">
-//         <h2 className="text-4xl font-bold mb-5 bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
-//           {title}
-//         </h2>
-//         <p className="text-sm text-gray-300 mb-5 font-Poppins ">
-//           {description}
-//         </p>
-
-//         <p className="text-[14px] font-Poppins text-gray-400 mb-4 ">{securityNote}</p>
-
-//         <label className="flex items-start gap-3 text-xs text-gray-300 text-left font-Poppins">
-//           <input
-//             type="checkbox"
-//             checked={agree}
-//             onChange={(e) => setAgree(e.target.checked)}
-//             className="mt-1 accent-pink-500"
-//           />
-//           <span>{checkboxLabel}</span>
-//         </label>
-
-
-//       </div>
-
-//       <div>
-//         <p className="font-Poppins text-center text-[#697586] py-6">By continuing, you agree to Playmate’s Term & Privacy Policy.</p>
-//       </div>
-
-//       {error && (
-//         <p className="font-Poppins text-center text-red-400 py-2 text-sm">{error}</p>
-//       )}
-
-//       <button
-//         onClick={onNext}
-//         disabled={disabled}
-//         className={`w-full py-4 rounded-full transition font-Poppins ${disabled
-//             ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-//             : "bg-gradient-to-r from-pink-500 to-orange-400 text-white"
-//           }`}
-//       >
-//         {loading ? "Loading..." : ctaLabel}
-//       </button>
-//     </div>
-//   );
-// }
-
 
 function IntroLoader({ image }) {
   return (
@@ -462,7 +696,7 @@ function IntroLoader({ image }) {
       <img
         src={image}
         alt="loading"
-        className="w-80 h-80 object-contain rounded-xl"
+        className="w-96 h-[450px]  rounded-xl"
       />
     </div> </>
   );
@@ -482,7 +716,7 @@ function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }
   return (
     <div className="flex flex-col justify-between py-10">
       
-      <div className="text-white text-xl cursor-pointer mb-6">←</div>
+     
 
       <div className="rounded-2xl border border-blue-500/40 bg-[#1c1c1c] py-12 px-4 text-center">
 
@@ -601,21 +835,7 @@ function WeightStep({
           margin: "0 auto",
         }}
       >
-        {/* Back arrow */}
-        {/* <div
-          onClick={onBack}
-          style={{
-            alignSelf: "flex-start",
-            fontSize: 22,
-            cursor: "pointer",
-            marginBottom: 20,
-            color: "#aaa",
-          }}
-        >
-          ←
-        </div> */}
-
-        {/* Title */}
+     
         <h2
           style={{
             fontFamily: "'Playfair Display', serif",
@@ -962,24 +1182,6 @@ function WeightRuler({ value, setValue, unit }) {
 }
 
 
-/* ---------------- REMAINING STEPS (STUBS) ---------------- */
-
-// function HeightStep({ value, onBack, onNext }) {
-//   return (
-//     <div className="text-center">
-//       <div className="text-left text-xl mb-6 cursor-pointer" onClick={onBack}>←</div>
-//       <h2 className="text-2xl mb-10">Height Step (Placeholder)</h2>
-//       <button onClick={onNext} className="p-4 bg-orange-500 rounded-full">Next</button>
-//     </div>
-//   );
-// }
-
-
-
-
-
-
-
 // Scroll clamp limits (value cannot go beyond these)
 const FT_MIN = 4;
 const FT_MAX = 8;
@@ -1025,172 +1227,80 @@ function HeightStep({ value,
 
   return (
     <>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;600;700&display=swap"
-        rel="stylesheet"
+   <link
+  href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;600;700&display=swap"
+  rel="stylesheet"
+/>
+
+<div className=" flex flex-col items-center px-5  font-['Poppins'] text-white max-w-[390px] mx-auto relative">
+
+  {/* Title */}
+  <h2 className="font-['Playfair_Display'] text-[27px] font-semibold text-center mb-4 mt-1 tracking-[-0.3px]">
+    {questionText}
+  </h2>
+
+  {/* Unit toggle */}
+  <div className="bg-[#1f1f1f] rounded-full p-1 flex border border-[#F57264] w-[200px] h-[48px] items-center relative mb-2">
+    
+    {/* Sliding pill */}
+    <div
+      className="absolute top-1 bottom-1 w-[calc(50%-4px)]  rounded-full bg-gradient-to-r from-[#1A43CA] to-[#1FCCF2] transition-all duration-300"
+      style={{
+        left: unit === "ft" ? 4 : "calc(50% + 0px)",
+      }}
+    />
+
+    <button
+      onClick={() => handleUnitChange("ft")}
+      className={`flex-1 bg-transparent border-none font-medium text-[14px] cursor-pointer relative z-[1] ${
+        unit === "ft" ? "text-white" : "text-[#888]"
+      }`}
+    >
+      Ft
+    </button>
+
+    <button
+      onClick={() => handleUnitChange("in")}
+      className={`flex-1 bg-transparent border-none font-Poppins font-medium text-[14px] cursor-pointer relative z-[1] ${
+        unit === "in" ? "text-white" : "text-[#888]"
+      }`}
+    >
+      Inches
+    </button>
+  </div>
+
+  {/* Ruler + value section */}
+  <HeightRuler value={value} setValue={setValue} unit={unit} />
+
+  {/* Note */} 
+  <div className=" flex flex-col justify-center items-center text-center font-Poppins  px-4 py-3.5 text-[11.5px] text-[#888] leading-[1.6] w-full">
+    <p className="text-white/90">
+    Note:If you do not know your current weight, select "Not Sure" and visit your nearest Playmate Center for proper weight check.
+    </p>
+
+    <label className="flex items-start gap-2 text-gray-800 font-Poppins text-center">
+      <input
+        type="checkbox"
+        checked={agree}
+        onChange={(e) => setAgree(e.target.checked)}
+        className="mt-1 accent-pink-500"
       />
-      <div
-        style={{
-          background: "#0a0a0a",
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          padding: "24px 20px",
-          fontFamily: "'Poppins', sans-serif",
-          color: "white",
-          maxWidth: 390,
-          margin: "0 auto",
-          position: "relative",
-        }}
-      >
-        {/* Back arrow */}
-        <div
-          onClick={onBack}
-          style={{
-            alignSelf: "flex-start",
-            fontSize: 22,
-            cursor: "pointer",
-            marginBottom: 24,
-            color: "#aaa",
-          }}
-        >
-          ←
-        </div>
+      <span>
+        Not Sure – Visit nearest Playmate Center
+      </span>
+    </label>
+  </div>
 
-        {/* Title */}
-        <h2
-          style={{
-            fontFamily: "'Playfair Display', serif",
-            fontSize: 30,
-            fontWeight: 600,
-            textAlign: "center",
-            marginBottom: 28,
-            marginTop: 4,
-            letterSpacing: "-0.3px",
-          }}
-        >
-          {questionText}
-        </h2>
+  {/* Next button */}
+  <button
+    onClick={onNext}
+    disabled={disabled}
+    className="mt-7 w-[60px] h-[60px] rounded-full bg-gradient-to-br from-pink-500 to-orange-500 border-none text-white text-[22px] cursor-pointer flex items-center justify-center shadow-[0_4px_20px_rgba(249,115,22,0.4)]"
+  >
+    ✓
+  </button>
 
-        {/* Unit toggle */}
-        <div
-          style={{
-            background: "#1f1f1f",
-            borderRadius: 999,
-            padding: 4,
-            display: "flex",
-            width: 200,
-            height: 42,
-            alignItems: "center",
-            position: "relative",
-            marginBottom: 28,
-          }}
-        >
-          {/* Sliding pill */}
-          <div
-            style={{
-              position: "absolute",
-              top: 4,
-              bottom: 4,
-              width: "calc(50% - 4px)",
-              borderRadius: 999,
-              background: "linear-gradient(to right, #1A43CA, #1FCCF2)",
-              transition: "left 0.3s ease",
-              left: unit === "ft" ? 4 : "calc(50% + 0px)",
-            }}
-          />
-          <button
-            onClick={() => handleUnitChange("ft")}
-            style={{
-              flex: 1,
-              background: "transparent",
-              border: "none",
-              color: unit === "ft" ? "white" : "#888",
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: "pointer",
-              position: "relative",
-              zIndex: 1,
-              fontFamily: "'Poppins', sans-serif",
-            }}
-          >
-            Ft
-          </button>
-          <button
-            onClick={() => handleUnitChange("in")}
-            style={{
-              flex: 1,
-              background: "transparent",
-              border: "none",
-              color: unit === "in" ? "white" : "#888",
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: "pointer",
-              position: "relative",
-              zIndex: 1,
-              fontFamily: "'Poppins', sans-serif",
-            }}
-          >
-            Inches
-          </button>
-        </div>
-
-        {/* Ruler + value section */}
-        <HeightRuler value={value} setValue={setValue} unit={unit} />
-
-        {/* Note */}
-        <div
-          style={{
-            marginTop: 28,
-            background: "#141414",
-            borderRadius: 12,
-            padding: "14px 16px",
-            fontSize: 11.5,
-            color: "#888",
-            lineHeight: 1.6,
-            width: "100%",
-          }}
-        >
-          <p style={{ margin: 0 }}>
-            <strong style={{ color: "#aaa" }}>Note:</strong> If you do not know your current weight, select "Not Sure" and visit your nearest Playmate Center for proper weight check.
-          </p>
-          <label className="flex items-start gap-2 text-gray-300 font-Poppins text-center">
-            <input
-              type="checkbox"
-              checked={agree}
-              onChange={(e) => setAgree(e.target.checked)}
-              className="mt-1 accent-pink-500"
-            />
-            <span>
-              Not Sure – Visit nearest Playmate Center
-            </span>
-          </label>
-        </div>
-
-        {/* Next button */}
-        <button
-          onClick={onNext}
-          disabled={disabled}
-          style={{
-            marginTop: 28,
-            width: 60,
-            height: 60,
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #ec4899, #f97316)",
-            border: "none",
-            color: "white",
-            fontSize: 22,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 4px 20px rgba(249,115,22,0.4)",
-          }}
-        >
-          ✓
-        </button>
-      </div>
+</div>
     </>
   );
 }
@@ -1224,7 +1334,6 @@ function HeightRuler({ value, setValue, unit }) {
     const handleWheel = (e) => {
       e.preventDefault();
       const direction = e.deltaY > 0 ? 1 : -1;
-      // Strictly clamped — cannot scroll past min or max
       setValue((prev) => Math.min(Math.max(prev + direction, min), max));
     };
 
@@ -1236,6 +1345,7 @@ function HeightRuler({ value, setValue, unit }) {
       e.preventDefault();
       const touchEnd = e.touches[0].clientY;
       const delta = touchStart.current - touchEnd;
+
       if (Math.abs(delta) > 8) {
         const direction = delta > 0 ? 1 : -1;
         setValue((prev) => Math.min(Math.max(prev + direction, min), max));
@@ -1255,36 +1365,15 @@ function HeightRuler({ value, setValue, unit }) {
   }, [setValue, min, max]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        width: "100%",
-        padding: "0 12px",
-      }}
-    >
+    <div className="flex items-center justify-between w-full  px-3">
+
       {/* Left big value */}
       <div>
-        <div
-          style={{
-            fontSize: 72,
-            fontWeight: 700,
-            lineHeight: 1,
-            color: "white",
-            fontFamily: "'Poppins', sans-serif",
-          }}
-        >
+        <div className="text-[40px] font-semibold leading-none text-white font-Poppins ">
           {clampedValue}
         </div>
-        <div
-          style={{
-            fontSize: 16,
-            color: "#888",
-            marginTop: 4,
-            fontFamily: "'Poppins', sans-serif",
-          }}
-        >
+
+        <div className="text-[16px] text-white mt-1  font-['Poppins']">
           {unit === "in" ? "Inches" : "Feet"}
         </div>
       </div>
@@ -1292,136 +1381,71 @@ function HeightRuler({ value, setValue, unit }) {
       {/* Ruler */}
       <div
         ref={containerRef}
-        style={{
-          position: "relative",
-          height: viewHeight,
-          width: 110,
-          overflow: "hidden",
-          cursor: "ns-resize",
-        }}
+        className="relative w-[110px] overflow-hidden cursor-ns-resize   "
+        style={{ height: viewHeight }}
       >
-        {/* Pink arrow indicator at center */}
-        <div
-          style={{
-            position: "absolute",
-            right: 0,
-            top: "50%",
-            transform: "translateY(-50%)",
-            zIndex: 20,
-            width: 0,
-            height: 0,
-            borderTop: "9px solid transparent",
-            borderBottom: "9px solid transparent",
-            borderRight: "16px solid #ec4899",
-          }}
-        />
 
-        {/* Top fade overlay */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 60,
-            background: "linear-gradient(to bottom, #0a0a0a, transparent)",
-            zIndex: 10,
-            pointerEvents: "none",
-          }}
-        />
-        {/* Bottom fade overlay */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 60,
-            background: "linear-gradient(to top, #0a0a0a, transparent)",
-            zIndex: 10,
-            pointerEvents: "none",
-          }}
-        />
+        {/* Pink arrow indicator */}
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-0 h-0 border-t-[9px] border-t-transparent border-b-[9px] border-b-transparent border-r-[16px] border-r-pink-500" />
 
-        {/* Tick strip — visMin to visMax */}
+      
+
+        {/* Tick strip */}
         <div
+          className="absolute left-0 w-full transition-transform duration-100 ease-out"
           style={{
-            position: "absolute",
-            left: 0,
-            width: "100%",
-            transform: `translateY(${center - offset}px)`,
-            transition: "transform 0.1s ease-out",
+            transform: `translateY(${center - offset}px)`
           }}
         >
           {Array.from({ length: visMax - visMin + 1 }).map((_, i) => {
             const v = visMin + i;
             const isMajor = v % 10 === 0;
             const isSelected = v === clampedValue;
-            // Ticks outside the scrollable range are faded to hint the boundary
             const isOutOfRange = v < min || v > max;
 
             return (
               <div
                 key={v}
+                className="flex items-center justify-end pr-[22px]"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
                   height: stepHeight,
-                  paddingRight: 22,
-                  opacity: isOutOfRange ? 0.25 : 1,
+                  opacity: isOutOfRange ? 0.25 : 1
                 }}
               >
+
                 {isMajor && (
                   <span
-                    style={{
-                      color: isSelected ? "white" : "#555",
-                      fontSize: 11,
-                      marginRight: 6,
-                      fontFamily: "'Poppins', sans-serif",
-                      fontWeight: isSelected ? 700 : 400,
-                    }}
+                    className={`text-[11px] mr-[6px] font-['Poppins'] ${
+                      isSelected ? "text-white font-bold" : "text-white font-normal"
+                    }`}
                   >
                     {v}
                   </span>
                 )}
+
                 <div
+                  className="rounded-[1px]"
                   style={{
                     width: isMajor ? 40 : 20,
                     height: isSelected ? 2 : isMajor ? 2 : 1,
                     background: isSelected
                       ? "#ec4899"
                       : isMajor
-                        ? "#555"
-                        : "#333",
-                    borderRadius: 1,
+                      ? "#555"
+                      : "#333",
                   }}
                 />
               </div>
             );
           })}
         </div>
+
       </div>
     </div>
   );
 }
 
 
-
-
-
-
-
-
-// function BloodStep({ value, onBack }) {
-//   return (
-//     <div className="text-center">
-//       <div className="text-left text-xl mb-6 cursor-pointer" onClick={onBack}>←</div>
-//       <h2 className="text-2xl mb-10">Blood Group: {value}</h2>
-//       <button className="p-4 bg-pink-500 rounded-full">Finish</button>
-//     </div>
-//   );
-// }
 
 function BloodStep({ value, setValue, onBack, onComplete, questionData }) {
   const [group, setGroup] = useState(value?.replace(/[+-]/, "") || "A");
@@ -1439,12 +1463,9 @@ function BloodStep({ value, setValue, onBack, onComplete, questionData }) {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col px-4 py-6">
+    <div className="min-h-screen bg-black text-white flex flex-col px-4 mt-2">
 
-      {/* TOP BAR */}
-      <div className="text-xl mb-6 cursor-pointer" onClick={onBack}>
-        ←
-      </div>
+
 
       {/* TITLE */}
       <h2 className="text-3xl text-center mb-6 font-semibold font-Playfair Display ">
@@ -1454,7 +1475,7 @@ function BloodStep({ value, setValue, onBack, onComplete, questionData }) {
 
       {/* GROUP SELECTOR */}
       <div className="flex justify-center mb-10 font-Poppins ">
-        <div className="flex bg-[#1f1f1f] rounded-full p-1 w-[260px]">
+        <div className="flex bg-[#1f1f1f] border border-[#FF8319] rounded-full p-1 w-[260px]">
           {["A", "B", "AB", "O"].map((g) => (
             <button
               key={g}
@@ -1472,7 +1493,7 @@ function BloodStep({ value, setValue, onBack, onComplete, questionData }) {
       </div>
 
       {/* BIG VALUE */}
-      <div className="text-center mb-10 font-Poppins ">
+      <div className="text-center font-Poppins ">
         <div className="text-[90px] font-extrabold leading-none text-red-500">
           {group}
           <span className="text-4xl align-top ml-1">{rh}</span>
@@ -1501,7 +1522,7 @@ function BloodStep({ value, setValue, onBack, onComplete, questionData }) {
       </div>
 
       {/* CONFIRM */}
-      <div className="flex justify-center mb-6">
+      <div className="flex justify-center mb-2">
         <button
           onClick={onComplete}
           className="w-16 h-16 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-2xl shadow-lg"
@@ -1511,7 +1532,7 @@ function BloodStep({ value, setValue, onBack, onComplete, questionData }) {
       </div>
 
       {/* NOTE */}
-      <p className="text-[14px] text-white/80 font-normal  text-center mb-4 font-Poppins  ">
+      <p className="text-[14px] text-white/80 font-normal  text-center mb-2 font-Poppins  ">
         Note: If you do not know your current blood group,
         select “Not Sure” and visit your nearest Playmate
         Center for proper check.

@@ -779,6 +779,7 @@ import {
   submitAnswer,
   saveSelection,
 } from "@/lib/api/categoryApi";
+import SportProgressBar from "@/app/components/SportProgressBar";
 
 export default function CategorySelection() {
   const router = useRouter();
@@ -806,6 +807,18 @@ export default function CategorySelection() {
   // Store full session data for tracking item completion status
   const [sessionData, setSessionData] = useState(null);
 
+  const [progressPercentage, setProgressPercentage] = useState(0);
+const [pendingCoins, setPendingCoins] = useState(0);
+
+const [selectedOption, setSelectedOption] = useState(null);
+
+const colorPalette = [
+  { card: "from-[#1B5CD1] to-[#1EB9EC]", hover: "hover:bg-[#1EB9EC]" },
+  { card: "from-[#9333EA] to-[#6366F1]", hover: "hover:bg-[#6366F1]" },
+  { card: "from-[#14B8A6] to-[#22C55E]", hover: "hover:bg-[#22C55E]" },
+];
+
+const gradient = colorPalette[qIndex % colorPalette.length];
   const token =
     typeof window !== "undefined"
       ? sessionStorage.getItem("accessToken")
@@ -1243,14 +1256,33 @@ async function handleItemClick(itemKey) {
         question_id: question.question_id
       });
       
-      const submitRes = await submitAnswer(token, {
-        session_id: sessionIdAtCompletion,
-        category_key: categoryKeyAtCompletion,
-        item_key: itemKeyAtCompletion,
-        question_id: question.question_id,
-        selected_option_ids: [optionId],
-      });
+      // const submitRes = await submitAnswer(token, {
+      //   session_id: sessionIdAtCompletion,
+      //   category_key: categoryKeyAtCompletion,
+      //   item_key: itemKeyAtCompletion,
+      //   question_id: question.question_id,
+      //   selected_option_ids: [optionId],
+      // });
       
+
+      const submitRes = await submitAnswer(token, {
+  session_id: sessionIdAtCompletion,
+  category_key: categoryKeyAtCompletion,
+  item_key: itemKeyAtCompletion,
+  question_id: question.question_id,
+  selected_option_ids: [optionId],
+});
+
+// update progress %
+if (submitRes?.item_progress?.percentage !== undefined) {
+  setProgressPercentage(submitRes.item_progress.percentage);
+}
+
+// update earned coins
+if (submitRes?.reward?.pending_coins !== undefined) {
+  setPendingCoins(submitRes.reward.pending_coins);
+}
+
       console.log('Submit answer response:', submitRes);
 
       // Check if item is complete based on response
@@ -1542,7 +1574,27 @@ if (submitRes?.category_complete) {
       console.log('Default: showing items screen');
       setItemsData(refreshed);
       setScreen("items");
-    } catch (err) {
+    }
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    catch (err) {
       console.error("Submit answer error:", err);
       alert("Failed to save answer. Please try again.");
     }
@@ -1657,20 +1709,23 @@ if (submitRes?.category_complete) {
   }
   onClick={() => handleItemClick(item.key)}
   className={`w-52 py-3 rounded-lg border transition flex items-center justify-center gap-2
-    ${
-      item.status === "completed" || item.is_completed
-        ? "bg-green-700 border-green-600 opacity-70 cursor-not-allowed"
-        : item.disabled
-        ? "bg-gray-700 border-gray-600 opacity-60 cursor-not-allowed"
-        : "border-pink-500 hover:bg-pink-500"
-    }`}
+
+  ${
+    item.status === "completed" || item.is_completed
+      ? "bg-green-700 border-green-600 text-white cursor-not-allowed"
+      : item.disabled
+      ? "bg-gray-700 border-gray-600 opacity-60 cursor-not-allowed"
+      : "border-pink-500 hover:bg-pink-500"
+  }
+`}
 >
-  {item.icon || "🏃"} {item.title || item.name || item.key}
+  {item.icon || "🎯"} {item.title || item.name || item.key}
 
   {(item.status === "completed" || item.is_completed) && (
     <span className="text-green-300 font-bold">✔</span>
   )}
 </button>
+
           ))}
 
         </div> 
@@ -1698,41 +1753,53 @@ if (submitRes?.category_complete) {
 
 
       {/* QUESTIONS */}
-      {screen === "questions" && questions && questions.length > 0 && (
-        <div className="max-w-md flex flex-col justify-center items-center w-full space-y-6">
-          {questions[qIndex] && qIndex < questions.length ? (
-            <>
-   {itemsData.items_title}
-              <div className="p-6 w-96 rounded-xl  bg-gradient-to-r from-[#1B5CD1] to-[#1EB9EC] text-lg text-white font-Poppins text-center">
-                
-                {questions[qIndex].question_text}
-              </div>
+   {screen === "questions" && questions && questions.length > 0 && (
+  <div className="max-w-md flex flex-col justify-center items-center w-full space-y-6">
 
-              {questions[qIndex].options && questions[qIndex].options.map((opt) => (
-                <button
-                  key={opt.option_id}
-                  onClick={() => handleAnswer(opt.option_id)}
-                  className="w-96 py-3 border border-pink-500 hover:bg-[#e28010] font-Poppins rounded-lg"
-                >
-                  {opt.label}
-                </button>
-              ))}
-              
-              {/* Back button to return to items */}
-              <button
-                onClick={() => handleBackToItems()}
-                className="mt-4 text-gray-400 hover:text-white text-sm"
-              >
-                ← Back to Items
-              </button>
-            </>
-          ) : (
-            <div className="text-center text-gray-400">
-              No questions available for this item
-            </div>
-          )}
+    <SportProgressBar
+      percentage={progressPercentage}
+      pendingCoins={pendingCoins}
+    />
+
+    {questions[qIndex] && qIndex < questions.length ? (
+      <>
+        <div className={`p-6 w-96 rounded-xl bg-gradient-to-r ${gradient.card} text-lg text-white font-Poppins text-center`}>
+          {questions[qIndex].question_text}
         </div>
-      )}
+
+        {questions[qIndex].options &&
+          questions[qIndex].options.map((opt) => (
+            <button
+              key={opt.option_id}
+           onClick={() => {
+  setSelectedOption(opt.option_id);
+  handleAnswer(opt.option_id);
+}}
+             className={`w-96 py-3 border font-Poppins rounded-lg transition
+${
+  selectedOption === opt.option_id
+    ? "bg-pink-500 border-pink-500 text-white"
+    : `border-pink-500 ${gradient.hover}`
+}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+
+        <button
+          onClick={() => handleBackToItems()}
+          className="mt-4 text-gray-400 hover:text-white text-sm"
+        >
+          ← Back to Items
+        </button>
+      </>
+    ) : (
+      <div className="text-center text-gray-400">
+        No questions available for this item
+      </div>
+    )}
+  </div>
+)}
 
       {/* No questions available */}
       {screen === "questions" && (!questions || questions.length === 0) && (
