@@ -456,22 +456,46 @@ export default function LoginPage() {
           const nextStep = data.next_required_step;
           const onboardingState = data.onboarding_state;
 
+          console.log('Login page - nextStep:', nextStep);
+          console.log('Login page - onboardingState:', onboardingState);
+
           if (
             nextStep === "ACTIVE_USER" ||
             nextStep === "COMPLETED" ||
             nextStep === "HOME" ||
             nextStep === "DONE" ||
             nextStep === "ACTIVE" ||
-            nextStep === "QUESTIONNAIRE_COMPLETED" ||
-            nextStep === "QUESTIONNAIRE_COMPLETE" ||
+            nextStep === "EXPERIENCE_COMPLETED" ||
+            nextStep === "EXPERIENCE_COMPLETE" ||
+            // Extended profile states (only completed ones go to home)
+            nextStep === "EXTENDED_PROFILE_PENDING" ||
             nextStep === "EXTENDED_PROFILE_COMPLETED"
           ) {
+            console.log('Redirecting to /home - completed state');
             router.push("/home");
+            return;
+          }
+
+          // EXTENDED_PROFILE_INTRO - user needs to complete extended profile (experience)
+          if (nextStep === "EXTENDED_PROFILE_INTRO") {
+            console.log('Redirecting to /onboarding/experience - EXTENDED_PROFILE_INTRO');
+            router.push("/onboarding/experience");
+            return;
+          }
+
+          // If user has completed questionnaire, redirect to experience
+          if (
+            nextStep === "QUESTIONNAIRE_COMPLETED" ||
+            nextStep === "QUESTIONNAIRE_COMPLETE"
+          ) {
+            console.log('Redirecting to /onboarding/experience - QUESTIONNAIRE_COMPLETED');
+            router.push("/onboarding/experience");
             return;
           }
 
           if (nextStep) {
             const route = getRouteFromStep(nextStep);
+            console.log('getRouteFromStep result for', nextStep, ':', route);
             if (route && route !== "/login") {
               router.push(route);
               return;
@@ -480,12 +504,14 @@ export default function LoginPage() {
 
           if (onboardingState) {
             const stateRoute = getOnboardingRedirect(onboardingState);
+            console.log('getOnboardingRedirect result for', onboardingState, ':', stateRoute);
             if (stateRoute && stateRoute !== "/login") {
               router.push(stateRoute);
               return;
             }
           }
 
+          console.log('Falling through to /home');
           router.push("/home");
         } catch (err) {
           console.error("Session check failed:", err);

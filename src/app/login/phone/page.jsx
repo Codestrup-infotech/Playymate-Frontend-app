@@ -179,24 +179,73 @@ export default function PhoneLogin() {
       // Also call authService.storeTokens if it handles other storage logic
       authService.storeTokens({ accessToken, refreshToken });
 
-      // ✅ FIX: Do NOT call getOnboardingStatus here.
-      // The backend returns 403 for this endpoint with a freshly issued token
-      // at this point in the auth flow. We already have next_required_step
-      // from the OTP verify response above — use that directly.
+          const statusResponse =
+            await userService.getOnboardingStatus();
 
-      console.log("✅ Login complete. Next step:", nextStepFromOtp);
-      console.log("nextStepFromOtp for returning user:", nextStepFromOtp);
+          const currentStep =
+            statusResponse?.data?.data?.next_required_step;
 
-      // Route based on next step from OTP response
-      if (
-        nextStepFromOtp === "ACTIVE_USER" ||
-        nextStepFromOtp === "COMPLETED" ||
-        nextStepFromOtp === "HOME" ||
-        nextStepFromOtp === "ACTIVE" // ACTIVE may be returned for returning users
-      ) {
-        router.push("/onboarding/home");
-        return;
-      }
+          const onboardingState =
+            statusResponse?.data?.data?.onboarding_state;
+
+          const userState =
+            statusResponse?.data?.data?.onboarding_state;
+
+          const redirectStep =
+            currentStep || userState || nextStep;
+
+          console.log('Phone login - currentStep:', currentStep);
+          console.log('Phone login - userState (onboarding_state):', userState);
+          console.log('Phone login - nextStep:', nextStep);
+          console.log('Phone login - redirectStep:', redirectStep);
+
+          // All completed states - redirect to home
+          const completedStates = [
+            'ACTIVE_USER',
+            'COMPLETED',
+            'HOME',
+            'DONE',
+            'ACTIVE',
+            // Extended profile states (only completed ones go to home)
+            'EXTENDED_PROFILE_PENDING',
+            'EXTENDED_PROFILE_COMPLETED',
+          ];
+
+          console.log('Checking redirectStep:', redirectStep);
+          console.log('Is in completedStates:', completedStates.includes(redirectStep));
+
+          if (completedStates.includes(redirectStep)) {
+            console.log('Redirecting to /home - completed state');
+            router.push('/home');
+            return;
+          }
+
+          // EXTENDED_PROFILE_INTRO - user needs to complete extended profile (experience)
+          if (redirectStep === 'EXTENDED_PROFILE_INTRO') {
+            console.log('Redirecting to /onboarding/experience - EXTENDED_PROFILE_INTRO');
+            router.push('/onboarding/experience');
+            return;
+          }
+
+          // If user has completed questionnaire, redirect to experience
+          if (
+            redirectStep === 'QUESTIONNAIRE_COMPLETED' ||
+            redirectStep === 'QUESTIONNAIRE_COMPLETE'
+          ) {
+            console.log('Redirecting to /onboarding/experience - QUESTIONNAIRE_COMPLETED');
+            router.push('/onboarding/experience');
+            return;
+          }
+
+          // If user has completed experience (legacy state), redirect to home
+          // Note: API doesn't return this state anymore, but keeping for backward compatibility
+          if (
+            redirectStep === 'EXPERIENCE_COMPLETED' ||
+            redirectStep === 'EXPERIENCE_COMPLETE'
+          ) {
+            router.push('/home');
+            return;
+          }
 
       if (
         nextStepFromOtp === "NAME_CAPTURE" ||
@@ -232,9 +281,8 @@ export default function PhoneLogin() {
         return;
       }
 
-      // Final fallback
-      router.push("/onboarding/name");
-
+      // Default fallback after all checks - go to home
+      router.push('/home');
     } catch (err) {
       console.error("verifyPhoneOtp error:", err);
       setError(err.response?.data?.message || "Verification failed.");
@@ -284,15 +332,18 @@ export default function PhoneLogin() {
   const currentScreen = step === "phone" ? phoneScreen : otpScreen;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col justify-between px-6 py-12">
+    <div className="min-h-screen bg-black text-white flex flex-col  justify-center items-center space-y-20 px-6">
 
       {/* Back */}
-      <button onClick={() => router.back()} className="text-xl">
+      <button
+        onClick={() => router.back()}
+        className="text-xl  mr-80 "
+      >
         ←
       </button>
 
       {/* Content */}
-      <div className="max-w-md w-full mx-auto">
+      <div className="flex  flex-col justify-center items-center w-full mx-auto">
 
         {/* Title */}
         <div className="text-center mb-8">
@@ -303,7 +354,7 @@ export default function PhoneLogin() {
                 index === 2 ? (
                   <span
                     key={index}
-                    className="bg-gradient-to-r from-fuchsia-500 to-orange-500 bg-clip-text text-transparent"
+                    className="bg-gradient-to-br from-[#EF3AFF] via-[#FF8319] to-[#FF8319] bg-clip-text text-transparent"
                   >
                     {" " + word}
                   </span>
@@ -313,7 +364,7 @@ export default function PhoneLogin() {
               )}
           </h1>
 
-          <p className="text-gray-400 mt-3  font-Poppins text-sm">
+          <p className="text-gray-400 mt-3   font-Poppins text-sm">
             {currentScreen?.subtitle
               ?.replace("{phone}", `+91 ${phone}`)}
           </p>
@@ -328,7 +379,7 @@ export default function PhoneLogin() {
 
         {/* PHONE INPUT */}
         {step === "phone" && (
-          <div className="flex items-center  font-Poppins bg-[#1a1a1a] rounded-xl px-4 h-14 gap-3 border border-gray-700">
+          <div className="flex items-center  w-96 font-Poppins bg-[#1a1a1a] rounded-xl px-4 h-14 gap-3 border border-pink-500 ">
 
             <span className="text-xl">🇮🇳</span>
             <span className="text-gray-400">
@@ -339,9 +390,13 @@ export default function PhoneLogin() {
               type="tel"
               maxLength={10}
               value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-              placeholder={phoneScreen?.input_placeholders?.phone}
-              className="flex-1 bg-transparent outline-none text-white"
+              onChange={(e) =>
+                setPhone(e.target.value.replace(/\D/g, ""))
+              }
+              placeholder={
+                phoneScreen?.input_placeholders?.phone
+              }
+              className="flex-1 bg-transparent  outline-none text-white"
             />
           </div>
         )}
@@ -395,7 +450,7 @@ export default function PhoneLogin() {
       <button
         onClick={step === "phone" ? sendPhoneOtp : verifyPhoneOtp}
         disabled={loading}
-        className="w-full max-w-md  font-Poppins mx-auto py-4 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-500 font-semibold"
+        className="w-full max-w-sm font-Poppins mx-auto py-4 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-500 font-semibold"
       >
         {loading ? "Loading..." : currentScreen?.cta_text?.primary}
       </button>

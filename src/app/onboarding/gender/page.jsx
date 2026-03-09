@@ -539,7 +539,7 @@ export default function OnboardingGenderPage() {
       <div className="w-full max-w-sm">
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-10">
+        {/* <div className="flex items-center gap-3 mb-10">
           <button
             onClick={() => router.push("/onboarding/name")}
             className="p-2 rounded-full hover:bg-white/10 transition-all duration-200"
@@ -550,7 +550,7 @@ export default function OnboardingGenderPage() {
           <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
             <div className="h-full w-[20%] bg-gradient-to-r from-pink-500 to-orange-400 transition-all duration-300" />
           </div>
-        </div>
+        </div> */}
 
         {/* Title */}
         <div className="text-center mb-2">
@@ -586,7 +586,7 @@ export default function OnboardingGenderPage() {
                 flex items-center justify-center gap-3
                 text-lg font-semibold
                 rounded-2xl
-                bg-gradient-to-br from-[#1e1e22] to-[#18181c] hover:bg-gradient-to-br  hover:from-[#EB4694] hover:to-[#E1314A]
+                bg-gradient-to-br from-[#1e1e22] to-[#18181c] hover:bg-gradient-to-br  hover:from-[#EB4694] hover:to-[#FF8319]
                 border
                 transition-all duration-200
                 shadow-lg
@@ -603,7 +603,7 @@ export default function OnboardingGenderPage() {
 
               {option.symbol && (
                 <span
-                  className="text-xl"
+                  className="text-xl hover:text-white"
                   style={{ color: option.symbolColor }}
                 >
                   {option.symbol}
@@ -611,7 +611,7 @@ export default function OnboardingGenderPage() {
               )}
 
               {loading && gender === option.id && (
-                <Loader2 className="w-4 h-4 animate-spin ml-1 text-pink-400" />
+                <Loader2 className="w-4 h-4 animate-spin ml-1 text-pink-400  " />
               )}
             </button>
           ))}

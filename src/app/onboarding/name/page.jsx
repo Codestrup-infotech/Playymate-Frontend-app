@@ -593,31 +593,31 @@ export default function OnboardingNamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-black text-white flex items-center justify-center  px-4">
+      <div className="w-full max-w-sm flex flex-col  ">
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <button
+        <div className="flex items-center gap-3 ">
+          {/* <button
             onClick={() => router.push("/login/email")}
             className="p-2 rounded-full hover:bg-white/10 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-          </button>
+          </button> */}
 
-          <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
+          {/* <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-pink-500 to-orange-400 w-[10%]" />
-          </div>
+          </div> */}
         </div>
 
         {/* Content */}
-        <div className="space-y-6">
+        <div className="space-y-10">
 
           <div className="text-center">
-
+{/* 
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 mb-4">
               <User className="w-8 h-8 text-white" />
-            </div>
+            </div> */}
 
             <h1 className="text-3xl font-bold">
               {nameScreen?.title
@@ -643,7 +643,7 @@ export default function OnboardingNamePage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-10">
 
             {error && (
               <div className="flex items-center justify-center font-Poppins gap-2 text-red-400 text-sm py-2">

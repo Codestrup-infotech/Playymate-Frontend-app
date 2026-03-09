@@ -292,9 +292,9 @@ export default function OnboardingLocationPage() {
   return (
     <> 
     <div className='bg-black flex justify-center items-center'> 
-    <div className="min-h-screen w-96 bg-black text-white flex flex-col">
+    <div className="min-h-screen py-4 w-96 bg-black text-white flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4">
+      {/* <div className="flex items-center gap-3 p-4">
         <button
           onClick={() => router.push('/onboarding/dob')}
           className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -304,7 +304,7 @@ export default function OnboardingLocationPage() {
         <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
           <div className="h-full bg-gradient-to-r from-pink-500 to-orange-400 w-[50%]" />
         </div>
-      </div>
+      </div> */}
 
       {/* Content */}
       <div className="flex-1 flex flex-col">
@@ -334,7 +334,7 @@ export default function OnboardingLocationPage() {
         )}
 
         {/* Map */}
-        <div className="flex-1 relative mx-4 rounded-2xl overflow-hidden mb-4">
+        <div className="flex-1 relative mx-4 rounded-3xl overflow-hidden mb-6">
           <iframe
             src={mapUrl}
             className="absolute inset-0 w-full h-full border-0"
@@ -343,7 +343,7 @@ export default function OnboardingLocationPage() {
           />
 
           {/* Search Overlay */}
-          <div className="absolute bottom-4 left-4 right-4">
+          <div className="absolute bottom-4 left-4 right-4 font-Poppins ">
             <div className="bg-black/90 backdrop-blur rounded-xl p-3 space-y-3">
               {/* Search Input */}
               <div className="relative">

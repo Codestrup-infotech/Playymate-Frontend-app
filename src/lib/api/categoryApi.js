@@ -1,6 +1,6 @@
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "http://localhost:5000/api/v1";
+  "https://api-dev.playymate.com/api/v1";
 
 /* ======================================================
    HANDLE RESPONSE (Supports success OR status format)
@@ -45,16 +45,25 @@ export async function startQuestionnaireSession(
   token,
   loopMode = false
 ) {
+  console.log('[startQuestionnaireSession] Starting new session...');
   const res = await fetch(
     `${BASE_URL}/questionnaire/session/start`,
     {
       method: "POST",
       headers: authHeaders(token),
       body: JSON.stringify({
-        loop_mode: loopMode,
+        session_type: "preference",  // Required by backend
       }),
     }
   );
+
+  // Log response status
+  console.log('[startQuestionnaireSession] Response status:', res.status);
+  
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.log('[startQuestionnaireSession] Error response:', errorText);
+  }
 
   return await handleResponse(res);
 }
@@ -65,21 +74,40 @@ export async function startQuestionnaireSession(
    Backend automatically finds the user's active session using token
 ====================================================== */
 
-export async function getQuestionnaireSession(token) {
+export async function getQuestionnaireSession(token, sessionId = null) {
   try {
     console.log('📡 Calling /session/status to find existing session...');
     
+    // Build URL with session_id if provided
+    let url = `${BASE_URL}/questionnaire/session/status`;
+    if (sessionId) {
+      url += `?session_id=${sessionId}`;
+    }
+    
     // Call WITHOUT session_id - backend auto-finds session using user ID from token!
-    const res = await fetch(
-      `${BASE_URL}/questionnaire/session/status`,
-      {
-        headers: authHeaders(token),
-      }
-    );
+    const res = await fetch(url, {
+      headers: authHeaders(token),
+    });
     
     console.log('📥 Session status response status:', res.status);
     
+    // Log the error response for debugging
     if (!res.ok) {
+      const errorText = await res.text();
+      console.log('❌ Session status error response:', errorText);
+      
+      // Parse error to check if can start new session
+      try {
+        const errorData = JSON.parse(errorText);
+        // If backend says can start new session, return null to trigger new session creation
+        if (errorData.can_start_new_session === true) {
+          console.log('📝 Backend says can start new session');
+          return null;
+        }
+      } catch (e) {
+        // Not JSON
+      }
+      
       console.log('❌ Session status request failed, status:', res.status);
       return null;
     }
@@ -264,7 +292,16 @@ export async function completeQuestionnaire(
     }
   );
 
-  return await handleResponse(res);
+  // Check if response is ok
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('completeQuestionnaire API error:', res.status, errorText);
+    throw new Error(`API error: ${res.status} - ${errorText}`);
+  }
+
+  const data = await res.json();
+  console.log('completeQuestionnaire response:', data);
+  return data;
 }
 
 // const BASE_URL =

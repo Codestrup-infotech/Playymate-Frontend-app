@@ -1114,7 +1114,25 @@ export default function EmailLogin() {
               redirectStep === "DONE" ||
               redirectStep === "EXTENDED_PROFILE_COMPLETED"
             ) {
-              router.push("/onboarding/home");
+              router.push("/home");
+              return;
+            }
+
+            // If user has completed questionnaire, redirect to experience
+            if (
+              redirectStep === "QUESTIONNAIRE_COMPLETED" ||
+              redirectStep === "QUESTIONNAIRE_COMPLETE"
+            ) {
+              router.push("/onboarding/experience");
+              return;
+            }
+
+            // If user has completed experience, redirect to home
+            if (
+              redirectStep === "EXPERIENCE_COMPLETED" ||
+              redirectStep === "EXPERIENCE_COMPLETE"
+            ) {
+              router.push("/home");
               return;
             }
 
@@ -1204,19 +1222,19 @@ export default function EmailLogin() {
     step === "email" ? emailScreen : emailOtpScreen;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col justify-between items-center px-6 py-12">
+    <div className="min-h-screen bg-black text-white flex flex-col justify-center  items-center px-6 py-20">
 
       {/* Back */}
-      <div className="w-full max-w-md">
+      {/* <div className="w-full max-w-md">
         <button
           onClick={() => router.back()}
           className="text-white text-2xl"
         >
           ←
         </button>
-      </div>
+      </div> */}
 
-      <div className="w-full max-w-md flex flex-col justify-center flex-1 gap-7">
+      <div className="w-full max-w-96 flex flex-col justify-center flex-1 gap-7">
 
         {/* Title */}
         <div className="text-center">
@@ -1315,7 +1333,7 @@ export default function EmailLogin() {
       </div>
 
       {/* CTA */}
-      <div className="w-full max-w-md">
+      <div className="w-full flex  justify-center items-center ">
 
         <button
           onClick={
@@ -1324,7 +1342,7 @@ export default function EmailLogin() {
               : verifyEmailOtp
           }
           disabled={loading}
-          className="w-full py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 text-white text-base font-semibold font-['Poppins'] disabled:opacity-80"
+          className="w-96 py-4 rounded-full bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] text-white text-base font-semibold font-['Poppins'] disabled:opacity-80"
         >
           {loading
             ? step === "email"

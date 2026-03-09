@@ -2,6 +2,12 @@ import api from './api';
 import axios from 'axios';
 
 export const questionnaireService = {
+  // ============ QUESTIONNAIRE COMPLETE ============
+  
+  // Complete questionnaire - updates state to QUESTIONNAIRE_COMPLETED
+  completeQuestionnaire: () =>
+    api.post('/questionnaire/complete'),
+
   // ============ PHYSICAL PROFILE CONSENT ============
   
   // Submit physical profile consent

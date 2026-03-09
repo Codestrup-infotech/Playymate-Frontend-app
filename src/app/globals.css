@@ -102,7 +102,7 @@
 /* Dark custom scrollbar */
 .custom-scrollbar {
   scrollbar-width: thin;            /* Firefox */
-  scrollbar-color: #393935 #000;    /* thumb track */
+  scrollbar-color: #393935 #000000;    /* thumb track */
 }
 
 /* Chrome, Edge, Safari */
@@ -159,5 +159,7 @@
 .animate-orbit-inner {
   animation: orbit-inner 7s ease-in-out infinite;
 }
+
+
 
 

@@ -20,9 +20,19 @@ export const userService = {
   updateProfile: (data) => 
     api.post('/users/profile', data),
 
+
+    // ============ AUTH ============
+emailPasswordSignup: (email, password, confirmPassword) =>
+api.post("/api/v1/auth/signup/email-password", {
+  email,
+  password,
+  confirm_password: confirmPassword,
+}),
+
+
   // ============ ONBOARDING ============
   getOnboardingStatus: () => api.get('/users/onboarding/status'),
-  completeOnboarding: () => api.post('/users/onboarding/complete'),
+  completeOnboarding: () => api.post('/questionnaire/onboarding/complete'),
   
   updateLanguage: (language) => 
     api.post('/users/language', { language }),

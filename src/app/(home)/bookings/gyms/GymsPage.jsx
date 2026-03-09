@@ -14,7 +14,7 @@ export default function GymsPage() {
           key={gym.id}
           gym={gym}
           onClick={() =>
-            router.push(`/booking/gyms/${gym.id}`)
+            router.push(`/bookings/gyms/${gym.id}`)
           }
         />
       ))}
