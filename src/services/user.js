@@ -20,6 +20,10 @@ export const userService = {
   updateProfile: (data) => 
     api.post('/users/profile', data),
 
+   //gender
+    getScreenConfig: (screenKey) =>
+  api.get(`/onboarding/config/screens/${screenKey}`),
+
 
     // ============ AUTH ============
 emailPasswordSignup: (email, password, confirmPassword) =>

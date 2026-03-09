@@ -147,6 +147,7 @@ export default function OnboardingDOBPage() {
   const [error, setError] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [age, setAge] = useState(null);
+  const [screenConfig, setScreenConfig] = useState(null);
 
   const currentYear = new Date().getFullYear();
 
@@ -172,39 +173,32 @@ export default function OnboardingDOBPage() {
   const clearError = () => setError(null);
 
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
+    const initialize = async () => {
       try {
-        const response = await userService.getOnboardingStatus();
-        const state = response?.data?.data?.onboarding_state;
-        
-        console.log('DOB page - State:', state);
-
-        // If state is already past DOB, redirect to location
-        const pastDOBStates = ['PARENT_CONSENT_PENDING', 'PARENT_CONSENT_APPROVED', 'LOCATION_CAPTURED', 'PROFILE_PHOTO_CAPTURED'];
-        if (pastDOBStates.includes(state)) {
-          router.push('/onboarding/location');
+  
+        const statusRes = await userService.getOnboardingStatus();
+        const state = statusRes?.data?.data?.onboarding_state;
+  
+        if (state !== "GENDER_CAPTURED") {
+          router.push("/onboarding/gender");
           return;
         }
-
-        // If state is DOB_CAPTURED or GENDER_CAPTURED (user just came from gender), stay on this page
-        if (state === 'DOB_CAPTURED' || state === 'GENDER_CAPTURED') {
-          setInitialLoading(false);
-          return;
-        }
-
-        // For any other state (including null, undefined), redirect to gender
-        router.push('/onboarding/gender');
+  
+        const configRes = await userService.getScreenConfig("age_selection");
+        const screen = configRes?.data?.data?.screen;
+  
+        setScreenConfig(screen);
+  
       } catch (err) {
-        console.error('Failed to check onboarding status:', err);
-        // On error, redirect to gender
-        router.push('/onboarding/gender');
+        console.error("Init error:", err);
       } finally {
         setInitialLoading(false);
       }
     };
-    checkOnboardingStatus();
+  
+    initialize();
+  
   }, [router]);
-
   const computeAge = () => {
     const birthDate = new Date(`${selectedYear}-${String(selectedMonth).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}`);
     const today = new Date();
@@ -377,21 +371,25 @@ export default function OnboardingDOBPage() {
 
         {/* Title */}
         <div className="text-center ">
-          <h1 className="text-3xl font-bold tracking-tight">
-            How{' '}
-            <span style={{ fontStyle: 'italic', fontWeight: 400 }}>Old</span>{' '}
-            <span
-              style={{
-                background: 'linear-gradient(90deg, #e8506a, #c0392b)',
-                WebkitBackgroundClip: 'text  ',
-                WebkitTextFillColor: 'transparent',
-                fontWeight: 700,
-              }}
-            >
-              Are You
-            </span>
-          </h1>
-          <p className="mt-1 text-gray-400 text-sm font-Poppins">Please Provide your age in Years</p>
+        <h1 className="text-3xl font-bold tracking-tight">
+  {(screenConfig?.title || "How Old Are You")
+    .split(" ")
+    .map((word, index) => (
+      <span
+        key={index}
+        className={
+          index === 1
+            ? "bg-gradient-to-r from-pink-500 to-orange-500 bg-clip-text text-transparent"
+            : ""
+        }
+      >
+        {word}{" "}
+      </span>
+    ))}
+</h1>
+<p className="mt-2 text-gray-400 text-sm font-Poppins">
+  {screenConfig?.subtitle || "Helps us personalize your experience"}
+</p>
         </div>
 
         {error && (
@@ -470,7 +468,7 @@ export default function OnboardingDOBPage() {
               className="w-full font-Poppins py-4 rounded-full font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50"
               style={{ background: 'linear-gradient(90deg, #e8506a, #e8923a)' }}
             >
-              Continue
+              {screenConfig?.button_text?.primary || "Continue"}
             </button>
          
         

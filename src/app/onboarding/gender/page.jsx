@@ -400,11 +400,6 @@ import { userService } from "@/services/user";
 import { getErrorMessage } from "@/lib/api/errorMap";
 import { getRouteFromStep } from "@/lib/api/navigation";
 
-const GENDER_OPTIONS = [
-  { id: "male", label: "Male", symbol: "♂", symbolColor: "#e05a6a" },
-  { id: "female", label: "Female", symbol: "♀", symbolColor: "#e05a6a" },
-  { id: "other", label: "Other", symbol: null },
-];
 
 export default function OnboardingGenderPage() {
   const router = useRouter();
@@ -412,17 +407,38 @@ export default function OnboardingGenderPage() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const [screenConfig, setScreenConfig] = useState(null);
   const clearError = () => setError(null);
 
+
+  const genderOptions = [
+    {
+      id: "male",
+      label: screenConfig?.option_labels?.male || "Male",
+      symbol: "♂",
+      symbolColor: "#e05a6a",
+    },
+    {
+      id: "female",
+      label: screenConfig?.option_labels?.female || "Female",
+      symbol: "♀",
+      symbolColor: "#e05a6a",
+    },
+    {
+      id: "other",
+      label: screenConfig?.option_labels?.other || "Other",
+      symbol: null,
+    },
+  ];
+
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
+    const initialize = async () => {
       try {
+  
+        // onboarding state check
         const response = await userService.getOnboardingStatus();
         const state = response?.data?.data?.onboarding_state;
-
-        console.log("Gender page - State:", state);
-
+  
         const pastGenderStates = [
           "DOB_CAPTURED",
           "PARENT_CONSENT_PENDING",
@@ -430,32 +446,29 @@ export default function OnboardingGenderPage() {
           "LOCATION_CAPTURED",
           "PROFILE_PHOTO_CAPTURED",
         ];
-
+  
         if (pastGenderStates.includes(state)) {
           router.push("/onboarding/dob");
           return;
         }
-
-        if (
-          state === "GENDER_CAPTURED" ||
-          state === "BASIC_ACCOUNT_CREATED" ||
-          !state
-        ) {
-          setInitialLoading(false);
-          return;
-        }
-
-        router.push("/onboarding/name");
+  
+        // 🔹 Fetch screen config
+        const configRes = await userService.getScreenConfig("gender_selection");
+        const screen = configRes?.data?.data?.screen;
+  
+        setScreenConfig(screen);
+  
       } catch (err) {
-        console.error("Failed to check onboarding status:", err);
-        router.push("/onboarding/name");
+        console.error("Init error:", err);
       } finally {
         setInitialLoading(false);
       }
     };
-
-    checkOnboardingStatus();
+  
+    initialize();
+  
   }, [router]);
+
 
   const handleSubmit = async (selectedGender) => {
     if (!selectedGender) {
@@ -545,15 +558,24 @@ export default function OnboardingGenderPage() {
 
         {/* Title */}
         <div className="text-center mb-2">
-          <h1 className="text-3xl font-bold tracking-tight">
-            What's Your{" "}
-            <span className="bg-gradient-to-r from-pink-500 to-red-600 bg-clip-text text-transparent">
-              Gender
-            </span>
-          </h1>
-
-          <p className="mt-2 text-gray-400 text-sm font-Poppins">
-            Tell Us about your Gender
+        <h1 className="text-3xl font-bold tracking-tight">
+  {(screenConfig?.title || "What's Your Gender")
+    .split(" ")
+    .map((word, index) => (
+      <span
+        key={index}
+        className={
+          index === 2
+            ? "bg-gradient-to-r from-pink-500 to-orange-500 bg-clip-text text-transparent"
+            : ""
+        }
+      >
+        {word}{" "}
+      </span>
+    ))}
+    </h1>
+        <p>
+          {screenConfig?.subtitle || "Tell Us about your Gender"}
           </p>
         </div>
 
@@ -567,7 +589,7 @@ export default function OnboardingGenderPage() {
 
         {/* Gender Options */}
         <div className="mt-8 flex flex-col gap-4   font-Poppins font-normal">
-          {GENDER_OPTIONS.map((option) => (
+          {genderOptions.map((option) => (
             <button
               key={option.id}
               onClick={() => handleSubmit(option.id)}

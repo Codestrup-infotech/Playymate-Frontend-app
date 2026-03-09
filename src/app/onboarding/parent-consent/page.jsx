@@ -294,20 +294,29 @@ export default function OnboardingParentConsentPage() {
 
   // Load screen configuration
   useEffect(() => {
-    const fetchScreenConfig = async () => {
-      try {
-        const response = await authService.getOnboardingScreen("parent_consent");
-        const screen = response?.data?.data?.screen;
 
+    const fetchScreenConfig = async () => {
+  
+      try {
+  
+        const res = await userService.getScreenConfig("parent_consent");
+  
+        const screen = res?.data?.data?.screen;
+  
         if (screen) {
           setScreenConfig(screen);
         }
+  
       } catch (err) {
+  
         console.error("Failed to load parent consent screen config:", err);
+  
       }
+  
     };
-
+  
     fetchScreenConfig();
+  
   }, []);
 
   // Check onboarding status on mount
@@ -485,9 +494,7 @@ export default function OnboardingParentConsentPage() {
             </p>
           )}
 
-          <p className="mt-4 text-gray-500 text-xs font-Poppins">
-            Your information is secure and never shared.
-          </p>
+         
         </div>
 
         {error && (
@@ -526,9 +533,7 @@ export default function OnboardingParentConsentPage() {
             )}
           </button>
 
-          <p className="mt-4 text-center text-xs text-gray-500">
-            By continuing, you agree to Playmate's Terms & Privacy Policy.
-          </p>
+         
         </div>
       </div>
     </div>
