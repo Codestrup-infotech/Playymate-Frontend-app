@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  Home, Calendar, User, ShoppingCart, Users, Trophy,
+  Home, Calendar, User, ShoppingCart, Users, Trophy,Wallet, Map,
   HelpCircle, Compass, Flame, Zap, Menu, BookOpen,
 } from "lucide-react";
 import { useTheme } from "@/lib/ThemeContext";

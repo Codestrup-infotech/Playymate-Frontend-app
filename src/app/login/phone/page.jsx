@@ -176,81 +176,11 @@ export default function PhoneLogin() {
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
 
-      // Also call authService.storeTokens if it handles other storage logic
+      // Also persist via authService
       authService.storeTokens({ accessToken, refreshToken });
 
-          const statusResponse =
-            await userService.getOnboardingStatus();
-
-          const currentStep =
-            statusResponse?.data?.data?.next_required_step;
-
-          const onboardingState =
-            statusResponse?.data?.data?.onboarding_state;
-
-          const userState =
-            statusResponse?.data?.data?.onboarding_state;
-
-          const redirectStep =
-            currentStep || userState || nextStep;
-
-          console.log('Phone login - currentStep:', currentStep);
-          console.log('Phone login - userState (onboarding_state):', userState);
-          console.log('Phone login - nextStep:', nextStep);
-          console.log('Phone login - redirectStep:', redirectStep);
-
-          // All completed states - redirect to home
-          const completedStates = [
-            'ACTIVE_USER',
-            'COMPLETED',
-            'HOME',
-            'DONE',
-            'ACTIVE',
-            // Extended profile states (only completed ones go to home)
-            'EXTENDED_PROFILE_PENDING',
-            'EXTENDED_PROFILE_COMPLETED',
-          ];
-
-          console.log('Checking redirectStep:', redirectStep);
-          console.log('Is in completedStates:', completedStates.includes(redirectStep));
-
-          if (completedStates.includes(redirectStep)) {
-            console.log('Redirecting to /home - completed state');
-            router.push('/home');
-            return;
-          }
-
-          // EXTENDED_PROFILE_INTRO - user needs to complete extended profile (experience)
-          if (redirectStep === 'EXTENDED_PROFILE_INTRO') {
-            console.log('Redirecting to /onboarding/experience - EXTENDED_PROFILE_INTRO');
-            router.push('/onboarding/experience');
-            return;
-          }
-
-          // If user has completed questionnaire, redirect to experience
-          if (
-            redirectStep === 'QUESTIONNAIRE_COMPLETED' ||
-            redirectStep === 'QUESTIONNAIRE_COMPLETE'
-          ) {
-            console.log('Redirecting to /onboarding/experience - QUESTIONNAIRE_COMPLETED');
-            router.push('/onboarding/experience');
-            return;
-          }
-
-          // If user has completed experience (legacy state), redirect to home
-          // Note: API doesn't return this state anymore, but keeping for backward compatibility
-          if (
-            redirectStep === 'EXPERIENCE_COMPLETED' ||
-            redirectStep === 'EXPERIENCE_COMPLETE'
-          ) {
-            router.push('/home');
-            return;
-          }
-
-      if (
-        nextStepFromOtp === "NAME_CAPTURE" ||
-        nextStepFromOtp === "NAME"
-      ) {
+      // Route based on next_required_step from OTP verify response
+      if (nextStepFromOtp === "NAME_CAPTURE" || nextStepFromOtp === "NAME") {
         router.push("/onboarding/name");
         return;
       }
@@ -281,8 +211,8 @@ export default function PhoneLogin() {
         return;
       }
 
-      // Default fallback after all checks - go to home
-      router.push('/home');
+      // Final fallback — go to home
+      router.push("/home");
     } catch (err) {
       console.error("verifyPhoneOtp error:", err);
       setError(err.response?.data?.message || "Verification failed.");
@@ -309,17 +239,17 @@ export default function PhoneLogin() {
   };
 
   const handleKeyDown = (e, index) => {
-  if (e.key === "Backspace") {
-    const updated = [...otp];
+    if (e.key === "Backspace") {
+      const updated = [...otp];
 
-    if (otp[index]) {
-      updated[index] = "";
-      setOtp(updated);
-    } else if (index > 0) {
-      inputsRef.current[index - 1]?.focus();
+      if (otp[index]) {
+        updated[index] = "";
+        setOtp(updated);
+      } else if (index > 0) {
+        inputsRef.current[index - 1]?.focus();
+      }
     }
-  }
-};
+  };
 
   if (loadingConfig) {
     return (
@@ -414,7 +344,7 @@ export default function PhoneLogin() {
                   onChange={(e) =>
                     handleOtpChange(e.target.value, i)
                   }
-                   onKeyDown={(e) => handleKeyDown(e, i)}
+                  onKeyDown={(e) => handleKeyDown(e, i)}
                   className="w-12 h-14 text-center bg-[#1a1a1a] font-Poppins rounded-xl border border-gray-600 text-lg"
                 />
               ))}
