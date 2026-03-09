@@ -76,7 +76,7 @@ export const stepRouteMap = {
   'EXPERIENCE_COMPLETE': '/home',
   
   // Extended profile
-  'EXTENDED_PROFILE_INTRO': '/home',
+  'EXTENDED_PROFILE_INTRO': '/onboarding/experience',
   'EXTENDED_PROFILE_PENDING': '/home',
   'EXTENDED_PROFILE_COMPLETED': '/home',
   

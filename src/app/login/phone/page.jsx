@@ -757,35 +757,61 @@ export default function PhoneLogin() {
             statusResponse?.data?.data?.onboarding_state;
 
           const userState =
-            statusResponse?.data?.data?.user_state;
+            statusResponse?.data?.data?.onboarding_state;
 
           const redirectStep =
             currentStep || userState || nextStep;
 
-          if (
-            redirectStep === "ACTIVE_USER" ||
-            redirectStep === "COMPLETED" ||
-            redirectStep === "HOME"
-          ) {
-            router.push("/home");
+          console.log('Phone login - currentStep:', currentStep);
+          console.log('Phone login - userState (onboarding_state):', userState);
+          console.log('Phone login - nextStep:', nextStep);
+          console.log('Phone login - redirectStep:', redirectStep);
+
+          // All completed states - redirect to home
+          const completedStates = [
+            'ACTIVE_USER',
+            'COMPLETED',
+            'HOME',
+            'DONE',
+            'ACTIVE',
+            // Extended profile states (only completed ones go to home)
+            'EXTENDED_PROFILE_PENDING',
+            'EXTENDED_PROFILE_COMPLETED',
+          ];
+
+          console.log('Checking redirectStep:', redirectStep);
+          console.log('Is in completedStates:', completedStates.includes(redirectStep));
+
+          if (completedStates.includes(redirectStep)) {
+            console.log('Redirecting to /home - completed state');
+            router.push('/home');
+            return;
+          }
+
+          // EXTENDED_PROFILE_INTRO - user needs to complete extended profile (experience)
+          if (redirectStep === 'EXTENDED_PROFILE_INTRO') {
+            console.log('Redirecting to /onboarding/experience - EXTENDED_PROFILE_INTRO');
+            router.push('/onboarding/experience');
             return;
           }
 
           // If user has completed questionnaire, redirect to experience
           if (
-            redirectStep === "QUESTIONNAIRE_COMPLETED" ||
-            redirectStep === "QUESTIONNAIRE_COMPLETE"
+            redirectStep === 'QUESTIONNAIRE_COMPLETED' ||
+            redirectStep === 'QUESTIONNAIRE_COMPLETE'
           ) {
-            router.push("/onboarding/experience");
+            console.log('Redirecting to /onboarding/experience - QUESTIONNAIRE_COMPLETED');
+            router.push('/onboarding/experience');
             return;
           }
 
-          // If user has completed experience, redirect to home
+          // If user has completed experience (legacy state), redirect to home
+          // Note: API doesn't return this state anymore, but keeping for backward compatibility
           if (
-            redirectStep === "EXPERIENCE_COMPLETED" ||
-            redirectStep === "EXPERIENCE_COMPLETE"
+            redirectStep === 'EXPERIENCE_COMPLETED' ||
+            redirectStep === 'EXPERIENCE_COMPLETE'
           ) {
-            router.push("/home");
+            router.push('/home');
             return;
           }
 
@@ -814,7 +840,8 @@ export default function PhoneLogin() {
         console.error(err);
       }
 
-      router.push("/onboarding/name");
+      // Default fallback after all checks - go to home
+      router.push('/home');
     } catch (err) {
       setError(err.response?.data?.message || "Verification failed.");
     } finally {

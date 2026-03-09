@@ -778,6 +778,7 @@ import {
   getItemQuestions,
   submitAnswer,
   saveSelection,
+  completeQuestionnaire,
 } from "@/lib/api/categoryApi";
 import SportProgressBar from "@/app/components/SportProgressBar";
 
@@ -867,6 +868,16 @@ async function initialize() {
       setSessionData(session); // Store full session data
       if (session?.overall_progress?.percentage === 100) {
   console.log("All preference categories already completed");
+
+  // Complete questionnaire to update state to QUESTIONNAIRE_COMPLETED
+  try {
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null;
+    await completeQuestionnaire(token, session.session_id);
+    console.log("Questionnaire completed successfully");
+  } catch (completeErr) {
+    console.error("Error completing questionnaire:", completeErr);
+  }
+
   router.push("/onboarding/experience");
   return;
 }
@@ -1417,13 +1428,45 @@ if (submitRes?.category_complete) {
   // ✅ If no next category → onboarding finished
   console.log("All categories completed. Redirecting...");
 
-  router.push("/onboarding/experience");
+  // Complete questionnaire to update state to QUESTIONNAIRE_COMPLETED
+  try {
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null;
+    await completeQuestionnaire(token, sessionIdAtCompletion);
+    console.log("Questionnaire completed successfully");
+  } catch (completeErr) {
+    console.error("Error completing questionnaire:", completeErr);
+  }
+
+  console.log("Redirecting to /onboarding/experience...");
+  // Use window.location for more reliable redirect
+  if (typeof window !== 'undefined') {
+    window.location.href = '/onboarding/experience';
+  } else {
+    router.push("/onboarding/experience");
+  }
   return;
 }
       
       if (isCategoryComplete && !nextCategoryKey) {
         console.log('All categories complete! Going to experience');
-        router.push("/onboarding/experience");
+
+        // Complete questionnaire to update state to QUESTIONNAIRE_COMPLETED
+        try {
+          const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null;
+          await completeQuestionnaire(token, sessionIdAtCompletion);
+          console.log("Questionnaire completed successfully");
+        } catch (completeErr) {
+          console.error("Error completing questionnaire:", completeErr);
+        }
+
+        console.log("Redirecting to /onboarding/experience (second location)...");
+        // Use window.location for more reliable redirect
+        if (typeof window !== 'undefined') {
+          window.location.href = '/onboarding/experience';
+        } else {
+          router.push("/onboarding/experience");
+        }
+        console.log("After router.push (second) - this should not appear if redirect works");
         return;
       }
 

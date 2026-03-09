@@ -427,89 +427,123 @@ export default function PhysicalPreferences() {
     fetchScreenData();
   }, []);
 
-  const submitAnswer = async (questionId, answer, questionData = null) => {
-    try {
-      setAnswerLoading(true);
-      setAnswerError(null);
+ const submitAnswer = async (questionId, answer, questionData = null) => {
+  try {
+    setAnswerLoading(true);
+    setAnswerError(null);
 
-      const questionType = questionData?.question_type || "number";
+    const questionType = questionData?.question_type || "number";
+    let payload = {};
 
-      let payload = {};
+    if (questionType === "single_select" || questionId === "blood_group") {
+      let optionId = null;
 
-      if (questionType === "single_select" || questionId === "blood_group") {
-        let optionId = null;
-
-        if (answer && typeof answer === "string" && answer.startsWith("opt_")) {
-          optionId = answer;
-        }
-
-        if (!optionId && answer && typeof answer === "string") {
-          const byId = questionData?.options?.find(
-            (opt) => opt.option_id === answer
-          );
-          if (byId) optionId = answer;
-        }
-
-        if (!optionId && answer && typeof answer === "string") {
-          const normalizedAnswer = answer.toLowerCase().replace(/\s+/g, "");
-
-          const byLabel = questionData?.options?.find(
-            (opt) =>
-              opt.label?.toLowerCase().replace(/\s+/g, "") ===
-                normalizedAnswer ||
-              opt.value?.toLowerCase().replace(/\s+/g, "") === normalizedAnswer
-          );
-
-          if (byLabel?.option_id) optionId = byLabel.option_id;
-        }
-
-        if (!optionId && questionId === "blood_group") {
-          const bloodGroupMap = {
-            "A+": "opt_a+",
-            "A-": "opt_a-",
-            "B+": "opt_b+",
-            "B-": "opt_b-",
-            "AB+": "opt_ab+",
-            "AB-": "opt_ab-",
-            "O+": "opt_o+",
-            "O-": "opt_o-",
-            unknown: "opt_unknown",
-          };
-
-          optionId = bloodGroupMap[answer];
-        }
-
-        if (optionId) payload.selected_option_ids = [optionId];
-      } else if (questionType === "number" || questionType === "range") {
-        payload.answer_number =
-          typeof answer === "number"
-            ? answer
-            : parseInt(answer) || parseFloat(answer);
-      } else if (questionType === "text") {
-        payload.answer_text = answer;
-      } else if (questionType === "boolean") {
-        payload.answer_boolean =
-          answer === true || answer === "true" || answer === 1;
+      if (answer && typeof answer === "string" && answer.startsWith("opt_")) {
+        optionId = answer;
       }
+
+      if (!optionId && answer && typeof answer === "string") {
+        const byId = questionData?.options?.find(
+          (opt) => opt.option_id === answer
+        );
+        if (byId) optionId = answer;
+      }
+
+      if (!optionId && answer && typeof answer === "string") {
+        const normalizedAnswer = answer.toLowerCase().replace(/\s+/g, "");
+
+        const byLabel = questionData?.options?.find(
+          (opt) =>
+            opt.label?.toLowerCase().replace(/\s+/g, "") === normalizedAnswer ||
+            opt.value?.toLowerCase().replace(/\s+/g, "") === normalizedAnswer
+        );
+
+        if (byLabel?.option_id) optionId = byLabel.option_id;
+      }
+
+      if (!optionId && questionId === "blood_group") {
+        const bloodGroupMap = {
+          "A+": "opt_a+",
+          "A-": "opt_a-",
+          "B+": "opt_b+",
+          "B-": "opt_b-",
+          "AB+": "opt_ab+",
+          "AB-": "opt_ab-",
+          "O+": "opt_o+",
+          "O-": "opt_o-",
+          unknown: "opt_unknown",
+        };
+
+        optionId = bloodGroupMap[answer];
+      }
+
+      if (optionId) payload.selected_option_ids = [optionId];
+
+    } else if (questionType === "number" || questionType === "range") {
+      payload.answer_number =
+        typeof answer === "number"
+          ? answer
+          : parseInt(answer) || parseFloat(answer);
+
+    } else if (questionType === "text") {
+      payload.answer_text = answer;
+
+    } else if (questionType === "boolean") {
+      payload.answer_boolean =
+        answer === true || answer === "true" || answer === 1;
+    }
+
+    const response = await questionnaireService.submitAnswer(
+      questionId,
+      payload
+    );
 
     const coins = response.data?.data?.reward?.pending_coins;
 
-if (coins !== undefined) {
-  setPendingCoins(coins);
-}
-
-      return true;
-    } catch (err) {
-      console.error(err);
-      setAnswerError(
-        err.response?.data?.message ||
-          `Failed to submit ${questionId} answer`
-      );
-      return false;
-    } finally {
-      setAnswerLoading(false);
+    if (coins !== undefined) {
+      setPendingCoins(coins);
     }
-  };
+
+    return true;
+
+  } catch (err) {
+    console.error(err);
+
+    setAnswerError(
+      err.response?.data?.message ||
+        `Failed to submit ${questionId} answer`
+    );
+
+    return false;
+
+  } finally {
+    setAnswerLoading(false);
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   const nextDisabled =
     (step === 1 && !introAgree) ||

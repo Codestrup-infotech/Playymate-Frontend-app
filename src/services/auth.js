@@ -193,13 +193,17 @@ sendPhoneOTP: async (phone) => {
       'AADHAAR_VERIFIED': '/verification/liveness',
       'FACE_LIVENESS_PASSED': '/verification/complete',
       'VERIFICATION_PENDING': '/onboarding/physical',
-      'KYC_COMPLETED': '/physical-activity',
-      'PHYSICAL_PROFILE_CONSENT': '/physical-activity',
-      'PHYSICAL_PROFILE_COMPLETED': '/physical-questions',
-      'QUESTIONNAIRE_STARTED': '/physical-questions',
-      'QUESTIONNAIRE_COMPLETED': '/',
-      'COMPLETED': '/',
-      'ACTIVE_USER': '/'
+      'KYC_COMPLETED': '/onboarding/physical',
+      'PHYSICAL_PROFILE_CONSENT': '/onboarding/physical',
+      'PHYSICAL_PROFILE_COMPLETED': '/onboarding/physical',
+      'QUESTIONNAIRE_STARTED': '/onboarding/questionnaire',
+      'QUESTIONNAIRE_COMPLETED': '/onboarding/experience',
+      // Extended profile states
+      'EXTENDED_PROFILE_INTRO': '/onboarding/experience',
+      'EXTENDED_PROFILE_PENDING': '/home',
+      'EXTENDED_PROFILE_COMPLETED': '/home',
+      'COMPLETED': '/home',
+      'ACTIVE_USER': '/home'
     };
     
     return stateToScreen[onboardingState] || '/onboarding/gender';

@@ -36,16 +36,25 @@ export default function CompleteExperience() {
       "EXPERIENCE_COMPLETED",
       "EXPERIENCE_COMPLETE",
       "EXTENDED_PROFILE_COMPLETED",
-      "EXTENDED_PROFILE_INTRO",
-      "EXTENDED_PROFILE_PENDING",
     ];
+
+    console.log('Experience page - nextStep:', nextStep);
+    console.log('Experience page - onboardingState:', onboardingState);
 
     if (
       completedSteps.includes(nextStep) ||
       completedSteps.includes(onboardingState)
     ) {
+      console.log('Experience page - redirecting to home (completed state)');
       router.push("/home");
       return;
+    }
+
+    // If user has EXTENDED_PROFILE_INTRO or PENDING, they should stay on experience page
+    if (nextStep === 'EXTENDED_PROFILE_INTRO' || nextStep === 'EXTENDED_PROFILE_PENDING' ||
+        onboardingState === 'EXTENDED_PROFILE_INTRO' || onboardingState === 'EXTENDED_PROFILE_PENDING') {
+      console.log('Experience page - user needs to complete extended profile, staying on this page');
+      // Don't redirect - let user complete the experience
     }
   } catch (err) {
     console.error("Failed to check onboarding status:", err);
@@ -132,6 +141,14 @@ export default function CompleteExperience() {
     setStep(step + 1);
     setAnswers({});
   } else {
+    // All screens completed - call the onboarding complete API to update state
+    try {
+      await userService.completeOnboarding();
+      console.log("Onboarding completed successfully");
+    } catch (completeErr) {
+      // Log error but don't block user from proceeding
+      console.error("Error completing onboarding:", completeErr);
+    }
     router.push("/home");
   }
 
@@ -142,7 +159,26 @@ export default function CompleteExperience() {
     setLoading(false);
   };
 
-  const skip = () => router.push("/home");
+  const skip = async () => {
+    // Call skip API and then complete onboarding
+    try {
+      await experienceService.skipAnswers();
+    } catch (skipErr) {
+      // Log error but don't block user from proceeding
+      console.error("Error skipping experience:", skipErr);
+    }
+    
+    // Complete onboarding after skip
+    try {
+      await userService.completeOnboarding();
+      console.log("Onboarding completed successfully");
+    } catch (completeErr) {
+      // Log error but don't block user from proceeding
+      console.error("Error completing onboarding:", completeErr);
+    }
+    
+    router.push("/home");
+  };
 
   if (pageLoading) {
     return (

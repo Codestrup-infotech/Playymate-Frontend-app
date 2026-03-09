@@ -292,7 +292,16 @@ export async function completeQuestionnaire(
     }
   );
 
-  return await handleResponse(res);
+  // Check if response is ok
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('completeQuestionnaire API error:', res.status, errorText);
+    throw new Error(`API error: ${res.status} - ${errorText}`);
+  }
+
+  const data = await res.json();
+  console.log('completeQuestionnaire response:', data);
+  return data;
 }
 
 // const BASE_URL =
