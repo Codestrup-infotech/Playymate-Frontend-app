@@ -427,7 +427,7 @@ export default function LoginPage() {
   const [isLoadingFacebook, setIsLoadingFacebook] = useState(false);
   const [screenConfig, setScreenConfig] = useState(null);
 
-  /* ================= FETCH LOGIN SCREEN CONFIG ================= */
+  /* ======= FETCH LOGIN SCREEN CONFIG =======*/
 
   useEffect(() => {
     const fetchLoginScreen = async () => {
