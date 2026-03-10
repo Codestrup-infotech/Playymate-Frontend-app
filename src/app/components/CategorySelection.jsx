@@ -779,6 +779,7 @@ import {
   submitAnswer,
   saveSelection,
   completeQuestionnaire,
+  getCategoryCompletion,
 } from "@/lib/api/categoryApi";
 import SportProgressBar from "@/app/components/SportProgressBar";
 
@@ -812,6 +813,21 @@ export default function CategorySelection() {
 const [pendingCoins, setPendingCoins] = useState(0);
 
 const [selectedOption, setSelectedOption] = useState(null);
+const [remainingSlots, setRemainingSlots] = useState(null);
+
+const [completionData, setCompletionData] = useState(null);
+
+ // ✅ ADD HERE
+  const completedItemsCount =
+    itemsData?.items?.filter(
+      (item) => item.status === "completed" || item.is_completed
+    ).length || 0;
+
+  const remainingItems =
+    itemsData?.max_selection - completedItemsCount;
+
+const [rewardScreen, setRewardScreen] = useState(false);
+const [earnedCoins, setEarnedCoins] = useState(0);
 
 const colorPalette = [
   { card: "from-[#1B5CD1] to-[#1EB9EC]", hover: "hover:bg-[#1EB9EC]" },
@@ -1284,6 +1300,21 @@ async function handleItemClick(itemKey) {
   selected_option_ids: [optionId],
 });
 
+// update progress
+if (submitRes?.item_progress?.percentage !== undefined) {
+  setProgressPercentage(submitRes.item_progress.percentage);
+}
+
+// update coins
+if (submitRes?.reward?.pending_coins !== undefined) {
+  setPendingCoins(submitRes.reward.pending_coins);
+}
+
+// update remaining items
+if (submitRes?.remaining_slots !== undefined) {
+  setRemainingSlots(submitRes.remaining_slots);
+}
+
 // update progress %
 if (submitRes?.item_progress?.percentage !== undefined) {
   setProgressPercentage(submitRes.item_progress.percentage);
@@ -1399,51 +1430,220 @@ if (submitRes?.reward?.pending_coins !== undefined) {
 //   return;
 // }
 
+// if (submitRes?.category_complete) {
+
+//   const nextCategoryKey = submitRes?.next_category_key;
+
+//   // mark category completed locally
+//   setCompletedCategories(prev => [
+//     ...prev,
+//     categoryKeyAtCompletion
+//   ]);
+
+//   // ✅ If next category exists → load it
+//   if (nextCategoryKey) {
+
+//     console.log("Moving to next category:", nextCategoryKey);
+
+//     setCurrentItemKey(null);
+//     setCurrentCategoryKey(nextCategoryKey);
+
+//     const nextIntro = await getCategoryIntro(nextCategoryKey);
+
+//     setIntroData(nextIntro);
+//     setScreen("intro");
+
+//     return;
+//   }
+
+//   // ✅ If no next category → onboarding finished
+//   console.log("All categories completed. Redirecting...");
+
+//   // Complete questionnaire to update state to QUESTIONNAIRE_COMPLETED
+//   try {
+//     const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null;
+//     await completeQuestionnaire(token, sessionIdAtCompletion);
+//     console.log("Questionnaire completed successfully");
+//   } catch (completeErr) {
+//     console.error("Error completing questionnaire:", completeErr);
+//   }
+
+//   console.log("Redirecting to /onboarding/experience...");
+//   // Use window.location for more reliable redirect
+//   if (typeof window !== 'undefined') {
+//     window.location.href = '/onboarding/experience';
+//   } else {
+//     router.push("/onboarding/experience");
+//   }
+//   return;
+// }
+// if (submitRes?.category_complete) {
+
+//   const nextCategoryKey = submitRes?.next_category_key;
+
+//   const coins = Math.floor(submitRes?.reward?.pending_coins || 0);
+
+//   setEarnedCoins(coins);
+//   setRewardScreen(true);
+
+//   setTimeout(async () => {
+
+//     setRewardScreen(false);
+
+//     if (nextCategoryKey) {
+
+//       setCurrentItemKey(null);
+//       setCurrentCategoryKey(nextCategoryKey);
+
+//       const nextIntro = await getCategoryIntro(nextCategoryKey);
+
+//       setIntroData(nextIntro);
+//       setScreen("intro");
+
+//     } else {
+
+//       router.push("/onboarding/experience");
+
+//     }
+
+//   }, 10000);
+
+//   return;
+// }
+// if (submitRes?.category_complete) {
+
+//   const nextCategoryKey = submitRes?.next_category_key;
+
+//   try {
+
+//     const completionRes = await getCategoryCompletion(
+//       token,
+//       categoryKeyAtCompletion,
+//       sessionIdAtCompletion
+//     );
+
+//     setCompletionData(completionRes.data);
+
+//     setRewardScreen(true);
+
+//     setTimeout(async () => {
+
+//       setRewardScreen(false);
+
+//       if (nextCategoryKey) {
+
+//         setCurrentItemKey(null);
+//         setCurrentCategoryKey(nextCategoryKey);
+
+//         const nextIntro = await getCategoryIntro(nextCategoryKey);
+
+//         setIntroData(nextIntro);
+//         setScreen("intro");
+
+//       } else {
+
+//         router.push("/onboarding/experience");
+
+//       }
+
+//     }, 2000);
+
+//   } catch (err) {
+//     console.error("Completion screen error:", err);
+//   }
+
+//   return;
+// }
+// if (submitRes?.category_complete) {
+
+//   const nextCategoryKey = submitRes?.next_category_key;
+
+//   const completionRes = await getCategoryCompletion(
+//     token,
+//     categoryKeyAtCompletion,
+//     sessionIdAtCompletion
+//   );
+
+//   setCompletionData(completionRes.data);
+
+//   setScreen("completion");
+
+//   setTimeout(async () => {
+
+//     if (nextCategoryKey) {
+
+//       setCurrentItemKey(null);
+//       setCurrentCategoryKey(nextCategoryKey);
+
+//       const nextIntro = await getCategoryIntro(nextCategoryKey);
+
+//       setIntroData(nextIntro);
+//       setScreen("intro");
+
+//     } else {
+
+//       router.push("/onboarding/experience");
+
+//     }
+
+//   }, 10000);
+
+//   return;
+// }
 if (submitRes?.category_complete) {
 
   const nextCategoryKey = submitRes?.next_category_key;
 
-  // mark category completed locally
-  setCompletedCategories(prev => [
-    ...prev,
-    categoryKeyAtCompletion
-  ]);
+  // fallback data from submitRes
+  setCompletionData({
+    completion: {
+      title_text: "Great Choice!",
+      subtitle_text: `You've completed ${submitRes.reward.category_key}`,
+      media_url: "/coin.png",
+      media_type: "image",
+      show_coins: true
+    },
+    coins_earned: Math.floor(submitRes.reward.pending_coins)
+  });
 
-  // ✅ If next category exists → load it
-  if (nextCategoryKey) {
+  setScreen("completion");
 
-    console.log("Moving to next category:", nextCategoryKey);
-
-    setCurrentItemKey(null);
-    setCurrentCategoryKey(nextCategoryKey);
-
-    const nextIntro = await getCategoryIntro(nextCategoryKey);
-
-    setIntroData(nextIntro);
-    setScreen("intro");
-
-    return;
-  }
-
-  // ✅ If no next category → onboarding finished
-  console.log("All categories completed. Redirecting...");
-
-  // Complete questionnaire to update state to QUESTIONNAIRE_COMPLETED
+  // fetch dynamic completion data
   try {
-    const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null;
-    await completeQuestionnaire(token, sessionIdAtCompletion);
-    console.log("Questionnaire completed successfully");
-  } catch (completeErr) {
-    console.error("Error completing questionnaire:", completeErr);
+    const res = await getCategoryCompletion(
+      token,
+      categoryKeyAtCompletion,
+      sessionIdAtCompletion
+    );
+
+    if (res?.data) {
+      setCompletionData(res.data);
+    }
+
+  } catch (err) {
+    console.log("Completion API failed, using fallback");
   }
 
-  console.log("Redirecting to /onboarding/experience...");
-  // Use window.location for more reliable redirect
-  if (typeof window !== 'undefined') {
-    window.location.href = '/onboarding/experience';
-  } else {
-    router.push("/onboarding/experience");
-  }
+  setTimeout(async () => {
+
+    if (nextCategoryKey) {
+
+      setCurrentItemKey(null);
+      setCurrentCategoryKey(nextCategoryKey);
+
+      const nextIntro = await getCategoryIntro(nextCategoryKey);
+
+      setIntroData(nextIntro);
+      setScreen("intro");
+
+    } else {
+
+      router.push("/onboarding/experience");
+
+    }
+
+  }, 10000);
+
   return;
 }
       
@@ -1717,10 +1917,23 @@ if (submitRes?.category_complete) {
 
           {/* <p className="text-2xl font-semibold text-center">  {itemsData.category_description}</p> */}
 
-          <p className="text-center text-gray-400 font-Poppins">
+          {/* <p className="text-center text-gray-400 font-Poppins">
             Select up to <span className="text-white font-Poppins"> {itemsData.max_selection}{" "}
             {itemsData.category_title}  </span>
-          </p>
+          </p> */}
+<p className="text-center text-gray-400 font-Poppins">
+  Select up to{" "}
+  <span className="text-white font-Poppins">
+    {itemsData?.max_selection} {itemsData?.category_title}
+  </span>
+
+  {(remainingSlots ?? itemsData?.max_selection) > 0 && (
+    <span className="text-pink-400 ml-2">
+      ({remainingSlots ?? itemsData?.max_selection} more remaining)
+    </span>
+  )}
+</p>
+
 
         <div className=" grid grid-rows-2 grid-flow-col  gap-4 pt-10 font-Poppins">
           {itemsData.items.map((item) => (
@@ -1795,14 +2008,66 @@ if (submitRes?.category_complete) {
       )}
 
 
+
+{/* {rewardScreen && (
+  <div className="absolute inset-0 bg-black flex flex-col items-center justify-center text-center space-y-6">
+
+    <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+      Preferences Saved Successfully
+    </h1>
+
+    <p className="text-gray-400">
+      Your experience is now personalized for you.
+    </p>
+
+    <div className="text-7xl">🪙</div>
+
+    <h2 className="text-yellow-400 text-2xl font-semibold">
+      You've earned {earnedCoins} Coins
+    </h2>
+
+  </div>
+)} */}
+{screen === "completion" && completionData && (
+
+  <div className="max-w-md flex flex-col items-center text-center space-y-6">
+
+    <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+      {completionData.completion.title_text}
+    </h1>
+
+    <p className="text-gray-400">
+      {completionData.completion.subtitle_text}
+    </p>
+
+    {completionData.completion.media_type === "lottie" && (
+      <img
+        src={completionData.completion.media_url}
+        alt="celebration"
+        className="w-40 h-40"
+      />
+    )}
+
+    {completionData.completion.show_coins && (
+      <h2 className="text-yellow-400 text-2xl font-semibold">
+        You've earned {Math.floor(completionData.coins_earned)} Coins
+      </h2>
+    )}
+
+  </div>
+
+)}
+
       {/* QUESTIONS */}
    {screen === "questions" && questions && questions.length > 0 && (
   <div className="max-w-md flex flex-col justify-center items-center w-full space-y-6">
 
-    <SportProgressBar
-      percentage={progressPercentage}
-      pendingCoins={pendingCoins}
-    />
+ <SportProgressBar
+  percentage={progressPercentage}
+  pendingCoins={pendingCoins}
+  colorStart={gradient.card.split(" ")[0].replace("from-[", "").replace("]", "")}
+  colorEnd={gradient.card.split(" ")[1].replace("to-[", "").replace("]", "")}
+/>
 
     {questions[qIndex] && qIndex < questions.length ? (
       <>

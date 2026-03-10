@@ -161,6 +161,52 @@ export async function getCategoryItems(
   return await handleResponse(res);
 }
 
+
+// export async function getCategoryCompletion(token, categoryKey, sessionId) {
+//   const res = await fetch(
+//     `${BASE_URL}/questionnaire/categories/${categoryKey}/completion?session_id=${sessionId}`,
+//     {
+//       method: "GET",
+//       headers: {
+//         Authorization: `Bearer ${token}`,
+//         "Content-Type": "application/json",
+//       },
+//     }
+//   );
+
+//   return await handleResponse(res);
+// }
+
+export async function getCategoryCompletion(token, categoryKey, sessionId) {
+
+  console.log("Calling completion API with:");
+  console.log("token:", token);
+  console.log("categoryKey:", categoryKey);
+  console.log("sessionId:", sessionId);
+
+  const url = `${BASE_URL}/questionnaire/categories/${categoryKey}/completion?session_id=${sessionId}`;
+
+  console.log("Completion API URL:", url);
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  console.log("Completion API response status:", res.status);
+
+  const data = await res.json();
+
+  console.log("Completion API response data:", data);
+
+  return data;
+}
+
+
+
 /* ======================================================
    SAVE SELECTION (VERY IMPORTANT FOR ITERATIVE MODE)
    POST /questionnaire/selection

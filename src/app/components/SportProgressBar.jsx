@@ -6,7 +6,7 @@ import { useRef, useEffect } from "react";
    WATER BALL PROGRESS
 ========================= */
 
-function WaterBall({ progress = 0 }) {
+function WaterBall({ progress = 0, colorStart = "#1B5CD1", colorEnd = "#1EB9EC" }) {
   const SIZE = 70;
   const R = SIZE / 2;
 
@@ -58,12 +58,12 @@ function WaterBall({ progress = 0 }) {
       ctx.lineTo(SIZE, SIZE);
       ctx.closePath();
 
-      const g = ctx.createLinearGradient(0, fillY, 0, SIZE);
-      g.addColorStop(0, "rgba(6,182,212,0.8)");
-      g.addColorStop(1, "rgba(7,60,110,0.95)");
+    const g = ctx.createLinearGradient(0, fillY, 0, SIZE);
+g.addColorStop(0, colorStart);
+g.addColorStop(1, colorEnd);
 
-      ctx.fillStyle = g;
-      ctx.fill();
+ctx.fillStyle = g;
+ctx.fill();
 
       ctx.restore();
 
@@ -106,7 +106,7 @@ function TopProgress({ progress = 0, coins = 0 }) {
   return (
     <div className="w-full px-6 pt-4">
 
-      <div className="relative w-full h-2 bg-[#E8EAEC] rounded-full overflow-hidden">
+      {/* <div className="relative w-full h-2 bg-[#E8EAEC] rounded-full overflow-hidden">
 
         <div
           className="h-full bg-gradient-to-r from-pink-500 to-orange-400 transition-all duration-500"
@@ -117,11 +117,27 @@ function TopProgress({ progress = 0, coins = 0 }) {
           className="absolute -top-3 transition-all duration-500"
           style={{ left: `calc(${progress}% - 12px)` }}
         >
-          <div className="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center text-xs shadow-lg">
+          <div className="w-6 h-6  rounded-full bg-yellow-400 flex items-center justify-center text-xs shadow-lg">
             🪙
           </div>
         </div>
-      </div>
+      </div> */}
+
+      <div className="relative w-full h-2 bg-[#E8EAEC] rounded-full overflow-visible">
+
+  <div
+    className="h-full bg-gradient-to-r from-pink-500 to-orange-400 transition-all duration-500"
+    style={{ width: `${progress}%` }}
+  />
+
+  <div
+    className="absolute -top-2 transition-all duration-500"
+    style={{ left: `${progress}%`, transform: "translateX(-50%)" }}
+  >
+    <div className="w-6 h-6 rounded-full bg-yellow-400  shadow-md"></div>
+  </div>
+
+</div>
 
       <div className="text-pink-400 text-sm mt-2 font-normal">
         +{coins} Coins earned!
@@ -134,7 +150,7 @@ function TopProgress({ progress = 0, coins = 0 }) {
    MAIN COMPONENT
 ========================= */
 
-export default function SportProgressBar({ percentage = 0, pendingCoins = 0 }) {
+export default function SportProgressBar({ percentage = 0, pendingCoins = 0, colorStart, colorEnd }) {
   return (
     <div className="flex flex-col items-center w-full space-y-3">
 
@@ -142,7 +158,11 @@ export default function SportProgressBar({ percentage = 0, pendingCoins = 0 }) {
       <TopProgress progress={percentage} coins={pendingCoins} />
 
       {/* water ball */}
-      <WaterBall progress={percentage} />
+   <WaterBall
+  progress={percentage}
+  colorStart={colorStart}
+  colorEnd={colorEnd}
+/>
 
     </div>
   );
