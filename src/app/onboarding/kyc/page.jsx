@@ -472,23 +472,22 @@ export default function KYCPage() {
   ======================================================== */
 
   useEffect(() => {
-    const fetchScreens = async () => {
+    const fetchScreen = async () => {
       try {
-        const res = await kycService.getScreenConfigs();
-
-        const screens = res?.data?.data?.screens || [];
-
-        const kycScreen = screens.find(
-          (s) => s.screen_key === "kyc_start"
-        );
-
-        setScreenConfig(kycScreen);
+        const res = await userService.getScreenConfig("kyc_start");
+  
+        const screen =
+          res?.data?.data?.screen ||
+          res?.data?.screen ||
+          res?.data;
+  
+        setScreenConfig(screen);
       } catch (err) {
-        console.error("Screen config error:", err);
+        console.error("KYC screen fetch error:", err);
       }
     };
-
-    fetchScreens();
+  
+    fetchScreen();
   }, []);
 
   /* ========================================================
@@ -667,52 +666,81 @@ export default function KYCPage() {
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-gray-900/50 p-6 rounded-2xl">
 
-        {step === STEPS.INTRO && (
-          <>
-            <div className="text-center mb-6">
+      {step === STEPS.INTRO && (
+  <div className="flex flex-col items-center justify-center min-h-screen text-center px-6">
 
-              <Shield className="w-12 h-12 text-pink-500 mx-auto mb-3" />
-
-              <h2 className="text-xl font-bold text-white">
-                {screenConfig.title}
-              </h2>
-
-              {screenConfig.subtitle && (
-                <p className="text-gray-400 text-sm mt-2">
-                  {screenConfig.subtitle}
-                </p>
-              )}
-
-              {screenConfig.description && (
-                <p className="text-gray-500 text-xs mt-2">
-                  {screenConfig.description}
-                </p>
-              )}
-            </div>
-
-            <button
-              onClick={handleContinue}
-              disabled={loading}
-              className="w-full py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-xl text-white font-semibold mb-3"
+    {/* Title */}
+    <h1 className="text-4xl font-Playfair Display font-bold text-white mb-4">
+      {(screenConfig?.title || "Start Your KYC")
+        .split(" ")
+        .map((word, i) =>
+          i === 2 ? (
+            <span
+              key={i}
+              className="bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
             >
-              {loading ? (
-                <Loader2 className="animate-spin mx-auto" />
-              ) : (
-                screenConfig.button_text?.primary
-              )}
-            </button>
+              {" " + word}
+            </span>
+          ) : (
+            " " + word
+          )
+        )}
+    </h1>
 
-            {screenConfig.button_text?.skip && (
-              <button
-                onClick={handleSkip}
-                className="w-full py-3 border border-gray-700 text-gray-400 rounded-xl"
-              >
-                {screenConfig.button_text.skip}
-              </button>
-            )}
-          </>
+    {/* Subtitle */}
+    {screenConfig?.subtitle && (
+      <p className="text-gray-400 text-base max-w-xs mb-12 leading-relaxed">
+        {screenConfig.subtitle}
+      </p>
+    )}
+
+    {/* Card */}
+    <div className="w-full max-w-sm bg-gradient-to-b from-[#2c0f27] to-[#1a0b17] rounded-3xl p-7">
+
+      {/* Description */}
+      {screenConfig?.description && (
+        <p className="text-gray-300 text-sm mb-8 leading-relaxed">
+          {screenConfig.description}
+        </p>
+      )}
+
+      {/* Buttons */}
+      <div className="flex gap-4">
+
+        {/* Skip */}
+        {screenConfig?.button_text?.skip && (
+          <button
+            onClick={handleSkip}
+            className="flex-1 py-3 rounded-full border border-pink-500 text-white font-medium"
+          >
+            {screenConfig.button_text.skip}
+          </button>
         )}
 
+        {/* Continue */}
+        <button
+          onClick={handleContinue}
+          disabled={loading}
+          className="flex-1 py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-semibold"
+        >
+          {loading ? (
+            <Loader2 className="animate-spin mx-auto" />
+          ) : (
+            screenConfig?.button_text?.primary || "Continue"
+          )}
+        </button>
+
+        <button
+          onClick={handleSkip}
+          className="flex-1 py-3 rounded-full border border-pink-500 text-white font-medium"
+        >
+          {screenConfig?.button_text?.skip || "Skip"}
+        </button>
+
+      </div>
+    </div>
+  </div>
+)}
         {step === STEPS.POLLING && (
           <div className="text-center text-white">
             <Loader2 className="animate-spin mx-auto mb-3" />

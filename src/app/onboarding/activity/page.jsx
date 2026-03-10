@@ -13,6 +13,46 @@ export default function ActivityIntentPage() {
   // Check if we have role info from URL (user came from role selection)
   const roleValue = searchParams.get("roleValue");
   const roleLabel = searchParams.get("roleLabel");
+  const [activityScreenConfig, setActivityScreenConfig] = useState(null);
+  const [basicScreenConfig, setBasicScreenConfig] = useState(null);
+  const [additionalScreenConfig, setAdditionalScreenConfig] = useState(null);
+
+
+useEffect(() => {
+  const fetchScreenConfigs = async () => {
+    try {
+      const [activityRes, basicRes, additionalRes] = await Promise.all([
+        userService.getScreenConfig("activity_intent"),
+        userService.getScreenConfig("profile_details_basic"),
+        userService.getScreenConfig("profile_details_additional"),
+      ]);
+
+      const activityScreen =
+        activityRes?.data?.data?.screen ||
+        activityRes?.data?.screen ||
+        activityRes?.data;
+
+      const basicScreen =
+        basicRes?.data?.data?.screen ||
+        basicRes?.data?.screen ||
+        basicRes?.data;
+
+      const additionalScreen =
+        additionalRes?.data?.data?.screen ||
+        additionalRes?.data?.screen ||
+        additionalRes?.data;
+
+      setActivityScreenConfig(activityScreen || null);
+      setBasicScreenConfig(basicScreen || null);
+      setAdditionalScreenConfig(additionalScreen || null);
+
+    } catch (err) {
+      console.error("Failed to fetch screen configs:", err);
+    }
+  };
+
+  fetchScreenConfigs();
+}, []);
 
   const handleBack = () => {
     router.back();
@@ -25,16 +65,23 @@ export default function ActivityIntentPage() {
         roleValue={roleValue}
         roleLabel={roleLabel}
         onBack={handleBack}
+        basicScreenConfig={basicScreenConfig}
+        additionalScreenConfig={additionalScreenConfig}
       />
     );
   }
 
-  return <RoleSelection onBack={handleBack} />;
+  return (
+    <RoleSelection
+      onBack={handleBack}
+      activityScreenConfig={activityScreenConfig}
+    />
+  );
 }
 
 /* ---------------- ROLE SELECTION COMPONENT (STEP 1) ---------------- */
 
-function RoleSelection({ onBack }) {
+function RoleSelection({ onBack, activityScreenConfig }) {
   const router = useRouter();
 
   const [roles, setRoles] = useState([]);
@@ -92,10 +139,26 @@ function RoleSelection({ onBack }) {
             ← 
           </button> */}
 <div className="flex  flex-col space-y-3 "> 
-          <h1 className="text-2xl font-semibold font-Playfair Display">
-            What are you doing right now?
-          </h1>
-          <p className="text-sm font-Poppins">This helps us tailor your Playymate experience.</p> </div>
+<h1 className="text-2xl font-semibold font-Playfair Display">
+  {(activityScreenConfig?.title || "What are you doing right now?")
+    .split(" ")
+    .map((word, index) =>
+      index === 3 ? (
+        <span
+          key={index}
+          className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent"
+        >
+          {" " + word}
+        </span>
+      ) : (
+        " " + word
+      )
+    )}
+</h1>
+<p className="text-sm font-Poppins">
+  {activityScreenConfig?.subtitle || "This helps us tailor your Playymate experience."}
+</p>          
+          </div>
         </div>
 
         {/* ---------------- STEP 1: ROLE SELECTION ---------------- */}
@@ -160,7 +223,13 @@ function RoleSelection({ onBack }) {
 
 /* ---------------- DYNAMIC FORM COMPONENT (STEP 2) ---------------- */
 
-function DetailsForm({ roleValue, roleLabel, onBack }) {
+function DetailsForm({
+  roleValue,
+  roleLabel,
+  onBack,
+  basicScreenConfig,
+  additionalScreenConfig
+}) {
   const router = useRouter();
 
   const [formFields, setFormFields] = useState([]);
@@ -319,18 +388,39 @@ router.push(route);
 
   return (
     <div className="bg-black py-8 ">
-      <div className="flex items-center  justify-center gap-6 mb-6 ">
-          <button
-            onClick={onBack}
-            className="text-3xl text-gray-400 font-bold"
-          >
-            ←
-          </button>
+      <div className="relative mb-6 text-center">
+  {/* Back Button */}
+  <button
+    onClick={onBack}
+    className="absolute left-0 text-3xl text-gray-400 font-bold"
+  >
+    ←
+  </button>
 
-          <h1 className="text-2xl font-semibold text-white">
-            Tell us more about your {roleLabel}
-          </h1>
-        </div>
+  {/* Title */}
+  <h1 className="text-2xl font-Playfair Display font-bold text-white">
+  {(basicScreenConfig?.title || "Complete your profile")
+    .split(" ")
+    .map((word, index) =>
+      index === 2 ? (
+        <span
+          key={index}
+          className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent"
+        >
+          {" " + word}
+        </span>
+      ) : (
+        " " + word
+      )
+    )}
+</h1>
+
+  {/* Subtitle */}
+  <p className="mt-2 text-gray-400 text-sm">
+    {basicScreenConfig?.subtitle || "Add a few more details so people can know you better"}
+  </p>
+</div>
+
       <div className="w-[390px] text-white mx-auto font-Poppins ">
         {/* HEADER */}
         
@@ -405,7 +495,12 @@ router.push(route);
                     )}
                     <input
                       type={field.field_type === 'number' ? 'number' : 'text'}
-                      placeholder={field.placeholder || `Enter ${field.name || field.key}`}
+                      placeholder={
+                        basicScreenConfig?.input_placeholders?.[field.key] ||
+                        additionalScreenConfig?.input_placeholders?.[field.key] ||
+                        field.placeholder ||
+                        `Enter ${field.name}`
+                      }
                       className={`w-full mt-1 px-3 py-2 rounded-lg bg-black border border-gray-700 text-white ${field.icon ? 'pl-10' : ''}`}
                       onChange={(e) =>
                         handleChange(field.key, e.target.value)
@@ -416,13 +511,21 @@ router.push(route);
               </div>
             ))}
 
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="w-full mt-6 py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-50"
-            >
-              {loading ? "Saving..." : "Save & Continue"}
-            </button>
+<button
+  onClick={handleSubmit}
+  disabled={loading}
+  className="w-full mt-6 py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-50"
+>
+  {loading
+    ? "Saving..."
+    : basicScreenConfig?.button_text?.primary || "Save & Continue"}
+</button>
+<button
+  className="text-gray-400 mt-3"
+  onClick={() => router.push("/")}
+>
+  {basicScreenConfig?.button_text?.skip || "Skip for now"}
+</button>
           </div>
         )}
       </div>

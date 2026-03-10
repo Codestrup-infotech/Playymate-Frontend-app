@@ -269,20 +269,26 @@ export default function OnboardingProfilePhotoPage() {
   const [uploadProgress, setUploadProgress] = useState([false, false, false]);
   // Track successful uploads
   const [uploadedUrls, setUploadedUrls] = useState([null, null, null]);
-
+  const [screenConfig, setScreenConfig] = useState(null);
   const clearError = () => setError(null);
 
   // Check onboarding status on mount
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
+    const initialize = async () => {
       try {
+  
         const response = await userService.getOnboardingStatus();
         const state = response?.data?.data?.onboarding_state;
-        
-        // If already past profile photo, redirect to next step
-        const validStates = ['PROFILE_PHOTO_CAPTURED', 'ACTIVITY_INTENT_CAPTURED', 'PROFILE_DETAILS_CAPTURED'];
+  
+        const validStates = [
+          'PROFILE_PHOTO_CAPTURED',
+          'ACTIVITY_INTENT_CAPTURED',
+          'PROFILE_DETAILS_CAPTURED'
+        ];
+  
         if (validStates.includes(state)) {
           const nextStep = response?.data?.next_required_step;
+  
           if (nextStep) {
             const route = getRouteFromStep(nextStep);
             router.push(route);
@@ -291,10 +297,10 @@ export default function OnboardingProfilePhotoPage() {
           }
           return;
         }
-        
-        // Must be in LOCATION_CAPTURED state to proceed
+  
         if (state !== 'LOCATION_CAPTURED') {
           const nextStep = response?.data?.next_required_step;
+  
           if (nextStep) {
             const route = getRouteFromStep(nextStep);
             router.push(route);
@@ -303,15 +309,21 @@ export default function OnboardingProfilePhotoPage() {
           }
           return;
         }
+  
+        // ✅ FETCH PROFILE PHOTO SCREEN CONFIG
+        const configRes = await userService.getScreenConfig("profile_photo");
+  
+        setScreenConfig(configRes?.data?.data?.screen);
+  
       } catch (err) {
-        console.error('Failed to check onboarding status:', err);
-        // Continue anyway - let user try to upload
+        console.error("Initialization error:", err);
       } finally {
         setInitialLoading(false);
       }
     };
-
-    checkOnboardingStatus();
+  
+    initialize();
+  
   }, [router]);
 
   const handleFileSelect = (e, index) => {
@@ -561,15 +573,25 @@ export default function OnboardingProfilePhotoPage() {
         {/* Content */}
         <div className="space-y-6">
           <div className="text-center">
-            <h1 className="text-3xl font-bold">
-              Add a Profile{' '}
-              <span className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent">
-                Photo
-              </span>
-            </h1>
-            <p className="mt-2 text-gray-400 text-sm font-Poppins ">
-              Add a photo to personalize your profile and make your experience more engaging.
-            </p>
+          <h1 className="text-3xl font-bold">
+  {screenConfig?.title
+    ?.split(" ")
+    .map((word, index) =>
+      index === 2 ? (
+        <span
+          key={index}
+          className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent"
+        >
+          {" " + word}
+        </span>
+      ) : (
+        " " + word
+      )
+    )}
+</h1>
+        <p className="mt-2 text-gray-400 text-sm font-Poppins">
+        {screenConfig?.subtitle}
+       </p>
           </div>
 
           {error && (
@@ -665,7 +687,7 @@ export default function OnboardingProfilePhotoPage() {
                       <circle cx="24" cy="16" r="10" fill="#6b7280" />
                       <ellipse cx="24" cy="38" rx="16" ry="10" fill="#6b7280" />
                     </svg>
-                    <span className="text-gray-400 text-xs">Upload Photo</span>
+                    <span className="text-gray-400 text-xs">{screenConfig?.option_labels?.upload_photo || "Upload Photo"}</span>
                   </div>
                 )}
               </div>
@@ -700,7 +722,7 @@ export default function OnboardingProfilePhotoPage() {
                 Saving...
               </>
             ) : (
-              'Get Started'
+              screenConfig?.button_text?.primary || "Get Started"
             )}
           </button>
 

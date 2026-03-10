@@ -219,27 +219,32 @@ export default function LivenessPage() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
-
+  const [successConfig, setSuccessConfig] = useState(null);
   const DEV_MODE = process.env.NEXT_PUBLIC_KYC_DEV_MODE === "true";
 
   /* =========================================================
      LOAD SCREEN CONFIG (Dynamic UI)
   ========================================================== */
 
+  const [introConfig, setIntroConfig] = useState(null);
+  const [scanConfig, setScanConfig] = useState(null);
+  
   useEffect(() => {
-    const fetchScreenConfig = async () => {
+    const fetchScreenConfigs = async () => {
       try {
-        const res = await kycService.getScreenConfig(
-          "face_verification_intro"
-        );
-
-        setScreenConfig(res?.data?.data);
+        const [introRes, scanRes] = await Promise.all([
+          kycService.getScreenConfig("face_verification_intro"),
+          kycService.getScreenConfig("face_verification_scan"),
+        ]);
+  
+        setIntroConfig(introRes?.data?.data?.screen || null);
+        setScanConfig(scanRes?.data?.data?.screen || null);
       } catch (err) {
-        console.error("Screen config error:", err);
+        console.error("Screen config fetch error:", err);
       }
     };
-
-    fetchScreenConfig();
+  
+    fetchScreenConfigs();
   }, []);
 
   /* =========================================================
@@ -327,6 +332,10 @@ export default function LivenessPage() {
           selfieFile,
           "image/jpeg"
         );
+
+
+
+
 
 //         await kycService.faceLiveness(file_url);
 
@@ -439,114 +448,201 @@ setTimeout(() => {
     }
   };
 
+  // Success
+
+  useEffect(() => {
+    const fetchSuccessScreen = async () => {
+      try {
+        const res = await kycService.getScreenConfig("kyc_success");
+  
+        const screen = res?.data?.data?.screen;
+  
+        setSuccessConfig(screen);
+      } catch (err) {
+        console.error("KYC success config error:", err);
+      }
+    };
+  
+    fetchSuccessScreen();
+  }, []);
+
   /* =========================================================
      UI
   ========================================================== */
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-gray-900/50 p-6 rounded-2xl">
+
+
+      <div className="max-w-md w-full text-center mb-3 bg-gray-900/50 p-6 rounded-2xl">
 
         {/* TITLE SECTION */}
-
-        <div className="text-center mb-6">
-          <h2 className="text-xl font-bold text-white">
-            {screenConfig?.title}
+        <h2 className="text-2xl font-bold text-white">
+          {introConfig?.title || "Face Verification"}
           </h2>
+          {introConfig?.subtitle && (
+         <p className="text-gray-400 text-sm mt-2">
+          {introConfig.subtitle}
+         </p>
+         )}
 
-          {screenConfig?.subtitle && (
-            <p className="text-gray-400 text-sm mt-2">
-              {screenConfig.subtitle}
-            </p>
-          )}
+      {introConfig?.description && (
+        <p className="text-gray-500 text-xs mt-2 mb-6">
+       {introConfig.description}
+     </p>
+      )}
 
-          {screenConfig?.description && (
-            <p className="text-gray-500 text-xs mt-2">
-              {screenConfig.description}
-            </p>
-          )}
+        <div className="text-center ">
+         
+
+         
+
+          
         </div>
 
-        {/* CAPTURE STEP */}
+       {/* CAPTURE STEP */}
 
-        {step === "capture" && (
-          <>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="rounded-xl mb-4 w-full"
-            />
+{step === "capture" && (
+  <div className="flex flex-col items-center text-center">
 
-            <canvas ref={canvasRef} className="hidden" />
+         <h1 className="text-xl font-Playfair Display font-bold text-white mb-8">
+            {screenConfig?.title || "Align Your Face in the Frame"}
+         </h1>
 
-            <button
-              onClick={capture}
-              className="w-full py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-xl text-white font-semibold flex items-center justify-center gap-2"
-            >
-              <Camera className="w-5 h-5" />
+    {/* Face Circle Frame */}
+    <div className="relative w-72 h-72 rounded-full overflow-hidden border border-blue-400/30">
 
-              {screenConfig?.button_text?.primary || "Capture"}
-            </button>
-          </>
+      {/* Camera */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+
+      {/* Blue Overlay */}
+      <div className="absolute inset-0 bg-blue-900/30"></div>
+
+      {/* Moving Scan Line */}
+      <div className="absolute left-0 right-0 h-[3px] bg-blue-400 shadow-[0_0_15px_#60a5fa] animate-scan"></div>
+
+    </div>
+
+    <canvas ref={canvasRef} className="hidden" />
+
+    {/* Button from API */}
+    <button
+      onClick={capture}
+      className="mt-14 w-full max-w-sm py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-semibold"
+    >
+      {screenConfig?.button_text?.primary || "Capture"}
+    </button>
+
+  </div>
+)}    
+
+
+  {/* REVIEW STEP */}
+
+{step === "review" && (
+  <div className="flex flex-col items-center text-center">
+
+    {/* Title from API */}
+    
+
+    {/* Circular Selfie Preview */}
+    <div className="relative w-72 h-72 rounded-full overflow-hidden border border-blue-400/30 mb-8">
+
+      <img
+        src={selfie}
+        alt="Selfie preview"
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+
+      {/* Optional overlay */}
+      <div className="absolute inset-0 bg-blue-900/20"></div>
+
+    </div>
+
+    {error && (
+      <p className="text-red-400 text-sm text-center mb-4">
+        {error}
+      </p>
+    )}
+
+    {/* Buttons */}
+    <div className="flex gap-4 w-full max-w-sm">
+
+      {/* Retake */}
+      <button
+        onClick={() => {
+          setStep("capture");
+          setError("");
+
+          setTimeout(() => startCamera(), 300);
+        }}
+        disabled={loading}
+        className="flex-1 py-3 border border-gray-700 text-gray-300 rounded-full"
+      >
+        {screenConfig?.button_text?.retake || "Retake"}
+      </button>
+
+      {/* Verify */}
+      <button
+        onClick={verify}
+        disabled={loading}
+        className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-white font-semibold"
+      >
+        {loading ? (
+          <Loader2 className="animate-spin mx-auto" />
+        ) : (
+          screenConfig?.button_text?.primary || "Verify"
         )}
+      </button>
 
-        {/* REVIEW STEP */}
+    </div>
 
-        {step === "review" && (
-          <>
-            <img
-              src={selfie}
-              alt="Selfie preview"
-              className="rounded-xl mb-4"
-            />
-
-            {error && (
-              <p className="text-red-400 text-sm text-center mb-3">
-                {error}
-              </p>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setStep("capture");
-                  setError("");
-
-                  setTimeout(() => startCamera(), 300);
-                }}
-                disabled={loading}
-                className="flex-1 py-3 border border-gray-700 text-gray-300 rounded-xl"
-              >
-                Retake
-              </button>
-
-              <button
-                onClick={verify}
-                disabled={loading}
-                className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-orange-400 rounded-xl text-white font-semibold"
-              >
-                {loading ? (
-                  <Loader2 className="animate-spin mx-auto" />
-                ) : (
-                  screenConfig?.button_text?.primary || "Verify"
-                )}
-              </button>
-            </div>
-          </>
-        )}
-
+  </div>
+)}
         {/* SUCCESS STEP */}
 
         {step === "success" && (
-          <div className="text-center">
-            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+  <div className="min-h-screen bg-black flex flex-col items-center justify-center text-center px-6">
 
-            <p className="text-white">
-              KYC Completed Successfully
-            </p>
-          </div>
-        )}
+    {/* Back Button */}
+    <button
+      onClick={() => router.back()}
+      className="absolute left-6 top-6 text-white text-2xl"
+    >
+      ←
+    </button>
+
+    {/* Congrats Badge */}
+    <div className="mb-8">
+      <div className="text-orange-400 font-bold text-xl relative">
+        <span className="absolute inset-0 flex items-center justify-center text-purple-500 text-5xl opacity-40">
+          ✦
+        </span>
+
+        <span className="relative text-orange-400 text-lg tracking-widest">
+          CONGRATS
+        </span>
+      </div>
+    </div>
+
+    {/* Title */}
+    <h1 className="text-4xl font-Playfair Display font-bold bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent mb-4">
+      {successConfig?.title || "Congratulations!"}
+    </h1>
+
+    {/* Subtitle */}
+    <p className="text-gray-400 text-lg max-w-sm">
+      {successConfig?.subtitle ||
+        "Your account has been verified successfully."}
+    </p>
+
+  </div>
+)}
       </div>
     </div>
   );
