@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import userService from "../../../../../services/user";
 
 export default function BusinessOwnerProfilePage() {
   const router = useRouter();
@@ -15,6 +16,37 @@ export default function BusinessOwnerProfilePage() {
     bio: "",
   });
 
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState(null);
+
+  const handleSaveAndContinue = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      console.log("BUSINESS PROFILE:", form);
+      console.log("Calling API to save business profile...");
+
+      // Call API to save business owner profile
+      const response = await userService.completeProfileSetup('business_owner', form);
+      
+      console.log("API Response Success:", response);
+      
+      // Navigate to KYC on success
+      router.push("/personal-verification/kyc");
+    } catch (err) {
+      console.error("Failed to save business profile:", err);
+      setError(err.response?.data?.message || "Failed to save profile. Please try again.");
+      
+      // For demo/development, still navigate to KYC if API fails
+      if (process.env.NODE_ENV === 'development') {
+        router.push("/personal-verification/kyc");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black flex justify-center items-center px-4">
 
@@ -23,7 +55,7 @@ export default function BusinessOwnerProfilePage() {
         {/* TOP BAR */}
         <div className="flex items-center gap-3 pt-4">
           <button
-            onClick={() => router.push("/personalVerifictionFlow?step=7")}
+            onClick={() => router.push("/personal-verifiction?step=7")}
             className="text-xl text-white/70"
           >
             ←
@@ -135,21 +167,23 @@ export default function BusinessOwnerProfilePage() {
         {/* CTA */}
         <div className="mt-12">
 
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/40 rounded-lg text-red-400 text-sm text-center">
+              {error}
+            </div>
+          )}
+
           <button
-            onClick={() => {
-              console.log("BUSINESS PROFILE:", form);
-
-              // 👉 backend submit later
-
-              router.push("/personalVerifictionFlow?step=8"); // or next onboarding step
-            }}
+            onClick={handleSaveAndContinue}
+            disabled={isLoading}
             className="
               w-full py-4 rounded-full font-semibold
               bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
               shadow-[0_0_28px_rgba(255,130,60,0.45)]
+              disabled:opacity-50 disabled:cursor-not-allowed
             "
           >
-            Save & Continue
+            {isLoading ? "Saving..." : "Save & Continue"}
           </button>
 
           <button

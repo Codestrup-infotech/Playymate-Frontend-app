@@ -1,448 +1,355 @@
+
+
+
 "use client";
 
-
 import React, { useState, useEffect } from "react";
+import { userService } from "@/services/user";
+import { useRouter } from "next/navigation";
+import { getStartingStep } from "@/lib/onboarding/stateMapper";
+import { usePlacesAutocomplete } from "@/hooks/usePlacesAutocomplete";
+import { validateLocationData, validateCoordinates } from "@/lib/validators/locationValidator";
+
 
 
 export default function PersonalVerification() {
+  const router = useRouter();
 
-
+  const [loading, setLoading] = useState(true);
   const [step, setStep] = useState(1);
+  const [ageGroup, setAgeGroup] = useState(null);
+
+  /* ---------------------------------------------------------- */
+  /* AUTH + ONBOARDING STATE SYNC                               */
+  /* ---------------------------------------------------------- */
 
   useEffect(() => {
-    const savedStep = sessionStorage.getItem("pq_step");
-    if (savedStep) {
-      setStep(Number(savedStep));
-      sessionStorage.removeItem("pq_step");
-    }
-  }, []);
+    const init = async () => {
+      try {
+        const token =
+          localStorage.getItem("accessToken") ||
+          localStorage.getItem("playymate_access_token");
 
-  
+        if (!token) {
+          router.push("/login");
+          return;
+        }
 
+        const response = await userService.getOnboardingStatus();
+        const data = response?.data?.data;
 
+        const {
+          onboarding_state,
+          onboarding_complete,
+        } = data;
 
+        if (onboarding_complete) {
+          router.push("/home");
+          return;
+        }
 
+        const savedAgeGroup = localStorage.getItem("user_age_group");
+        if (savedAgeGroup) {
+          setAgeGroup(savedAgeGroup);
+        }
 
+        const initialStep = getStartingStep(
+          onboarding_state,
+          savedAgeGroup
+        );
 
-    const [data, setData] = useState({
-        gender: "",
-        dob: "",
-        age: "",
-        status: "",
-    });
+        setStep(initialStep || 1);
+      } catch (error) {
+        console.error("Failed to fetch onboarding state:", error);
+        setStep(1);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const pic = [
-        "/loginAvatars/map-bg.jpg"
-    ];
+    init();
+  }, [router]);
 
+  /* ---------------------------------------------------------- */
+  /* Refresh Step From Backend (CRITICAL)                       */
+  /* ---------------------------------------------------------- */
+
+  const refreshStepFromServer = async () => {
+    const response = await userService.getOnboardingStatus();
+    const state = response?.data?.data?.onboarding_state;
+    const savedAgeGroup = localStorage.getItem("user_age_group");
+    const correctStep = getStartingStep(state, savedAgeGroup);
+    setStep(correctStep || 1);
+  };
+
+  /* ---------------------------------------------------------- */
+  /* LOADING                                                     */
+  /* ---------------------------------------------------------- */
+
+  if (loading) {
     return (
-        <div className="min-h-screen bg-black flex items-center justify-center text-white">
-
-            {step === 1 && (
-                <GenderStep
-                    value={data.gender}
-                    onSelect={(gender) =>
-                        setData({ ...data, gender })
-                    }
-                    onNext={() => setStep(2)}
-                />
-            )}
-
-            {step === 2 && (
-                <AgeStep
-                    data={data}
-                    setData={setData}
-                    onNext={() => setStep(3)}
-                    onBack={() => setStep(1)}
-                />
-            )}
-
-            {step === 3 && (
-                <ParentConsentStep
-                    onNext={() => setStep(4)}
-                    onBack={() => setStep(2)}
-                />
-            )}
-
-
-            {step === 4 && (
-                <LocationPermissionStep
-                    onNext={() => setStep(5)}
-                    onBack={() => setStep(3)}
-                />
-            )}
-
-            {step === 5 && (
-                <LocationPickerStep
-                    onNext={() => setStep(6)}
-                    onBack={() => setStep(4)}
-                />
-            )}
-
-
-            {step === 6 && (
-                <PhotoStep
-                    onNext={() => setStep(7)}
-                    onBack={() => setStep(5)}
-                />
-            )}
-
-            {step === 7 && (
-                <StatusStep
-                    value={data.status}
-                    onSelect={(status) =>
-                        setData({ ...data, status })
-                    }
-                    onNext={() => setStep(8)}
-                    onBack={() => setStep(6)}
-                />
-
-            )}
-
-             {step === 8 && (
-                <KYC
-                    value={data.status}
-                    onSelect={(status) =>
-                        setData({ ...data, status })
-                    }
-                    onNext={() => setStep(9)}
-                    onBack={() => setStep(7)}
-                />
-
-            )}
-
-
-             {step === 9 && (
-                <VerifyAadhaar
-                    value={data.status}
-                    onSelect={(status) =>
-                        setData({ ...data, status })
-                    }
-                    onNext={() => setStep(10)}
-                    onBack={() => setStep(8)}
-                />
-
-            )}
-
-              {step === 10 && (
-                <AthaarOTP
-                    value={data.status}
-                    onSelect={(status) =>
-                        setData({ ...data, status })
-                    }
-                    onNext={() => setStep(11)}
-                    onBack={() => setStep(9)}
-                />
-
-            )}
-
-            
-              {step === 11 && (
-                <FaceVerification
-                    value={data.status}
-                    onSelect={(status) =>
-                        setData({ ...data, status })
-                    }
-                    onNext={() => setStep(12)}
-                    onBack={() => setStep(10)}
-                />
-
-            )}
-
-             {step === 12 && (
-                <AlignFace
-                    value={data.status}
-                    onSelect={(status) =>
-                        setData({ ...data, status })
-                    }
-                    onNext={() => setStep(13)}
-                    onBack={() => setStep(11)}
-                />
-
-            )} 
-
-            {step === 13 && (
-                <Success
-                    value={data.status}
-                    onSelect={(status) =>
-                        setData({ ...data, status })
-                    }
-                    onNext={() => setStep(14)}
-                    onBack={() => setStep(12)}
-                />
-
-            )} 
-
-        </div>
-
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+      </div>
     );
+  }
+
+  /* ---------------------------------------------------------- */
+  /* STEP RENDERING                                              */
+  /* ---------------------------------------------------------- */
+
+  return (
+    <div className="min-h-screen bg-black flex items-center justify-center text-white">
+
+      {step === 1 && (
+       <GenderStep onSuccess={refreshStepFromServer} />
+      )}
+
+      {step === 2 && (
+        <AgeStep
+          onSuccess={(serverAgeGroup, calculatedAge) => {
+            if (serverAgeGroup) {
+              localStorage.setItem("user_age_group", serverAgeGroup);
+              setAgeGroup(serverAgeGroup);
+            }
+            // For adults (age >= 18), go to step 4 (Location)
+            // For minors (age < 18), go to step 3 (Parent Consent)
+            if (calculatedAge >= 18) {
+              setStep(4); // Location for adults
+            } else {
+              setStep(3); // Parent consent for minors
+            }
+          }}
+        />
+      )}
+
+      {step === 3 && (
+        <ParentConsentStep
+          onNext={refreshStepFromServer}
+          onBack={() => setStep(2)}
+        />
+      )}
+
+     {step === 4 && (
+  <LocationPickerStep
+    onSuccess={refreshStepFromServer}
+  />
+)}
+
+      {step === 5 && (
+        <PhotoStep
+          onSuccess={refreshStepFromServer}
+        />
+      )}
+
+      {step === 6 && (
+        <StatusStep />
+      )}
+
+    </div>
+  );
 }
+
+
+
 
 
 // STEP 1 — GENDER
 
-function GenderStep({ value, onSelect, onNext }) {
-    const genders = ["Male", "Female", "Other"];
+function GenderStep({ onSuccess }) {
+  const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-    return (
-        <div className="w-[340px] text-center">
+  const genders = [
+    { label: "Male", value: "male" },
+    { label: "Female", value: "female" },
+    { label: "Other", value: "other" },
+  ];
 
-            <h1 className="text-3xl font-Playfair Display">
-                What’s Your <span className="text-pink-500">Gender</span>
-            </h1>
+  const handleContinue = async () => {
+    if (!selected) return;
 
-            <p className="text-gray-400 mt-2 font-Poppins">
-                Tell us about your gender
-            </p>
+    try {
+      setLoading(true);
+      setError(null);
 
-            <div className="mt-10 space-y-4 font-Poppins">
-                {genders.map((g) => (
-                    <button
-                        key={g}
-                        onClick={() => onSelect(g)}
-                        className={`w-full py-4 rounded-xl border transition
-              ${value === g
-                                ? "border-pink-500 bg-white/5 "
-                                : "border-gray-700"
-                            }`}
-                    >
-                        {g}
-                    </button>
-                ))}
-            </div>
+      await userService.updateGender(selected);
 
-            <button
-                disabled={!value}
-                onClick={onNext}
-                className="mt-10 w-full py-4 font-Poppins rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40"
-            >
-                Continue
-            </button>
-        </div>
-    );
+      // ✅ Refresh step from backend
+      onSuccess();
+
+    } catch (err) {
+      console.error("Error saving gender:", err);
+      setError("Failed to save gender. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="w-[360px] text-center">
+
+      <h2 className="text-3xl font-bold mb-6">
+        What's Your Gender?
+      </h2>
+
+      <div className="space-y-4">
+        {genders.map((g) => (
+          <button
+            key={g.value}
+            onClick={() => setSelected(g.value)}
+            className={`w-full py-4 rounded-xl border transition
+              ${
+                selected === g.value
+                  ? "border-pink-500 bg-white/5"
+                  : "border-gray-700"
+              }`}
+          >
+            {g.label}
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <p className="text-red-400 mt-4 text-sm">{error}</p>
+      )}
+
+      <button
+        disabled={!selected || loading}
+        onClick={handleContinue}
+        className="mt-6 w-full py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40"
+      >
+        {loading ? "Saving..." : "Continue"}
+      </button>
+    </div>
+  );
 }
-
 
 // STEP 2 — AGE
 
-function AgeStep({ data, setData, onNext, onBack }) {
-    const days = Array.from({ length: 31 }, (_, i) => i + 1);
+function AgeStep({ onSuccess }) {
+  const [loading, setLoading] = useState(false);
 
-    const months = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    ];
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+  const months = [
+    "Jan","Feb","Mar","Apr","May","Jun",
+    "Jul","Aug","Sep","Oct","Nov","Dec"
+  ];
+  const years = Array.from(
+    { length: 90 },
+    (_, i) => new Date().getFullYear() - i
+  );
 
-    const years = Array.from(
-        { length: 90 },
-        (_, i) => new Date().getFullYear() - i
-    );
+  const [day, setDay] = useState(7);
+  const [month, setMonth] = useState("Feb");
+  const [year, setYear] = useState(2002);
 
-    const [day, setDay] = React.useState(7);
-    const [month, setMonth] = React.useState("Feb");
-    const [year, setYear] = React.useState(2002);
+  const age = new Date().getFullYear() - year;
 
-    const age =
-        new Date().getFullYear() - year;
+  async function confirmDob() {
+    const dob = `${year}-${String(
+      months.indexOf(month) + 1
+    ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-    function confirmDob() {
-        const dob = `${year}-${String(
-            months.indexOf(month) + 1
-        ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    try {
+      setLoading(true);
 
-        setData({ ...data, dob, age });
-        onNext();
+      const response = await userService.updateDOB(dob);
+
+      const ageGroup = response?.data?.data?.age_group;
+
+      if (ageGroup) {
+        localStorage.setItem("user_age_group", ageGroup);
+      }
+
+      // Calculate age from selected year
+      const calculatedAge = new Date().getFullYear() - year;
+      
+      // ✅ Pass both ageGroup and calculatedAge to parent
+      onSuccess(ageGroup, calculatedAge);
+
     }
+    //  catch (error) {
+    //   console.error("Error saving DOB:", error);
+    //   alert("Failed to save Date of Birth. Please try again.");
+    // }
+    
+    catch (error) {
+  console.log("FULL DOB ERROR:", {
+    status: error?.response?.status,
+    data: error?.response?.data,
+    message: error?.response?.data?.message,
+    error_code: error?.response?.data?.error_code,
+  });
 
-    return (
-        <div className="w-[360px] text-center">
+  alert(error?.response?.data?.message || "Failed to save DOB");
+}
 
-            {/* HEADER */}
-            <div className="flex items-center gap-12 mb-3">
-                <button onClick={onBack} className="mt-6 mb-10 text-gray-400 text-3xl font-bold"> ← </button>
-                <h1 className="text-3xl font-Playfair Display">
-                    How <span className="text-pink-500">Old</span> Are You
-                </h1>
-            </div>
+    finally {
+      setLoading(false);
+    }
+  }
 
-            <p className="text-gray-400 text-sm font-Poppins ">
-                Please provide your age in years
-            </p>
+  return (
+    <div className="w-[360px] text-center">
 
-            {/* WHEEL */}
-            <div className="relative mt-12 h-[240px] font-Poppins">
+      <h1 className="text-3xl mb-6">
+        How Old Are You?
+      </h1>
 
-                {/* fade overlays */}
-                <div className="absolute top-0 w-full h-20 bg-gradient-to-b from-black to-transparent z-20 pointer-events-none" />
-                <div className="absolute bottom-0 w-full h-20 bg-gradient-to-t from-black to-transparent z-20 pointer-events-none" />
+      <div className="grid grid-cols-3 gap-2 mb-6">
+        <select value={day} onChange={(e)=>setDay(Number(e.target.value))}>
+          {days.map(d => <option key={d}>{d}</option>)}
+        </select>
 
-                {/* center highlight */}
-                <div className="absolute top-1/2 left-0 w-full h-[52px] font-Poppins
-                               -translate-y-1/2
-                                 border-t border-b border-pink-500/40
-                             bg-pink-500/5 rounded-xl z-10 pointer-events-none"
-                />
+        <select value={month} onChange={(e)=>setMonth(e.target.value)}>
+          {months.map(m => <option key={m}>{m}</option>)}
+        </select>
 
-                <div className="grid grid-cols-3 h-full">
+        <select value={year} onChange={(e)=>setYear(Number(e.target.value))}>
+          {years.map(y => <option key={y}>{y}</option>)}
+        </select>
+      </div>
 
-                    <WheelColumn
-                        items={days}
-                        value={day}
-                        onChange={setDay}
-                    />
+      <p className="mb-4">You're {age}</p>
 
-                    <WheelColumn
-                        items={months}
-                        value={month}
-                        onChange={setMonth}
-                    />
-
-                    <WheelColumn
-                        items={years}
-                        value={year}
-                        onChange={setYear}
-                        highlight
-                    />
-
-                </div>
-            </div>
-
-            {/* AGE CARD */}
-            <div className="mt-12 border-2 border-pink-500/40 rounded-2xl p-5
-        bg-black/60
-        ">
-
-                <p className="text-xl font-semibold">
-                    You’re {age}
-                </p>
-
-                <p className="text-xs text-gray-400 mt-2 font-Poppins"> 
-                    Is {month} {day}, {year} your birthday?
-                    This can only be changed once.
-                </p>
-
-                <button
-                    onClick={confirmDob}
-                    className="mt-6 w-full py-4 rounded-full
-            bg-gradient-to-r from-pink-500 via-orange-400 to-pink-500 font-Poppins
-            font-semibold tracking-wide"
-                >
-                    Continue
-                </button>
-
-                <button
-                    onClick={onBack}
-                    className="mt-3 text-sm text-gray-400 font-Poppins "
-                >
-                    Edit
-                </button>
-            </div>
-
-        </div>
-    );
+      <button
+        onClick={confirmDob}
+        disabled={loading}
+        className="w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40"
+      >
+        {loading ? "Saving..." : "Continue"}
+      </button>
+    </div>
+  );
 }
 
 
-function WheelColumn({ items, value, onChange, highlight }) {
-    const containerRef = React.useRef(null);
-    const itemRefs = React.useRef([]);
 
-    // find closest item when scrolling stops
-    React.useEffect(() => {
-        const container = containerRef.current;
-        if (!container) return;
-
-        let timeout;
-
-        function onScroll() {
-            clearTimeout(timeout);
-
-            timeout = setTimeout(() => {
-                const center =
-                    container.scrollTop +
-                    container.offsetHeight / 2;
-
-                let closestIndex = 0;
-                let minDist = Infinity;
-
-                itemRefs.current.forEach((el, idx) => {
-                    if (!el) return;
-
-                    const elCenter =
-                        el.offsetTop + el.offsetHeight / 2;
-
-                    const dist = Math.abs(elCenter - center);
-
-                    if (dist < minDist) {
-                        minDist = dist;
-                        closestIndex = idx;
-                    }
-                });
-
-                onChange(items[closestIndex]);
-            }, 80);
-        }
-
-        container.addEventListener("scroll", onScroll);
-
-        return () => container.removeEventListener("scroll", onScroll);
-    }, [items, value]);
-
-    // snap active into center
-    React.useEffect(() => {
-        const index = items.indexOf(value);
-        const container = containerRef.current;
-        const el = itemRefs.current[index];
-
-        if (!container || !el) return;
-
-        const offset =
-            el.offsetTop -
-            container.offsetHeight / 2 +
-            el.offsetHeight / 2;
-
-        container.scrollTo({
-            top: offset,
-            behavior: "smooth",
-        });
-    }, [value]);
-
-    return (
-        <div
-            ref={containerRef}
-            className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
-        >
-            <div className="py-[96px] space-y-4">
-
-                {items.map((item, idx) => {
-                    const active = item === value;
-
-                    return (
-                        <div
-                            key={item}
-                            ref={(el) => (itemRefs.current[idx] = el)}
-                            className={`snap-center text-center transition-all duration-200
-                ${active
-                                    ? highlight
-                                        ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent text-2xl font-semibold"
-                                        : "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent text-2xl font-semibold"
-                                    : "text-gray-500 opacity-30 text-2xl"
-                                }`}
-                        >
-                            {item}
-                        </div>
-                    );
-                })}
-
-            </div>
-        </div>
-    );
-}
 
 // STEP 3 — PARENT CONSENT
 
 function ParentConsentStep({ onNext, onBack }) {
     const [checked, setChecked] = React.useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const handleConsent = async () => {
+        if (!checked) return;
+        
+        try {
+            setLoading(true);
+            // Save parent consent to backend
+            await userService.giveParentConsent();
+            onNext();
+        } catch (error) {
+  console.error('Error saving parent consent:', error);
+  alert("Failed to save parent consent. Please try again.");
+  return; // STOP here
+}finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="w-[360px] h-[640px] text-white relative px-6">
@@ -494,18 +401,18 @@ function ParentConsentStep({ onNext, onBack }) {
             <div className="absolute bottom-8 left-0 w-full px-6 font-Poppins">
 
                 <button
-                    disabled={!checked}
-                    onClick={onNext}
+                    disabled={!checked || loading}
+                    onClick={handleConsent}
                     className="w-full py-4 rounded-full
             bg-gradient-to-r from-pink-500 to-orange-400
-         
+          
             disabled:opacity-40"
                 >
-                    Give Consent
+                    {loading ? 'Saving...' : 'Give Consent'}
                 </button>
 
                 <p className="mt-4 text-center text-xs text-gray-500">
-                    By continuing, you agree to Playmate’s Terms & Privacy Policy.
+                    By continuing, you agree to Playmate's Terms & Privacy Policy.
                 </p>
             </div>
 
@@ -515,277 +422,528 @@ function ParentConsentStep({ onNext, onBack }) {
 
 
 
-// STEP 4 — LOCATION
-
-function LocationPermissionStep({ onNext, onBack }) {
-    return (
-        <div className="relative w-[360px] h-[640px] overflow-hidden bg-black">
-
-            {/* MAP BACKGROUND IMAGE */}
-            <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{
-                    backgroundImage: "url( /loginAvatars/map.jpg)", // put image in /public/map-bg.jpg
-                }}
-            />
-
-            {/* DARK OVERLAY */}
-            <div className="absolute inset-0 bg-black/20" />
-
-            {/* PERMISSION CARD */}
-            <div className="relative z-10 w-full h-full flex items-center justify-center">
-
-                <div className="bg-white rounded-2xl p-6 w-[280px] text-center shadow-2xl">
-
-                    <div className="mx-auto w-14 h-14 flex items-center justify-center">
-                        <span className="text-4xl">📍</span>
-                    </div>
-
-                    <h2 className="mt-4 font-bold text-lg text-black font-Poppins">
-                        Location
-                    </h2>
-
-                    <p className="mt-2 text-sm text-gray-500 font-Poppins ">
-                        Allow maps to access your location while you use the app?
-                    </p>
-
-                    <button
-                        onClick={onNext}
-                        className="mt-6 w-full py-3 rounded-full
-              bg-gradient-to-r from-pink-500 to-orange-400
-              text-white font-Poppins "
-                    >
-                        Allow
-                    </button>
+// STEP 4 Location
 
 
-                </div>
-            </div>
-        </div>
+function LocationPickerStep({ onSuccess }) {
+  const [query, setQuery] = useState("");
+  const [coords, setCoords] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const inputRef = React.useRef(null);
+
+  // ✅ Google Places Hook
+  const {
+    predictions,
+    selectedPlace,
+    isLoaded,
+    error: placesError,
+    getPredictions,
+    selectPrediction,
+    parseAddress,
+    clearSelection,
+  } = usePlacesAutocomplete(inputRef);
+
+  /* ---------------------------------------------------------- */
+  /* AUTO REQUEST GEOLOCATION ON MOUNT                         */
+  /* ---------------------------------------------------------- */
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCoords({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      () => {
+        // user denied → silently ignore
+      },
+      { enableHighAccuracy: true }
     );
-}
+  }, []);
 
-// STEP 5 - LocationPicker
+  /* ---------------------------------------------------------- */
+  /* HANDLE SEARCH INPUT                                        */
+  /* ---------------------------------------------------------- */
 
-function LocationPickerStep({ onNext, onBack }) {
-    const [query, setQuery] = React.useState("");
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setQuery(value);
 
-    const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(
-        query
-    )}&output=embed`;
+    if (value.length >= 3) {
+      getPredictions(value);
+    }
+  };
 
-    return (
-        <div className="relative w-[360px] h-[640px] overflow-hidden bg-black font-Poppins">
+  const handleSelectPrediction = async (prediction) => {
+    const place = await selectPrediction(prediction);
+    if (!place) return;
 
-            {/* MAP */}
-            <iframe
-                src={mapUrl}
-                className="absolute inset-0 w-full h-full border-0"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-            />
+    const parsed = parseAddress(place);
+    setQuery(parsed.fullAddress || prediction.description);
 
-            {/* Bottom Search Bar */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%]
+    if (place.geometry?.location) {
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      setCoords({ lat, lng });
+    }
+  };
+
+  /* ---------------------------------------------------------- */
+  /* CONFIRM LOCATION                                           */
+  /* ---------------------------------------------------------- */
+
+  const handleConfirmLocation = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!coords) {
+        setError("Please allow location or search a location.");
+        setLoading(false);
+        return;
+      }
+
+      const payload = {
+        lat: coords.lat,
+        lng: coords.lng,
+        location: {
+          type: "Point",
+          coordinates: [coords.lng, coords.lat],
+        },
+      };
+
+      const response = await userService.updateLocation(payload);
+
+      console.log("Location saved:", response.data);
+
+      // 🔥 Refresh onboarding step from backend
+      if (onSuccess) {
+        onSuccess();
+      }
+
+    } catch (err) {
+      console.log("FULL LOCATION ERROR:", err?.response?.data);
+
+      const status = err?.response?.status;
+
+      if (status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+
+      if (status === 400) {
+        // State mismatch → just refresh
+        if (onSuccess) {
+          onSuccess();
+        }
+        return;
+      }
+
+      setError(
+        err?.response?.data?.message ||
+        "Failed to save location. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ---------------------------------------------------------- */
+  /* MAP URL                                                     */
+  /* ---------------------------------------------------------- */
+
+  const mapUrl = coords
+    ? `https://www.google.com/maps?q=${coords.lat},${coords.lng}&z=15&output=embed`
+    : `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+
+  /* ---------------------------------------------------------- */
+  /* UI                                                          */
+  /* ---------------------------------------------------------- */
+
+  return (
+    <div className="relative w-[360px] h-[640px] bg-black text-white">
+
+      <iframe
+        src={mapUrl}
+        className="absolute inset-0 w-full h-full border-0"
+        loading="lazy"
+      />
+
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%]
         bg-black/80 rounded-xl p-3 backdrop-blur">
 
-                <div className="flex items-center gap-2 border border-pink-500/40 rounded-lg px-3 py-2">
+        {/* Search */}
+        <div className="relative">
+          <div className="flex items-center gap-2 border border-pink-500/40 rounded-lg px-3 py-2">
+            🔍
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={handleInputChange}
+              placeholder="Search location..."
+              className="bg-transparent outline-none text-sm flex-1 text-white"
+            />
+            {query && (
+              <button
+                onClick={() => {
+                  setQuery("");
+                  clearSelection();
+                  setCoords(null);
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
 
-                    <span>🔍</span>
-
-                    <input
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search location..."
-                        className="bg-transparent outline-none text-sm flex-1 text-white"
-                    />
-
-                </div>
-
+          {predictions.length > 0 && (
+            <div className="absolute bottom-full left-0 right-0 mb-1 bg-gray-900 rounded-lg max-h-40 overflow-y-auto">
+              {predictions.map((prediction) => (
                 <button
-                    onClick={onNext}
-                    className="mt-3 w-full py-3 rounded-full
-            bg-gradient-to-r from-pink-500 to-orange-400"
+                  key={prediction.place_id}
+                  onClick={() => handleSelectPrediction(prediction)}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-800"
                 >
-                    Confirm Location
+                  {prediction.description}
                 </button>
-
-                <button
-                    onClick={onBack}
-                    className="mt-2 text-xs text-gray-400 w-full"
-                >
-                    Back
-                </button>
+              ))}
             </div>
+          )}
         </div>
-    );
+
+        {/* Places Error */}
+        {placesError && (
+          <p className="text-yellow-400 text-xs mt-2 text-center">
+            {placesError}
+          </p>
+        )}
+
+        {/* Confirm Button */}
+        <button
+          onClick={handleConfirmLocation}
+          disabled={loading}
+          className="mt-3 w-full py-3 rounded-full
+            bg-gradient-to-r from-pink-500 to-orange-400
+            disabled:opacity-40"
+        >
+          {loading ? "Saving..." : "Confirm Location"}
+        </button>
+
+        {error && (
+          <p className="text-red-400 text-xs text-center mt-2">
+            {error}
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
 
-// STEP 6 — PHOTO
 
-function PhotoStep({ onNext, onBack }) {
-    const [photo, setPhoto] = React.useState(null);
+// STEP 5 — PHOTO
 
-    function handleUpload(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+function PhotoStep({ onSuccess }) {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-        const url = URL.createObjectURL(file);
-        setPhoto(url);
+  /* ---------------------------------------------------------- */
+  /* HANDLE FILE SELECT                                         */
+  /* ---------------------------------------------------------- */
+
+  const handleUpload = (e) => {
+    const selected = e.target.files[0];
+    if (!selected) return;
+
+    setFile(selected);
+    setPreview(URL.createObjectURL(selected));
+  };
+
+  /* ---------------------------------------------------------- */
+  /* SUBMIT PHOTO                                               */
+  /* ---------------------------------------------------------- */
+
+  const handleSubmit = async () => {
+    if (!file) {
+      setError("Please select a photo.");
+      return;
     }
 
-    return (
-        <div className="w-[360px] text-center text-white py-16">
-            <div className="flex items-center gap-12 mb-3">
-                <button onClick={onBack} className="mt-6 mb-10 text-gray-400 text-3xl font-bold"> ← </button>
+    try {
+      setLoading(true);
+      setError(null);
 
-                {/* TITLE */}
-                <h1 className="text-3xl font-Playfair Display">
-                    Add a Profile{" "}
-                    <span className="text-orange-400">Photo</span>
-                </h1>
-            </div>
-            <p className="text-gray-400 mt-2 text-sm px-4 font-Poppins ">
-                Add a photo to personalize your profile and make your experience
-                more engaging.
-            </p>
+      const fileName = `profile_${Date.now()}.jpg`;
+      const contentType = file.type || "image/jpeg";
 
-            {/* MAIN IMAGE */}
-            <div className="relative mt-10 mx-auto w-[170px] h-[210px]
+      // 1️⃣ Get presigned URL
+    const presignResponse = await userService.getPresignedUrl(
+  fileName,
+  file
+);
+
+      const { upload_url, file_url } =
+        presignResponse?.data?.data || {};
+
+      if (!upload_url || !file_url) {
+        throw new Error("Invalid presign response");
+      }
+
+      // 2️⃣ Upload file to S3
+     await userService.uploadToPresigned(
+  upload_url,
+  file,
+  file.type
+);
+
+      // 3️⃣ Save file URL to backend
+      await userService.updateProfilePhoto(file_url);
+
+      console.log("Profile photo saved successfully");
+
+      // 4️⃣ Refresh step from backend
+      if (onSuccess) {
+        onSuccess();
+      }
+
+    } 
+    // catch (err) {
+    //   console.log("FULL PHOTO ERROR:", err?.response?.data);
+
+    //   const status = err?.response?.status;
+
+    //   if (status === 401) {
+    //     window.location.href = "/login";
+    //     return;
+    //   }
+
+    //   if (status === 400) {
+    //     // state mismatch → refresh
+    //     if (onSuccess) {
+    //       onSuccess();
+    //     }
+    //     return;
+    //   }
+
+    //   setError(
+    //     err?.response?.data?.message ||
+    //     "Failed to upload photo. Please try again."
+    //   );
+    // }
+
+    catch (err) {
+  console.log("FULL PHOTO ERROR:", err?.response?.data);
+  console.log("VALIDATION DETAILS:", err?.response?.data?.errors);
+}
+
+// catch (err) {
+//   const errorMessage =
+//     err?.response?.data?.message ||
+//     "Photo validation failed.";
+
+//   setError(errorMessage);
+// }
+    
+    finally {
+      setLoading(false);
+    }
+  };
+
+  /* ---------------------------------------------------------- */
+  /* UI                                                          */
+  /* ---------------------------------------------------------- */
+
+  return (
+    <div className="w-[360px] text-center text-white py-16">
+
+      <h1 className="text-3xl font-Playfair Display">
+        Add a Profile{" "}
+        <span className="text-orange-400">Photo</span>
+      </h1>
+
+      <div className="relative mt-10 mx-auto w-[170px] h-[210px]
         rounded-2xl p-[2px]
         bg-gradient-to-br from-pink-500 to-orange-400">
 
-                <div className="w-full h-full bg-white rounded-2xl overflow-hidden flex items-center justify-center">
+        <div className="w-full h-full bg-white rounded-2xl overflow-hidden flex items-center justify-center">
 
-                    {photo ? (
-                        <img
-                            src={photo}
-                            alt="profile"
-                            className="w-full h-full object-fill"
-                        />
-                    ) : (
-                        <img
-                            src="/loginAvatars/profile.png"
-                            alt="placeholder"
-                            className="w-28 h-28 object-cover"
-                        />
-                    )}
-
-                </div>
-
-                {/* CAMERA BUTTON */}
-                <label className="absolute -bottom-3 -right-3 w-12 h-12
-                   rounded-full bg-gradient-to-r from-pink-500 to-orange-400 flex items-center justify-center
-                   cursor-pointer shadow-lg">
-
-                    <img src="/loginAvatars/camera.png" alt="" />
-                    <input
-                        type="file"
-                        accept="image/*"
-                        hidden
-                        onChange={handleUpload}
-                    />
-                </label>
-            </div>
-
-            {/* SMALL UPLOAD BOXES */}
-            <div className="grid grid-cols-2 gap-4 mt-10 px-4 font-Poppins ">
-
-                {[1, 2].map((i) => (
-                    <label
-                        key={i}
-                        className="border border-pink-500/40 rounded-xl p-6
-              flex flex-col items-center gap-2
-              cursor-pointer
-              bg-white/5
-              hover:bg-white/10 transition">
-
-                        <div className="w-10 h-10 rounded-full
-              bg-gradient-to-br from-pink-500 to-orange-400
-              flex items-center justify-center">
-
-                            👤
-                        </div>
-
-                        <span className="text-sm">Upload Photo</span>
-
-                        <input
-                            type="file"
-                            hidden
-                            accept="image/*"
-                            onChange={handleUpload}
-                        />
-                    </label>
-                ))}
-
-            </div>
-
-            {/* BUTTON */}
-            <button
-                disabled={!photo}
-                onClick={onNext}
-                className="mt-12 w-[90%] py-4 rounded-full
-          bg-gradient-to-r from-pink-500 to-orange-400
-       font-Poppins
-          disabled:opacity-40"
-            >
-                Get Started
-            </button>
+          {preview ? (
+            <img
+              src={preview}
+              alt="profile"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-gray-400">No Photo</span>
+          )}
         </div>
-    );
+
+        <label className="absolute -bottom-3 -right-3 w-12 h-12
+          rounded-full bg-gradient-to-r from-pink-500 to-orange-400
+          flex items-center justify-center cursor-pointer shadow-lg">
+
+          📷
+          <input
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={handleUpload}
+          />
+        </label>
+      </div>
+
+      {error && (
+        <p className="text-red-400 text-sm mt-4">{error}</p>
+      )}
+
+      <button
+        disabled={!file || loading}
+        onClick={handleSubmit}
+        className="mt-12 w-[90%] py-4 rounded-full
+          bg-gradient-to-r from-pink-500 to-orange-400
+          disabled:opacity-40"
+      >
+        {loading ? "Uploading..." : "Continue"}
+      </button>
+    </div>
+  );
 }
 
-// STEP 7 — STATUS
+// STEP 6 — STATUS
 
 
-import { useRouter } from "next/navigation";
 
- function StatusStep({ value, onSelect, onBack }) {
+
+
+
+
+ function StatusStep({ onBack }) {
   const router = useRouter();
 
-  const options = [
-    { label: "Student", icon: "🎓" },
-    { label: "Working Professional", icon: "💼" },
-    { label: "Business Owner", icon: "👜" },
-    { label: "Self - Employed", icon: "👤" },
-    { label: "Freelancer", icon: "🧑‍💻" },
-    { label: "Other", icon: "⋯" },
-  ];
+  const [roles, setRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(true);
+  const [selectedRole, setSelectedRole] = useState(null);
+  const [formFields, setFormFields] = useState([]);
+  const [formData, setFormData] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  // 👉 Navigate based on selected status
-  const handleNext = () => {
-    if (!value) return;
+  // ✅ Fetch roles from backend
+  useEffect(() => {
+    setRolesLoading(true);
+    userService.getActivityIntentRoles()
+      .then((res) => {
+        // API returns { data: { roles: [...] } }
+        const rolesArray = res?.data?.data?.roles || res?.data?.roles || [];
+        console.log("Activity intent roles response:", rolesArray);
+        setRoles(Array.isArray(rolesArray) ? rolesArray : []);
+      })
+      .catch((err) => {
+        console.error("Error fetching roles:", err);
+        setRoles([]);
+      })
+      .finally(() => {
+        setRolesLoading(false);
+      });
+  }, []);
 
-    switch (value) {
-      case "Student":
-        router.push("/personal-verifiction/profile_setup/student");
-        break;
+  // ✅ When role selected
+  const handleSelectRole = async (role) => {
+    setSelectedRole(role);
+    setFormFields([]);
+    setFormData({});
 
-      case "Working Professional":
-        router.push(
-          "/personal-verifiction/profile_setup/working_professional"
-        );
-        break;
+    try {
+      setLoading(true);
 
-      case "Business Owner":
-        router.push("/personal-verifiction/profile_setup/business_owner");
-        break;
+      // POST selected role - details should be empty string initially
+      const response = await userService.setActivityIntent(role.value, '');
+      console.log("Activity intent set:", response.data);
 
-      case "Self - Employed":
-        router.push("/personal-verifiction/profile_setup/self_employed");
-        break;
+      // GET profile role config (form fields)
+      try {
+        const configRes = await userService.getProfileRoleConfig();
+        const configs = configRes?.data?.data?.configs || [];
+        
+        // Find the config for the selected role
+        const roleConfig = configs.find(c => c.role_type === role.value);
+        if (roleConfig && roleConfig.fields) {
+          setFormFields(roleConfig.fields);
+        } else {
+          console.log("No fields config found for role:", role.value);
+        }
+      } catch (fieldErr) {
+        console.log("No profile role config:", fieldErr);
+      }
+      
+    } catch (err) {
+      console.error("Error setting activity intent:", err);
+      alert(err?.response?.data?.message || "Failed to save activity. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      case "Freelancer":
-        router.push("/personal-verifiction/profile_setup/freelancer");
-        break;
+  // ✅ Handle input change
+  const handleChange = (key, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
 
-      default:
-        router.push("/personal-verifiction/profile_setup/other");
+  // ✅ Submit profile details
+  const handleSubmit = async () => {
+    console.log("Form fields:", formFields);
+    console.log("Form data:", formData);
+    console.log("Selected role:", selectedRole?.value);
+    
+    // Validate required fields
+    const missingFields = formFields
+      .filter(field => field.required && !formData[field.key])
+      .map(field => field.label);
+    
+    if (missingFields.length > 0) {
+      alert(`Please fill in: ${missingFields.join(', ')}`);
+      return;
+    }
+
+    // Check if current_city is required
+    if (!formData.current_city) {
+      alert("Please enter your current city");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Build details object - include all form data plus current_city
+      const details = {
+        ...formData,
+      };
+      
+      console.log("Submitting details:", { role_type: selectedRole?.value, details });
+      
+      // Use userService.setProfileDetails with correct format
+      const response = await userService.setProfileDetails(selectedRole?.value, details);
+      console.log("Profile details saved:", response.data);
+      
+      // Redirect to KYC
+      router.push("/personal-verification/kyc");
+    } catch (err) {
+      console.error("Profile details error:", err.response?.data || err);
+      alert(err?.response?.data?.message || "Failed to save profile details. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="w-[360px] text-center text-white">
+    <div className="w-[360px] text-white mx-auto">
 
       {/* TOP BAR */}
       <div className="flex items-center gap-6 mb-6">
@@ -796,7 +954,7 @@ import { useRouter } from "next/navigation";
           ←
         </button>
 
-        <h1 className="text-2xl font-Playfair Display font-semibold leading-tight">
+        <h1 className="text-2xl font-semibold leading-tight">
           What are you{" "}
           <span className="bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
             doing right now?
@@ -804,545 +962,131 @@ import { useRouter } from "next/navigation";
         </h1>
       </div>
 
-      <p className="text-gray-400 text-sm px-4 font-Poppins">
-        This helps us tailor your Playmate experience.
-      </p>
+      {/* ROLE OPTIONS */}
+      {rolesLoading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto"></div>
+          <p className="mt-4 text-gray-400">Loading options...</p>
+        </div>
+      ) : roles.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-400">No activity options available.</p>
+          <p className="text-gray-500 text-sm mt-2">Please try again later.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {roles.map((role) => {
+            const active = selectedRole?.value === role.value;
 
-      {/* OPTIONS */}
-      <div className="mt-6 space-y-3 px-2 font-Poppins">
-        {options.map((opt) => {
-          const active = value === opt.label;
-
-          return (
-            <button
-              key={opt.label}
-              onClick={() => onSelect(opt.label)}
-              className={`w-full flex items-center justify-between
-                px-4 py-4 rounded-xl border transition-all
-                ${
-                  active
-                    ? "border-pink-500 bg-white/5"
-                    : "border-gray-700 bg-white/2"
-                }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">{opt.icon}</span>
-                <span className="text-sm">{opt.label}</span>
-              </div>
-
-              <div
-                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
+            return (
+              <button
+                key={role.value}
+                onClick={() => handleSelectRole(role)}
+                className={`w-full flex items-center justify-between px-4 py-4 rounded-xl border transition-all
                   ${
                     active
-                      ? "border-pink-500"
-                      : "border-gray-500"
+                      ? "border-pink-500 bg-white/5"
+                      : "border-gray-700 bg-white/2"
                   }`}
               >
-                {active && (
-                  <div className="w-2.5 h-2.5 rounded-full
-                    bg-gradient-to-r from-pink-500 to-orange-400"
-                  />
-                )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* CONTINUE */}
-      <button
-        disabled={!value}
-        onClick={handleNext}
-        className="mt-8 w-[90%] py-4 rounded-full
-          bg-gradient-to-r from-pink-500 to-orange-400
-          font-Poppins disabled:opacity-40"
-      >
-        Continue
-      </button>
-
-      {/* SKIP */}
-      <button className="mt-4 text-xs text-gray-400 font-Poppins">
-        Skip for now
-      </button>
-    </div>
-  );
-}
-
-
-// step 8   /   KYC
-
-function KYC({ onNext, onSkip, onBack }) {
-  return (
-    <div className="min-h-screen bg-black relative flex items-center justify-center px-6">
-
-      {/* Back Arrow */}
-      {onBack && (
-        <button
-          onClick={onBack}
-          className="absolute top-5 left-5 text-white/80 text-xl"
-        >
-          ←
-        </button>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{role.icon}</span>
+                  <span className="text-sm">{role.label}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       )}
 
-      {/* Card */}
-      <div
-        className="
-          w-full max-w-sm
-          rounded-3xl
-          p-8
-          text-center
-          bg-gradient-to-br from-[#2a1626] to-[#120a12]
-          shadow-[0_0_60px_rgba(255,100,160,0.18)]
-        "
-      >
-        {/* Title */}
-        <h1 className="text-3xl font-Playfair Display text-white">
-          Start Your{" "}
-          <span className="text-orange-400">
-            KYC
-          </span>
-        </h1>
+      {/* DYNAMIC FORM */}
+      {selectedRole && (
+        <div className="mt-6 space-y-4">
 
-        {/* Subtitle */}
-        <p className="mt-3 text-sm text-white/50 leading-relaxed">
-          Free users must verify within 30 days
-          <br />
-          to continue using the app
-        </p>
+          <h2 className="text-lg font-semibold">
+            {selectedRole.label} Details
+          </h2>
 
-        {/* Buttons */}
-        <div className="mt-10 flex gap-4 justify-center">
+          {loading && <p className="text-gray-400">Loading fields...</p>}
 
-          {/* Skip */}
-          <button
-            onClick={onNext}
-            className="
-              px-9 py-3 rounded-full
-              border border-pink-500/60
-              text-white/70
-              hover:bg-white/5
-              transition
-            "
-          >
-            Skip
-          </button>
+          {/* Backend generated fields */}
+          {formFields.map((field) => (
+            <div key={field.key}>
+              <label className="text-sm text-gray-400">
+                {field.icon} {field.label}
+              </label>
 
-          {/* Continue */}
-          <button
-            onClick={onNext}
-            className="
-              px-9 py-3 rounded-full  text-white font-Poppins
-              bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
-              shadow-[0_0_28px_rgba(255,130,60,0.5)]
-              hover:scale-[1.04]
-              transition
-            "
-          >
-            Continue
-          </button>
-
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// step 9  /   Verify Aadhar
-
-function VerifyAadhaar({ onBack, onNext }) {
-  const [aadhaar, setAadhaar] = React.useState("");
-
-  return (
-    <div className="min-h-screen bg-black relative px-6 text-white flex flex-col">
-
-      {/* Back */}
-      <button
-        onClick={onBack}
-        className="absolute top-5 left-5 text-white/80 text-xl"
-      >
-        ←
-      </button>
-
-      {/* CONTENT */}
-      <div className="mt-28 text-center">
-
-        <h1 className="text-3xl font-Playfair Display leading-tight">
-          Enter Your{" "}
-          <span className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] bg-clip-text text-transparent">
-            Aadhar
-          </span>
-          <br />
-          <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
-            Number
-          </span>
-        </h1>
-
-        <p className="mt-4 text-sm text-white/40 px-4">
-          We have sent the OTP to your aadhar
-          <br />
-          number
-        </p>
-
-        {/* INPUT */}
-        <div className="mt-10">
-
-          <div className="p-[1.5px] rounded-2xl bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]">
-            <input
-              value={aadhaar}
-              maxLength={12}
-              onChange={(e) =>
-                setAadhaar(
-                  e.target.value.replace(/\D/g, "")
-                )
-              }
-              placeholder="Enter your 16 Digit Aadhar Number"
-              className="
-                w-full rounded-2xl px-5 py-4
-                bg-[#141414]
-                outline-none
-                text-sm
-                placeholder:text-white/30
-              "
-            />
-          </div>
-
-        </div>
-      </div>
-
-      {/* VERIFY BUTTON */}
-      <div className="mt-auto pb-10">
-
-        <button
-          disabled={aadhaar.length !== 12}
-          onClick={onNext}
-          className="
-            w-full py-4 rounded-full font-semibold
-            bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
-            shadow-[0_0_28px_rgba(255,130,60,0.5)]
-            disabled:opacity-40
-          "
-        >
-          Verify Aadhar
-        </button>
-      </div>
-
-    </div>
-  );
-}
-
-// step 10   /   Adhaar OTP
-
-function AthaarOTP({ onBack, onVerify,onNext, onResend }) {
-  const [otp, setOtp] = React.useState(["", "", "", "", "", ""]);
-  const inputsRef = React.useRef([]);
-
-  const handleChange = (value, index) => {
-    if (!/^\d?$/.test(value)) return;
-
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    if (value && index < 5) {
-      inputsRef.current[index + 1].focus();
-    }
-  };
-
-  const handleKeyDown = (e, index) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      inputsRef.current[index - 1].focus();
-    }
-  };
-
-  const code = otp.join("");
-
-  return (
-    <div className="min-h-screen bg-black relative px-6 text-white flex flex-col">
-
-      {/* Back */}
-      <button
-        onClick={onBack}
-        className="absolute top-5 left-5 text-white/80 text-xl"
-      >
-        ←
-      </button>
-
-      {/* CONTENT */}
-      <div className="mt-28 text-center">
-
-        <h1 className="text-3xl font-Playfair Display leading-tight">
-          Verification{" "}
-          <span className="text-orange-400">
-            Code
-          </span>
-        </h1>
-
-        <p className="mt-4 text-sm text-white/40 px-4 leading-relaxed">
-          Please enter the code we just sent to your registered
-          <br />
-          mobile number to verify your Aadhaar number.
-        </p>
-
-        {/* OTP BOXES */}
-        <div className="mt-10 flex justify-center gap-3">
-
-          {otp.map((digit, i) => (
-            <input
-              key={i}
-              ref={(el) => (inputsRef.current[i] = el)}
-              value={digit}
-              maxLength={1}
-              onChange={(e) =>
-                handleChange(e.target.value, i)
-              }
-              onKeyDown={(e) =>
-                handleKeyDown(e, i)
-              }
-              className="
-                w-12 h-14 text-center text-xl
-                rounded-xl
-                bg-[#141414]
-                border border-[#EF3AFF]/40
-                focus:border-[#FF8319]
-                outline-none
-              "
-            />
-          ))}
-        </div>
-
-        {/* RESEND */}
-        <div className="mt-6 text-sm text-white/50">
-          Didn’t receive OTP?{" "}
-          <button
-            onClick={onResend}
-            className="text-white underline"
-          >
-            Resend Code
-          </button>
-        </div>
-      </div>
-
-      {/* VERIFY BUTTON */}
-      <div className="mt-auto pb-10">
-
-        <button
-          disabled={code.length !== 6}
-          onClick={onNext}
-          className="
-            w-full py-4 rounded-full font-semibold
-            bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
-            shadow-[0_0_28px_rgba(255,130,60,0.5)]
-            disabled:opacity-40
-          "
-        >
-          Verify
-        </button>
-      </div>
-
-    </div>
-  );
-}
-
-//step 11    /    FaceVerification 
-
-function FaceVerification({ onBack, onStart, onNext }) {
-
-  return (
-    <div className="min-h-screen bg-black relative px-6 text-white flex flex-col">
-
-      {/* Back */}
-      <button
-        onClick={onBack}
-        className="absolute top-5 left-5 text-white/80 text-xl"
-      >
-        ←
-      </button>
-
-      {/* CONTENT */}
-      <div className="mt-24 text-center">
-
-        {/* TITLE */}
-        <h1 className="text-3xl font-Playfair Display">
-          <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
-            Face
-          </span>{" "}
-          Verification
-        </h1>
-
-        {/* ICON */}
-        <div className="mt-10 flex justify-center relative">
-
-          {/* Scan Frame */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-44 h-44 relative">
-
-              {/* corners */}
-              <span className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-pink-500" />
-              <span className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-orange-400" />
-              <span className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-pink-500" />
-              <span className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-orange-400" />
-
+              {field.type === "select" ? (
+                <select
+                  className="w-full mt-1 px-3 py-2 rounded-lg bg-black border border-gray-700"
+                  value={formData[field.key] || ''}
+                  onChange={(e) =>
+                    handleChange(field.key, e.target.value)
+                  }
+                >
+                  <option value="">Select</option>
+                  {field.options?.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type={field.type || "text"}
+                  placeholder={field.placeholder}
+                  value={formData[field.key] || ''}
+                  className="w-full mt-1 px-3 py-2 rounded-lg bg-black border border-gray-700"
+                  onChange={(e) =>
+                    handleChange(field.key, e.target.value)
+                  }
+                />
+              )}
             </div>
-          </div>
+          ))}
 
-          {/* Avatar */}
-          <div className="relative z-10 w-28 h-28 rounded-full bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] flex items-center justify-center">
-            <span className="text-3xl text-black">✔</span>
-          </div>
+          {/* Always include current_city as it's required by the API */}
+          {!formFields.find(f => f.key === 'current_city') && (
+            <div>
+              <label className="text-sm text-gray-400">
+                📍 Current City
+              </label>
+              <input
+                type="text"
+                placeholder="Enter your city"
+                value={formData.current_city || ''}
+                className="w-full mt-1 px-3 py-2 rounded-lg bg-black border border-gray-700"
+                onChange={(e) =>
+                  handleChange('current_city', e.target.value)
+                }
+              />
+            </div>
+          )}
 
-        </div>
+          {/* Special Case → Other */}
+          {selectedRole.value === "OTHER" && (
+            <div>
+              <label className="text-sm text-gray-400">
+                Enter your profession
+              </label>
+              <input
+                type="text"
+                className="w-full mt-1 px-3 py-2 rounded-lg bg-black border border-gray-700"
+                onChange={(e) =>
+                  handleChange("custom_profession", e.target.value)
+                }
+              />
+            </div>
+          )}
 
-        {/* TEXT */}
-        <h2 className="mt-10 text-lg font-semibold">
-          Verify your identity
-        </h2>
-
-        <p className="mt-3 w-96 text-md text-white/40 px-10 leading-relaxed">
-          Please enter the code we just sent to your registered
-          mobile number to verify your Aadhaar number.
-        </p>
-      </div>
-
-      {/* BUTTON */}
-      <div className="mt-auto pb-10">
-
-        <button
-          onClick={onNext}
-          className="
-            w-full py-4 rounded-full font-semibold
-            bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
-            shadow-[0_0_30px_rgba(255,130,60,0.55)]
-            hover:scale-[1.03]
-            transition
-          "
-        >
-          Start Verification
-        </button>
-
-      </div>
-
-    </div>
-  );
-}
-
-// step 12    /   AlignFace
-
-function AlignFace({ onBack, onVerify , onNext }) {
-    
-  return (
-    <div className="min-h-screen bg-black relative px-6 text-white flex flex-col items-center">
-
-      {/* Back */}
-      <button
-        onClick={onBack}
-        className="absolute top-5 left-5 text-white/80 text-xl"
-      >
-        ←
-      </button>
-
-      {/* TITLE */}
-      <h1 className="mt-20 text-center text-3xl font-Playfair Display leading-tight">
-        Align Your Face in the
-        <br />
-        Frame
-      </h1>
-
-      {/* SCAN AREA */}
-      <div className="mt-12 relative">
-
-        {/* Circular Frame */}
-        <div className="relative w-72 h-72 rounded-full overflow-hidden border border-white/15">
-
-          {/* Fake Camera Image */}
-          <img
-            src="/loginAvatars/faceVerifyimg.png" // replace with camera feed later
-            alt="Face preview"
-            className="w-full h-full object-cover opacity-90"
-          />
-
-          {/* Dark Overlay */}
-          <div className="absolute inset-0 bg-black/30" />
-
-          {/* Scan Line */}
-          <div className="absolute top-1/2 left-0 w-full h-[2px]
-            bg-gradient-to-r from-transparent via-blue-400 to-transparent
-            animate-pulse"
-          />
-
-          {/* Circular Ring */}
-          <div className="absolute inset-0 rounded-full ring-2 ring-white/10" />
-        </div>
-      </div>
-
-      {/* VERIFY BUTTON */}
-      <div className="mt-auto w-full pb-10">
-
-        <button
-          onClick={onNext}
-          className="
-            w-full py-4 rounded-full font-semibold
-            bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
-            shadow-[0_0_30px_rgba(255,130,60,0.55)]
-            hover:scale-[1.03]
-            transition
-          "
-        >
-          Verify
-        </button>
-      </div>
-
-    </div>
-  );
-}
-
-// step 13   /   Success
-
-function Success({ onBack, onDone }) {
-  return (
-    <div className="min-h-screen bg-black relative px-6 text-white flex flex-col">
-
-      {/* Back */}
-      <button
-        onClick={onBack}
-        className="absolute top-5 left-5 text-white/80 text-xl"
-      >
-        ←
-      </button>
-
-      {/* CENTER CONTENT */}
-      <div className="flex-1 flex flex-col justify-center items-center text-center">
-
-        <h1 className="text-4xl font-Playfair Display font-semibold
-          bg-gradient-to-r from-pink-400 to-orange-400
-          bg-clip-text text-transparent">
-          Congratulations!
-        </h1>
-
-        <p className="mt-4 text-sm text-white/40 max-w-xs">
-          Your account has been verified successfully.
-        </p>
-
-      </div>
-
-      {/* OPTIONAL CTA */}
-      {onDone && (
-        <div className="pb-10">
           <button
-            onClick={onDone}
-            className="
-              w-full py-4 rounded-full font-Poppins
-              bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
-              shadow-[0_0_28px_rgba(255,130,60,0.5)]
-            "
+            onClick={handleSubmit}
+            className="w-full mt-6 py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"
           >
-            Continue
+            Save & Continue
           </button>
         </div>
       )}
-
     </div>
   );
 }
-
-

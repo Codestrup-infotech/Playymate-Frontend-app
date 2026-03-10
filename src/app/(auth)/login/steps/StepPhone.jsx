@@ -6,13 +6,16 @@ import { useRouter } from "next/navigation";
 import { Mail, AlertCircle, Loader2 } from "lucide-react";
 import { authService } from "@/services/auth";
 import { getErrorMessage } from "@/lib/api/errorMap";
+import userService from "@/services/user";   // ✅ ADD THIS
 
 export default function StepPhone({ onBackToWelcome }) {
   const router = useRouter();
 
-  const [step, setStep] = useState("phone"); // phone | phoneOtp | email | emailOtp
+  const [step, setStep] = useState("phone"); // phone | phoneOtp | email | emailOtp | name | name | nameOtp
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [nameOtp, setNameOtp] = useState(["", "", "", "", "", ""]);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(30);
   const [loading, setLoading] = useState(false);
@@ -126,6 +129,7 @@ export default function StepPhone({ onBackToWelcome }) {
         return;
       }
 
+      // After phone verified, go to email
       setStep("email");
     } catch (err) {
       const errorCode = err?.response?.data?.error_code;
@@ -209,11 +213,92 @@ export default function StepPhone({ onBackToWelcome }) {
         return;
       }
 
-      clearSession();
-      router.push("/personal-verification");
+      // After email verified, go to name capture (Step E)
+      setStep("name");
     } catch (err) {
       const errorCode = err?.response?.data?.error_code;
       setError(getErrorMessage(errorCode) || "Email verification failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ----------------------------------------------------------- */
+  /* NAME - SAVE AND COMPLETE LOGIN (Step E + F) */
+  /* ----------------------------------------------------------- */
+
+  const sendNameAndComplete = async () => {
+    if (loading) return;
+
+    if (!name.trim()) {
+      setError("Please enter your name.");
+      return;
+    }
+
+    const flowId = sessionStorage.getItem("auth_flow_id");
+    if (!flowId) {
+      setError("Session expired. Please start again.");
+      setStep("phone");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      clearError();
+
+      // Save name first (Step E in documentation)
+      // This transitions: EMAIL_VERIFIED → NAME_CAPTURED (BASIC_ACCOUNT_CREATED)
+      await authService.updateName(flowId, name);
+      
+      // Then complete login to get tokens (Step F)
+      // This should be called after name is captured
+      // Endpoint: POST /api/v1/auth/complete
+      const completeResponse = await authService.completeLogin(flowId);
+      console.log('Complete login response:', completeResponse);
+      
+      const tokens = completeResponse?.data?.data || completeResponse?.data;
+      
+      if (!tokens?.access_token) {
+        throw new Error("Failed to get access token");
+      }
+      
+      // Store tokens before navigating
+      authService.storeTokens({
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+      });
+     const onboarding = await userService.getOnboardingStatus();
+const state = onboarding.data.data.onboarding_state;
+
+console.log("SERVER ONBOARDING STATE:", state);
+
+router.push("/personal-verification");
+    } catch (err) {
+      console.error('Error in name/complete flow:', err);
+      console.error('Error response:', err.response);
+      console.error('Error status:', err.response?.status);
+      console.error('Error data:', err.response?.data);
+      
+      const errorCode = err?.response?.data?.error_code;
+      const status = err?.response?.status;
+      const errorData = err?.response?.data;
+      
+      // Handle specific errors
+      if (status === 500) {
+        // For 500 errors, log more details
+        console.error('Server 500 error - check backend logs');
+        setError("Server error. Please try again or contact support.");
+      } else if (errorCode === 'VERIFICATION_INCOMPLETE') {
+        setError("Please complete all verification steps.");
+      } else if (errorCode === 'INVALID_AUTH_FLOW') {
+        clearSession();
+        setError("Session expired. Please start again.");
+        setStep("phone");
+      } else if (errorData?.message) {
+        setError(errorData.message);
+      } else {
+        setError(getErrorMessage(errorCode) || "Failed to complete registration.");
+      }
     } finally {
       setLoading(false);
     }
@@ -395,6 +480,44 @@ export default function StepPhone({ onBackToWelcome }) {
               onClick={sendEmailOtp}
               disabled={loading}
               className="w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"
+            >
+              {loading ? <Loader2 className="animate-spin mx-auto" /> : "Continue"}
+            </button>
+          </>
+        )}
+
+        {/* NAME - Step E */}
+        {step === "name" && (
+          <>
+            <h1 className="text-3xl font-bold text-center font-['Playfair_Display']">
+              What's Your <span className="text-pink-400">Name</span>?
+            </h1>
+
+            <p className="text-center text-sm text-gray-400">
+              This will be displayed on your profile
+            </p>
+
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                clearError();
+              }}
+              className="w-full h-12 bg-black border border-pink-500 rounded-xl px-4 text-lg"
+              placeholder="Enter your full name"
+            />
+
+            {error && (
+              <p className="text-red-400 text-sm mt-1 flex items-center gap-2">
+                <AlertCircle size={16} /> {error}
+              </p>
+            )}
+
+            <button
+              onClick={sendNameAndComplete}
+              disabled={loading || !name.trim()}
+              className="w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-50"
             >
               {loading ? <Loader2 className="animate-spin mx-auto" /> : "Continue"}
             </button>

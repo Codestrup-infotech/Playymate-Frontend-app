@@ -63,8 +63,20 @@ export const authService = {
   // ============ ACCOUNT COMPLETION ============
   createBasicAccount: (authFlowId, data) => 
     api.post('/auth/basic-account', { auth_flow_id: authFlowId, ...data }),
-  completeLogin: (authFlowId) => 
-    api.post('/auth/complete', { auth_flow_id: authFlowId }),
+  completeLogin: (authFlowId) => {
+    console.log('Completing login with flow:', { auth_flow_id: authFlowId });
+    // Send minimal request to match Swagger exactly
+    // device_info is optional
+    return api.post('/auth/complete', { 
+      auth_flow_id: authFlowId
+    });
+  },
+
+  // ============ NAME UPDATE (During Auth Flow) ============
+  updateName: (authFlowId, name) => {
+    console.log('Updating name with flow:', { auth_flow_id: authFlowId, full_name: name });
+    return api.post('/auth/profile/name', { auth_flow_id: authFlowId, full_name: name });
+  },
 
   // ============ SESSION MANAGEMENT ============
   refreshToken: (refreshToken) => 
@@ -95,7 +107,8 @@ export const authService = {
   isInAuthFlow: () => {
     if (typeof window !== 'undefined') {
       const hasFlowId = !!sessionStorage.getItem('auth_flow_id');
-      const hasTokens = !!localStorage.getItem('accessToken');
+      // Check both possible token key names
+      const hasTokens = !!localStorage.getItem('accessToken') || !!localStorage.getItem('playymate_access_token');
       return hasFlowId && !hasTokens;
     }
     return false;
@@ -104,8 +117,11 @@ export const authService = {
   // ============ HELPERS ============
   storeTokens: (data) => {
     if (typeof window !== 'undefined') {
+      // Store with both key names for compatibility
       localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('playymate_access_token', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
+      localStorage.setItem('playymate_refresh_token', data.refreshToken);
       if (data.accessToken) {
         sessionStorage.removeItem('auth_flow_id');
       }
@@ -116,9 +132,11 @@ export const authService = {
     if (typeof window !== 'undefined') {
       if (data.accessToken) {
         localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('playymate_access_token', data.accessToken);
       }
       if (data.refreshToken) {
         localStorage.setItem('refreshToken', data.refreshToken);
+        localStorage.setItem('playymate_refresh_token', data.refreshToken);
       }
       if (data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
@@ -159,7 +177,8 @@ export const authService = {
 
   isLoggedIn: () => {
     if (typeof window !== 'undefined') {
-      return !!localStorage.getItem('accessToken');
+      // Check both possible token key names
+      return !!localStorage.getItem('accessToken') || !!localStorage.getItem('playymate_access_token');
     }
     return false;
   },

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import userService from "../../../../../services/user";
 
 export default function StudentProfilePage() {
   const router = useRouter();
@@ -13,10 +14,47 @@ export default function StudentProfilePage() {
     bio: "",
   });
 
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState(null);
+
 
 const goBackToQuestion = () => {
   sessionStorage.setItem("pq_step", "7"); // remember step
-  router.push("/personal-verifiction");   // clean URL
+  router.push("/personal-verification");   // clean URL
+};
+
+const handleSaveAndContinue = async () => {
+  try {
+    setIsLoading(true);
+    setError(null);
+    
+    console.log("STUDENT PROFILE:", form);
+    console.log("Calling API to save student profile...");
+
+    // Call API to save student profile
+    const response = await userService.completeProfileSetup('student', form);
+    
+    console.log("API Response Success:", response);
+    console.log("Profile saved successfully! Navigating to KYC...");
+    router.push("/personal-verification/kyc");
+  } catch (err) {
+    console.error("========== API ERROR ==========");
+    console.error("Error message:", err.message);
+    console.error("Error response:", err.response?.data);
+    console.error("Error status:", err.response?.status);
+    console.error("Full error:", err);
+    console.error("================================");
+    
+    setError(err.response?.data?.message || "Failed to save profile. Please try again.");
+    
+    // For demo/development, still navigate to KYC if API fails
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Dev mode: Navigating to KYC anyway (API call failed)...");
+      router.push("/personal-verification/kyc");
+    }
+  } finally {
+    setIsLoading(false);
+  }
 };
 
 
@@ -129,21 +167,22 @@ const goBackToQuestion = () => {
         {/* FOOTER */}
         <div className="mt-12">
 
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/40 rounded-lg text-red-400 text-sm text-center">
+              {error}
+            </div>
+          )}
+
           <button
-            onClick={() => {
-              console.log("STUDENT PROFILE:", form);
-
-              // 👉 backend submit later
-
-              router.push("/personalVerifictionFlow?step=8"); // or next onboarding step
-            }}
+            onClick={handleSaveAndContinue}
+            disabled={isLoading}
             className="
               w-full py-4 rounded-full  font-Poppins
               bg-gradient-to-r from-pink-500 to-orange-400
-            
+              disabled:opacity-50 disabled:cursor-not-allowed
             "
           >
-            Save & Continue
+            {isLoading ? "Saving..." : "Save & Continue"}
           </button>
 
           <button

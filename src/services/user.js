@@ -1,8 +1,9 @@
 import api from './api';
+import axios from 'axios';
 
 export const userService = {
   // ============ PROFILE ============
-  updateName: (name) => api.post('/users/profile/name', { name }),
+  updateName: (name) => api.post('/users/profile/name', { full_name: name }),
   updateGender: (gender) => api.post('/users/profile/gender', { gender }),
   updateDOB: (dob) => api.post('/users/profile/dob', { dob }),
   
@@ -25,11 +26,19 @@ export const userService = {
     api.post('/users/onboarding/interests', { interests }),
 
   // ============ ACTIVITY INTENT ============
-  setActivityIntent: (activityType, details = {}) => 
+  setActivityIntent: (activityType, details = '') => 
     api.post('/users/activity-intent', { 
       activity_type: activityType, 
-      details 
+      details: details  // details is a string, not an object
     }),
+
+  // Get roles for activity intent
+  getActivityIntentRoles: () => 
+    api.get('/users/activity-intent/roles'),
+
+  // Get profile role config (form fields) by role - NEW ENDPOINT
+  getProfileRoleConfig: (role) => 
+    api.get('/users/profile-role-config'),
 
   // ============ PROFILE DETAILS ============
   setProfileDetails: (roleType, details) => 
@@ -52,7 +61,7 @@ export const userService = {
     api.post('/users/profile-photo', { image_url: imageUrl }),
 
   // ============ PARENT CONSENT (MINORS) ============
-  giveParentConsent: () => api.post('/users/parent/consent/give'),
+  giveParentConsent: () => api.post('/users/parent/consent/give', { accepted: true }),
   getParentConsentStatus: () => api.get('/users/parent/consent/status'),
   revokeParentConsent: () => api.post('/users/parent/consent/revoke'),
 
@@ -72,11 +81,12 @@ export const userService = {
     api.post('/kyc/face/liveness', imageData),
 
   // ============ MEDIA UPLOAD ============
-  getPresignedUrl: (fileName, contentType) => 
-    api.post('/users/media/presign', { 
-      file_name: fileName, 
-      content_type: contentType 
-    }),
+getPresignedUrl: (fileName, file) =>
+  api.post("/users/media/presign", {
+    file_name: fileName,
+    mime_type: file.type,
+    size_bytes: file.size,
+  }),
 
   // Upload file using presigned URL
   uploadToPresigned: async (presignedUrl, file, contentType) => {
