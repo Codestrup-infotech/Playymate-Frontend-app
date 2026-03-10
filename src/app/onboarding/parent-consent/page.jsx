@@ -514,7 +514,6 @@ export default function OnboardingParentConsentPage() {
           <button
             onClick={handleConsent}
             disabled={!checked || loading}
-            onClick={handleConsent}
             className="w-96 py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40 flex items-center justify-center"
           >
             {loading ? (

@@ -1,36 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Settings, Share2, MessageCircle, Users, Heart, MapPin, Pencil } from "lucide-react";
-
+import { userService } from "@/services/user";
+import { userAccountService } from "@/services/user-account";
+import { getCurrentUserId } from "@/services/profile.service";
 export default function ProfilePage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Posts");
   const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const tabs = ["Posts", "Reels", "Events", "Community"];
-
-  const userId = 1;
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        // First, try to get user_id from localStorage (stored during onboarding/login)
-        let userId = localStorage.getItem('user_id');
-        let storedUser = null;
+        // Use helper function to get current user ID
+        let userId = getCurrentUserId();
         
-        // Also try to get from 'user' localStorage (some parts of the app use this)
-        try {
-          storedUser = JSON.parse(localStorage.getItem("user"));
-        } catch (e) {
-          // Ignore parse errors
-        }
-        
-        // If user_id not found in localStorage, try stored user object
-        if (!userId && storedUser?.id) {
-          userId = storedUser.id;
-        }
+        console.log("Fetching profile for userId:", userId);
         
         // If we have a user ID, fetch user profile
         let userData = null;
@@ -41,56 +32,101 @@ export default function ProfilePage() {
           userData = userRes?.data?.data || userRes?.data;
         } else {
           // Fallback: use getMe() which doesn't require user ID - it uses the auth token
-          console.log("User ID not found in localStorage, using getMe()...");
+          console.log("User ID not found, using getMe()...");
           userRes = await userService.getMe();
           userData = userRes?.data?.data || userRes?.data;
           
           // Try to get user_id from the response
-          if (userRes?.data?.id) {
-            userId = userRes.data.id;
+          if (userData?.id) {
+            userId = userData.id;
             localStorage.setItem('user_id', userId);
             console.log("Stored user_id from getMe response:", userId);
           }
         }
+
+        // Handle different response structures
+        if (!userData && userRes?.data) {
+          userData = userRes.data;
+        }
+        
+        if (!userData) {
+          throw new Error("No profile data received from API");
+        }
+
+        // Transform API response to match UI expected format
+        const userIdFromData = userData._id || userData.id;
+        
+        // Store user_id for future use if not already stored
+        if (userIdFromData && !localStorage.getItem('user_id')) {
+          localStorage.setItem('user_id', userIdFromData);
+        }
+
+        const transformedProfile = {
+          _id: userIdFromData,
+          name: userData.full_name || userData.name,
+          username: userData.username || userData.email?.split('@')[0] || userData.phone || 'User',
+          username: userData.username || userData.email?.split('@')[0] || userData.phone || 'User',
+          email: userData.email,
+          phone: userData.phone,
+          bio: userData.bio || '',
+          gender: userData.gender,
+          dob: userData.dob,
+          location: typeof userData.profile_location === 'object' 
+            ? userData.profile_location?.display_text || userData.profile_location?.city || JSON.stringify(userData.profile_location)
+            : userData.profile_location || userData.location,
+          photo: userData.profile_picture || userData.photo || userData.avatar,
+          posts: userData.posts_count || userData.posts || 0,
+          followers: userData.followers_count || userData.followers || 0,
+          following: userData.following_count || userData.following || 0,
+          gallery: userData.gallery || [],
+          // Handle interests as object with categories
+          interests: Array.isArray(userData.interests) 
+            ? userData.interests 
+            : (userData.interests 
+                ? [...(userData.interests.sports || []), ...(userData.interests.hobbies || []), ...(userData.interests.additional || []), ...(userData.interests.activities || []), ...(userData.interests.nostalgia || [])]
+                : []),
+          activity_intent: userData.activity_intent,
+          profile_role: userData.profile_role,
+          profile_details: userData.profile_details,
+        };
   
-        setProfile(userData);
+        setProfile(transformedProfile);
         
         // ============ LOG USER DATA TO CONSOLE ============
         console.group("👤 USER DATA FROM CONSOLE");
         console.log("========== USER ID ==========");
-        console.log("User ID:", userId);
-        console.log("Stored User Object:", storedUser);
+        console.log("User ID:", userIdFromData);
         
         console.log("\n========== FULL USER PROFILE ==========");
-        console.log(userData);
+        console.log(transformedProfile);
         
         console.log("\n========== USER DETAILS BREAKDOWN ==========");
-        console.log("Name:", userData?.name);
-        console.log("Username:", userData?.username);
-        console.log("Email:", userData?.email);
-        console.log("Phone:", userData?.phone);
-        console.log("Gender:", userData?.gender);
-        console.log("Date of Birth:", userData?.dob);
-        console.log("Location:", userData?.location);
-        console.log("Bio:", userData?.bio);
-        console.log("Photo/Avatar:", userData?.photo);
+        console.log("Name:", transformedProfile?.name);
+        console.log("Username:", transformedProfile?.username);
+        console.log("Email:", transformedProfile?.email);
+        console.log("Phone:", transformedProfile?.phone);
+        console.log("Gender:", transformedProfile?.gender);
+        console.log("Date of Birth:", transformedProfile?.dob);
+        console.log("Location:", transformedProfile?.location);
+        console.log("Bio:", transformedProfile?.bio);
+        console.log("Photo/Avatar:", transformedProfile?.photo);
         
         console.log("\n========== INTERESTS (FROM ONBOARDING) ==========");
-        console.log("Interests Array:", userData?.interests);
-        console.log("Interests Count:", userData?.interests?.length);
+        console.log("Interests Array:", transformedProfile?.interests);
+        console.log("Interests Count:", transformedProfile?.interests?.length);
         
         console.log("\n========== ACTIVITY & PROFILE DETAILS ==========");
-        console.log("Activity Intent:", userData?.activity_intent);
-        console.log("Profile Role:", userData?.profile_role);
-        console.log("Profile Details:", userData?.profile_details);
+        console.log("Activity Intent:", transformedProfile?.activity_intent);
+        console.log("Profile Role:", transformedProfile?.profile_role);
+        console.log("Profile Details:", transformedProfile?.profile_details);
         
         console.log("\n========== SOCIAL STATS ==========");
-        console.log("Posts:", userData?.posts);
-        console.log("Followers:", userData?.followers);
-        console.log("Following:", userData?.following);
+        console.log("Posts:", transformedProfile?.posts);
+        console.log("Followers:", transformedProfile?.followers);
+        console.log("Following:", transformedProfile?.following);
         
         console.log("\n========== GALLERY ==========");
-        console.log("Gallery Images:", userData?.gallery);
+        console.log("Gallery Images:", transformedProfile?.gallery);
         
         console.log("\n========== RAW API RESPONSE ==========");
         console.log(userRes);
@@ -107,7 +143,7 @@ export default function ProfilePage() {
           
           // Extract interests from different possible locations
           const interestsFromStatus = onboardingRes?.data?.interests || onboardingRes?.data?.data?.interests;
-          const interestsFromProfile = userData?.interests;
+          const interestsFromProfile = transformedProfile?.interests;
           
           console.log("\n========== ALL INTEREST SOURCES ==========");
           console.log("Interests from getOnboardingStatus():", interestsFromStatus);
@@ -127,16 +163,33 @@ export default function ProfilePage() {
         
       } catch (error) {
         console.log("ERROR:", error);
+        setError(error.message || "Failed to load profile");
+      } finally {
+        setLoading(false);
       }
     };
   
     fetchProfile();
   }, []);
   
-  if (!profile) {
+  if (loading) {
     return (
       <div className="text-white text-center py-20">
         Loading profile...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-white text-center py-20">
+        <p className="text-red-500 mb-4">Error: {error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-purple-600 rounded-lg"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -148,7 +201,7 @@ export default function ProfilePage() {
       <div className="max-w-6xl mx-auto px-4">
 
         {/* HEADER CARD */}
-        <div className="bg-[#1a1a2e] rounded-xl p-6">
+        <div className="bg-black text-white rounded-xl p-6">
 
           {/* HEADER */}
           <div className="flex justify-between items-center mb-6">
@@ -183,7 +236,7 @@ export default function ProfilePage() {
               <div className="relative">
                 <div className="w-40 h-40 rounded-full p-[3px] bg-gradient-to-tr from-purple-500 to-orange-500">
                   <img
-                    src={profile.photo}
+                    src={profile.photo || "/loginAvatars/profile.png"}
                     alt="profile"
                     className="w-full h-full rounded-full border-4 border-[#1a1a2e] object-cover"
                   />
@@ -214,15 +267,15 @@ export default function ProfilePage() {
               {/* STATS */}
               <div className="flex gap-12 mt-6">
                 <div>
-                  <p className="text-xl font-bold">{profile.posts}</p>
+                  <p className="text-xl font-bold">{profile.posts || 0}</p>
                   <p className="text-gray-400 text-sm">Posts</p>
                 </div>
                 <div>
-                  <p className="text-xl font-bold">{profile.followers}</p>
+                  <p className="text-xl font-bold">{profile.followers || 0}</p>
                   <p className="text-gray-400 text-sm">Followers</p>
                 </div>
                 <div>
-                  <p className="text-xl font-bold">{profile.following}</p>
+                  <p className="text-xl font-bold">{profile.following || 0}</p>
                   <p className="text-gray-400 text-sm">Following</p>
                 </div>
               </div>
@@ -232,18 +285,18 @@ export default function ProfilePage() {
                 <p className="font-semibold text-white">{profile.username}</p>
 
                 <p className="mt-1 text-gray-300">
-                  {profile.interests?.join(" / ")}
+                  {Array.isArray(profile.interests) ? profile.interests.join(" / ") : profile.interests}
                 </p>
 
-                <p className="mt-2 text-sm text-gray-400">{profile.bio}</p>
+                <p className="mt-2 text-sm text-gray-400">{profile.bio || "No bio yet"}</p>
 
                 <p className="text-purple-400 mt-2">
-                  #{profile.interests?.join(" #")}
+                  #{Array.isArray(profile.interests) ? profile.interests.join(" #") : profile.interests}
                 </p>
 
                 <p className="mt-2 text-gray-400 flex items-center gap-1">
                   <MapPin size={14} />
-                  {profile.location}
+                  {profile.location || "Location not set"}
                 </p>
               </div>
 

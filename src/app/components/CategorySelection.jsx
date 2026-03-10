@@ -1758,7 +1758,7 @@ if (submitRes?.category_complete) {
       ? "bg-green-700 border-green-600 text-white cursor-not-allowed"
       : item.disabled
       ? "bg-gray-700 border-gray-600 opacity-60 cursor-not-allowed"
-      : "border-pink-500 hover:bg-pink-500"
+      : "border-[#ff02c8] hover:bg-[#ff03ea]"
   }
 `}
 >
@@ -1821,8 +1821,8 @@ if (submitRes?.category_complete) {
              className={`w-96 py-3 border font-Poppins rounded-lg transition
 ${
   selectedOption === opt.option_id
-    ? "bg-pink-500 border-pink-500 text-white"
-    : `border-pink-500 ${gradient.hover}`
+    ? "bg-[#474746] border-[#DBD8D4] text-white"
+    : `border-[#DBD8D4] ${gradient.hover}`
 }`}
             >
               {opt.label}
