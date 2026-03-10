@@ -2,12 +2,12 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  ArrowLeft, 
-  Camera, 
-  MapPin, 
-  Link as LinkIcon, 
-  User, 
+import {
+  ArrowLeft,
+  Camera,
+  MapPin,
+  Link as LinkIcon,
+  User,
   AtSign,
   Globe,
   Heart,
@@ -23,10 +23,10 @@ import {
 export default function EditProfilePage() {
   const router = useRouter();
   const fileInputRef = useRef(null);
-  
+
   const [profileImage, setProfileImage] = useState("/profile.jpg");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     username: "your-name",
     name: "XYZ",
@@ -59,7 +59,7 @@ export default function EditProfilePage() {
     const updated = [...selectedInterests];
     updated[index].selected = !updated[index].selected;
     setSelectedInterests(updated);
-    
+
     const selectedNames = updated
       .filter(item => item.selected)
       .map(item => item.name);
@@ -85,7 +85,7 @@ export default function EditProfilePage() {
       <div className="sticky top-0 bg-black/80 backdrop-blur-md z-50 border-b border-gray-800">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => router.back()}
               className="p-2 hover:bg-gray-800 rounded-full transition-colors"
             >
@@ -93,7 +93,7 @@ export default function EditProfilePage() {
             </button>
             <h1 className="text-xl font-semibold">Edit Profile</h1>
           </div>
-          <button 
+          <button
             onClick={handleSave}
             disabled={isLoading}
             className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
@@ -104,7 +104,7 @@ export default function EditProfilePage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        
+
         {/* Profile Photo Section */}
         <div className="bg-[#1a1a2e] rounded-xl p-6">
           <h2 className="text-lg font-semibold mb-4">Profile Photo</h2>
@@ -117,15 +117,15 @@ export default function EditProfilePage() {
                   className="w-full h-full rounded-full border-4 border-[#1a1a2e] object-cover"
                 />
               </div>
-              <button 
+              <button
                 onClick={() => fileInputRef.current?.click()}
                 className="absolute bottom-0 right-0 p-2 bg-purple-600 rounded-full hover:bg-purple-700 transition-colors"
               >
                 <Camera size={16} />
               </button>
-              <input 
+              <input
                 ref={fileInputRef}
-                type="file" 
+                type="file"
                 accept="image/*"
                 onChange={handleImageChange}
                 className="hidden"
@@ -144,7 +144,7 @@ export default function EditProfilePage() {
         {/* Basic Info Section */}
         <div className="bg-[#1a1a2e] rounded-xl p-6 space-y-4">
           <h2 className="text-lg font-semibold">Basic Information</h2>
-          
+
           {/* Username */}
           <div className="space-y-2">
             <label className="text-sm text-gray-400 flex items-center gap-2">
@@ -154,7 +154,7 @@ export default function EditProfilePage() {
             <input
               type="text"
               value={formData.username}
-              onChange={(e) => setFormData({...formData, username: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               className="w-full bg-[#252542] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
@@ -168,7 +168,7 @@ export default function EditProfilePage() {
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full bg-[#252542] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
@@ -181,7 +181,7 @@ export default function EditProfilePage() {
             </label>
             <textarea
               value={formData.bio}
-              onChange={(e) => setFormData({...formData, bio: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
               rows={4}
               className="w-full bg-[#252542] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
               placeholder="Tell us about yourself..."
@@ -198,7 +198,7 @@ export default function EditProfilePage() {
             <input
               type="text"
               value={formData.website}
-              onChange={(e) => setFormData({...formData, website: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, website: e.target.value })}
               className="w-full bg-[#252542] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
@@ -212,7 +212,7 @@ export default function EditProfilePage() {
             <input
               type="text"
               value={formData.location}
-              onChange={(e) => setFormData({...formData, location: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               className="w-full bg-[#252542] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
@@ -225,21 +225,20 @@ export default function EditProfilePage() {
             Interests
           </h2>
           <p className="text-gray-400 text-sm mb-4">Select your interests to personalize your feed</p>
-          
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {selectedInterests.map((interest, index) => (
               <button
                 key={interest.name}
                 onClick={() => toggleInterest(index)}
-                className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
-                  interest.selected 
-                    ? "border-purple-500 bg-purple-500/20" 
+                className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${interest.selected
+                    ? "border-purple-500 bg-purple-500/20"
                     : "border-gray-700 hover:border-gray-600 bg-[#252542]"
-                }`}
+                  }`}
               >
-                <interest.icon 
-                  size={24} 
-                  className={interest.selected ? "text-purple-400" : "text-gray-400"} 
+                <interest.icon
+                  size={24}
+                  className={interest.selected ? "text-purple-400" : "text-gray-400"}
                 />
                 <span className={`text-sm font-medium ${interest.selected ? "text-white" : "text-gray-400"}`}>
                   {interest.name}
@@ -257,7 +256,7 @@ export default function EditProfilePage() {
         {/* Additional Info Section */}
         <div className="bg-[#1a1a2e] rounded-xl p-6 space-y-4">
           <h2 className="text-lg font-semibold">Additional Information</h2>
-          
+
           {/* Gender */}
           <div className="space-y-2">
             <label className="text-sm text-gray-400">Gender</label>

@@ -14,14 +14,14 @@ export default function MapPage() {
 
   return (
     <div className="relative w-full h-screen bg-black text-white overflow-hidden">
-      
+
       {/* MAP BACKGROUND */}
       <div className="absolute inset-0">
         <iframe
           width="100%"
           height="100%"
           className="opacity-70"
-          src="https://maps.google.com/maps?q=18.5204,73.8567&z=13&output=embed"
+          src={process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_URL || "https://maps.google.com/maps?q=18.5204,73.8567&z=13&output=embed"}
         />
       </div>
 
@@ -44,10 +44,9 @@ export default function MapPage() {
               key={cat.name}
               onClick={() => setActiveTab(cat.name)}
               className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm transition-all
-                ${
-                  activeTab === cat.name
-                    ? "bg-gradient-to-r from-pink-500 to-orange-400"
-                    : "bg-white/10 border border-gray-700"
+                ${activeTab === cat.name
+                  ? "bg-gradient-to-r from-pink-500 to-orange-400"
+                  : "bg-white/10 border border-gray-700"
                 }`}
             >
               {cat.icon}
@@ -101,9 +100,8 @@ export default function MapPage() {
 function NavItem({ label, active }) {
   return (
     <div
-      className={`text-xs flex flex-col items-center ${
-        active ? "text-orange-400" : "text-gray-400"
-      }`}
+      className={`text-xs flex flex-col items-center ${active ? "text-orange-400" : "text-gray-400"
+        }`}
     >
       <MapPin size={18} />
       {label}
