@@ -5,14 +5,20 @@ import { useRouter } from "next/navigation";
 import { UserPlus, List, FileText, X, Loader2 } from "lucide-react";
 import UsernamePopup from "./UsernamePopup";
 import BioPopup from "./BioPopup";
-import useProfileCompletion from "@/hooks/useProfileCompletion";
 
-export default function ProfileCompletionCard() {
+export default function ProfileCompletionCard({ profileCard, userData, onRefresh }) {
   const router = useRouter();
-  const { loading, tasks, userData, refreshProfile } = useProfileCompletion();
+  
+  // Get tasks from profileCard prop (from Feed API) or use default
+  const tasks = profileCard?.tasks || {
+    username: true,
+    profile_main_type: true,
+    bio: true,
+  };
   
   const [showUsernamePopup, setShowUsernamePopup] = useState(false);
   const [showBioPopup, setShowBioPopup] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   // Task completion status - true means task is PENDING (not completed)
   // false means task is COMPLETED
@@ -24,14 +30,18 @@ export default function ProfileCompletionCard() {
   const handleUsernameSave = async (username) => {
     setShowUsernamePopup(false);
     // Refresh profile data to update UI
-    await refreshProfile();
+    if (onRefresh) {
+      await onRefresh();
+    }
   };
 
   // Handle bio save from popup
   const handleBioSave = async (bio) => {
     setShowBioPopup(false);
     // Refresh profile data to update UI
-    await refreshProfile();
+    if (onRefresh) {
+      await onRefresh();
+    }
   };
 
   // Navigate to profile type selection

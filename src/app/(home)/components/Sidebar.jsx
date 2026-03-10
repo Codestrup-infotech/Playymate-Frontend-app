@@ -3,25 +3,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  Home, Calendar, User, ShoppingCart, Users, Trophy,Wallet, Map,
-  HelpCircle, Compass, Flame, Zap, Menu, BookOpen,
+  Home, Calendar, User, ShoppingCart, Users, Trophy, Wallet, Map,
+  HelpCircle, Compass, Flame, Zap, Menu, BookOpen, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useTheme } from "@/lib/ThemeContext";
 
-export default function Sidebar({ isOpen = false, onToggle }) {
+export default function Sidebar({ isOpen = true, onToggle }) {
   const pathname = usePathname();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // default collapsed
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // default open
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
-  const handleMouseEnter = () => {
-    setIsSidebarOpen(true);
-    if (onToggle) onToggle(true);
-  };
-
-  const handleMouseLeave = () => {
-    setIsSidebarOpen(false);
-    if (onToggle) onToggle(false);
+  const handleToggle = () => {
+    const next = !isSidebarOpen;
+    setIsSidebarOpen(next);
+    if (onToggle) onToggle(next);
   };
 
   const menu = [
@@ -44,19 +40,16 @@ export default function Sidebar({ isOpen = false, onToggle }) {
 
   return (
     <div
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       className={`
         fixed left-0 top-0 h-screen
-        ${isSidebarOpen ? "w-[240px]" : "w-[70px]"}
-        transition-all duration-300 z-50 overflow-hidden
+        ${isSidebarOpen ? "w-[240px]" : "w-[72px]"}
+        transition-all duration-300 ease-in-out
+        z-50 overflow-hidden
         ${isDark ? "bg-[#121226]" : "bg-gray-100"}
       `}
     >
-      {/* Logo Section */}
-      <div
-        className="flex items-center h-16 px-4 relative w-full"
-      >
+      {/* Logo + Toggle Button Row */}
+      <div className="flex items-center justify-between h-16 px-3 relative w-full">
         {/* Small Logo (collapsed) */}
         <div
           className={`absolute left-1/2 -translate-x-1/2 transition-opacity duration-200 ${isSidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"
@@ -70,7 +63,7 @@ export default function Sidebar({ isOpen = false, onToggle }) {
         </div>
         {/* Full Logo (expanded) */}
         <div
-          className={`absolute left-1/2 -translate-x-1/2 transition-opacity duration-200 flex items-center gap-2 ${isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          className={`transition-opacity duration-200 flex items-center gap-2 ${isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             }`}
         >
           <img
@@ -79,6 +72,18 @@ export default function Sidebar({ isOpen = false, onToggle }) {
             className="h-10 w-auto object-contain"
           />
         </div>
+
+        {/* Toggle Button — always visible, right side */}
+        <button
+          onClick={handleToggle}
+          className={`ml-auto flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-md
+            transition-colors duration-200
+            ${isDark ? "text-gray-400 hover:bg-gray-700 hover:text-white" : "text-gray-500 hover:bg-gray-200 hover:text-gray-900"}
+          `}
+          title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          {isSidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+        </button>
       </div>
 
       {/* Menu Items */}
@@ -113,7 +118,7 @@ export default function Sidebar({ isOpen = false, onToggle }) {
 
             {/* Label — slides in when hover-open */}
             <span
-              className={`whitespace-nowrap text-base font-medium transition-all duration-200 ${isSidebarOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2 pointer-events-none"
+              className={`whitespace-nowrap text-base font-medium transition-opacity duration-200 ${isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
                 }`}
             >
               {item.name}
@@ -137,7 +142,7 @@ export default function Sidebar({ isOpen = false, onToggle }) {
               <Zap size={22} className="text-yellow-400" />
             </div>
             <span
-              className={`whitespace-nowrap text-base font-medium text-yellow-400 transition-all duration-200 ${isSidebarOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2 pointer-events-none"
+              className={`whitespace-nowrap text-base font-medium text-yellow-400 transition-opacity duration-200 ${isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
                 }`}
             >
               Upgrade

@@ -6,7 +6,7 @@ import { ThemeProvider, useTheme } from "@/lib/ThemeContext";
 import MessagesFloatingButton from "@/app/(home)/home/components/MessagesFloatingButton";
 
 function AppLayoutInner({ children }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const { theme } = useTheme();
 
   return (
@@ -21,8 +21,8 @@ function AppLayoutInner({ children }) {
 
       {/* Main Content Area */}
       <div
-        className={`flex flex-col flex-1 mt-[50px] transition-all duration-300 ${sidebarOpen ? "ml-[240px]" : "ml-[70px]"
-          }`}
+        style={{ marginLeft: sidebarOpen ? "240px" : "72px" }}
+        className="flex flex-col flex-1 mt-[50px] transition-all duration-300 ease-in-out"
       >
         {/* Fixed Topbar */}
         <Topbar isSidebarOpen={sidebarOpen} />

@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-dev.playymate.com/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-const api = axios.create({   
+const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT) || 30000,
   headers: { 'Content-Type': 'application/json' },
