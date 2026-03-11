@@ -548,7 +548,7 @@ export default function ProfilePage() {
 
         {/* empty state */}
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-16 h-16 rounded-full bg-purple-900/30 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded-full bg-purple-900/30 flex items-center  justify-center mb-4">
             <MessageCircle size={28} className="text-purple-400" />
           </div>
           <p className="text-gray-400 text-sm font-medium">No {activeTab.toLowerCase()} yet</p>

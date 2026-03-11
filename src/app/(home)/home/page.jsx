@@ -198,7 +198,7 @@ export default function HomePage() {
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className=" flex  space-x-10 ">
 
         {/* ── Feed Column ── */}
         <div className="lg:col-span-2 space-y-6">
@@ -362,7 +362,7 @@ export default function HomePage() {
         </div>
 
         {/* ── Right Panel ── */}
-        <div className="hidden lg:block">
+        <div className="hidden lg:block ">
           <div className="sticky top-0 h-[calc(100vh-9rem)] overflow-y-auto pr-1 custom-scrollbar space-y-6">
 
             {/* Suggested follows from feed API */}

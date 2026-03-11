@@ -720,11 +720,11 @@ function ScreenRenderer({ screen, onNext, onBack, isFirst, isLast, screens, curr
         <div className="relative w-full h-screen flex flex-col justify-center text-center items-center">
           <div className="flex flex-col justify-center items-center space-y-4">
             {image_url ? (
-              <img src={image_url} alt={title} className="w-48" />
+              <img src={image_url} alt={title} className="w-" />
             ) : (
-              <img src="/playymate-icon.png" alt="Playmate" className="w-48" />
+              <img src="/playymate-icon.png" alt="Playmate" className="w-" />
             )}
-            {title && <img src="/playymate-logo.png" alt={title} className="w-96" />}
+            {title && <img src="/playymate-logo.png" alt={title} className="w-" />}
           </div>
           {cta && (
             <div className="absolute bottom-12 w-full flex justify-center px-6">

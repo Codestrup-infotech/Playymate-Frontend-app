@@ -15,7 +15,7 @@ export default function LivenessPage() {
   const router = useRouter();
 
   const [step, setStep] = useState("initializing"); // initializing, ready, verifying, success, error
-  const [sessionId, setSessionId] = useState(null);
+  const [sessionData, setSessionData] = useState(null); // { sessionId, credentials, region }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -65,7 +65,8 @@ export default function LivenessPage() {
       console.log("Session response:", response.data);
 
       if (response.data.status === "success") {
-        setSessionId(response.data.data.sessionId);
+        // Store the whole payload including credentials
+        setSessionData(response.data.data);
         setStep("ready");
       } else {
         throw new Error(response.data.message || "Failed to create liveness session");
@@ -89,7 +90,7 @@ export default function LivenessPage() {
       setStep("verifying");
 
       // Verify the liveness session with the backend
-      const response = await kycService.verifyLivenessSession(sessionId);
+      const response = await kycService.verifyLivenessSession(sessionData.sessionId);
 
       console.log("Verification response:", response.data);
 
@@ -138,6 +139,7 @@ export default function LivenessPage() {
 
   const handleRetry = () => {
     setError("");
+    setSessionData(null);
     setSessionId(null);
     setStep("initializing");
     initializeLiveness();
@@ -179,7 +181,7 @@ export default function LivenessPage() {
         )}
 
         {/* READY STATE - AWS AMPLIFY LIVENESS DETECTOR */}
-        {step === "ready" && sessionId && (
+        {step === "ready" && sessionData && (
           <div className="flex flex-col items-center justify-center">
             <p className="text-gray-400 text-sm text-center mb-4">
               Position your face within the frame and follow the instructions
@@ -187,10 +189,17 @@ export default function LivenessPage() {
             
             <div className="w-full rounded-xl overflow-hidden" style={{ maxWidth: '400px' }}>
               <FaceLivenessDetector
-                sessionId={sessionId}
-                region={AWS_REGION}
+                sessionId={sessionData.sessionId}
+                region={sessionData.region || AWS_REGION}
                 onAnalysisComplete={handleAnalysisComplete}
                 onError={handleError}
+                // Pass temporary AWS credentials from backend
+                credentialProvider={async () => ({
+                  accessKeyId: sessionData.credentials.accessKeyId,
+                  secretAccessKey: sessionData.credentials.secretAccessKey,
+                  sessionToken: sessionData.credentials.sessionToken,
+                  expiration: new Date(sessionData.credentials.expiration),
+                })}
                 // Styling props
                 className="w-full"
               />

@@ -1,0 +1,40 @@
+import { Amplify } from 'aws-amplify';
+
+/**
+ * AWS Amplify Configuration
+ * 
+ * Configures AWS Amplify for Face Liveness functionality.
+ * Credentials are loaded from environment variables.
+ * 
+ * Get credentials from: Admin → Provider Config → LIVENESS
+ */
+
+const amplifyConfig = {
+  Auth: {
+    // Required for AWS services
+    identityPoolId: process.env.NEXT_PUBLIC_AWS_IDENTITY_POOL_ID,
+    region: process.env.NEXT_PUBLIC_AWS_REGION || 'ap-south-1',
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  },
+  AWSRekognitionStreaming: {
+    region: process.env.NEXT_PUBLIC_AWS_REGION || 'ap-south-1',
+  },
+};
+
+// Only configure if credentials are provided
+if (typeof window !== 'undefined' && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+  try {
+    Amplify.configure({
+      ...amplifyConfig,
+      ssr: true,
+    });
+    console.log('AWS Amplify configured for Face Liveness');
+  } catch (error) {
+    console.error('Failed to configure AWS Amplify:', error);
+  }
+}
+
+export default amplifyConfig;

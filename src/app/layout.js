@@ -1,5 +1,8 @@
 import "./globals.css";
 
+// AWS Amplify configuration for Face Liveness
+import "@/lib/amplify-config";
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>

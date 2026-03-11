@@ -33,7 +33,7 @@ export default function FaceLivenessModal({
   onError 
 }) {
   const [step, setStep] = useState("initializing"); // initializing, ready, verifying, success, error
-  const [sessionId, setSessionId] = useState(null);
+  const [sessionData, setSessionData] = useState(null); // { sessionId, credentials, region }
   const [error, setError] = useState(null);
 
   const AWS_REGION = typeof window !== 'undefined' 
@@ -51,7 +51,7 @@ export default function FaceLivenessModal({
 
   const resetState = () => {
     setStep("initializing");
-    setSessionId(null);
+    setSessionData(null);
     setError(null);
   };
 
@@ -68,7 +68,8 @@ export default function FaceLivenessModal({
       console.log("Session created:", response.data);
 
       if (response.data.status === "success") {
-        setSessionId(response.data.data.sessionId);
+        // Store the whole payload including credentials
+        setSessionData(response.data.data);
         setStep("ready");
       } else {
         throw new Error(response.data.message || "Failed to create liveness session");
@@ -87,7 +88,7 @@ export default function FaceLivenessModal({
       setStep("verifying");
       
       // Verify the liveness session
-      const response = await kycService.verifyLivenessSession(sessionId);
+      const response = await kycService.verifyLivenessSession(sessionData.sessionId);
 
       console.log("Verification response:", response.data);
 
@@ -159,7 +160,7 @@ export default function FaceLivenessModal({
           )}
 
           {/* Ready State - AWS Amplify FaceLivenessDetector */}
-          {step === "ready" && sessionId && (
+          {step === "ready" && sessionData && (
             <div className="flex flex-col items-center justify-center">
               <p className="text-gray-400 text-sm text-center mb-4">
                 Position your face within the frame and follow the instructions
@@ -167,10 +168,17 @@ export default function FaceLivenessModal({
               
               <div className="w-full rounded-xl overflow-hidden">
                 <FaceLivenessDetector
-                  sessionId={sessionId}
-                  region={AWS_REGION}
+                  sessionId={sessionData.sessionId}
+                  region={sessionData.region || AWS_REGION}
                   onAnalysisComplete={handleAnalysisComplete}
                   onError={handleAmplifyError}
+                  // Pass temporary AWS credentials from backend
+                  credentialProvider={async () => ({
+                    accessKeyId: sessionData.credentials.accessKeyId,
+                    secretAccessKey: sessionData.credentials.secretAccessKey,
+                    sessionToken: sessionData.credentials.sessionToken,
+                    expiration: new Date(sessionData.credentials.expiration),
+                  })}
                   className="w-full"
                 />
               </div>
