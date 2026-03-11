@@ -655,8 +655,11 @@ export default function OnboardingProfilePhotoPage() {
       )
     )}
 </h1>
-        <p className="mt-2 text-gray-400 text-sm font-Poppins">
+        {/* <p className="mt-2 text-gray-400 text-sm font-Poppins">
         {screenConfig?.subtitle}
+       </p> */}
+       <p className="mt-2 text-gray-400 text-sm font-Poppins">
+        {screenConfig?.description}
        </p>
           </div>
           {error && (

@@ -369,7 +369,7 @@ import PhysicalTopProgress from "@/app/components/PhysicalTopProgress";
 export default function PhysicalPreferences() {
   const router = useRouter();
 
-  const TOTAL_STEPS = 5;
+  const TOTAL_STEPS = 6;
 
   const [step, setStep] = useState(1);
   const [weight, setWeight] = useState(62);
@@ -395,8 +395,30 @@ export default function PhysicalPreferences() {
 
   const [answerLoading, setAnswerLoading] = useState(false);
   const [answerError, setAnswerError] = useState(null);
-
+  const [consentScreen, setConsentScreen] = useState(null);
+  const [consentScreenData, setConsentScreenData] = useState(null);
   const [showLoader, setShowLoader] = useState(true);
+
+
+useEffect(() => {
+  const fetchConsentScreen = async () => {
+    try {
+      const res =
+        await questionnaireService.getPhysicalProfileConsentScreen();
+
+      console.log("CONSENT API RESPONSE:", res);
+
+      if (res?.data?.data) {
+        setConsentScreenData(res.data.data);
+      }
+
+    } catch (error) {
+      console.error("Consent API failed:", error);
+    }
+  };
+
+  fetchConsentScreen();
+}, []);
 
   useEffect(() => {
     const fetchScreenData = async () => {
@@ -415,8 +437,9 @@ export default function PhysicalPreferences() {
         setLoading(false);
 
         setTimeout(() => {
-          setShowLoader(false);
-        }, 6000);
+          setStep(2);
+        }, 3000);
+
       } catch (err) {
         console.error("Failed to fetch screen:", err);
         setError(err.message);
@@ -526,90 +549,79 @@ export default function PhysicalPreferences() {
 
 
 
+const nextDisabled =
+(step === 1 && !introAgree) ||
+(step === 2 && !introAgree) ||
+(step === 3 && !weightAgree) ||
+(step === 4 && !heightAgree);
 
+const goNext = async () => {
 
+  // INTRO → CONSENT
+  if (step === 1 && introAgree) {
+    setStep(2);
+    return;
+  }
 
+  // CONSENT → FETCH QUESTIONS
+  if (step === 2) {
+    try {
 
+      setConsentLoading(true);
+      setConsentError(null);
 
+      await questionnaireService.submitConsent(true);
 
+      setQuestionsLoading(true);
 
+      const questionsRes =
+        await questionnaireService.getQuestions("basic_metrics");
 
+      const questions =
+        questionsRes.data?.data?.questions?.basic_metrics || [];
 
+      const sortedQuestions =
+        questions.sort((a, b) => a.flow_order - b.flow_order);
 
+      setBasicMetricsQuestions(sortedQuestions);
 
+      const weightQuestion = sortedQuestions.find(
+        (q) => q.question_id === "weight"
+      );
 
+      const heightQuestion = sortedQuestions.find(
+        (q) => q.question_id === "height"
+      );
 
-
-
-
-
-
-
-  const nextDisabled =
-    (step === 1 && !introAgree) ||
-    (step === 2 && !weightAgree) ||
-    (step === 3 && !heightAgree);
-
-  const goNext = async () => {
-    if (step === 1 && introAgree) {
-      try {
-        setConsentLoading(true);
-        setConsentError(null);
-
-        await questionnaireService.submitConsent(true);
-
-        setQuestionsLoading(true);
-
-        try {
-          const questionsRes =
-            await questionnaireService.getQuestions("basic_metrics");
-
-          const questions =
-            questionsRes.data?.data?.questions?.basic_metrics || [];
-
-          const sortedQuestions = questions.sort(
-            (a, b) => a.flow_order - b.flow_order
-          );
-
-          setBasicMetricsQuestions(sortedQuestions);
-
-          const weightQuestion = sortedQuestions.find(
-            (q) => q.question_id === "weight"
-          );
-          const heightQuestion = sortedQuestions.find(
-            (q) => q.question_id === "height"
-          );
-
-          if (weightQuestion?.range_config) {
-            const { min, max } = weightQuestion.range_config;
-            setWeight(Math.round((min + max) / 2));
-          }
-
-          if (heightQuestion?.range_config) {
-            const { min, max } = heightQuestion.range_config;
-            setHeight(Math.round((min + max) / 2));
-          }
-        } catch (qErr) {
-          console.error(qErr);
-        } finally {
-          setQuestionsLoading(false);
-        }
-
-        setStep((s) => s + 1);
-      } catch (err) {
-        console.error(err);
-        setConsentError(
-          err.response?.data?.message ||
-            "Failed to submit consent."
-        );
-        setStep((s) => s + 1);
-      } finally {
-        setConsentLoading(false);
+      if (weightQuestion?.range_config) {
+        const { min, max } = weightQuestion.range_config;
+        setWeight(Math.round((min + max) / 2));
       }
-    } else if (!nextDisabled) {
-      setStep((s) => s + 1);
+
+      if (heightQuestion?.range_config) {
+        const { min, max } = heightQuestion.range_config;
+        setHeight(Math.round((min + max) / 2));
+      }
+
+      setStep(3);
+
+    } catch (err) {
+      console.error(err);
+      setConsentError(
+        err.response?.data?.message || "Failed to submit consent."
+      );
+    } finally {
+      setConsentLoading(false);
+      setQuestionsLoading(false);
     }
-  };
+
+    return;
+  }
+
+  if (!nextDisabled) {
+    setStep((s) => s + 1);
+  }
+};
 
   const goBack = () => {
     setStep((s) => s - 1);
@@ -631,21 +643,23 @@ export default function PhysicalPreferences() {
         </div>
       ) : (
         <>
-          {step === 1 && showLoader ? (
-            <IntroLoader image={screenData?.image_url} />
-          ) : step === 1 ? (
-            <Intro
-              agree={introAgree}
-              setAgree={setIntroAgree}
-              onNext={goNext}
-              disabled={nextDisabled}
-              screenData={screenData}
-              loading={consentLoading}
-              error={consentError}
-            />
-          ) : null}
+        {step === 1 && (
+  <IntroLoader image={screenData?.image_url} />
+)}
 
-          {step === 2 && (
+{step === 2 && (
+  <Intro
+    agree={introAgree}
+    setAgree={setIntroAgree}
+    onNext={goNext}
+    disabled={!introAgree}
+    screenData={consentScreenData}
+    loading={consentLoading}
+    error={consentError}
+  />
+)}
+
+          {step === 3 && (
             <WeightStep
               value={weight}
               agree={weightAgree}
@@ -659,14 +673,14 @@ export default function PhysicalPreferences() {
                   (q) => q.question_id === "weight"
                 );
                 if (q) await submitAnswer(q.question_id, weight, q);
-                setStep(3);
+                setStep(4);
               }}
-              onBack={() => setStep(1)}
+              onBack={() => setStep(2)}
               disabled={nextDisabled}
             />
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <HeightStep
               value={height}
               setValue={setHeight}
@@ -680,21 +694,21 @@ export default function PhysicalPreferences() {
                   (q) => q.question_id === "height"
                 );
                 if (q) await submitAnswer(q.question_id, height, q);
-                setStep(4);
+                setStep(5);
               }}
-              onBack={() => setStep(2)}
+              onBack={() => setStep(3)}
               disabled={nextDisabled}
             />
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <BloodStep
               value={blood}
               setValue={setBlood}
               questionData={basicMetricsQuestions.find(
                 (q) => q.question_id === "blood_group"
               )}
-              onBack={() => setStep(3)}
+              onBack={() => setStep(4)}
               onComplete={async () => {
                 const q = basicMetricsQuestions.find(
                   (q) => q.question_id === "blood_group"
@@ -702,14 +716,14 @@ export default function PhysicalPreferences() {
                 if (q && blood)
                   await submitAnswer(q.question_id, blood, q);
 
-                setStep(5);
+                setStep(6);
               }}
             />
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <Fitness
-              onBack={() => setStep(4)}
+              onBack={() => setStep(5)}
               onComplete={() => {
                 router.push("/onboarding/questionnaire");
               }}
@@ -737,27 +751,28 @@ function IntroLoader({ image }) {
 }
 
 
+
+
 function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }) {
 
   const title = screenData?.title || "Physical Profile";
   const description = screenData?.description;
-
+  
   const securityNote =
     screenData?.privacy_assurance ||
     "Your information is secure and never shared";
-
+  
   const checkboxLabel =
     screenData?.consent_checkbox_text ||
     "I understand and agree to answer questions";
-
+  
   const ctaText = screenData?.cta_text || "Continue";
-
+  
   const gradientStart = screenData?.title_gradient_start || "#FF6B6B";
   const gradientEnd = screenData?.title_gradient_end || "#FFA726";
-
+  
   const cardBackground = screenData?.card_background || "#1c1c1c";
   const borderGradient = screenData?.card_border_gradient || "#4A47A3";
-
   return (
     <div className="flex flex-col justify-between py-10">
       
@@ -907,7 +922,7 @@ function WeightStep({
     <span
       key={index}
       className={
-        index === 3
+        index === 2
           ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
           : ""
       }
@@ -1303,8 +1318,19 @@ function HeightStep({ value,
 
   {/* Title */}
   <h2 className="font-['Playfair_Display'] text-[27px] font-semibold text-center mb-4 mt-1 tracking-[-0.3px]">
-    {questionText}
-  </h2>
+  {questionText?.split(" ").map((word, index) => (
+    <span
+      key={index}
+      className={
+        index === 2
+          ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
+          : ""
+      }
+    >
+      {word + " "}
+    </span>
+  ))}
+</h2>
 
   {/* Unit toggle */}
   <div className="bg-[#1f1f1f] rounded-full p-1 flex border border-[#F57264] w-[200px] h-[48px] items-center relative mb-2">
@@ -1540,7 +1566,7 @@ function BloodStep({ value, setValue, onBack, onComplete, questionData }) {
     <span
       key={index}
       className={
-        index === 3
+        index === 2
           ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
           : ""
       }
