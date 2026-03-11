@@ -1886,7 +1886,7 @@ if (submitRes?.category_complete) {
             <img
               src={introData.intro.media_url}
               alt="intro"
-              className="w-80 h-96 rounded-2xl "
+              className=" w-[280px]  h-[430px]  rounded-3xl "
             />
           )}
 

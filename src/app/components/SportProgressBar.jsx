@@ -106,22 +106,7 @@ function TopProgress({ progress = 0, coins = 0 }) {
   return (
     <div className="w-96 px-6 pt-4">
 
-      {/* <div className="relative w-full h-2 bg-[#E8EAEC] rounded-full overflow-hidden">
-
-        <div
-          className="h-full bg-gradient-to-r from-pink-500 to-orange-400 transition-all duration-500"
-          style={{ width: `${progress}%` }}
-        />
-
-        <div
-          className="absolute -top-3 transition-all duration-500"
-          style={{ left: `calc(${progress}% - 12px)` }}
-        >
-          <div className="w-6 h-6  rounded-full bg-yellow-400 flex items-center justify-center text-xs shadow-lg">
-            🪙
-          </div>
-        </div>
-      </div> */}
+     
 
       <div className="relative w-full h-2 bg-[#E8EAEC] rounded-full font-Poppins overflow-visible">
 
@@ -129,6 +114,7 @@ function TopProgress({ progress = 0, coins = 0 }) {
     className="h-full bg-gradient-to-r from-pink-500 to-orange-400  font-Poppins transition-all duration-500"
     style={{ width: `${progress}%` }}
   />
+
 
   <div
     className="absolute -top-2 transition-all duration-500"
