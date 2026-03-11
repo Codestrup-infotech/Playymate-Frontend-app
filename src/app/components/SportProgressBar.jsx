@@ -69,7 +69,7 @@ ctx.fill();
 
       ctx.beginPath();
       ctx.arc(R, R, R - 2, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(147,220,255,0.7)";
+      ctx.strokeStyle = "#000000";
       ctx.lineWidth = 3;
       ctx.stroke();
 
@@ -104,7 +104,7 @@ ctx.fill();
 
 function TopProgress({ progress = 0, coins = 0 }) {
   return (
-    <div className="w-full px-6 pt-4">
+    <div className="w-96 px-6 pt-4">
 
       {/* <div className="relative w-full h-2 bg-[#E8EAEC] rounded-full overflow-hidden">
 
@@ -123,10 +123,10 @@ function TopProgress({ progress = 0, coins = 0 }) {
         </div>
       </div> */}
 
-      <div className="relative w-full h-2 bg-[#E8EAEC] rounded-full overflow-visible">
+      <div className="relative w-full h-2 bg-[#E8EAEC] rounded-full font-Poppins overflow-visible">
 
   <div
-    className="h-full bg-gradient-to-r from-pink-500 to-orange-400 transition-all duration-500"
+    className="h-full bg-gradient-to-r from-pink-500 to-orange-400  font-Poppins transition-all duration-500"
     style={{ width: `${progress}%` }}
   />
 
@@ -139,7 +139,7 @@ function TopProgress({ progress = 0, coins = 0 }) {
 
 </div>
 
-      <div className="text-pink-400 text-sm mt-2 font-normal">
+      <div className="text-pink-400 text-sm mt-2 font-Poppins font-normal">
         +{coins} Coins earned!
       </div>
     </div>
@@ -152,7 +152,7 @@ function TopProgress({ progress = 0, coins = 0 }) {
 
 export default function SportProgressBar({ percentage = 0, pendingCoins = 0, colorStart, colorEnd }) {
   return (
-    <div className="flex flex-col items-center w-full space-y-3">
+    <div className="flex flex-col items-center w-full space-y-3 font-Poppins">
 
       {/* top progress */}
       <TopProgress progress={percentage} coins={pendingCoins} />

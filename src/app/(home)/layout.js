@@ -11,7 +11,7 @@ function AppLayoutInner({ children }) {
 
   return (
     <div
-      className={`flex h-screen overflow-hidden transition-colors duration-300 ${theme === "dark"
+      className={`flex h-screen overflow-hidden font-Poppins transition-colors duration-300 ${theme === "dark"
         ? "bg-[#0f0f1a] text-white"
         : "bg-gray-100 text-gray-900"
         }`}

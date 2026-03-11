@@ -2060,18 +2060,18 @@ if (submitRes?.category_complete) {
 
       {/* QUESTIONS */}
    {screen === "questions" && questions && questions.length > 0 && (
-  <div className="max-w-md flex flex-col justify-center items-center w-full space-y-6">
-
+  <div className="max-w-md absolute flex flex-col justify-center items-center w-full ">
+<div className="relative top-4"> 
  <SportProgressBar
   percentage={progressPercentage}
   pendingCoins={pendingCoins}
   colorStart={gradient.card.split(" ")[0].replace("from-[", "").replace("]", "")}
   colorEnd={gradient.card.split(" ")[1].replace("to-[", "").replace("]", "")}
 />
-
+ </div>
     {questions[qIndex] && qIndex < questions.length ? (
       <>
-        <div className={`p-6 w-96 rounded-xl bg-gradient-to-r ${gradient.card} text-lg text-white font-Poppins text-center`}>
+        <div className={`p-6 w-80  rounded-xl mb-2 bg-gradient-to-r ${gradient.card} text-lg text-white font-Poppins text-center`}>
           {questions[qIndex].question_text}
         </div>
 
@@ -2083,7 +2083,7 @@ if (submitRes?.category_complete) {
   setSelectedOption(opt.option_id);
   handleAnswer(opt.option_id);
 }}
-             className={`w-96 py-3 border font-Poppins rounded-lg transition
+             className={`w-80 py-3 mb-3 mt-2 border font-Poppins rounded-xl transition
 ${
   selectedOption === opt.option_id
     ? "bg-[#474746] border-[#DBD8D4] text-white"

@@ -308,22 +308,7 @@ export default function OnboardingLocationPage() {
 
       {/* Content */}
       <div className="flex-1 flex flex-col">
-        {/* Title */}
-        <div className="px-4 text-center mb-4">
-          {/* <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 mb-3">
-            <MapPin className="w-7 h-7 text-white" />
-          </div> */}
-          <h1 className="text-2xl font-bold">
-            Where are you{' '}
-            <span className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent">
-              located
-            </span>
-            ?
-          </h1>
-          <p className="text-gray-400 text-sm mt-1">
-            This helps us find playmates near you
-          </p>
-        </div>
+      
 
         {/* Error */}
         {error && (

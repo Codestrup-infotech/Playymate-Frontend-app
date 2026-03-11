@@ -1449,8 +1449,8 @@ function HeightRuler({ value, setValue, unit }) {
 
                 {isMajor && (
                   <span
-                    className={`text-[11px] mr-[6px] font-['Poppins'] ${
-                      isSelected ? "text-white font-bold" : "text-white font-normal"
+                    className={`text-[14px] mr-[6px] font-Poppins font-normal ${
+                      isSelected ? "text-white font-normal " : "text-white font-normal"
                     }`}
                   >
                     {v}
@@ -1460,13 +1460,13 @@ function HeightRuler({ value, setValue, unit }) {
                 <div
                   className="rounded-[1px]"
                   style={{
-                    width: isMajor ? 40 : 20,
-                    height: isSelected ? 2 : isMajor ? 2 : 1,
+                    width: isMajor ? 60 : 30,
+                    height: isSelected ? 4 : isMajor ? 3 : 1,
                     background: isSelected
                       ? "#ec4899"
                       : isMajor
-                      ? "#555"
-                      : "#333",
+                      ? "#FFFFFF"
+                      : "#FFFFFF",
                   }}
                 />
               </div>

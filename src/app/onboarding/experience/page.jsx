@@ -213,13 +213,13 @@ export default function CompleteExperience() {
         </div>
 
         {/* QUESTIONS */}
-        <div className="space-y-6">
+        <div className="space-y-6 font-Poppins ">
 
         {currentScreen?.questions?.map((question) => (
 
             <div
               key={question.question_key}
-              className="bg-[#121212] p-4 rounded-xl border border-cyan-500/40"
+              className="bg-[#121212] p-4   rounded-xl border border-cyan-500/40"
             >
 
               <p className="text-gray-300 text-sm mb-3">
@@ -267,7 +267,7 @@ export default function CompleteExperience() {
         </div>
 
         {/* ACTION BUTTONS */}
-        <div className="mt-8 space-y-4">
+        <div className="mt-8 space-y-4 font-Poppins ">
 
           <button
             onClick={handleNext}
