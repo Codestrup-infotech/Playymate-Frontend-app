@@ -61,16 +61,26 @@ export const stepRouteMap = {
   'PHYSICAL_PROFILE_CONSENT': '/onboarding/physical',
   'PHYSICAL_PROFILE_COMPLETED': '/onboarding/physical',
   'PHYSICAL': '/onboarding/physical',
+  'PHYSICAL_PROFILE_QUESTIONS': '/onboarding/physical',
+  
+  // Category selection
+  'CATEGORY_SELECTION': '/onboarding/category-selection',
   
   // Questionnaire steps
   'QUESTIONNAIRE_STARTED': '/onboarding/questionnaire',
-  'QUESTIONNAIRE_COMPLETED': '/home',
+  'QUESTIONNAIRE_COMPLETED': '/onboarding/experience',
   'QUESTIONNAIRE': '/onboarding/questionnaire',
   'QUESTIONNAIRE_CATEGORY': '/onboarding/questionnaire',
-  'QUESTIONNAIRE_COMPLETE': '/home',
+  'QUESTIONNAIRE_COMPLETE': '/onboarding/experience',
+  
+  // Experience steps
+  'EXPERIENCE': '/onboarding/experience',
+  'EXPERIENCE_STARTED': '/onboarding/experience',
+  'EXPERIENCE_COMPLETED': '/home',
+  'EXPERIENCE_COMPLETE': '/home',
   
   // Extended profile
-  'EXTENDED_PROFILE_INTRO': '/home',
+  'EXTENDED_PROFILE_INTRO': '/onboarding/experience',
   'EXTENDED_PROFILE_PENDING': '/home',
   'EXTENDED_PROFILE_COMPLETED': '/home',
   

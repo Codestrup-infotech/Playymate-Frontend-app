@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function ProPlanPage() {
+function ProPlanPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const planId = searchParams.get("plan") || "pro";
@@ -163,6 +163,25 @@ export default function ProPlanPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ProPlanPageLoading() {
+  return (
+    <div className="min-h-screen bg-black text-white flex justify-center items-center px-6 py-12">
+      <div className="animate-pulse space-y-4">
+        <div className="h-8 w-32 bg-gray-800 rounded"></div>
+        <div className="h-64 w-64 bg-gray-800 rounded-3xl"></div>
+      </div>
+    </div>
+  );
+}
+
+export default function ProPlanPage() {
+  return (
+    <Suspense fallback={<ProPlanPageLoading />}>
+      <ProPlanPageContent />
+    </Suspense>
   );
 }
 

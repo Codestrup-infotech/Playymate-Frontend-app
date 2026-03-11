@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import experienceService from "@/services/experience";
+import { userService } from "@/services/user";
 
 export default function CompleteExperience() {
 
@@ -19,26 +20,60 @@ export default function CompleteExperience() {
   // FETCH API SCREENS
   useEffect(() => {
 
-    const fetchScreens = async () => {
+   const checkOnboardingStatus = async () => {
+  try {
+    const statusResponse = await userService.getOnboardingStatus();
+    const data = statusResponse?.data?.data || {};
+    const nextStep = data.next_required_step;
+    const onboardingState = data.onboarding_state;
 
-      try {
+    const completedSteps = [
+      "ACTIVE_USER",
+      "COMPLETED",
+      "HOME",
+      "DONE",
+      "ACTIVE",
+      "EXPERIENCE_COMPLETED",
+      "EXPERIENCE_COMPLETE",
+      "EXTENDED_PROFILE_COMPLETED",
+    ];
 
-        const res = await experienceService.getScreens();
+    console.log('Experience page - nextStep:', nextStep);
+    console.log('Experience page - onboardingState:', onboardingState);
 
-        const apiScreens = res?.data?.data?.screens || [];
+    if (
+      completedSteps.includes(nextStep) ||
+      completedSteps.includes(onboardingState)
+    ) {
+      console.log('Experience page - redirecting to home (completed state)');
+      router.push("/home");
+      return;
+    }
 
-        setScreens(apiScreens);
+    // If user has EXTENDED_PROFILE_INTRO or PENDING, they should stay on experience page
+    if (nextStep === 'EXTENDED_PROFILE_INTRO' || nextStep === 'EXTENDED_PROFILE_PENDING' ||
+        onboardingState === 'EXTENDED_PROFILE_INTRO' || onboardingState === 'EXTENDED_PROFILE_PENDING') {
+      console.log('Experience page - user needs to complete extended profile, staying on this page');
+      // Don't redirect - let user complete the experience
+    }
+  } catch (err) {
+    console.error("Failed to check onboarding status:", err);
+  }
 
-      } catch (error) {
-        console.error("Failed to fetch screens:", error);
-      }
+  try {
+    const res = await experienceService.getScreens();
+    const apiScreens = res?.data?.data?.screens || [];
+    setScreens(apiScreens);
+  } catch (error) {
+    console.error("Failed to fetch screens:", error);
+  }
 
-      setPageLoading(false);
-    };
+  setPageLoading(false);
+};
 
-    fetchScreens();
+    checkOnboardingStatus();
 
-  }, []);
+  }, [router]);
 
   // SELECT OPTION
   const selectOption = (questionKey, value, type) => {
@@ -78,37 +113,72 @@ export default function CompleteExperience() {
   const handleNext = async () => {
     setLoading(true);
   
+  try {
+
+  const responses = Object.entries(answers).map(([key, value]) => ({
+    question_key: key,
+    answer: value
+  }));
+
+  // 🔍 Debug logs
+  console.log("=== RESPONSES ===");
+  console.log(responses);
+
+  const payload = {
+    screen_key: currentScreen.screen_key,
+    responses
+  };
+
+  console.log("=== PAYLOAD OBJECT ===");
+  console.log(payload);
+
+  console.log("=== PAYLOAD JSON ===");
+  console.log(JSON.stringify(payload, null, 2));
+
+  await experienceService.saveAnswers(payload);
+
+  if (step < screens.length - 1) {
+    setStep(step + 1);
+    setAnswers({});
+  } else {
+    // All screens completed - call the onboarding complete API to update state
     try {
-  
-      const responses = Object.entries(answers).map(([key, value]) => ({
-        question_key: key,
-        answer: value
-      }));
-  
-      const payload = {
-        screen_key: currentScreen.screen_key,
-        responses
-      };
-  
-      console.log("Submitting payload:", payload);
-  
-      await experienceService.saveAnswers(payload);
-  
-      if (step < screens.length - 1) {
-        setStep(step + 1);
-        setAnswers({});
-      } else {
-        router.push("/home");
-      }
-  
-    } catch (error) {
-      console.error("Submit error:", error.response?.data || error);
+      await userService.completeOnboarding();
+      console.log("Onboarding completed successfully");
+    } catch (completeErr) {
+      // Log error but don't block user from proceeding
+      console.error("Error completing onboarding:", completeErr);
     }
+    router.push("/home");
+  }
+
+} catch (error) {
+  console.error("Submit error:", error.response?.data || error);
+}
   
     setLoading(false);
   };
 
-  const skip = () => router.push("/home");
+  const skip = async () => {
+    // Call skip API and then complete onboarding
+    try {
+      await experienceService.skipAnswers();
+    } catch (skipErr) {
+      // Log error but don't block user from proceeding
+      console.error("Error skipping experience:", skipErr);
+    }
+    
+    // Complete onboarding after skip
+    try {
+      await userService.completeOnboarding();
+      console.log("Onboarding completed successfully");
+    } catch (completeErr) {
+      // Log error but don't block user from proceeding
+      console.error("Error completing onboarding:", completeErr);
+    }
+    
+    router.push("/home");
+  };
 
   if (pageLoading) {
     return (
@@ -143,13 +213,13 @@ export default function CompleteExperience() {
         </div>
 
         {/* QUESTIONS */}
-        <div className="space-y-6">
+        <div className="space-y-6 font-Poppins ">
 
         {currentScreen?.questions?.map((question) => (
 
             <div
               key={question.question_key}
-              className="bg-[#121212] p-4 rounded-xl border border-cyan-500/40"
+              className="bg-[#121212] p-4   rounded-xl border border-cyan-500/40"
             >
 
               <p className="text-gray-300 text-sm mb-3">
@@ -197,7 +267,7 @@ export default function CompleteExperience() {
         </div>
 
         {/* ACTION BUTTONS */}
-        <div className="mt-8 space-y-4">
+        <div className="mt-8 space-y-4 font-Poppins ">
 
           <button
             onClick={handleNext}

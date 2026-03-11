@@ -1,352 +1,411 @@
 "use client";
-import { useState, useRef } from "react";
-import { MessageCircle, Heart, Send, ShoppingCart, MapPin, Users, Trophy, Image, X , Home, Compass, Plus, Grid3X3 , Wallet} from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import {
+  MessageCircle, Heart, Send, ShoppingCart, MapPin,
+  Users, Image, X, RefreshCw, Loader2
+} from "lucide-react";
+import ProfileCompletionCard from "@/app/components/profileCompletion/ProfileCompletionCard";
+import { useTheme } from "@/lib/ThemeContext";
+import SuggestedUsers from "./components/SuggestedUsers";
+import useFeed from "@/hooks/useFeed";
 
-export default function HomePage() {
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const fileInputRef = useRef(null);
+/* ─── Small helper components ─── */
 
-  const openUploadModal = () => setIsUploadModalOpen(true);
-  const closeUploadModal = () => setIsUploadModalOpen(false);
-  
-  const handleSelectFromComputer = () => {
-    if (fileInputRef?.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      console.log("Selected file:", file);
-      // Handle file upload here
-      closeUploadModal();
-    }
-  };
-
-
-
-  // BottomNav Component
-function BottomNav() {
-  const [activeTab, setActiveTab] = useState("home");
-
-  const navItems = [
-    { name: "Home", icon: <Home size={22} />, active: true },
-    { name: "Search", icon: <Compass size={22} />, active: false },
-    { name: "Post", icon: <Plus size={24} />, active: true, isCenter: true },
-    { name: "Map", icon: <Grid3X3 size={22} />, active: false },
-    { name: "Wallet", icon: <Wallet size={22} />, active: false },
-  ];
+function PostCard({ post, isDark, cardBg, mutedText, iconBtn }) {
+  const [liked, setLiked] = useState(false);
+  const author = post.author ?? {};
+  const content = post.data?.content ?? post.content ?? {};
+  const media = post.data?.media ?? post.media ?? [];
+  const likesCount = post.data?.likes_count ?? post.likes_count ?? 0;
+  const commentsCount = post.data?.comments_count ?? post.comments_count ?? 0;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#111111] border-t border-white/10 pb-safe">
-      <div className="flex items-center justify-around py-3 px-4">
-        {navItems.map((item) => (
+    <div className={`${cardBg} rounded-xl overflow-hidden shadow-sm transition-colors duration-300`}>
+      {/* Author row */}
+      <div className="flex items-center gap-3 p-4">
+        {author.profile_image_url ? (
+          <img src={author.profile_image_url} alt={author.full_name} className="w-10 h-10 rounded-full object-cover" />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-orange-500" />
+        )}
+        <div>
+          <h4 className="font-semibold text-sm">{author.full_name || "Unknown"}</h4>
+          {author.username && <p className={`text-xs ${mutedText}`}>@{author.username}</p>}
+        </div>
+      </div>
+
+      {/* Media */}
+      {media.length > 0 && (
+        <div className="relative aspect-video">
+          {media[0].type === "video" ? (
+            <video src={media[0].url} controls className="w-full h-full object-cover" />
+          ) : (
+            <img src={media[0].url} alt="post media" className="w-full h-full object-cover" />
+          )}
+        </div>
+      )}
+
+      {/* Text */}
+      {content.text && (
+        <p className={`px-4 py-3 text-sm ${isDark ? "text-gray-200" : "text-gray-800"}`}>
+          {content.text}
+        </p>
+      )}
+
+      {/* Location */}
+      {content.location?.display_text && (
+        <p className={`px-4 pb-2 text-xs flex items-center gap-1 ${mutedText}`}>
+          <MapPin size={12} /> {content.location.display_text}
+        </p>
+      )}
+
+      {/* Actions */}
+      <div className="flex justify-between items-center px-4 pb-4 text-sm">
+        <div className="flex items-center gap-5">
           <button
-            key={item.name}
-            onClick={() => setActiveTab(item.name.toLowerCase())}
-            className={`
-              flex flex-col items-center gap-1 transition-all duration-300
-              ${item.isCenter ? "relative -top-5" : ""}
-            `}
+            onClick={() => setLiked(l => !l)}
+            className={`flex items-center gap-1.5 transition-colors ${liked ? "text-pink-500" : iconBtn}`}
           >
-            {item.isCenter ? (
-              <div className="w-14 h-14 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 flex items-center justify-center shadow-lg shadow-pink-500/30 hover:scale-105 active:scale-95 transition-transform">
-                <Plus size={28} className="text-white" />
-              </div>
-            ) : (
-              <div className={`
-                p-2 rounded-lg transition-colors
-                ${item.active ? "text-pink-500" : "text-gray-500"}
-              `}>
-                {item.icon}
-              </div>
-            )}
-            <span className={`text-xs ${item.active ? "text-pink-500" : "text-gray-500"}`}>
-              {item.name}
-            </span>
+            <Heart size={18} className={liked ? "fill-pink-500" : ""} />
+            <span>{liked ? likesCount + 1 : likesCount}</span>
           </button>
-        ))}
+          <button className={`flex items-center gap-1.5 transition-colors ${iconBtn}`}>
+            <MessageCircle size={18} />
+            <span>{commentsCount}</span>
+          </button>
+        </div>
+        <button className={`flex items-center gap-1.5 transition-colors ${iconBtn}`}>
+          <Send size={18} />
+        </button>
       </div>
     </div>
   );
 }
 
+function VenueCard({ venue, isDark, cardBg, mutedText }) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-      {/* Feed Section */}
-      <div className="lg:col-span-2 space-y-6">
-
-        {/* Stories */}
-        <div className="flex gap-4 overflow-x-auto pb-2">
-          {/* First Story - Current User with Upload */}
-          <div key="current-user" className="flex flex-col items-center">
-            <div className="relative">
-              <div 
-                className="w-16 h-16 rounded-full p-[2px] bg-gradient-to-tr from-purple-500 to-orange-500 cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={openUploadModal}
-              >
-                <div className="w-full h-full rounded-full overflow-hidden bg-gray-800">
-                  <img 
-                    src="data:image/png;base64,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" 
-                    alt="Your Story" 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-
-              {/* Plus Button */}
-              <div 
-                className="absolute -bottom-1 -right-1
-                                w-6 h-6
-                                bg-black
-                                rounded-full
-                                flex items-center justify-center
-                                border-2 border-white
-                                text-white text-sm font-bold
-                                cursor-pointer hover:bg-gray-900 transition-colors"
-                onClick={openUploadModal}
-              >
-                +
-              </div>
-            </div>
-            <span className="text-sm mt-2">You</span>
-          </div>
-
-          {/* Other Stories */}
-          {[2,3,4,5].map((item) => (
-            <div key={item} className="flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-500 to-orange-500 p-[2px]">
-                <img 
-                  src="data:image/png;base64,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" 
-                  alt={`User ${item}`} 
-                  className="w-full h-full rounded-full object-cover"
-                />
-              </div>
-              <span className="text-sm mt-2">User {item}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Upload Modal */}
-        {isUploadModalOpen && (
-          <div 
-            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-            onClick={closeUploadModal}
-          >
-            <div 
-              className="bg-white rounded-xl p-8 w-[400px] text-center"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Close Button */}
-              <button 
-                onClick={closeUploadModal}
-                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-              >
-                <X size={24} />
-              </button>
-
-              {/* Drag & Drop Area */}
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 mb-6 hover:border-purple-500 transition-colors cursor-pointer">
-                <Image size={48} className="mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600 font-medium">Drag photos and videos here</p>
-              </div>
-
-              {/* Select Button */}
-              <button 
-                onClick={handleSelectFromComputer}
-                className="bg-gradient-to-r from-purple-600 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity w-full"
-              >
-                Select from computer
-              </button>
-
-              {/* Hidden File Input */}
-              <input 
-                ref={fileInputRef}
-                type="file" 
-                accept="image/*,video/*" 
-                className="hidden"
-                onChange={handleFileChange}
-              />
-            </div>
-          </div>
+    <div className={`${cardBg} rounded-xl overflow-hidden shadow-sm transition-colors duration-300`}>
+      {venue.image_url && (
+        <img src={venue.image_url} alt={venue.name} className="w-full h-40 object-cover" />
+      )}
+      <div className="p-4">
+        <h4 className={`font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>{venue.name}</h4>
+        {venue.address && (
+          <p className={`text-xs flex items-center gap-1 mt-1 ${mutedText}`}>
+            <MapPin size={12} /> {venue.address}
+          </p>
         )}
-
-        {/* Post Card */}
-        <div className="bg-[#1a1a2e] rounded-xl p-4">
-          <div className="h-60 bg-gray-700 rounded-lg mb-4"></div>
-          
-          {/* Post Card Footer */}
-          <div className="flex justify-between items-center mt-4 text-sm">
-            {/* Left Actions */}
-            <div className="flex items-center gap-6">
-              {/* Comment */}
-              <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
-                <MessageCircle size={20} />
-                <span>10</span>
-              </button>
-              {/* Like */}
-              <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
-                <Heart size={20} />
-                <span>122</span>
-              </button>
-            </div>
-
-            {/* Right Actions */}
-            <div className="flex items-center gap-6">
-              {/* Share */}
-              <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
-                <Send size={20} />
-              </button>
-              {/* Add to Cart */}
-              <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
-                <ShoppingCart size={20} />
-              </button>
-            </div>
-          </div>
+        <div className="flex items-center justify-between mt-3">
+          {venue.distance_km && (
+            <span className={`text-xs ${mutedText}`}>{venue.distance_km} km away</span>
+          )}
+          {venue.rating && (
+            <span className="text-xs text-yellow-400">★ {venue.rating}</span>
+          )}
         </div>
-
-        {/* Booking Card */}
-        <div className="bg-[#1a1a2e] rounded-xl overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center gap-3 p-4">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-orange-500 p-[2px]">
-              <div className="w-full h-full rounded-full bg-gray-800"></div>
-            </div>
-            <div>
-              <h4 className="font-semibold">John Doe</h4>
-              <p className="text-sm text-gray-400 flex items-center gap-1">
-                <MapPin size={14} />
-                New York, USA
-              </p>
-            </div>
-            <span className="ml-auto text-xs text-gray-400">Sponsored</span>
-          </div>
-
-          {/* Large Image */}
-          <div className="h-72 bg-gray-700"></div>
-
-          {/* Bottom Section */}
-          <div className="flex justify-between items-center p-4">
-            <div className="flex items-center gap-6 text-gray-400">
-              <span className="flex items-center gap-2">
-                <MessageCircle size={18} />
-                24
-              </span>
-              <span className="flex items-center gap-2">
-                <Heart size={18} />
-                156
-              </span>
-            </div>
-            <button className="bg-gradient-to-r from-purple-600 to-orange-500 px-6 py-2 rounded-lg font-semibold">
-              Book Now
-            </button>
-          </div>
-        </div>
-
-        {/* Suggested for You */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Suggested for you</h3>
-            <span className="text-purple-400 text-sm cursor-pointer">See All</span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            {/* Suggestion Card 1 */}
-            <div className="bg-[#1a1a2e] rounded-xl p-4">
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-500 to-orange-500 p-[2px] mb-3">
-                  <div className="w-full h-full rounded-full bg-gray-800"></div>
-                </div>
-                <h4 className="font-semibold">Sarah Wilson</h4>
-                <p className="text-xs text-gray-400 mb-3">Popular</p>
-                <button className="w-full bg-gradient-to-r from-purple-600 to-orange-500 py-2 rounded-lg text-sm font-semibold">
-                  Follow
-                </button>
-              </div>
-            </div>
-
-            {/* Suggestion Card 2 */}
-            <div className="bg-[#1a1a2e] rounded-xl p-4">
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-500 to-orange-500 p-[2px] mb-3">
-                  <div className="w-full h-full rounded-full bg-gray-800"></div>
-                </div>
-                <h4 className="font-semibold">Mike Johnson</h4>
-                <p className="text-xs text-gray-400 mb-3">Popular</p>
-                <button className="w-full bg-gradient-to-r from-purple-600 to-orange-500 py-2 rounded-lg text-sm font-semibold">
-                  Follow
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recommended for You - Tournament Card */}
-        <div className="bg-[#1a1a2e] rounded-xl overflow-hidden">
-          {/* Image with Overlay */}
-          <div className="relative h-64 bg-gray-700">
-            <span className="absolute top-3 left-3 bg-purple-600 text-xs px-2 py-1 rounded">
-              Volleyball
-            </span>
-            <div className="absolute bottom-3 left-3 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-orange-500 p-[2px]">
-                <div className="w-full h-full rounded-full bg-gray-800"></div>
-              </div>
-              <span className="text-sm">John Doe</span>
-            </div>
-          </div>
-
-          {/* Event Details */}
-          <div className="p-4">
-            <h3 className="text-lg font-semibold mb-2">Weekend Volleyball Tournament</h3>
-            <p className="text-sm text-gray-400 flex items-center gap-1 mb-4">
-              <MapPin size={14} />
-              Central Sports Arena, Los Angeles
-            </p>
-
-            {/* Joined and Stats */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-4 text-sm text-gray-400">
-                <span className="flex items-center gap-1">
-                  <Users size={16} />
-                  12/20 Joined
-                </span>
-                <span className="flex items-center gap-1">
-                  <MessageCircle size={16} />
-                  8
-                </span>
-                <span className="flex items-center gap-1">
-                  <Heart size={16} />
-                  45
-                </span>
-              </div>
-            </div>
-
-            {/* Join Button */}
-            <button className="w-full bg-gradient-to-r from-purple-600 to-orange-500 py-3 rounded-lg font-semibold">
-              Join Team
-            </button>
-          </div>
-        </div>
-
       </div>
-
-      {/* Right Panel */}
-      <div className="hidden lg:block space-y-6">
-
-        <div className="bg-[#1a1a2e] p-4 rounded-xl">
-          <h3 className="mb-4 font-semibold">Suggested for you</h3>
-          <button className="w-full bg-gradient-to-r from-purple-600 to-orange-500 py-2 rounded-lg">
-            Follow
-          </button>
-        </div>
-
-      </div>
-
-       {/* Bottom Navigation */}
-      <BottomNav />
     </div>
+  );
+}
+
+function FriendActivityCard({ item, isDark, cardBg, mutedText }) {
+  const data = item.data ?? {};
+  return (
+    <div className={`${cardBg} rounded-xl p-4 shadow-sm transition-colors duration-300 flex items-center gap-3`}>
+      {data.profile_image_url ? (
+        <img src={data.profile_image_url} className="w-10 h-10 rounded-full object-cover" alt={data.full_name} />
+      ) : (
+        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-orange-500 flex items-center justify-center">
+          <Users size={16} className="text-white" />
+        </div>
+      )}
+      <div>
+        <p className={`text-sm ${isDark ? "text-gray-200" : "text-gray-800"}`}>
+          <span className="font-semibold">{data.full_name || "Someone"}</span>
+          {data.activity && ` ${data.activity}`}
+        </p>
+        {data.time && <p className={`text-xs mt-0.5 ${mutedText}`}>{data.time}</p>}
+      </div>
+    </div>
+  );
+}
+
+function FeedItemRenderer({ item, isDark, cardBg, mutedText, iconBtn }) {
+  if (!item) return null;
+  if (item.type === "post") {
+    return <PostCard post={item} isDark={isDark} cardBg={cardBg} mutedText={mutedText} iconBtn={iconBtn} />;
+  }
+  if (item.type === "venue") {
+    const venue = item.data ?? item;
+    return <VenueCard venue={venue} isDark={isDark} cardBg={cardBg} mutedText={mutedText} />;
+  }
+  if (item.type === "friend_activity") {
+    return <FriendActivityCard item={item} isDark={isDark} cardBg={cardBg} mutedText={mutedText} />;
+  }
+  // Generic event card
+  if (item.type === "event") {
+    const data = item.data ?? {};
+    return (
+      <div className={`${cardBg} rounded-xl p-4 shadow-sm transition-colors duration-300`}>
+        <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">Event</span>
+        <h4 className={`font-semibold mt-2 ${isDark ? "text-white" : "text-gray-900"}`}>{data.name || "Event"}</h4>
+        {data.location && (
+          <p className={`text-xs mt-1 flex items-center gap-1 ${mutedText}`}>
+            <MapPin size={12} /> {data.location}
+          </p>
+        )}
+      </div>
+    );
+  }
+  return null;
+}
+
+/* ─── Main Page ─── */
+
+export default function HomePage() {
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const fileInputRef = useRef(null);
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  const {
+    feedItems,
+    suggestedFollows,
+    nearbyVenues,
+    profileCard,
+    userData,
+    loading,
+    loadingMore,
+    hasMore,
+    error,
+    loadMore,
+    refresh,
+    fetchUserProfile,
+  } = useFeed();
+
+  const cardBg = isDark ? "bg-[#1a1a2e]" : "bg-white";
+  const mutedText = isDark ? "text-gray-400" : "text-gray-500";
+  const iconBtn = isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900";
+
+  const openUploadModal = () => setIsUploadModalOpen(true);
+  const closeUploadModal = () => setIsUploadModalOpen(false);
+
+  const handleSelectFromComputer = () => fileInputRef?.current?.click();
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) { console.log("Selected file:", file); closeUploadModal(); }
+  };
+
+  return (
+    <>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* ── Feed Column ── */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* Stories row */}
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            <div className="flex flex-col items-center shrink-0">
+              <div
+                className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-purple-500 to-orange-500 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={openUploadModal}
+              >
+                <div className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-200"}`}>
+                  <Image size={24} className={mutedText} />
+                </div>
+              </div>
+              <span className={`text-xs mt-2 ${mutedText}`}>Your Story</span>
+            </div>
+
+            {/* Suggested users as stories */}
+            {suggestedFollows.slice(0, 5).map((u) => (
+              <div key={u.user_id} className="flex flex-col items-center shrink-0">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-500 to-orange-500 p-[2px]">
+                  {u.profile_image_url ? (
+                    <img src={u.profile_image_url} alt={u.full_name} className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <div className={`w-full h-full rounded-full ${isDark ? "bg-gray-700" : "bg-gray-200"}`} />
+                  )}
+                </div>
+                <span className={`text-xs mt-2 truncate max-w-[72px] text-center ${mutedText}`}>
+                  {u.username || u.full_name}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Upload Modal */}
+          {isUploadModalOpen && (
+            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={closeUploadModal}>
+              <div className="bg-white rounded-xl p-8 w-[400px] text-center relative" onClick={(e) => e.stopPropagation()}>
+                <button onClick={closeUploadModal} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+                  <X size={24} />
+                </button>
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 mb-6 hover:border-purple-500 transition-colors cursor-pointer">
+                  <Image size={48} className="mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-600 font-medium">Drag photos and videos here</p>
+                </div>
+                <button onClick={handleSelectFromComputer} className="bg-gradient-to-r from-purple-600 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity w-full">
+                  Select from computer
+                </button>
+                <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFileChange} />
+              </div>
+            </div>
+          )}
+
+          {/* Profile Completion Card - from Feed API */}
+          {profileCard?.enabled && (
+            <ProfileCompletionCard 
+              profileCard={profileCard} 
+              userData={userData}
+              onRefresh={async () => {
+                await fetchUserProfile();
+                await refresh();
+              }}
+            />
+          )}
+
+          {/* Refresh button */}
+          <div className="flex justify-end">
+            <button
+              onClick={refresh}
+              disabled={loading}
+              className={`flex items-center gap-2 text-sm px-4 py-2 rounded-lg transition-colors ${isDark ? "bg-[#1a1a2e] hover:bg-[#252542] text-gray-300" : "bg-white hover:bg-gray-50 text-gray-600 border border-gray-200"}`}
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              Refresh Feed
+            </button>
+          </div>
+
+          {/* Error state */}
+          {error && (
+            <div className={`rounded-xl p-4 border text-sm ${isDark ? "bg-red-900/20 border-red-700 text-red-300" : "bg-red-50 border-red-200 text-red-700"}`}>
+              ⚠️ {error} —{" "}
+              <button className="underline" onClick={refresh}>Try again</button>
+            </div>
+          )}
+
+          {/* Loading skeleton */}
+          {loading && (
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className={`rounded-xl p-4 animate-pulse ${cardBg}`}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-10 h-10 rounded-full ${isDark ? "bg-gray-700" : "bg-gray-200"}`} />
+                    <div className="flex-1 space-y-2">
+                      <div className={`h-3 rounded w-32 ${isDark ? "bg-gray-700" : "bg-gray-200"}`} />
+                      <div className={`h-2 rounded w-20 ${isDark ? "bg-gray-700" : "bg-gray-200"}`} />
+                    </div>
+                  </div>
+                  <div className={`h-48 rounded-lg ${isDark ? "bg-gray-700" : "bg-gray-200"}`} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Real feed items */}
+          {!loading && feedItems.length > 0 && (
+            <div className="space-y-6">
+              {feedItems.map((item, idx) => (
+                <FeedItemRenderer
+                  key={item?.data?.post_id || item?.data?.venue_id || idx}
+                  item={item}
+                  isDark={isDark}
+                  cardBg={cardBg}
+                  mutedText={mutedText}
+                  iconBtn={iconBtn}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loading && feedItems.length === 0 && !error && (
+            <div className={`rounded-xl p-10 text-center ${cardBg}`}>
+              <div className="text-5xl mb-4">🏃</div>
+              <h3 className={`font-semibold text-lg mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
+                Your feed is empty
+              </h3>
+              <p className={`text-sm ${mutedText}`}>Follow players to see their activity here</p>
+            </div>
+          )}
+
+          {/* Load more */}
+          {hasMore && !loading && (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="w-full py-3 rounded-xl border font-medium text-sm transition-colors flex items-center justify-center gap-2
+                disabled:opacity-60
+                bg-gradient-to-r from-purple-600/10 to-orange-500/10
+                hover:from-purple-600/20 hover:to-orange-500/20
+                border-purple-500/30 text-purple-500"
+            >
+              {loadingMore ? <><Loader2 size={16} className="animate-spin" /> Loading...</> : "Load more"}
+            </button>
+          )}
+
+          {/* Nearby Venues section (from feed API) */}
+          {nearbyVenues.length > 0 && (
+            <div>
+              <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>
+                Nearby Venues
+              </h3>
+              <div className="space-y-4">
+                {nearbyVenues.slice(0, 3).map((venue, i) => (
+                  <VenueCard key={venue.venue_id || i} venue={venue} isDark={isDark} cardBg={cardBg} mutedText={mutedText} />
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* ── Right Panel ── */}
+        <div className="hidden lg:block">
+          <div className="sticky top-0 h-[calc(100vh-9rem)] overflow-y-auto pr-1 custom-scrollbar space-y-6">
+
+            {/* Suggested follows from feed API */}
+            {suggestedFollows.length > 0 && (
+              <div className={`${cardBg} rounded-xl p-4`}>
+                <h3 className={`font-semibold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>
+                  Suggested for you
+                </h3>
+                <div className="space-y-3">
+                  {suggestedFollows.slice(0, 6).map((u) => (
+                    <div key={u.user_id} className="flex items-center gap-3">
+                      {u.profile_image_url ? (
+                        <img src={u.profile_image_url} alt={u.full_name} className="w-9 h-9 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-r from-purple-500 to-orange-500" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium truncate ${isDark ? "text-white" : "text-gray-900"}`}>
+                          {u.full_name}
+                        </p>
+                        {u.username && (
+                          <p className={`text-xs truncate ${mutedText}`}>@{u.username}</p>
+                        )}
+                        {u.mutual_connections > 0 && (
+                          <p className={`text-xs ${mutedText}`}>{u.mutual_connections} mutual</p>
+                        )}
+                      </div>
+                      <button className="text-xs font-semibold text-purple-500 hover:text-purple-400 shrink-0">
+                        Follow
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Fallback to existing SuggestedUsers if API returned nothing */}
+            {suggestedFollows.length === 0 && <SuggestedUsers />}
+
+          </div>
+        </div>
+
+      </div>
+    </>
   );
 }

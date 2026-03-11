@@ -358,6 +358,8 @@ export default function OnboardingNamePage() {
     const checkOnboardingStatus = async () => {
       const accessToken =
         localStorage.getItem("accessToken") ||
+        sessionStorage.getItem("accessToken") ||
+        sessionStorage.getItem("access_token") ||
         localStorage.getItem("playymate_access_token");
 
       const authFlowId = sessionStorage.getItem("auth_flow_id");
@@ -381,31 +383,33 @@ export default function OnboardingNamePage() {
         return;
       }
 
+      // ✅ Use stored next step — no API call needed
       if (accessToken) {
-        try {
-          const statusResponse = await userService.getOnboardingStatus();
-
-          const nextStep =
-            statusResponse?.data?.data?.next_required_step;
-
-          const onboardingState =
-            statusResponse?.data?.data?.onboarding_state;
-
-          console.log("Onboarding status:", {
-            nextStep,
-            onboardingState,
-          });
-
-          if (nextStep && nextStep !== "NAME") {
-            const route = getRouteFromStep(nextStep);
-
-            if (route) {
-              router.push(route);
-              return;
-            }
+        const storedNextStep = sessionStorage.getItem("onboarding_next_step");
+        
+        // Also try to get from API if stored step is not available
+        if (!storedNextStep) {
+          try {
+            const statusResponse = await userService.getOnboardingStatus();
+            const nextStep = statusResponse?.data?.data?.next_required_step;
+            // Store it for future use
+            sessionStorage.setItem("onboarding_next_step", nextStep || "");
+          } catch (err) {
+            console.error("Error checking onboarding status:", err);
           }
-        } catch (err) {
-          console.error("Error checking onboarding status:", err);
+        }
+
+        const nextStep = storedNextStep || sessionStorage.getItem("onboarding_next_step");
+
+        console.log("Onboarding next step:", nextStep);
+
+        if (nextStep && nextStep !== "NAME" && nextStep !== "NAME_CAPTURE") {
+          const route = getRouteFromStep(nextStep);
+
+          if (route) {
+            router.push(route);
+            return;
+          }
         }
       }
 
@@ -523,6 +527,9 @@ export default function OnboardingNamePage() {
 
       const nextStep = response?.data?.next_required_step;
 
+      // ✅ Store the next step so subsequent pages don't need to call API
+      sessionStorage.setItem("onboarding_next_step", nextStep || "");
+
       const hasValidNextStep =
         nextStep && typeof nextStep === "string" && nextStep.trim() !== "";
 
@@ -586,31 +593,31 @@ export default function OnboardingNamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-black text-white flex items-center justify-center  px-4">
+      <div className="w-full max-w-sm flex flex-col  ">
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <button
+        <div className="flex items-center gap-3 ">
+          {/* <button
             onClick={() => router.push("/login/email")}
             className="p-2 rounded-full hover:bg-white/10 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-          </button>
+          </button> */}
 
-          <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
+          {/* <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-pink-500 to-orange-400 w-[10%]" />
-          </div>
+          </div> */}
         </div>
 
         {/* Content */}
-        <div className="space-y-6">
+        <div className="space-y-10">
 
           <div className="text-center">
-
+{/* 
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 mb-4">
               <User className="w-8 h-8 text-white" />
-            </div>
+            </div> */}
 
             <h1 className="text-3xl font-bold">
               {nameScreen?.title
@@ -636,7 +643,7 @@ export default function OnboardingNamePage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-10">
 
             {error && (
               <div className="flex items-center justify-center font-Poppins gap-2 text-red-400 text-sm py-2">

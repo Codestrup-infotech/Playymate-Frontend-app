@@ -7,7 +7,7 @@
 import axios from "axios";
 import { getAuthToken } from "./client";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://api-dev.playymate.com/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 /**
  * Fetch all questions for a specific item within a category
@@ -22,7 +22,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://api-dev.playymate.c
  */
 export async function fetchAllQuestions(category, itemId, sessionId = null, token = null) {
   const authToken = token || getAuthToken();
-  
+
   // Use mock data if no token available (development mode)
   if (!authToken) {
     console.log("⚠️ No auth token, using mock questions data");
@@ -33,9 +33,9 @@ export async function fetchAllQuestions(category, itemId, sessionId = null, toke
     const response = await axios.get(
       `${API_BASE}/questionnaire/items/${itemId}/questions`,
       {
-        params: { 
+        params: {
           category,
-          session_id: sessionId 
+          session_id: sessionId
         },
         headers: {
           Authorization: `Bearer ${authToken}`,
@@ -43,11 +43,11 @@ export async function fetchAllQuestions(category, itemId, sessionId = null, toke
         timeout: 10000,
       }
     );
-    
+
     if (response.data?.success) {
       return response.data.data || response.data;
     }
-    
+
     throw new Error("Invalid API response");
   } catch (error) {
     console.warn(`⚠️ API fetch failed for item ${itemId}, using mock data:`, error.message);
@@ -68,7 +68,7 @@ export async function fetchAllQuestions(category, itemId, sessionId = null, toke
  */
 export async function postAnswer(questionId, answer, sessionId, token = null) {
   const authToken = token || getAuthToken();
-  
+
   // Use mock response if no token available
   if (!authToken) {
     console.log("⚠️ No auth token, using mock answer response");
@@ -90,11 +90,11 @@ export async function postAnswer(questionId, answer, sessionId, token = null) {
         timeout: 10000,
       }
     );
-    
+
     if (response.data?.success) {
       return response.data;
     }
-    
+
     throw new Error("Invalid API response");
   } catch (error) {
     console.warn("⚠️ API submit failed, using mock response:", error.message);
@@ -113,7 +113,7 @@ export async function postAnswer(questionId, answer, sessionId, token = null) {
  */
 export async function postBatchAnswers(answers, sessionId, token = null) {
   const authToken = token || getAuthToken();
-  
+
   if (!authToken) {
     console.log("⚠️ No auth token, using mock batch response");
     return {
@@ -140,7 +140,7 @@ export async function postBatchAnswers(answers, sessionId, token = null) {
         timeout: 10000,
       }
     );
-    
+
     return response.data;
   } catch (error) {
     console.warn("⚠️ Batch submit failed:", error.message);
@@ -167,9 +167,9 @@ export async function postBatchAnswers(answers, sessionId, token = null) {
 export async function fetchMockQuestions(category, itemId, sessionId = null) {
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 500));
-  
+
   const mockQuestions = getMockQuestionsByCategory(category, itemId);
-  
+
   return {
     questions: mockQuestions,
     session_id: sessionId || `mock_session_${Date.now()}`,
@@ -183,7 +183,7 @@ export async function fetchMockQuestions(category, itemId, sessionId = null) {
  */
 function getMockQuestionsByCategory(category, itemId) {
   const normalizedCategory = category?.toLowerCase();
-  
+
   // Category-specific mock questions
   const mockData = {
     sports: [
@@ -388,7 +388,7 @@ function mockSubmitAnswer(questionId, answer, sessionId) {
  */
 export async function startQuestionnaireSession(category, token = null) {
   const authToken = token || getAuthToken();
-  
+
   if (!authToken) {
     return {
       success: true,
@@ -432,7 +432,7 @@ export async function startQuestionnaireSession(category, token = null) {
  */
 export async function completeQuestionnaireSession(sessionId, token = null) {
   const authToken = token || getAuthToken();
-  
+
   if (!authToken) {
     return {
       success: true,

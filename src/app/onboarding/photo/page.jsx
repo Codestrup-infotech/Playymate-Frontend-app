@@ -269,20 +269,66 @@ export default function OnboardingProfilePhotoPage() {
   const [uploadProgress, setUploadProgress] = useState([false, false, false]);
   // Track successful uploads
   const [uploadedUrls, setUploadedUrls] = useState([null, null, null]);
+  const [screenConfig, setScreenConfig] = useState(null);
 
   const clearError = () => setError(null);
 
   // Check onboarding status on mount
+  // useEffect(() => {
+  //   // ✅ Use stored next step — no API call needed
+  //   const nextStep = sessionStorage.getItem("onboarding_next_step");
+  //   const token = sessionStorage.getItem("access_token") || 
+  //                 sessionStorage.getItem("accessToken") || 
+  //                 localStorage.getItem("accessToken") ||
+  //                 localStorage.getItem("playymate_access_token");
+
+  //   if (!token) {
+  //     router.push("/login/phone");
+  //     return;
+  //   }
+
+  //   // If the backend says user's next step is PAST photo, skip forward
+  //   if (nextStep && nextStep !== "PROFILE_PHOTO_CAPTURED" && nextStep !== "LOCATION_CAPTURED") {
+  //     const stepRoutes = {
+  //       "KYC_INFO": "/onboarding/kyc",
+  //       "KYC_COMPLETED": "/onboarding/physical",
+  //       "PHYSICAL_PROFILE_QUESTIONS": "/onboarding/physical",
+  //       "ACTIVE_USER": "/onboarding/home",
+  //       "COMPLETED": "/onboarding/home",
+  //       "HOME": "/onboarding/home",
+  //       "ACTIVE": "/onboarding/home",
+  //     };
+  //     const route = stepRoutes[nextStep];
+  //     if (route) {
+  //       router.push(route);
+  //       return;
+  //     }
+  //   }
+
+  //   // Otherwise, user belongs on this page — let them stay
+  //   setInitialLoading(false);
+  // }, [router]);
+
+
+
+
+// Check onboarding status on mount
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
+    const initialize = async () => {
       try {
+  
         const response = await userService.getOnboardingStatus();
         const state = response?.data?.data?.onboarding_state;
-        
-        // If already past profile photo, redirect to next step
-        const validStates = ['PROFILE_PHOTO_CAPTURED', 'ACTIVITY_INTENT_CAPTURED', 'PROFILE_DETAILS_CAPTURED'];
+  
+        const validStates = [
+          'PROFILE_PHOTO_CAPTURED',
+          'ACTIVITY_INTENT_CAPTURED',
+          'PROFILE_DETAILS_CAPTURED'
+        ];
+  
         if (validStates.includes(state)) {
           const nextStep = response?.data?.next_required_step;
+  
           if (nextStep) {
             const route = getRouteFromStep(nextStep);
             router.push(route);
@@ -291,10 +337,10 @@ export default function OnboardingProfilePhotoPage() {
           }
           return;
         }
-        
-        // Must be in LOCATION_CAPTURED state to proceed
+  
         if (state !== 'LOCATION_CAPTURED') {
           const nextStep = response?.data?.next_required_step;
+  
           if (nextStep) {
             const route = getRouteFromStep(nextStep);
             router.push(route);
@@ -303,16 +349,31 @@ export default function OnboardingProfilePhotoPage() {
           }
           return;
         }
+  
+        // ✅ FETCH PROFILE PHOTO SCREEN CONFIG
+        const configRes = await userService.getScreenConfig("profile_photo");
+  
+        setScreenConfig(configRes?.data?.data?.screen);
+  
       } catch (err) {
-        console.error('Failed to check onboarding status:', err);
-        // Continue anyway - let user try to upload
+        console.error("Initialization error:", err);
       } finally {
         setInitialLoading(false);
       }
     };
-
-    checkOnboardingStatus();
+  
+    initialize();
+  
   }, [router]);
+
+
+
+
+
+
+
+
+
 
   const handleFileSelect = (e, index) => {
     const file = e.target.files?.[0];
@@ -508,6 +569,23 @@ export default function OnboardingProfilePhotoPage() {
         return;
       }
 
+      // Handle 403 or FORBIDDEN - skip to next step (user already has photo set)
+      if (status === 403 || errorCode === 'FORBIDDEN') {
+        console.log("Got 403/FORBIDDEN on photo upload - skipping to next step");
+        const nextStep = sessionStorage.getItem("onboarding_next_step");
+        if (nextStep && nextStep !== "PROFILE_PHOTO_CAPTURED") {
+          const route = getRouteFromStep(nextStep);
+          if (route) {
+            router.push(route);
+            return;
+          }
+        }
+        // Default skip to KYC
+        sessionStorage.setItem("onboarding_next_step", "KYC_COMPLETED");
+        router.push('/onboarding/kyc');
+        return;
+      }
+
       // Handle specific face validation errors
       if (errorCode === 'FACE_NOT_DETECTED') {
         setError('No face detected. Please upload a photo with your face visible.');
@@ -546,7 +624,7 @@ export default function OnboardingProfilePhotoPage() {
     <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-1">
+        {/* <div className="flex items-center gap-3 mb-1">
           <button
             onClick={() => router.push('/onboarding/location')}
             className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -556,22 +634,31 @@ export default function OnboardingProfilePhotoPage() {
           <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-pink-500 to-orange-400 w-[60%]" />
           </div>
-        </div>
+        </div> */}
 
         {/* Content */}
         <div className="space-y-6">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold">
-              Add a Profile{' '}
-              <span className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent">
-                Photo
-              </span>
-            </h1>
-            <p className="mt-2 text-gray-400 text-sm font-Poppins ">
-              Add a photo to personalize your profile and make your experience more engaging.
-            </p>
+         <div className="text-center">
+          <h1 className="text-3xl font-bold">
+  {screenConfig?.title
+    ?.split(" ")
+    .map((word, index) =>
+      index === 2 ? (
+        <span
+          key={index}
+          className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent"
+        >
+          {" " + word}
+        </span>
+      ) : (
+        " " + word
+      )
+    )}
+</h1>
+        <p className="mt-2 text-gray-400 text-sm font-Poppins">
+        {screenConfig?.subtitle}
+       </p>
           </div>
-
           {error && (
             <div className="flex items-center justify-center gap-2 text-red-400 text-sm py-2">
               <AlertCircle className="w-4 h-4" />
@@ -628,7 +715,7 @@ export default function OnboardingProfilePhotoPage() {
           </div>
 
           {/* Two smaller photo slots */}
-          <div className="flex gap-4 justify-center pt-2">
+          <div className="flex gap-4 justify-center pt-2 font-Poppins ">
             {[1, 2].map((index) => (
               <div key={index} className="relative">
                 {photoPreviews[index] ? (
@@ -687,7 +774,7 @@ export default function OnboardingProfilePhotoPage() {
           <button
             onClick={handleSubmit}
             disabled={loading || uploading}
-            className="w-full py-4 rounded-full font-semibold bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-4 rounded-full font-Poppins font-normal bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {uploading ? (
               <>
@@ -700,7 +787,7 @@ export default function OnboardingProfilePhotoPage() {
                 Saving...
               </>
             ) : (
-              'Get Started'
+              screenConfig?.button_text?.primary || "Get Started"
             )}
           </button>
 

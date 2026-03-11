@@ -50,42 +50,38 @@ export default function OnboardingLocationPage() {
 
   // Check onboarding status on mount - redirect if not at correct step
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      try {
-        const response = await userService.getOnboardingStatus();
-        const currentState = response?.data?.data?.onboarding_state;
-        
-        console.log('Location page - State:', currentState);
+    // ✅ Use stored next step — no API call needed
+    const nextStep = sessionStorage.getItem("onboarding_next_step");
+    const token = sessionStorage.getItem("access_token") || 
+                  sessionStorage.getItem("accessToken") || 
+                  localStorage.getItem("accessToken") ||
+                  localStorage.getItem("playymate_access_token");
 
-        // If already past location, redirect to photo
-        const pastLocationStates = ['LOCATION_CAPTURED', 'PROFILE_PHOTO_CAPTURED', 'ACTIVITY_INTENT_CAPTURED'];
-        if (pastLocationStates.includes(currentState)) {
-          router.push('/onboarding/photo');
-          return;
-        }
-        
-        // If state is LOCATION_CAPTURED, stay on this page
-        if (currentState === 'LOCATION_CAPTURED') {
-          return; // Stay on location page
-        }
-        
-        // For DOB_CAPTURED or PARENT_CONSENT_APPROVED, stay on this page (valid states for location)
-        // This allows users who completed DOB or parent consent to set their location
-        if (currentState === 'DOB_CAPTURED' || currentState === 'PARENT_CONSENT_APPROVED') {
-          return; // Stay on location page
-        }
-        
-        // For any other state, redirect to DOB
-        console.log('Redirecting to DOB from location page');
-        router.push('/onboarding/dob');
-      } catch (err) {
-        console.error('Error checking onboarding status:', err);
-        // On error, redirect to DOB
-        router.push('/onboarding/dob');
+    if (!token) {
+      router.push("/login/phone");
+      return;
+    }
+
+    // If the backend says user's next step is PAST location, skip forward
+    if (nextStep && nextStep !== "LOCATION_CAPTURED" && nextStep !== "LOCATION") {
+      const stepRoutes = {
+        "PROFILE_PHOTO_CAPTURED": "/onboarding/photo",
+        "KYC_INFO": "/onboarding/kyc",
+        "KYC_COMPLETED": "/onboarding/physical",
+        "PHYSICAL_PROFILE_QUESTIONS": "/onboarding/physical",
+        "ACTIVE_USER": "/onboarding/home",
+        "COMPLETED": "/onboarding/home",
+        "HOME": "/onboarding/home",
+        "ACTIVE": "/onboarding/home",
+      };
+      const route = stepRoutes[nextStep];
+      if (route) {
+        router.push(route);
+        return;
       }
-    };
+    }
 
-    checkOnboardingStatus();
+    // Otherwise, user belongs on this page — let them stay
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -189,6 +185,23 @@ export default function OnboardingLocationPage() {
         return;
       }
 
+      // Handle 403 or FORBIDDEN - skip to next step (user already has location set)
+      if (status === 403 || errorCode === 'FORBIDDEN') {
+        console.log("Got 403/FORBIDDEN on location update - skipping to next step");
+        const nextStep = sessionStorage.getItem("onboarding_next_step");
+        if (nextStep && nextStep !== "LOCATION_CAPTURED" && nextStep !== "LOCATION") {
+          const route = getRouteFromStep(nextStep);
+          if (route) {
+            router.push(route);
+            return;
+          }
+        }
+        // Default skip to photo
+        sessionStorage.setItem("onboarding_next_step", "PROFILE_PHOTO_CAPTURED");
+        router.push('/onboarding/photo');
+        return;
+      }
+
       if (status === 400) {
         // Handle specific onboarding errors
         if (errorCode === 'ONBOARDING_INCOMPLETE') {
@@ -279,9 +292,9 @@ export default function OnboardingLocationPage() {
   return (
     <> 
     <div className='bg-black flex justify-center items-center'> 
-    <div className="min-h-screen w-96 bg-black text-white flex flex-col">
+    <div className="min-h-screen py-4 w-96 bg-black text-white flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4">
+      {/* <div className="flex items-center gap-3 p-4">
         <button
           onClick={() => router.push('/onboarding/dob')}
           className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -291,26 +304,11 @@ export default function OnboardingLocationPage() {
         <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
           <div className="h-full bg-gradient-to-r from-pink-500 to-orange-400 w-[50%]" />
         </div>
-      </div>
+      </div> */}
 
       {/* Content */}
       <div className="flex-1 flex flex-col">
-        {/* Title */}
-        <div className="px-4 text-center mb-4">
-          {/* <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 mb-3">
-            <MapPin className="w-7 h-7 text-white" />
-          </div> */}
-          <h1 className="text-2xl font-bold">
-            Where are you{' '}
-            <span className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent">
-              located
-            </span>
-            ?
-          </h1>
-          <p className="text-gray-400 text-sm mt-1">
-            This helps us find playmates near you
-          </p>
-        </div>
+      
 
         {/* Error */}
         {error && (
@@ -321,7 +319,7 @@ export default function OnboardingLocationPage() {
         )}
 
         {/* Map */}
-        <div className="flex-1 relative mx-4 rounded-2xl overflow-hidden mb-4">
+        <div className="flex-1 relative mx-4 rounded-3xl overflow-hidden mb-6">
           <iframe
             src={mapUrl}
             className="absolute inset-0 w-full h-full border-0"
@@ -330,7 +328,7 @@ export default function OnboardingLocationPage() {
           />
 
           {/* Search Overlay */}
-          <div className="absolute bottom-4 left-4 right-4">
+          <div className="absolute bottom-4 left-4 right-4 font-Poppins ">
             <div className="bg-black/90 backdrop-blur rounded-xl p-3 space-y-3">
               {/* Search Input */}
               <div className="relative">
