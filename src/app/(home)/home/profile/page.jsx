@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { userService } from "@/services/user";
 import { useTheme } from "@/lib/ThemeContext";
+import FaceLivenessModal from "../components/FaceLivenessModal";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -75,6 +76,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showFaceLiveness, setShowFaceLiveness] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -82,6 +84,14 @@ export default function ProfilePage() {
         const res = await userService.getMe();
         const data = res?.data?.data || res?.data;
         if (!data) throw new Error("No profile data received from API");
+        
+        // Log the image response data
+        console.log("=== PROFILE IMAGE RESPONSE ===");
+        console.log("profile_image_url:", data.profile_image_url);
+        console.log("profile_photos:", data.profile_photos);
+        console.log("full response:", JSON.stringify(data, null, 2));
+        console.log("=============================");
+        
         setProfile(data);
       } catch (err) {
         console.error("Profile fetch error:", err);
@@ -92,6 +102,21 @@ export default function ProfilePage() {
     };
     fetchProfile();
   }, []);
+
+  // Handle face liveness success
+  const handleFaceLivenessSuccess = async (data) => {
+    // Refresh profile to get updated verification status
+    try {
+      const res = await userService.getMe();
+      const data = res?.data?.data || res?.data;
+      if (data) {
+        setProfile(data);
+      }
+    } catch (err) {
+      console.error("Failed to refresh profile:", err);
+    }
+    setShowFaceLiveness(false);
+  };
 
   // ── states ────────────────────────────────────────────────────────────────
 
@@ -463,7 +488,7 @@ export default function ProfilePage() {
             { label: "Email", status: verification?.email?.status, date: verification?.email?.verified_at },
             { label: "Phone", status: verification?.phone?.status, date: verification?.phone?.verified_at },
             { label: "Aadhaar", status: verification?.aadhaar?.status, date: verification?.aadhaar?.verified_at },
-            { label: "Face", status: verification?.face?.status, date: verification?.face?.verified_at },
+            { label: "Face", status: verification?.face?.status, date: verification?.face?.verified_at, isFace: true },
           ].map((v) => (
             <div
               key={v.label}
@@ -485,6 +510,15 @@ export default function ProfilePage() {
                 <p className="text-[9px] text-gray-500">
                   {new Date(v.date).toLocaleDateString()}
                 </p>
+              )}
+              {/* Verify button for Face if not verified */}
+              {v.isFace && !v.status && is_own_profile && (
+                <button
+                  onClick={() => setShowFaceLiveness(true)}
+                  className="mt-2 py-1.5 px-2 text-[10px] font-medium bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  Verify Now
+                </button>
               )}
             </div>
           ))}
@@ -521,6 +555,14 @@ export default function ProfilePage() {
           <p className="text-gray-600 text-xs mt-1">Start sharing to see them here</p>
         </div>
       </div>
+
+      {/* Face Liveness Modal */}
+      <FaceLivenessModal
+        isOpen={showFaceLiveness}
+        onClose={() => setShowFaceLiveness(false)}
+        onSuccess={handleFaceLivenessSuccess}
+        onError={(error) => console.error("Liveness error:", error)}
+      />
 
     </div>
   );

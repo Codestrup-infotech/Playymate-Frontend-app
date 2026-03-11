@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-amplify/ui-react-liveness": "^3.6.1",
+    "aws-amplify": "^6.16.2",
     "axios": "^1.13.4",
     "firebase": "^12.9.0",
     "lucide-react": "^0.563.0",

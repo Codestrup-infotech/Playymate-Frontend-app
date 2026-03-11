@@ -244,9 +244,20 @@ export const kycService = {
 
 
   /* =========================================================
-     FACE LIVENESS
+     FACE LIVENESS (AWS Rekognition - Video-based)
   ========================================================== */
 
+  // Create a new liveness session with AWS Rekognition
+  createLivenessSession: () =>
+    api.post("/kyc/liveness/session"),
+
+  // Verify the liveness session
+  verifyLivenessSession: (sessionId) =>
+    api.post("/kyc/liveness/verify", {
+      sessionId,
+    }),
+
+  // Legacy face liveness (photo-based)
   faceLiveness: (imageUrl) =>
     api.post("/kyc/face-liveness", {
       image_url: imageUrl,

@@ -1,15 +1,26 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
+import { useTheme } from "@/lib/ThemeContext";
 
 export default function WalletPage() {
   const router = useRouter();
+  const { theme } = useTheme();
 
   const [coins] = useState(1800);
   const [diamonds] = useState(770);
   const [activeTab, setActiveTab] = useState("All");
+  
+  // Theme colors
+  const colors = {
+    bgPrimary: theme === "dark" ? "#000000" : "#ffffff",
+    bgSecondary: theme === "dark" ? "#1b1d3a" : "#f3f4f6",
+    bgCard: theme === "dark" ? "#1b1d3a" : "#ffffff",
+    textPrimary: theme === "dark" ? "#ffffff" : "#111827",
+    textSecondary: theme === "dark" ? "#9ca3af" : "#6b7280",
+  };
 
   const tabs = ["All", "Gold Coin", "Diamonds"];
 
@@ -70,7 +81,10 @@ export default function WalletPage() {
       : transactions.filter((t) => t.type === activeTab);
 
   return (
-    <div className="bg-black text-white min-h-screen px-6 pt-6 pb-32">
+    <div 
+      className="min-h-screen px-6 pt-6 pb-32"
+      style={{ backgroundColor: colors.bgPrimary, color: colors.textPrimary }}
+    >
 
       {/* Back + Title */}
       <div className="flex items-center mb-6">
