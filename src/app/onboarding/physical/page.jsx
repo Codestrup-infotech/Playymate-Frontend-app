@@ -651,7 +651,7 @@ function WeightStep({
     <span
       key={index}
       className={
-        index === 3
+        index === 2
           ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
           : ""
       }
@@ -744,8 +744,13 @@ function WeightStep({
         </div>
 
         {/* Horizontal Ruler */}
-        <WeightRuler value={value} setValue={setValue} unit={unit} />
-
+        <WeightRuler
+  value={value}
+  setValue={setValue}
+  unit={unit}
+  min={minWeight}
+  max={maxWeight}
+/>
         {/* Note */}
         <div
           style={{
@@ -811,12 +816,12 @@ function WeightStep({
   );
 }
 
-function WeightRuler({ value, setValue, unit }) {
+function WeightRuler({ value, setValue, unit, min, max }) {  
   const containerRef = useRef(null);
   const touchStart = useRef(0);
 
-  const min = unit === "kg" ? KG_MIN : LBS_MIN;
-  const max = unit === "kg" ? KG_MAX : LBS_MAX;
+  // const min = unit === "kg" ? KG_MIN : LBS_MIN;
+  // const max = unit === "kg" ? KG_MAX : LBS_MAX;
 
   // Visual range extends beyond hard limits
   const visMin = min - VISUAL_EXTRA;
@@ -1032,7 +1037,7 @@ function HeightStep({ value,
 
   // Get dynamic config from API or use defaults
   const rangeConfig = questionData?.range_config || {};
-  const minHeight = rangeConfig?.min || 100;
+  const minHeight = rangeConfig?.min || 50;
   const maxHeight = rangeConfig?.max || 250;
   const stepHeight = rangeConfig?.step || 1;
   const defaultUnit = rangeConfig?.unit || 'cm';
@@ -1105,7 +1110,7 @@ function HeightStep({ value,
     <span
       key={index}
       className={
-        index === 3
+        index === 2
           ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
           : ""
       }
@@ -1179,8 +1184,13 @@ function HeightStep({ value,
         </div>
 
         {/* Ruler + value section */}
-        <HeightRuler value={value} setValue={setValue} unit={unit} />
-
+        <HeightRuler
+  value={value}
+  setValue={setValue}
+  unit={unit}
+  min={minHeight}
+  max={maxHeight}
+/>
         {/* Note */}
         <div
           style={{
@@ -1237,13 +1247,13 @@ function HeightStep({ value,
   );
 }
 
-function HeightRuler({ value, setValue, unit }) {
+function HeightRuler({ value, setValue, unit, min, max }){
   const containerRef = useRef(null);
   const touchStart = useRef(0);
 
-  // Hard scroll clamp boundaries
-  const min = unit === "in" ? IN_MIN : FT_MIN;
-  const max = unit === "in" ? IN_MAX : FT_MAX;
+  // // Hard scroll clamp boundaries
+  // const min = unit === "in" ? IN_MIN : FT_MIN;
+  // const max = unit === "in" ? IN_MAX : FT_MAX;
 
   // Visual render range — extends VISUAL_EXTRA ticks beyond each hard limit
   const visMin = min - VISUAL_EXTRA;

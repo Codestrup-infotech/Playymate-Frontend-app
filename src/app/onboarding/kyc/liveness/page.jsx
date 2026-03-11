@@ -506,7 +506,7 @@ setTimeout(() => {
   <div className="flex flex-col items-center text-center">
 
          <h1 className="text-xl font-Playfair Display font-bold text-white mb-8">
-            {screenConfig?.title || "Align Your Face in the Frame"}
+            {screenConfig?.title}
          </h1>
 
     {/* Face Circle Frame */}
