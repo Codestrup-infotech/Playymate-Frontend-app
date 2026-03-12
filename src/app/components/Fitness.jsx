@@ -263,6 +263,16 @@ export default function Fitness({ onBack, onComplete }) {
     fetchQuestions();
   }, []);
 
+    useEffect(() => {
+  if (phase === "success") {
+    const timer = setTimeout(() => {
+      onComplete();
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }
+}, [phase, onComplete]);
+
   /* ─── derived state ─── */
   const visibleSteps = buildVisibleSteps(questions, answers);
   const current      = visibleSteps[stepIndex];
@@ -399,10 +409,11 @@ export default function Fitness({ onBack, onComplete }) {
       const data = res.data?.data;
       console.log(`[Fitness.submitAnswer] Success for ${qId}:`, data);
 
-      if (!coinsEarned.has(qId)) {
-        setCoins((c) => c + COINS_PER_QUESTION);
-        setCoinsEarned((prev) => new Set([...prev, qId]));
-      }
+     const coinsFromApi = data?.reward?.pending_coins;
+
+if (coinsFromApi !== undefined) {
+  setCoins(coinsFromApi);
+}
 
       if (data?.profile_completed) {
         console.log(`[Fitness.submitAnswer] Profile completed! Full response:`, data);
@@ -443,35 +454,30 @@ export default function Fitness({ onBack, onComplete }) {
   /* =====================================================
      RENDER — SUCCESS
   ===================================================== */
-  if (phase === "success") {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white text-center px-6">
-        <div className="text-5xl mb-4">🎉</div>
-        <h2 className="text-2xl font-bold mb-2">Physical Profile Completed!</h2>
-        <p className="text-gray-400 mb-2">You earned {coins} coins</p>
-        <button
-          onClick={async () => {
-            try {
-              // Get token from sessionStorage
-              const token = sessionStorage.getItem('accessToken');
-              if (token) {
-                console.log('[Fitness] Starting questionnaire session...');
-                await startQuestionnaireSession(token, false);
-                console.log('[Fitness] Questionnaire session started!');
-              }
-            } catch (err) {
-              console.error('[Fitness] Error starting session:', err);
-            }
-            // Then navigate to questionnaire
-            onComplete();
-          }}
-          className="mt-6 px-8 py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"
-        >
-          Continue
-        </button>
-      </div>
-    );
-  }
+
+
+
+
+
+ if (phase === "success") {
+
+
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white text-center px-6">
+      <div className="text-5xl mb-4">🎉</div>
+
+      <h2 className="text-2xl font-bold mb-2">
+        Physical Profile Completed!
+      </h2>
+
+      <p className="text-gray-400 mb-2 font-Poppins ">
+        You earned  <span className="text-yellow-400">     {Math.floor(coins)}  </span> gold coins
+      </p>
+    </div>
+  );
+}
+
 
   /* =====================================================
      RENDER — QUESTIONS

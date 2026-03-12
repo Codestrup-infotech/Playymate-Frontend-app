@@ -786,6 +786,17 @@ import SportProgressBar from "@/app/components/SportProgressBar";
 export default function CategorySelection() {
   const router = useRouter();
 
+  // Token state - initialized after component mounts
+  const [token, setToken] = useState(null);
+
+  // Initialize token on mount
+  useEffect(() => {
+    const storedToken = typeof window !== "undefined" 
+      ? sessionStorage.getItem("accessToken") 
+      : null;
+    setToken(storedToken);
+  }, []);
+
   const [sessionId, setSessionId] = useState(null);
   const [currentCategoryKey, setCurrentCategoryKey] = useState(null);
 
@@ -836,10 +847,6 @@ const colorPalette = [
 ];
 
 const gradient = colorPalette[qIndex % colorPalette.length];
-  const token =
-    typeof window !== "undefined"
-      ? sessionStorage.getItem("access_token")
-      : null;
 
   /* ================= INIT ================= */
 
@@ -850,6 +857,12 @@ const gradient = colorPalette[qIndex % colorPalette.length];
   
 async function initialize() {
   try {
+    // Get token directly from sessionStorage for immediate use
+    const authToken =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("accessToken")
+        : null;
+    
     setScreen("loading");
 
     console.log("=== INITIALIZE QUESTIONNAIRE ===");
@@ -862,7 +875,7 @@ async function initialize() {
 
     try {
       console.log("Checking existing session...");
-      session = await getQuestionnaireSession(token);
+      session = await getQuestionnaireSession(authToken);
 
       if (session) {
         console.log("Existing session found:", session);
@@ -887,8 +900,7 @@ async function initialize() {
 
   // Complete questionnaire to update state to QUESTIONNAIRE_COMPLETED
   try {
-    const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null;
-    await completeQuestionnaire(token, session.session_id);
+    await completeQuestionnaire(authToken, session.session_id);
     console.log("Questionnaire completed successfully");
   } catch (completeErr) {
     console.error("Error completing questionnaire:", completeErr);
@@ -974,12 +986,12 @@ if (session.categories_progress?.length) {
 
     console.log(">>> STARTING NEW SESSION");
 
-    const newSession = await startQuestionnaireSession(token, false);
+    const newSession = await startQuestionnaireSession(authToken, false);
     console.log('[CategorySelection] New session created:', newSession);
     
     // After starting session, get full session details with session_id
     // This follows the API doc: Get Session Status with session_id
-    const sessionDetails = await getQuestionnaireSession(token, newSession.session_id);
+    const sessionDetails = await getQuestionnaireSession(authToken, newSession.session_id);
     console.log('[CategorySelection] Session details:', sessionDetails);
     
     // Use the session details
@@ -1356,7 +1368,7 @@ if (submitRes?.reward?.pending_coins !== undefined) {
       
       // Show popup after item completed
       setShowPopup(true);
-      setTimeout(() => setShowPopup(false), 1500);
+      setTimeout(() => setShowPopup(false), 4000);
 
       // Use the submitAnswer response directly to determine next steps
       // This is more reliable than calling getCategoryItems
@@ -1601,7 +1613,7 @@ if (submitRes?.category_complete) {
       subtitle_text: `You've completed ${submitRes.reward.category_key}`,
       media_url: "/coin.png",
       media_type: "image",
-      show_coins: true
+      show_coins: (submitRes.reward.pending_coins || 0) > 0
     },
     coins_earned: Math.floor(submitRes.reward.pending_coins)
   });
@@ -1642,7 +1654,7 @@ if (submitRes?.category_complete) {
 
     }
 
-  }, 10000);
+  }, 5000);
 
   return;
 }
@@ -1961,14 +1973,17 @@ if (submitRes?.category_complete) {
   disabled={
     item.disabled ||
     item.status === "completed" ||
-    item.is_completed === true
+    item.is_completed === true ||
+    (sessionData?.categories_progress?.find(c => c.category_key === currentCategoryKey)?.completed_items?.includes(item.key))
   }
   onClick={() => handleItemClick(item.key)}
   className={`w-52 py-3 rounded-lg border transition flex items-center justify-center gap-2
 
   ${
-    item.status === "completed" || item.is_completed
-      ? "bg-green-700 border-green-600 text-white cursor-not-allowed"
+    item.status === "completed" || 
+    item.is_completed === true ||
+    (sessionData?.categories_progress?.find(c => c.category_key === currentCategoryKey)?.completed_items?.includes(item.key))
+      ? "bg-pink-700 border-pink-600 text-white cursor-not-allowed"
       : item.disabled
       ? "bg-gray-700 border-gray-600 opacity-60 cursor-not-allowed"
       : "border-[#ff02c8] hover:bg-[#ff03ea]"
@@ -1977,8 +1992,10 @@ if (submitRes?.category_complete) {
 >
   {item.icon || "🎯"} {item.title || item.name || item.key}
 
-  {(item.status === "completed" || item.is_completed) && (
-    <span className="text-green-300 font-bold">✔</span>
+  {(item.status === "completed" || 
+    item.is_completed === true ||
+    (sessionData?.categories_progress?.find(c => c.category_key === currentCategoryKey)?.completed_items?.includes(item.key))) && (
+    <span className="text-white font-bold">✓</span>
   )}
 </button>
 
@@ -2048,7 +2065,7 @@ if (submitRes?.category_complete) {
       />
     )}
 
-    {completionData.completion.show_coins && (
+    {completionData.completion.show_coins && completionData.coins_earned > 0 && (
       <h2 className="text-yellow-400 text-2xl font-semibold">
         You've earned {Math.floor(completionData.coins_earned)} Coins
       </h2>

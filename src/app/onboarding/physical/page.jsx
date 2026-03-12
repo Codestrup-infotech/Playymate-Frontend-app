@@ -366,10 +366,441 @@ import PhysicalTopProgress from "@/app/components/PhysicalTopProgress";
 
 
 
+// export default function PhysicalPreferences() {
+//   const router = useRouter();
+
+//   const TOTAL_STEPS = 5;
+
+//   const [step, setStep] = useState(1);
+//   const [weight, setWeight] = useState(62);
+//   const [height, setHeight] = useState(160);
+//   const [blood, setBlood] = useState("A+");
+
+//   const [pendingCoins, setPendingCoins] = useState(0);
+//   const progress = Math.round(((step - 1) / TOTAL_STEPS) * 100);
+
+//   const [screenData, setScreenData] = useState(null);
+//   const [basicMetricsQuestions, setBasicMetricsQuestions] = useState([]);
+//   const [questionsLoading, setQuestionsLoading] = useState(false);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [apiFetched, setApiFetched] = useState(false);
+
+//   const [introAgree, setIntroAgree] = useState(false);
+//   const [weightAgree, setWeightAgree] = useState(false);
+//   const [heightAgree, setHeightAgree] = useState(false);
+
+//   const [consentLoading, setConsentLoading] = useState(false);
+//   const [consentError, setConsentError] = useState(null);
+
+//   const [answerLoading, setAnswerLoading] = useState(false);
+//   const [answerError, setAnswerError] = useState(null);
+
+//   const [showLoader, setShowLoader] = useState(true);
+
+//   useEffect(() => {
+//     const fetchScreenData = async () => {
+//       try {
+//         setLoading(true);
+
+//         const response = await questionnaireService.getOnboardingScreen(
+//           "physical_intro",
+//           "mobile"
+//         );
+
+//         if (response.data?.data?.screens?.[0]) {
+//           setScreenData(response.data.data.screens[0]);
+//         }
+
+//         setLoading(false);
+
+//         setTimeout(() => {
+//           setShowLoader(false);
+//         }, 6000);
+//       } catch (err) {
+//         console.error("Failed to fetch screen:", err);
+//         setError(err.message);
+//         setLoading(false);
+//       }
+//     };
+
+//     fetchScreenData();
+//   }, []);
+
+//  const submitAnswer = async (questionId, answer, questionData = null) => {
+//   try {
+//     setAnswerLoading(true);
+//     setAnswerError(null);
+
+//     const questionType = questionData?.question_type || "number";
+//     let payload = {};
+
+//     if (questionType === "single_select" || questionId === "blood_group") {
+//       let optionId = null;
+
+//       if (answer && typeof answer === "string" && answer.startsWith("opt_")) {
+//         optionId = answer;
+//       }
+
+//       if (!optionId && answer && typeof answer === "string") {
+//         const byId = questionData?.options?.find(
+//           (opt) => opt.option_id === answer
+//         );
+//         if (byId) optionId = answer;
+//       }
+
+//       if (!optionId && answer && typeof answer === "string") {
+//         const normalizedAnswer = answer.toLowerCase().replace(/\s+/g, "");
+
+//         const byLabel = questionData?.options?.find(
+//           (opt) =>
+//             opt.label?.toLowerCase().replace(/\s+/g, "") === normalizedAnswer ||
+//             opt.value?.toLowerCase().replace(/\s+/g, "") === normalizedAnswer
+//         );
+
+//         if (byLabel?.option_id) optionId = byLabel.option_id;
+//       }
+
+//       if (!optionId && questionId === "blood_group") {
+//         const bloodGroupMap = {
+//           "A+": "opt_a+",
+//           "A-": "opt_a-",
+//           "B+": "opt_b+",
+//           "B-": "opt_b-",
+//           "AB+": "opt_ab+",
+//           "AB-": "opt_ab-",
+//           "O+": "opt_o+",
+//           "O-": "opt_o-",
+//           unknown: "opt_unknown",
+//         };
+
+//         optionId = bloodGroupMap[answer];
+//       }
+
+//       if (optionId) payload.selected_option_ids = [optionId];
+
+//     } else if (questionType === "number" || questionType === "range") {
+//       payload.answer_number =
+//         typeof answer === "number"
+//           ? answer
+//           : parseInt(answer) || parseFloat(answer);
+
+//     } else if (questionType === "text") {
+//       payload.answer_text = answer;
+
+//     } else if (questionType === "boolean") {
+//       payload.answer_boolean =
+//         answer === true || answer === "true" || answer === 1;
+//     }
+
+//     const response = await questionnaireService.submitAnswer(
+//       questionId,
+//       payload
+//     );
+
+//     const coins = response.data?.data?.reward?.pending_coins;
+
+//     if (coins !== undefined) {
+//       setPendingCoins(coins);
+//     }
+
+//     return true;
+
+//   } catch (err) {
+//     console.error(err);
+
+//     setAnswerError(
+//       err.response?.data?.message ||
+//         `Failed to submit ${questionId} answer`
+//     );
+
+//     return false;
+
+//   } finally {
+//     setAnswerLoading(false);
+//   }
+// };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//   const nextDisabled =
+//     (step === 1 && !introAgree) ||
+//     (step === 2 && !weightAgree) ||
+//     (step === 3 && !heightAgree);
+
+//   const goNext = async () => {
+//     if (step === 1 && introAgree) {
+//       try {
+//         setConsentLoading(true);
+//         setConsentError(null);
+
+//         await questionnaireService.submitConsent(true);
+
+//         setQuestionsLoading(true);
+
+//         try {
+//           const questionsRes =
+//             await questionnaireService.getQuestions("basic_metrics");
+
+//           const questions =
+//             questionsRes.data?.data?.questions?.basic_metrics || [];
+
+//           const sortedQuestions = questions.sort(
+//             (a, b) => a.flow_order - b.flow_order
+//           );
+
+//           setBasicMetricsQuestions(sortedQuestions);
+
+//           const weightQuestion = sortedQuestions.find(
+//             (q) => q.question_id === "weight"
+//           );
+//           const heightQuestion = sortedQuestions.find(
+//             (q) => q.question_id === "height"
+//           );
+
+//           if (weightQuestion?.range_config) {
+//             const { min, max } = weightQuestion.range_config;
+//             setWeight(Math.round((min + max) / 2));
+//           }
+
+//           if (heightQuestion?.range_config) {
+//             const { min, max } = heightQuestion.range_config;
+//             setHeight(Math.round((min + max) / 2));
+//           }
+//         } catch (qErr) {
+//           console.error(qErr);
+//         } finally {
+//           setQuestionsLoading(false);
+//         }
+
+//         setStep((s) => s + 1);
+//       } catch (err) {
+//         console.error(err);
+//         setConsentError(
+//           err.response?.data?.message ||
+//             "Failed to submit consent."
+//         );
+//         setStep((s) => s + 1);
+//       } finally {
+//         setConsentLoading(false);
+//       }
+//     } else if (!nextDisabled) {
+//       setStep((s) => s + 1);
+//     }
+//   };
+
+//   const goBack = () => {
+//     setStep((s) => s - 1);
+//   };
+
+//  return (
+//   <div className="min-h-screen flex flex-col justify-center items-center bg-black text-white px-4 overflow-hidden">
+
+//     {step >= 2 && (
+//       <div className="w-96">
+//         <PhysicalTopProgress progress={progress} pendingCoins={pendingCoins} />
+//       </div>
+//     )}
+
+//     <div className="w-full max-w-sm">
+//       {loading ? (
+//         <div className="flex justify-center items-center min-h-[400px]">
+//           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+//         </div>
+//       ) : (
+//         <>
+//           {step === 1 && showLoader ? (
+//             <IntroLoader image={screenData?.image_url} />
+//           ) : step === 1 ? (
+//             <Intro
+//               agree={introAgree}
+//               setAgree={setIntroAgree}
+//               onNext={goNext}
+//               disabled={nextDisabled}
+//               screenData={screenData}
+//               loading={consentLoading}
+//               error={consentError}
+//             />
+//           ) : null}
+
+//           {step === 2 && (
+//             <WeightStep
+//               value={weight}
+//               agree={weightAgree}
+//               setAgree={setWeightAgree}
+//               setValue={setWeight}
+//               questionData={basicMetricsQuestions.find(
+//                 (q) => q.question_id === "weight"
+//               )}
+//               onNext={async () => {
+//                 const q = basicMetricsQuestions.find(
+//                   (q) => q.question_id === "weight"
+//                 );
+//                 if (q) await submitAnswer(q.question_id, weight, q);
+//                 setStep(3);
+//               }}
+//               onBack={() => setStep(1)}
+//               disabled={nextDisabled}
+//             />
+//           )}
+
+//           {step === 3 && (
+//             <HeightStep
+//               value={height}
+//               setValue={setHeight}
+//               agree={heightAgree}
+//               setAgree={setHeightAgree}
+//               questionData={basicMetricsQuestions.find(
+//                 (q) => q.question_id === "height"
+//               )}
+//               onNext={async () => {
+//                 const q = basicMetricsQuestions.find(
+//                   (q) => q.question_id === "height"
+//                 );
+//                 if (q) await submitAnswer(q.question_id, height, q);
+//                 setStep(4);
+//               }}
+//               onBack={() => setStep(2)}
+//               disabled={nextDisabled}
+//             />
+//           )}
+
+//           {step === 4 && (
+//             <BloodStep
+//               value={blood}
+//               setValue={setBlood}
+//               questionData={basicMetricsQuestions.find(
+//                 (q) => q.question_id === "blood_group"
+//               )}
+//               onBack={() => setStep(3)}
+//               onComplete={async () => {
+//                 const q = basicMetricsQuestions.find(
+//                   (q) => q.question_id === "blood_group"
+//                 );
+//                 if (q && blood)
+//                   await submitAnswer(q.question_id, blood, q);
+
+//                 setStep(5);
+//               }}
+//             />
+//           )}
+
+//           {step === 5 && (
+//             <Fitness
+//               onBack={() => setStep(4)}
+//               onComplete={() => {
+//                 router.push("/onboarding/questionnaire");
+//               }}
+//             />
+//           )}
+//         </>
+//       )}
+//     </div>
+//   </div>
+// ); 
+// }
+
+// function IntroLoader({ image }) {
+//   return (
+//     <> 
+    
+//     <div className="flex items-center justify-center min-h-screen bg-black">
+//       <img
+//         src={image}
+//         alt="loading"
+//         className=" h-[500px] w-[350px]  rounded-2xl "
+//       />
+//     </div> </>
+//   );
+// }
+
+
+// function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }) {
+//   const title = screenData?.title || "Physical Profile";
+//   const description =
+//     screenData?.description || "Help us understand your physical attributes";
+
+//   const securityNote = "Your information is secure and never shared";
+
+//   const checkboxLabel =
+//     "I understand and agree to answer questions about my physical activity preferences";
+
+//   return (
+//     <div className="flex flex-col justify-between py-10">
+      
+     
+
+//       <div className="rounded-2xl border border-blue-500/40 bg-[#1c1c1c] py-12 px-4 text-center">
+
+//         <h2 className="text-4xl font-bold mb-5 bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+//           {title}
+//         </h2>
+
+//         <p className="text-sm text-gray-300 mb-5 font-Poppins">
+//           {description}
+//         </p>
+
+//         <p className="text-[14px] text-gray-400 mb-4 font-Poppins">
+//           {securityNote}
+//         </p>
+
+//         <label className="flex items-start gap-3 text-xs text-gray-300 text-left font-Poppins">
+//           <input
+//             type="checkbox"
+//             checked={agree}
+//             onChange={(e) => setAgree(e.target.checked)}
+//             className="mt-1 accent-pink-500"
+//           />
+//           <span>{checkboxLabel}</span>
+//         </label>
+
+//       </div>
+
+//       {error && (
+//         <p className="text-center text-red-400 py-2 text-sm">{error}</p>
+//       )}
+
+//       <button
+//         onClick={onNext}
+//         disabled={disabled}
+//         className={`w-full py-4 rounded-full transition mt-10 font-Poppins ${
+//           disabled
+//             ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+//             : "bg-gradient-to-r from-pink-500 to-orange-400 text-white"
+//         }`}
+//       >
+//         {loading ? "Loading..." : "Continue"}
+//       </button>
+//     </div>
+//   );
+// }
+
 export default function PhysicalPreferences() {
   const router = useRouter();
 
-  const TOTAL_STEPS = 5;
+  const TOTAL_STEPS = 6;
 
   const [step, setStep] = useState(1);
   const [weight, setWeight] = useState(62);
@@ -395,8 +826,30 @@ export default function PhysicalPreferences() {
 
   const [answerLoading, setAnswerLoading] = useState(false);
   const [answerError, setAnswerError] = useState(null);
-
+  const [consentScreen, setConsentScreen] = useState(null);
+  const [consentScreenData, setConsentScreenData] = useState(null);
   const [showLoader, setShowLoader] = useState(true);
+
+
+useEffect(() => {
+  const fetchConsentScreen = async () => {
+    try {
+      const res =
+        await questionnaireService.getPhysicalProfileConsentScreen();
+
+      console.log("CONSENT API RESPONSE:", res);
+
+      if (res?.data?.data) {
+        setConsentScreenData(res.data.data);
+      }
+
+    } catch (error) {
+      console.error("Consent API failed:", error);
+    }
+  };
+
+  fetchConsentScreen();
+}, []);
 
   useEffect(() => {
     const fetchScreenData = async () => {
@@ -415,8 +868,9 @@ export default function PhysicalPreferences() {
         setLoading(false);
 
         setTimeout(() => {
-          setShowLoader(false);
-        }, 6000);
+          setStep(2);
+        }, 3000);
+
       } catch (err) {
         console.error("Failed to fetch screen:", err);
         setError(err.message);
@@ -497,7 +951,10 @@ export default function PhysicalPreferences() {
       questionId,
       payload
     );
-
+console.log("FULL API RESPONSE:", response);
+console.log("API DATA:", response.data);
+console.log("REWARD DATA:", response.data?.data?.reward);
+console.log("PENDING COINS:", response.data?.data?.reward?.pending_coins);
     const coins = response.data?.data?.reward?.pending_coins;
 
     if (coins !== undefined) {
@@ -526,90 +983,79 @@ export default function PhysicalPreferences() {
 
 
 
+const nextDisabled =
+(step === 1 && !introAgree) ||
+(step === 2 && !introAgree) ||
+(step === 3 && !weightAgree) ||
+(step === 4 && !heightAgree);
 
+const goNext = async () => {
 
+  // INTRO → CONSENT
+  if (step === 1 && introAgree) {
+    setStep(2);
+    return;
+  }
 
+  // CONSENT → FETCH QUESTIONS
+  if (step === 2) {
+    try {
 
+      setConsentLoading(true);
+      setConsentError(null);
 
+      await questionnaireService.submitConsent(true);
 
+      setQuestionsLoading(true);
 
+      const questionsRes =
+        await questionnaireService.getQuestions("basic_metrics");
 
+      const questions =
+        questionsRes.data?.data?.questions?.basic_metrics || [];
 
+      const sortedQuestions =
+        questions.sort((a, b) => a.flow_order - b.flow_order);
 
+      setBasicMetricsQuestions(sortedQuestions);
 
+      const weightQuestion = sortedQuestions.find(
+        (q) => q.question_id === "weight"
+      );
 
+      const heightQuestion = sortedQuestions.find(
+        (q) => q.question_id === "height"
+      );
 
-
-
-
-
-
-
-  const nextDisabled =
-    (step === 1 && !introAgree) ||
-    (step === 2 && !weightAgree) ||
-    (step === 3 && !heightAgree);
-
-  const goNext = async () => {
-    if (step === 1 && introAgree) {
-      try {
-        setConsentLoading(true);
-        setConsentError(null);
-
-        await questionnaireService.submitConsent(true);
-
-        setQuestionsLoading(true);
-
-        try {
-          const questionsRes =
-            await questionnaireService.getQuestions("basic_metrics");
-
-          const questions =
-            questionsRes.data?.data?.questions?.basic_metrics || [];
-
-          const sortedQuestions = questions.sort(
-            (a, b) => a.flow_order - b.flow_order
-          );
-
-          setBasicMetricsQuestions(sortedQuestions);
-
-          const weightQuestion = sortedQuestions.find(
-            (q) => q.question_id === "weight"
-          );
-          const heightQuestion = sortedQuestions.find(
-            (q) => q.question_id === "height"
-          );
-
-          if (weightQuestion?.range_config) {
-            const { min, max } = weightQuestion.range_config;
-            setWeight(Math.round((min + max) / 2));
-          }
-
-          if (heightQuestion?.range_config) {
-            const { min, max } = heightQuestion.range_config;
-            setHeight(Math.round((min + max) / 2));
-          }
-        } catch (qErr) {
-          console.error(qErr);
-        } finally {
-          setQuestionsLoading(false);
-        }
-
-        setStep((s) => s + 1);
-      } catch (err) {
-        console.error(err);
-        setConsentError(
-          err.response?.data?.message ||
-            "Failed to submit consent."
-        );
-        setStep((s) => s + 1);
-      } finally {
-        setConsentLoading(false);
+      if (weightQuestion?.range_config) {
+        const { min, max } = weightQuestion.range_config;
+        setWeight(Math.round((min + max) / 2));
       }
-    } else if (!nextDisabled) {
-      setStep((s) => s + 1);
+
+      if (heightQuestion?.range_config) {
+        const { min, max } = heightQuestion.range_config;
+        setHeight(Math.round((min + max) / 2));
+      }
+
+      setStep(3);
+
+    } catch (err) {
+      console.error(err);
+      setConsentError(
+        err.response?.data?.message || "Failed to submit consent."
+      );
+    } finally {
+      setConsentLoading(false);
+      setQuestionsLoading(false);
     }
-  };
+
+    return;
+  }
+
+  if (!nextDisabled) {
+    setStep((s) => s + 1);
+  }
+};
 
   const goBack = () => {
     setStep((s) => s - 1);
@@ -618,12 +1064,17 @@ export default function PhysicalPreferences() {
  return (
   <div className="min-h-screen flex flex-col justify-center items-center bg-black text-white px-4 overflow-hidden">
 
-    {step >= 2 && (
+    {/* {step >= 2 && (
       <div className="w-96">
         <PhysicalTopProgress progress={progress} pendingCoins={pendingCoins} />
       </div>
-    )}
+    )} */}
 
+{step >= 3 && step <= 6 && (
+  <div className="w-96">
+    <PhysicalTopProgress progress={progress} pendingCoins={pendingCoins} />
+  </div>
+)}
     <div className="w-full max-w-sm">
       {loading ? (
         <div className="flex justify-center items-center min-h-[400px]">
@@ -631,21 +1082,23 @@ export default function PhysicalPreferences() {
         </div>
       ) : (
         <>
-          {step === 1 && showLoader ? (
-            <IntroLoader image={screenData?.image_url} />
-          ) : step === 1 ? (
-            <Intro
-              agree={introAgree}
-              setAgree={setIntroAgree}
-              onNext={goNext}
-              disabled={nextDisabled}
-              screenData={screenData}
-              loading={consentLoading}
-              error={consentError}
-            />
-          ) : null}
+        {step === 1 && (
+  <IntroLoader image={screenData?.image_url} />
+)}
 
-          {step === 2 && (
+{step === 2 && (
+  <Intro
+    agree={introAgree}
+    setAgree={setIntroAgree}
+    onNext={goNext}
+    disabled={!introAgree}
+    screenData={consentScreenData}
+    loading={consentLoading}
+    error={consentError}
+  />
+)}
+
+          {step === 3 && (
             <WeightStep
               value={weight}
               agree={weightAgree}
@@ -659,14 +1112,14 @@ export default function PhysicalPreferences() {
                   (q) => q.question_id === "weight"
                 );
                 if (q) await submitAnswer(q.question_id, weight, q);
-                setStep(3);
+                setStep(4);
               }}
-              onBack={() => setStep(1)}
+              onBack={() => setStep(2)}
               disabled={nextDisabled}
             />
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <HeightStep
               value={height}
               setValue={setHeight}
@@ -680,21 +1133,21 @@ export default function PhysicalPreferences() {
                   (q) => q.question_id === "height"
                 );
                 if (q) await submitAnswer(q.question_id, height, q);
-                setStep(4);
+                setStep(5);
               }}
-              onBack={() => setStep(2)}
+              onBack={() => setStep(3)}
               disabled={nextDisabled}
             />
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <BloodStep
               value={blood}
               setValue={setBlood}
               questionData={basicMetricsQuestions.find(
                 (q) => q.question_id === "blood_group"
               )}
-              onBack={() => setStep(3)}
+              onBack={() => setStep(4)}
               onComplete={async () => {
                 const q = basicMetricsQuestions.find(
                   (q) => q.question_id === "blood_group"
@@ -702,14 +1155,14 @@ export default function PhysicalPreferences() {
                 if (q && blood)
                   await submitAnswer(q.question_id, blood, q);
 
-                setStep(5);
+                setStep(6);
               }}
             />
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <Fitness
-              onBack={() => setStep(4)}
+              onBack={() => setStep(5)}
               onComplete={() => {
                 router.push("/onboarding/questionnaire");
               }}
@@ -730,31 +1183,54 @@ function IntroLoader({ image }) {
       <img
         src={image}
         alt="loading"
-        className=" h-[500px] w-[350px]  rounded-2xl "
+        className="w-80 h-[450px]  rounded-2xl "
       />
     </div> </>
   );
 }
 
 
+
+
 function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }) {
+
   const title = screenData?.title || "Physical Profile";
-  const description =
-    screenData?.description || "Help us understand your physical attributes";
-
-  const securityNote = "Your information is secure and never shared";
-
+  const description = screenData?.description;
+  
+  const securityNote =
+    screenData?.privacy_assurance ||
+    "Your information is secure and never shared";
+  
   const checkboxLabel =
-    "I understand and agree to answer questions about my physical activity preferences";
-
+    screenData?.consent_checkbox_text ||
+    "I understand and agree to answer questions";
+  
+  const ctaText = screenData?.cta_text || "Continue";
+  
+  const gradientStart = screenData?.title_gradient_start || "#FF6B6B";
+  const gradientEnd = screenData?.title_gradient_end || "#FFA726";
+  
+  const cardBackground = screenData?.card_background || "#1c1c1c";
+  const borderGradient = screenData?.card_border_gradient || "#4A47A3";
   return (
     <div className="flex flex-col justify-between py-10">
       
      
 
-      <div className="rounded-2xl border border-blue-500/40 bg-[#1c1c1c] py-12 px-4 text-center">
+      <div
+        className="rounded-2xl border py-12 px-4 text-center"
+        style={{
+          background: cardBackground,
+          borderColor: borderGradient
+        }}
+      >
 
-        <h2 className="text-4xl font-bold mb-5 bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+        <h2
+          className="text-4xl font-bold mb-5 bg-clip-text text-transparent"
+          style={{
+            backgroundImage: `linear-gradient(to right, ${gradientStart}, ${gradientEnd})`
+          }}
+        >
           {title}
         </h2>
 
@@ -791,7 +1267,7 @@ function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }
             : "bg-gradient-to-r from-pink-500 to-orange-400 text-white"
         }`}
       >
-        {loading ? "Loading..." : "Continue"}
+        {loading ? "Loading..." : ctaText}
       </button>
     </div>
   );

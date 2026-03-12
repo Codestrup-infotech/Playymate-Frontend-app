@@ -126,7 +126,7 @@ function TopProgress({ progress = 0, coins = 0 }) {
 </div>
 
       <div className="text-pink-400 text-sm mt-2 font-Poppins font-normal">
-        +{coins} Coins earned!
+        {coins > 0 ? `+${coins} Coins earned!` : 'Item completed!'}
       </div>
     </div>
   );
