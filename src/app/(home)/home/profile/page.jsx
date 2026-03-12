@@ -277,7 +277,7 @@ export default function ProfilePage() {
                 </span>
               )}
               {age && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700/40 text-gray-400 border border-gray-600/30">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700/40 text-orange-400 border border-gray-600/30">
                   {age} yrs
                 </span>
               )}
@@ -354,7 +354,7 @@ export default function ProfilePage() {
       </div>
 
       {/* ── INFO CARDS ROW ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-Poppins ">
 
         {/* Activity Intent + Role Details */}
         <div
@@ -367,12 +367,12 @@ export default function ProfilePage() {
 
           {activity_intent?.type && (
             <div className="mb-3">
-              <p className="text-xs text-gray-500 mb-1">Activity Intent</p>
-              <span className="text-sm font-medium text-orange-300 capitalize">
+              <p className="text-xs text-gray-800 mb-1">Activity Intent</p>
+              <span className="text-sm font-medium text-[#F47022] capitalize">
                 {capitalize(activity_intent.type)}
               </span>
               {activity_intent.details && (
-                <p className="text-xs text-gray-400 mt-0.5">{activity_intent.details}</p>
+                <p className="text-md text-blue-950 mt-0.5">{activity_intent.details}</p>
               )}
             </div>
           )}
@@ -385,7 +385,7 @@ export default function ProfilePage() {
                   <GraduationCap size={14} className="text-purple-400 flex-shrink-0" />
                   <div>
                     <p className="text-[10px] text-gray-500">College</p>
-                    <p className="text-sm text-gray-200">{roleSpecific.college_name}</p>
+                    <p className="text-sm text-gray-600">{roleSpecific.college_name}</p>
                   </div>
                 </div>
               )}
@@ -417,8 +417,8 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2">
                   <MapPin size={14} className="text-orange-400 flex-shrink-0" />
                   <div>
-                    <p className="text-[10px] text-gray-500">Current City</p>
-                    <p className="text-sm text-gray-200 capitalize">{commonFields.current_city}</p>
+                    <p className="text-[14px] text-[#9A37DB] ">Current City</p>
+                    <p className="text-sm text-gray-500 capitalize">{commonFields.current_city}</p>
                   </div>
                 </div>
               )}
@@ -426,8 +426,8 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2">
                   <MapPin size={14} className="text-orange-400 flex-shrink-0" />
                   <div>
-                    <p className="text-[10px] text-gray-500">Hometown</p>
-                    <p className="text-sm text-gray-200 capitalize">{commonFields.hometown}</p>
+                    <p className="text-[14px] text-[#9A37DB]">Hometown</p>
+                    <p className="text-sm text-gray-500 capitalize">{commonFields.hometown}</p>
                   </div>
                 </div>
               )}
@@ -435,8 +435,8 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2">
                   <User size={14} className="text-orange-400 flex-shrink-0" />
                   <div>
-                    <p className="text-[10px] text-gray-500">Qualification</p>
-                    <p className="text-sm text-gray-200">{commonFields.qualification}</p>
+                    <p className="text-[14px] text-[#9A37DB]">Qualification</p>
+                    <p className="text-sm text-gray-500">{commonFields.qualification}</p>
                   </div>
                 </div>
               )}
@@ -479,7 +479,7 @@ export default function ProfilePage() {
         className={`rounded-2xl p-5 ${isDark ? "bg-[#12122a] border border-white/5" : "bg-white shadow"
           }`}
       >
-        <h3 className={`text-sm font-semibold mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-gray-800"}`}>
+        <h3 className={`text-md font-semibold mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-gray-800"}`}>
           <ShieldCheck size={16} className="text-green-400" /> Verification Status
         </h3>
 
@@ -498,16 +498,16 @@ export default function ProfilePage() {
                 }`}
             >
               <div className="flex items-center justify-between">
-                <p className={`text-xs font-medium ${isDark ? "text-gray-300" : "text-gray-700"}`}>{v.label}</p>
+                <p className={`text-md font-Poppins font-medium ${isDark ? "text-gray-300" : "text-gray-700"}`}>{v.label}</p>
                 {v.status
-                  ? <CheckCircle size={14} className="text-green-400" />
-                  : <XCircle size={14} className="text-gray-500" />}
+                  ? <CheckCircle size={14} className="text-green-400 text-md" />
+                  : <XCircle size={14} className="text-gray-500 text-md" />}
               </div>
               <p className={`text-[10px] ${v.status ? "text-green-400" : "text-gray-500"}`}>
                 {v.status ? "Verified" : "Not Verified"}
               </p>
               {v.date && (
-                <p className="text-[9px] text-gray-500">
+                <p className="text-[12px] font-Poppins text-gray-500">
                   {new Date(v.date).toLocaleDateString()}
                 </p>
               )}
@@ -531,7 +531,7 @@ export default function ProfilePage() {
           }`}
       >
         {/* tabs */}
-        <div className="flex gap-6 border-b border-white/10 pb-4 mb-6 overflow-x-auto">
+        <div className="flex gap-6 border-b border-white/90 pb-4 mb-6 overflow-x-auto">
           {["Posts", "Reels", "Events", "Community"].map((tab) => (
             <button
               key={tab}
