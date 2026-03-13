@@ -361,7 +361,12 @@ const menu = [
       </div>
 
       {/* Menu */}
-      <div className="flex flex-col mt-2 px-2 space-y-1 overflow-y-auto h-[calc(100vh-180px)]">
+      <div className={`flex flex-col mt-2 px-2 space-y-1 overflow-y-auto h-[calc(100vh-64px)]
+        scrollbar-hide
+        [&::-webkit-scrollbar]:hidden
+        [-ms-overflow-style:none]
+        [scrollbar-width:none]
+      `}>
 
       {menu.map((item) => {
 

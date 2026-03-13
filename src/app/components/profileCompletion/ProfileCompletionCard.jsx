@@ -76,10 +76,10 @@ export default function ProfileCompletionCard({ profileCard, userData, onRefresh
 
   return (
     <>
-      <div className="bg-[#1a1a2e] rounded-xl p-4">
+      <div className="bg-white rounded-xl p-4">
         {/* Header */}
         <div className="mb-4">
-          <h3 className="text-white font-semibold text-lg">Complete Your Profile</h3>
+          <h3 className="text-black font-semibold text-lg">Complete Your Profile</h3>
           <p className="text-gray-400 text-sm">
             Finish setting up your profile so friends can find you and connect easily.
           </p>
@@ -90,39 +90,39 @@ export default function ProfileCompletionCard({ profileCard, userData, onRefresh
           {/* Tile 1 - Create Username */}
           <button
             onClick={() => setShowUsernamePopup(true)}
-            className="bg-[#252542] rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-[#2d2d4a] transition-colors min-h-[120px]"
+            className="bg-gradient-to-tr from-purple-500 to-orange-400 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-[#2d2d4a] transition-colors min-h-[120px]"
           >
             <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center mb-2">
               <UserPlus className="w-5 h-5 text-purple-400" />
             </div>
-            <span className="text-white font-medium text-sm">Create Username</span>
+            <span className="text-black font-medium text-sm">Create Username</span>
             {displayUsername ? (
               <span className="text-green-400 text-xs mt-1">@{displayUsername}</span>
             ) : (
-              <span className="text-gray-500 text-xs mt-1">Add</span>
+              <span className="text-black-500 text-xs mt-1">Add</span>
             )}
           </button>
 
           {/* Tile 2 - Select Profile Type */}
           <button
             onClick={handleProfileTypeSelect}
-            className="bg-[#252542] rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-[#2d2d4a] transition-colors min-h-[120px]"
+            className="bg-gradient-to-tr from-purple-500 to-orange-400 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-[#2d2d4a] transition-colors min-h-[120px]"
           >
             <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center mb-2">
               <List className="w-5 h-5 text-orange-400" />
             </div>
-            <span className="text-white font-medium text-sm">Select Main Profile Type</span>
+            <span className="text-black font-medium text-sm">Select Main Profile Type</span>
             {displayProfileType ? (
               <span className="text-green-400 text-xs mt-1 capitalize">{displayProfileType}</span>
             ) : (
-              <span className="text-gray-500 text-xs mt-1">Select</span>
+              <span className="text-black-500 text-xs mt-1">Select</span>
             )}
           </button>
 
           {/* Tile 3 - Add Bio */}
           <button
             onClick={() => setShowBioPopup(true)}
-            className="bg-[#252542] rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-[#2d2d4a] transition-colors min-h-[120px]"
+            className="bg-gradient-to-tr from-purple-500 to-orange-400 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-[#2d2d4a] transition-colors min-h-[120px]"
           >
             <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center mb-2">
               <FileText className="w-5 h-5 text-blue-400" />
