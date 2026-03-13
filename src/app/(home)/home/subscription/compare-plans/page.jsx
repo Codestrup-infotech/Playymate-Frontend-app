@@ -122,11 +122,12 @@ export default function ComparePlansPage() {
 
         {/* Upgrade Button */}
         <div className="flex justify-center pt-8">
+          
           <button 
-            onClick={() => router.push("/home/upgrade/manage-subscription")}
+            onClick={() => router.push("/home/subscription/my-subscription")}
             className="w-full md:w-1/2 py-4 rounded-full text-xl font-semibold bg-gradient-to-r from-pink-500 to-orange-500 hover:opacity-90 transition"
           >
-            Upgrade Now
+            Next
           </button>
         </div>
 
