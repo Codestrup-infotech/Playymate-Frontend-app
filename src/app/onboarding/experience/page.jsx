@@ -9,6 +9,10 @@ export default function CompleteExperience() {
 
   const router = useRouter();
 
+  // Flow states: 'loading' -> 'questions' -> 'celebration' -> 'home'
+  const [flowState, setFlowState] = useState('loading');
+  const [introScreen, setIntroScreen] = useState(null);
+  const [celebrationData, setCelebrationData] = useState(null);
   const [screens, setScreens] = useState([]);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -19,65 +23,129 @@ const [showIntro, setShowIntro] = useState(true);
 
   const currentScreen = screens[step];
 
-  // FETCH API SCREENS
+  // FETCH INTRO SCREEN (shows as loader for 4 seconds)
   useEffect(() => {
 
-    const checkOnboardingStatus = async () => {
-  
+    const fetchScreens = async () => {
       try {
-  
-        const statusResponse = await userService.getOnboardingStatus();
-        const data = statusResponse?.data?.data || {};
-        const nextStep = data.next_required_step;
-        const onboardingState = data.onboarding_state;
-  
-        const completedSteps = [
-          "ACTIVE_USER",
-          "COMPLETED",
-          "HOME",
-          "DONE",
-          "ACTIVE",
-          "EXPERIENCE_COMPLETED",
-          "EXPERIENCE_COMPLETE",
-          "EXTENDED_PROFILE_COMPLETED",
-        ];
-  
-        if (
-          completedSteps.includes(nextStep) ||
-          completedSteps.includes(onboardingState)
-        ) {
-          router.push("/home");
-          return;
-        }
-  
-      } catch (err) {
-        console.error("Failed to check onboarding status:", err);
-      }
-  
-      try {
-  
-        // 🔹 FETCH EXTENDED INTRO SCREEN
+        // Fetch extended intro screen from backend
         const introRes = await experienceService.getExtendedIntro();
-        const introData = introRes?.data?.data?.screen;
-  
-        setIntroScreen(introData);
-  
-        // 🔹 FETCH EXPERIENCE SCREENS
-        const res = await experienceService.getScreens();
-        const apiScreens = res?.data?.data?.screens || [];
-  
-        setScreens(apiScreens);
-  
+        setIntroScreen(introRes?.data?.data?.screen);
       } catch (error) {
         console.error("Failed to fetch screens:", error);
       }
-  
-      setPageLoading(false);
     };
-  
+
+    fetchScreens();
+
+  }, []);
+
+  // Handle loading screen (4 seconds)
+  useEffect(() => {
+    if (flowState === 'loading' && introScreen) {
+      const timer = setTimeout(() => {
+        setFlowState('questions');
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [flowState, introScreen]);
+
+  // CHECK ONBOARDING STATUS AND FETCH QUESTIONS
+  useEffect(() => {
+
+    const checkOnboardingStatus = async () => {
+  try {
+    const statusResponse = await userService.getOnboardingStatus();
+    const data = statusResponse?.data?.data || {};
+    const nextStep = data.next_required_step;
+    const onboardingState = data.onboarding_state;
+
+    const completedSteps = [
+      "ACTIVE_USER",
+      "COMPLETED",
+      "HOME",
+      "DONE",
+      "ACTIVE",
+      "EXPERIENCE_COMPLETED",
+      "EXPERIENCE_COMPLETE",
+      "EXTENDED_PROFILE_COMPLETED",
+    ];
+
+    console.log('Experience page - nextStep:', nextStep);
+    console.log('Experience page - onboardingState:', onboardingState);
+
+    if (
+      completedSteps.includes(nextStep) ||
+      completedSteps.includes(onboardingState)
+    ) {
+      console.log('Experience page - redirecting to home (completed state)');
+      router.push("/home");
+      return;
+    }
+
+    // If user has EXTENDED_PROFILE_INTRO or PENDING, they should stay on experience page
+    if (nextStep === 'EXTENDED_PROFILE_INTRO' || nextStep === 'EXTENDED_PROFILE_PENDING' ||
+        onboardingState === 'EXTENDED_PROFILE_INTRO' || onboardingState === 'EXTENDED_PROFILE_PENDING') {
+      console.log('Experience page - user needs to complete extended profile, staying on this page');
+      // Don't redirect - let user complete the experience
+    }
+  } catch (err) {
+    console.error("Failed to check onboarding status:", err);
+  }
+
+  try {
+    const res = await experienceService.getScreens();
+    const apiScreens = res?.data?.data?.screens || [];
+    setScreens(apiScreens);
+  } catch (error) {
+    console.error("Failed to fetch screens:", error);
+  }
+
+  setPageLoading(false);
+};
+
     checkOnboardingStatus();
   
   }, [router]);
+
+  // Handle celebration screen auto-redirect (4 seconds)
+  useEffect(() => {
+    if (flowState === 'celebration') {
+      const timer = setTimeout(() => {
+        router.push("/home");
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [flowState, router]);
+
+  // Fetch completion celebration data from backend after all answers submitted
+  const fetchCompletionCelebration = async () => {
+    try {
+      const res = await experienceService.getCompletionCelebration();
+      setCelebrationData(res?.data?.data);
+      setFlowState('celebration');
+      
+      // Mark onboarding as complete on the backend
+      try {
+        await userService.completeOnboarding();
+        console.log('Onboarding marked as complete');
+      } catch (completeErr) {
+        console.error('Error completing onboarding:', completeErr);
+      }
+    } catch (error) {
+      console.error("Failed to fetch completion celebration:", error);
+      // Even if celebration screen fetch fails, try to complete onboarding
+      // This handles the case where completion-celebration screen returns 404
+      try {
+        await userService.completeOnboarding();
+        console.log('Onboarding marked as complete after celebration fetch error');
+      } catch (completeErr) {
+        console.error('Error completing onboarding:', completeErr);
+      }
+      // Still redirect to home
+      router.push("/home");
+    }
+  };
 
   // SELECT OPTION
   const selectOption = (questionKey, value, type) => {
@@ -145,15 +213,8 @@ const [showIntro, setShowIntro] = useState(true);
     setStep(step + 1);
     setAnswers({});
   } else {
-    // All screens completed - call the onboarding complete API to update state
-    try {
-      await userService.completeOnboarding();
-      console.log("Onboarding completed successfully");
-    } catch (completeErr) {
-      // Log error but don't block user from proceeding
-      console.error("Error completing onboarding:", completeErr);
-    }
-    router.push("/home");
+    // All screens completed - call completion celebration API from backend
+    await fetchCompletionCelebration();
   }
 
 } catch (error) {
@@ -164,27 +225,113 @@ const [showIntro, setShowIntro] = useState(true);
   };
 
   const skip = async () => {
-    // Call skip API and then complete onboarding
+    // Call skip API
     try {
       await experienceService.skipAnswers();
     } catch (skipErr) {
-      // Log error but don't block user from proceeding
       console.error("Error skipping experience:", skipErr);
     }
     
-    // Complete onboarding after skip
-    try {
-      await userService.completeOnboarding();
-      console.log("Onboarding completed successfully");
-    } catch (completeErr) {
-      // Log error but don't block user from proceeding
-      console.error("Error completing onboarding:", completeErr);
-    }
-    
-    router.push("/home");
+    // Call completion celebration API from backend
+    await fetchCompletionCelebration();
   };
 
-  if (pageLoading) {
+  // Render Loading Screen (extended-intro from backend API - 4 seconds)
+  const renderLoadingScreen = () => (
+    // <div className="min-h-screen bg-black flex flex-col items-center justify-center px-4">
+    //   <div className="text-center">
+      
+    //     <h1 className="text-white text-3xl font-Playfair Display font-bold mb-4">
+    //       {introScreen?.title || "Tell Us About Your Experience"}
+    //     </h1>
+        
+       
+      
+    //     {introScreen?.image_url && (
+    //       <div className="mb-6">
+    //         <img 
+    //           src={introScreen.image_url} 
+    //           alt="Experience" 
+    //           className=" h-96 w-60 mx-auto  rounded-3xl "
+    //         />
+    //       </div>
+    //     )}
+      
+    //   </div>
+     
+    // </div>
+    <div className="min-h-screen bg-black flex items-center justify-center px-4">
+  {introScreen?.image_url && (
+    <div className="relative w-60 h-96">
+
+      {/* Image */}
+      <img
+        src={introScreen.image_url}
+        alt="Experience"
+        className="w-full h-full object-cover rounded-3xl"
+      />
+
+      {/* Overlay text */}
+      <div className="absolute bottom-6 left-0 right-0 text-center px-4">
+        {(() => {
+          const title =
+            introScreen?.title || "Tell Us About Your Experience";
+
+          const words = title.split(" ");
+          const lastWord = words.pop();
+
+          return (
+            <h1 className="text-white text-xl font-bold leading-tight">
+              {words.join(" ")}{" "}
+              <span className="bg-gradient-to-r from-orange-500 to-pink-400 bg-clip-text text-transparent">
+                {lastWord}
+              </span>
+            </h1>
+          );
+        })()}
+      </div>
+
+    </div>
+  )}
+</div>
+  );
+
+  // Render Celebration Screen (data from backend API)
+  const renderCelebrationScreen = () => {
+    const screen = celebrationData?.screen;
+    
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-4">
+        {screen?.show_confetti && (
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="confetti-container"></div>
+          </div>
+        )}
+        <div className="text-center z-10">
+          <div className="text-6xl mb-6 animate-pulse">
+            🎉
+          </div>
+          <h1 className="text-white text-4xl font-bold mb-4">
+            {screen?.title || "You're All Set!"}
+          </h1>
+          <p className="text-gray-400 text-lg mb-2">
+            {screen?.subtitle || "Welcome to Playymate"}
+          </p>
+          <p className="text-cyan-400 text-md mb-8">
+            {screen?.message || "Your profile is ready!"}
+          </p>
+          <button
+            onClick={() => router.push("/home")}
+            className="px-8 py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 text-white font-semibold text-lg"
+          >
+            {screen?.cta?.text || "Explore Now"}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  if (pageLoading || !introScreen) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white">
         Loading...
@@ -192,39 +339,17 @@ const [showIntro, setShowIntro] = useState(true);
     );
   }
 
-  if (showIntro && introScreen) {
-    return (
-      <div className="min-h-screen bg-black flex flex-col justify-between items-center text-white px-4 py-10">
-  
-        {/* Image */}
-        <div className="flex justify-center items-center flex-1">
-          <img
-            src={introScreen.image_url}
-            alt="extended intro"
-            className="w-80 rounded-xl"
-          />
-        </div>
-  
-        {/* Bottom section */}
-        <div className="text-center w-full max-w-sm">
-  
-          <h1 className="text-3xl font-bold mb-6">
-            {introScreen.title}
-          </h1>
-  
-          <button
-            onClick={() => setShowIntro(false)}
-            className="w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 text-white font-semibold"
-          >
-            Continue
-          </button>
-  
-        </div>
-  
-      </div>
-    );
+  // Show loading screen (extended-intro from backend - 4 seconds)
+  if (flowState === 'loading') {
+    return renderLoadingScreen();
   }
 
+  // Show celebration screen (data from backend API)
+  if (flowState === 'celebration') {
+    return renderCelebrationScreen();
+  }
+
+  // Original questions flow
   return (
     <div className="min-h-screen bg-black flex justify-center px-4 py-10">
 
@@ -233,7 +358,6 @@ const [showIntro, setShowIntro] = useState(true);
         {/* HEADER */}
         <div className="text-center mb-8">
 
-          <p className="text-gray-400 text-sm">Final step</p>
 
           <h1 className="text-white text-4xl font-bold">
             COMPLETE YOUR
@@ -243,7 +367,7 @@ const [showIntro, setShowIntro] = useState(true);
             EXPERIENCE
           </h2>
 
-          <p className="text-cyan-400 mt-2">
+          <p className="text-cyan-400 mt-2 font-Poppins ">
             {currentScreen?.icon} {currentScreen?.title}
           </p>
 

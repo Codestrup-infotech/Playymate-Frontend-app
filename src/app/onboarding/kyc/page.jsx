@@ -1075,11 +1075,11 @@ export default function KYCPage() {
       {/* Buttons */}
       <div className="flex gap-4">
 
-        {/* Skip */}
+        {/* Skip - only show if configured */}
         {screenConfig?.button_text?.skip && (
           <button
             onClick={handleSkip}
-            className="flex-1 py-3 rounded-full border  border-pink-500 text-white font-medium"
+            className="flex-1 py-3 rounded-full border border-pink-500 text-white font-medium"
           >
             {screenConfig.button_text.skip}
           </button>
@@ -1096,13 +1096,6 @@ export default function KYCPage() {
           ) : (
             screenConfig?.button_text?.primary || "Continue"
           )}
-        </button>
-
-        <button
-          onClick={handleSkip}
-          className="flex-1 py-3 rounded-full font-Poppins border border-pink-500 text-white font-medium"
-        >
-          {screenConfig?.button_text?.skip || "Skip"}
         </button>
 
       </div>

@@ -983,11 +983,11 @@ console.log("PENDING COINS:", response.data?.data?.reward?.pending_coins);
 
 
 
-const nextDisabled = false ;
-// (step === 1 && !introAgree) ||
-// (step === 2 && !introAgree) ||
-// (step === 3 && !weightAgree) ||
-// (step === 4 && !heightAgree);
+const nextDisabled =
+(step === 1 && !introAgree) ||
+(step === 2 && !introAgree) ||
+(step === 3 && !weightAgree) ||
+(step === 4 && !heightAgree);
 
 const goNext = async () => {
 
@@ -2090,13 +2090,8 @@ function HeightStep({ value,
   </div>
 
   {/* Ruler + value section */}
-  <HeightRuler
-  value={value}
-  setValue={setValue}
-  unit={unit}
-  min={minHeight}
-  max={maxHeight}
-/>
+  <HeightRuler value={value} setValue={setValue} unit={unit} />
+
   {/* Note */} 
   <div className=" flex flex-col justify-center items-center text-center font-Poppins  px-4 py-3.5 text-[11.5px] text-[#888] leading-[1.6] w-full">
     <p className="text-white/90">

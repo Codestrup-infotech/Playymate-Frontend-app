@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -17,8 +17,22 @@ import {
   BookOpen,
   Utensils,
   Coffee,
-  Plane
+  Plane,
+  Trash2,
+  Check,
+  X
 } from "lucide-react";
+import {
+  getCurrentUserId,
+  getUserProfile,
+  updateUserProfile,
+  uploadAvatar,
+  deleteAvatar,
+  getAllProfilePhotos,
+  deleteProfilePhoto,
+  setPrimaryPhoto
+} from "@/services/profile.service";
+import { userService } from "@/services/user";
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -26,6 +40,10 @@ export default function EditProfilePage() {
 
   const [profileImage, setProfileImage] = useState("/profile.jpg");
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [profilePhotos, setProfilePhotos] = useState([]);
+  const [showPhotoManager, setShowPhotoManager] = useState(false);
 
   const [formData, setFormData] = useState({
     username: "your-name",
@@ -47,11 +65,186 @@ export default function EditProfilePage() {
     { name: "Coffee", icon: Coffee, selected: false },
   ]);
 
-  const handleImageChange = (e) => {
+  // Load user profile on mount
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        // Use userService.getMe() to get current user data
+        const res = await userService.getMe();
+        const profile = res?.data?.data || res?.data;
+        
+        console.log("Edit page - Current user profile:", profile);
+        
+        if (profile && profile._id) {
+          setUserId(profile._id);
+          console.log("Edit page - User ID set:", profile._id);
+          
+          // Update form data with user profile
+          setFormData({
+            username: profile.username || "",
+            name: profile.full_name || "",
+            bio: profile.bio || "",
+            website: profile.website || "",
+            location: profile.profile_location?.display_text || "",
+            interests: [],
+          });
+
+          // Set profile image
+          if (profile.profile_image_url) {
+            setProfileImage(profile.profile_image_url);
+            console.log("Edit page - Profile image set:", profile.profile_image_url);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load user profile:", error);
+      }
+    };
+
+    loadUserProfile();
+  }, []);
+
+  // Load profile photos
+  const loadProfilePhotos = async () => {
+    try {
+      const response = await getAllProfilePhotos();
+      if (response.status === "success") {
+        setProfilePhotos(response.data?.photos || []);
+      }
+    } catch (error) {
+      console.error("Failed to load profile photos:", error);
+    }
+  };
+
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      setProfileImage(imageUrl);
+    if (!file) return;
+
+    console.log("========== AVATAR UPLOAD STARTED ==========");
+    console.log("File selected:", file.name);
+    console.log("File size:", (file.size / 1024).toFixed(2), "KB");
+    console.log("File type:", file.type);
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size must be less than 5MB");
+      return;
+    }
+
+    // Show preview immediately while uploading
+    const imageUrl = URL.createObjectURL(file);
+    console.log("Local preview created:", imageUrl);
+    setProfileImage(imageUrl);
+    setIsUploading(true);
+
+    try {
+      if (userId) {
+        console.log("User ID:", userId);
+        console.log("Starting avatar upload to Wasabi...");
+        
+        // Upload using the API (presigned URL flow to Wasabi)
+        const result = await uploadAvatar(userId, file);
+        
+        console.log("Upload API response received!");
+        console.log("Full result:", result);
+        
+        if (result.status === "success") {
+          // Get the CDN URL from Wasabi/CloudFront
+          const cdnUrl = result.data?.profile_image_url;
+          console.log("CDN URL (Wasabi):", cdnUrl);
+          
+          if (cdnUrl) {
+            setProfileImage(cdnUrl);
+            console.log("Profile photo updated with CDN URL!");
+          } else {
+            console.warn("No CDN URL in response, keeping local preview");
+          }
+          alert("Profile photo updated successfully!");
+        }
+      } else {
+        // Fallback for when userId is not available
+        console.log("User ID not available, using local preview only");
+        alert("User ID not found. Please refresh the page and try again.");
+      }
+    } catch (error) {
+      console.error("========== AVATAR UPLOAD FAILED ==========");
+      console.error("Failed to upload avatar:", error);
+      
+      // Show more detailed error message
+      if (error.response) {
+        console.error("API Error:", error.response.data);
+        alert(`Failed to upload profile photo: ${error.response.data?.message || "Server error"}`);
+      } else if (error.request) {
+        alert("Failed to upload profile photo. Network error - please check your connection.");
+      } else {
+        alert("Failed to upload profile photo. Please try again.");
+      }
+      
+      // Don't revert - keep the local preview as fallback
+      // The user can try again if needed
+    } finally {
+      setIsUploading(false);
+      console.log("========== AVATAR UPLOAD COMPLETE ==========\n");
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    if (!userId) return;
+
+    const confirmDelete = window.confirm("Are you sure you want to delete your profile photo?");
+    if (!confirmDelete) return;
+
+    setIsLoading(true);
+    try {
+      const result = await deleteAvatar(userId);
+      if (result.status === "success") {
+        setProfileImage("/profile.jpg");
+        alert("Profile photo deleted successfully!");
+      }
+    } catch (error) {
+      console.error("Failed to delete avatar:", error);
+      alert("Failed to delete profile photo. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOpenPhotoManager = async () => {
+    await loadProfilePhotos();
+    setShowPhotoManager(true);
+  };
+
+  const handleDeleteProfilePhoto = async (photoIndex) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this photo?");
+    if (!confirmDelete) return;
+
+    try {
+      const result = await deleteProfilePhoto(photoIndex);
+      if (result.status === "success") {
+        await loadProfilePhotos();
+        alert("Photo deleted successfully!");
+      }
+    } catch (error) {
+      console.error("Failed to delete photo:", error);
+      alert("Failed to delete photo. Please try again.");
+    }
+  };
+
+  const handleSetPrimaryPhoto = async (photoIndex) => {
+    try {
+      const result = await setPrimaryPhoto(photoIndex);
+      if (result.status === "success") {
+        await loadProfilePhotos();
+        alert("Primary photo updated successfully!");
+      }
+    } catch (error) {
+      console.error("Failed to set primary photo:", error);
+      alert("Failed to set primary photo. Please try again.");
     }
   };
 
@@ -69,11 +262,24 @@ export default function EditProfilePage() {
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      router.push("/home/profile");
+      if (userId) {
+        // Update user profile via API
+        await updateUserProfile(userId, {
+          full_name: formData.name,
+          bio: formData.bio,
+          username: formData.username,
+          profile_location: {
+            display_text: formData.location,
+            city: formData.location.split(",")[0]?.trim() || "",
+            state: formData.location.split(",")[1]?.trim() || ""
+          }
+        });
+      }
+      // Force full page reload to ensure fresh data is fetched
+      window.location.href = "/home/profile";
     } catch (error) {
       console.error("Failed to save profile:", error);
+      alert("Failed to save profile. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -119,9 +325,14 @@ export default function EditProfilePage() {
               </div>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 p-2 bg-purple-600 rounded-full hover:bg-purple-700 transition-colors"
+                disabled={isUploading}
+                className="absolute bottom-0 right-0 p-2 bg-purple-600 rounded-full hover:bg-purple-700 transition-colors disabled:opacity-50"
               >
-                <Camera size={16} />
+                {isUploading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Camera size={16} />
+                )}
               </button>
               <input
                 ref={fileInputRef}
@@ -134,8 +345,27 @@ export default function EditProfilePage() {
             <div className="flex-1">
               <p className="font-semibold">{formData.name}</p>
               <p className="text-gray-400 text-sm">@{formData.username}</p>
-              <button className="mt-3 text-purple-400 text-sm hover:text-purple-300 font-medium">
-                Change Profile Photo
+              <div className="mt-3 flex gap-3">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-purple-400 text-sm hover:text-purple-300 font-medium"
+                >
+                  Change Profile Photo
+                </button>
+                {profileImage && profileImage !== "/profile.jpg" && (
+                  <button
+                    onClick={handleDeleteAvatar}
+                    className="text-red-400 text-sm hover:text-red-300 font-medium"
+                  >
+                    Delete Photo
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={handleOpenPhotoManager}
+                className="mt-2 text-blue-400 text-sm hover:text-blue-300 font-medium"
+              >
+                Manage Photos
               </button>
             </div>
           </div>
@@ -307,6 +537,77 @@ export default function EditProfilePage() {
         </div>
 
       </div>
+
+      {/* Profile Photo Manager Modal */}
+      {showPhotoManager && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1a1a2e] rounded-xl max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Manage Profile Photos</h3>
+              <button
+                onClick={() => setShowPhotoManager(false)}
+                className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              {profilePhotos.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {profilePhotos.map((photo, index) => (
+                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-gray-800">
+                      <img
+                        src={photo.url || photo}
+                        alt={`Profile photo ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {photo.is_primary && (
+                        <div className="absolute top-1 left-1 bg-purple-600 text-xs px-2 py-1 rounded-full">
+                          Primary
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        {!photo.is_primary && (
+                          <button
+                            onClick={() => handleSetPrimaryPhoto(index)}
+                            className="p-2 bg-purple-600 rounded-full hover:bg-purple-700 transition-colors"
+                            title="Set as primary"
+                          >
+                            <Check size={16} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteProfilePhoto(index)}
+                          className="p-2 bg-red-600 rounded-full hover:bg-red-700 transition-colors"
+                          title="Delete photo"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-gray-400 py-8">
+                  No additional profile photos. Upload more from your gallery.
+                </p>
+              )}
+              
+              <button
+                onClick={() => {
+                  setShowPhotoManager(false);
+                  fileInputRef.current?.click();
+                }}
+                className="w-full py-3 bg-purple-600 rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Camera size={20} />
+                Add More Photos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
