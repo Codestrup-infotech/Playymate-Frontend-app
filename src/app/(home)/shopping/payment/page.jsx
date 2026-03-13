@@ -1,11 +1,11 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { products } from "../data/products";
 import { ArrowLeft } from "lucide-react";
 
-export default function Payment() {
+function PaymentContent() {
   const router = useRouter();
   const params = useSearchParams();
   const id = params.get("id");
@@ -115,5 +115,17 @@ export default function Payment() {
       </div>
 
     </div>
+  );
+}
+
+export default function Payment() {
+  return (
+    <Suspense fallback={
+      <div className="bg-black text-white min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    }>
+      <PaymentContent />
+    </Suspense>
   );
 }

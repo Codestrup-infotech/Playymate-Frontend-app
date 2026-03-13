@@ -1,10 +1,11 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense } from "react";
 import { products } from "../data/products";
 import { CheckCircle } from "lucide-react";
 
-export default function Success() {
+function SuccessContent() {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -111,5 +112,17 @@ export default function Success() {
       </button>
 
     </div>
+  );
+}
+
+export default function Success() {
+  return (
+    <Suspense fallback={
+      <div className="bg-black text-white min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }

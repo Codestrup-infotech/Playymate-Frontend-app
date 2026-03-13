@@ -1,12 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { userService } from "@/services/user";
 import { kycService } from "@/services/kyc";
 import { getRouteFromStep } from "@/lib/api/navigation";
 
-export default function ActivityIntentPage() {
+function ActivityIntentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -79,7 +79,13 @@ useEffect(() => {
   );
 }
 
-/* ---------------- ROLE SELECTION COMPONENT (STEP 1) ---------------- */
+export default function ActivityIntentPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>}>
+      <ActivityIntentPageContent />
+    </Suspense>
+  );
+}
 
 function RoleSelection({ onBack, activityScreenConfig }) {
   const router = useRouter();

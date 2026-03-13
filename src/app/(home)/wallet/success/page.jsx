@@ -1,8 +1,9 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense } from "react";
 
-export default function DiamondSuccessPage() {
+function DiamondSuccessContent() {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -26,7 +27,7 @@ export default function DiamondSuccessPage() {
         </h1>
 
         <p className="text-gray-400 mt-2">
-          You're Ready To Boost Your Game 🚀
+          You Ready To Boost Your Game 🚀
         </p>
 
         {/* New Balance Card */}
@@ -68,5 +69,13 @@ export default function DiamondSuccessPage() {
       </div>
 
     </div>
+  );
+}
+
+export default function DiamondSuccessPage() {
+  return (
+    <Suspense fallback={<div className="bg-black text-white min-h-screen flex items-center justify-center">Loading...</div>}>
+      <DiamondSuccessContent />
+    </Suspense>
   );
 }
