@@ -778,10 +778,24 @@ import {
   getItemQuestions,
   submitAnswer,
   saveSelection,
+  completeQuestionnaire,
+  getCategoryCompletion,
 } from "@/lib/api/categoryApi";
+import SportProgressBar from "@/app/components/SportProgressBar";
 
 export default function CategorySelection() {
   const router = useRouter();
+
+  // Token state - initialized after component mounts
+  const [token, setToken] = useState(null);
+
+  // Initialize token on mount
+  useEffect(() => {
+    const storedToken = typeof window !== "undefined" 
+      ? sessionStorage.getItem("accessToken") 
+      : null;
+    setToken(storedToken);
+  }, []);
 
   const [sessionId, setSessionId] = useState(null);
   const [currentCategoryKey, setCurrentCategoryKey] = useState(null);
@@ -806,10 +820,33 @@ export default function CategorySelection() {
   // Store full session data for tracking item completion status
   const [sessionData, setSessionData] = useState(null);
 
-  const token =
-    typeof window !== "undefined"
-      ? sessionStorage.getItem("accessToken")
-      : null;
+  const [progressPercentage, setProgressPercentage] = useState(0);
+const [pendingCoins, setPendingCoins] = useState(0);
+
+const [selectedOption, setSelectedOption] = useState(null);
+const [remainingSlots, setRemainingSlots] = useState(null);
+
+const [completionData, setCompletionData] = useState(null);
+
+ // ✅ ADD HERE
+  const completedItemsCount =
+    itemsData?.items?.filter(
+      (item) => item.status === "completed" || item.is_completed
+    ).length || 0;
+
+  const remainingItems =
+    itemsData?.max_selection - completedItemsCount;
+
+const [rewardScreen, setRewardScreen] = useState(false);
+const [earnedCoins, setEarnedCoins] = useState(0);
+
+const colorPalette = [
+  { card: "from-[#1B5CD1] to-[#1EB9EC]", hover: "hover:bg-[#1EB9EC]" },
+  { card: "from-[#9333EA] to-[#6366F1]", hover: "hover:bg-[#6366F1]" },
+  { card: "from-[#14B8A6] to-[#22C55E]", hover: "hover:bg-[#22C55E]" },
+];
+
+const gradient = colorPalette[qIndex % colorPalette.length];
 
   /* ================= INIT ================= */
 
@@ -820,6 +857,12 @@ export default function CategorySelection() {
   
 async function initialize() {
   try {
+    // Get token directly from sessionStorage for immediate use
+    const authToken =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("accessToken")
+        : null;
+    
     setScreen("loading");
 
     console.log("=== INITIALIZE QUESTIONNAIRE ===");
@@ -832,7 +875,7 @@ async function initialize() {
 
     try {
       console.log("Checking existing session...");
-      session = await getQuestionnaireSession(token);
+      session = await getQuestionnaireSession(authToken);
 
       if (session) {
         console.log("Existing session found:", session);
@@ -854,6 +897,15 @@ async function initialize() {
       setSessionData(session); // Store full session data
       if (session?.overall_progress?.percentage === 100) {
   console.log("All preference categories already completed");
+
+  // Complete questionnaire to update state to QUESTIONNAIRE_COMPLETED
+  try {
+    await completeQuestionnaire(authToken, session.session_id);
+    console.log("Questionnaire completed successfully");
+  } catch (completeErr) {
+    console.error("Error completing questionnaire:", completeErr);
+  }
+
   router.push("/onboarding/experience");
   return;
 }
@@ -934,12 +986,12 @@ if (session.categories_progress?.length) {
 
     console.log(">>> STARTING NEW SESSION");
 
-    const newSession = await startQuestionnaireSession(token, false);
+    const newSession = await startQuestionnaireSession(authToken, false);
     console.log('[CategorySelection] New session created:', newSession);
     
     // After starting session, get full session details with session_id
     // This follows the API doc: Get Session Status with session_id
-    const sessionDetails = await getQuestionnaireSession(token, newSession.session_id);
+    const sessionDetails = await getQuestionnaireSession(authToken, newSession.session_id);
     console.log('[CategorySelection] Session details:', sessionDetails);
     
     // Use the session details
@@ -1243,14 +1295,48 @@ async function handleItemClick(itemKey) {
         question_id: question.question_id
       });
       
-      const submitRes = await submitAnswer(token, {
-        session_id: sessionIdAtCompletion,
-        category_key: categoryKeyAtCompletion,
-        item_key: itemKeyAtCompletion,
-        question_id: question.question_id,
-        selected_option_ids: [optionId],
-      });
+      // const submitRes = await submitAnswer(token, {
+      //   session_id: sessionIdAtCompletion,
+      //   category_key: categoryKeyAtCompletion,
+      //   item_key: itemKeyAtCompletion,
+      //   question_id: question.question_id,
+      //   selected_option_ids: [optionId],
+      // });
       
+
+      const submitRes = await submitAnswer(token, {
+  session_id: sessionIdAtCompletion,
+  category_key: categoryKeyAtCompletion,
+  item_key: itemKeyAtCompletion,
+  question_id: question.question_id,
+  selected_option_ids: [optionId],
+});
+
+// update progress
+if (submitRes?.item_progress?.percentage !== undefined) {
+  setProgressPercentage(submitRes.item_progress.percentage);
+}
+
+// update coins
+if (submitRes?.reward?.pending_coins !== undefined) {
+  setPendingCoins(submitRes.reward.pending_coins);
+}
+
+// update remaining items
+if (submitRes?.remaining_slots !== undefined) {
+  setRemainingSlots(submitRes.remaining_slots);
+}
+
+// update progress %
+if (submitRes?.item_progress?.percentage !== undefined) {
+  setProgressPercentage(submitRes.item_progress.percentage);
+}
+
+// update earned coins
+if (submitRes?.reward?.pending_coins !== undefined) {
+  setPendingCoins(submitRes.reward.pending_coins);
+}
+
       console.log('Submit answer response:', submitRes);
 
       // Check if item is complete based on response
@@ -1282,7 +1368,7 @@ async function handleItemClick(itemKey) {
       
       // Show popup after item completed
       setShowPopup(true);
-      setTimeout(() => setShowPopup(false), 1500);
+      setTimeout(() => setShowPopup(false), 4000);
 
       // Use the submitAnswer response directly to determine next steps
       // This is more reliable than calling getCategoryItems
@@ -1356,42 +1442,243 @@ async function handleItemClick(itemKey) {
 //   return;
 // }
 
+// if (submitRes?.category_complete) {
+
+//   const nextCategoryKey = submitRes?.next_category_key;
+
+//   // mark category completed locally
+//   setCompletedCategories(prev => [
+//     ...prev,
+//     categoryKeyAtCompletion
+//   ]);
+
+//   // ✅ If next category exists → load it
+//   if (nextCategoryKey) {
+
+//     console.log("Moving to next category:", nextCategoryKey);
+
+//     setCurrentItemKey(null);
+//     setCurrentCategoryKey(nextCategoryKey);
+
+//     const nextIntro = await getCategoryIntro(nextCategoryKey);
+
+//     setIntroData(nextIntro);
+//     setScreen("intro");
+
+//     return;
+//   }
+
+//   // ✅ If no next category → onboarding finished
+//   console.log("All categories completed. Redirecting...");
+
+//   // Complete questionnaire to update state to QUESTIONNAIRE_COMPLETED
+//   try {
+//     const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null;
+//     await completeQuestionnaire(token, sessionIdAtCompletion);
+//     console.log("Questionnaire completed successfully");
+//   } catch (completeErr) {
+//     console.error("Error completing questionnaire:", completeErr);
+//   }
+
+//   console.log("Redirecting to /onboarding/experience...");
+//   // Use window.location for more reliable redirect
+//   if (typeof window !== 'undefined') {
+//     window.location.href = '/onboarding/experience';
+//   } else {
+//     router.push("/onboarding/experience");
+//   }
+//   return;
+// }
+// if (submitRes?.category_complete) {
+
+//   const nextCategoryKey = submitRes?.next_category_key;
+
+//   const coins = Math.floor(submitRes?.reward?.pending_coins || 0);
+
+//   setEarnedCoins(coins);
+//   setRewardScreen(true);
+
+//   setTimeout(async () => {
+
+//     setRewardScreen(false);
+
+//     if (nextCategoryKey) {
+
+//       setCurrentItemKey(null);
+//       setCurrentCategoryKey(nextCategoryKey);
+
+//       const nextIntro = await getCategoryIntro(nextCategoryKey);
+
+//       setIntroData(nextIntro);
+//       setScreen("intro");
+
+//     } else {
+
+//       router.push("/onboarding/experience");
+
+//     }
+
+//   }, 10000);
+
+//   return;
+// }
+// if (submitRes?.category_complete) {
+
+//   const nextCategoryKey = submitRes?.next_category_key;
+
+//   try {
+
+//     const completionRes = await getCategoryCompletion(
+//       token,
+//       categoryKeyAtCompletion,
+//       sessionIdAtCompletion
+//     );
+
+//     setCompletionData(completionRes.data);
+
+//     setRewardScreen(true);
+
+//     setTimeout(async () => {
+
+//       setRewardScreen(false);
+
+//       if (nextCategoryKey) {
+
+//         setCurrentItemKey(null);
+//         setCurrentCategoryKey(nextCategoryKey);
+
+//         const nextIntro = await getCategoryIntro(nextCategoryKey);
+
+//         setIntroData(nextIntro);
+//         setScreen("intro");
+
+//       } else {
+
+//         router.push("/onboarding/experience");
+
+//       }
+
+//     }, 2000);
+
+//   } catch (err) {
+//     console.error("Completion screen error:", err);
+//   }
+
+//   return;
+// }
+// if (submitRes?.category_complete) {
+
+//   const nextCategoryKey = submitRes?.next_category_key;
+
+//   const completionRes = await getCategoryCompletion(
+//     token,
+//     categoryKeyAtCompletion,
+//     sessionIdAtCompletion
+//   );
+
+//   setCompletionData(completionRes.data);
+
+//   setScreen("completion");
+
+//   setTimeout(async () => {
+
+//     if (nextCategoryKey) {
+
+//       setCurrentItemKey(null);
+//       setCurrentCategoryKey(nextCategoryKey);
+
+//       const nextIntro = await getCategoryIntro(nextCategoryKey);
+
+//       setIntroData(nextIntro);
+//       setScreen("intro");
+
+//     } else {
+
+//       router.push("/onboarding/experience");
+
+//     }
+
+//   }, 10000);
+
+//   return;
+// }
 if (submitRes?.category_complete) {
 
   const nextCategoryKey = submitRes?.next_category_key;
 
-  // mark category completed locally
-  setCompletedCategories(prev => [
-    ...prev,
-    categoryKeyAtCompletion
-  ]);
+  // fallback data from submitRes
+  setCompletionData({
+    completion: {
+      title_text: "Great Choice!",
+      subtitle_text: `You've completed ${submitRes.reward.category_key}`,
+      media_url: "/coin.png",
+      media_type: "image",
+      show_coins: (submitRes.reward.pending_coins || 0) > 0
+    },
+    coins_earned: Math.floor(submitRes.reward.pending_coins)
+  });
 
-  // ✅ If next category exists → load it
-  if (nextCategoryKey) {
+  setScreen("completion");
 
-    console.log("Moving to next category:", nextCategoryKey);
+  // fetch dynamic completion data
+  try {
+    const res = await getCategoryCompletion(
+      token,
+      categoryKeyAtCompletion,
+      sessionIdAtCompletion
+    );
 
-    setCurrentItemKey(null);
-    setCurrentCategoryKey(nextCategoryKey);
+    if (res?.data) {
+      setCompletionData(res.data);
+    }
 
-    const nextIntro = await getCategoryIntro(nextCategoryKey);
-
-    setIntroData(nextIntro);
-    setScreen("intro");
-
-    return;
+  } catch (err) {
+    console.log("Completion API failed, using fallback");
   }
 
-  // ✅ If no next category → onboarding finished
-  console.log("All categories completed. Redirecting...");
+  setTimeout(async () => {
 
-  router.push("/onboarding/experience");
+    if (nextCategoryKey) {
+
+      setCurrentItemKey(null);
+      setCurrentCategoryKey(nextCategoryKey);
+
+      const nextIntro = await getCategoryIntro(nextCategoryKey);
+
+      setIntroData(nextIntro);
+      setScreen("intro");
+
+    } else {
+
+      router.push("/onboarding/experience");
+
+    }
+
+  }, 5000);
+
   return;
 }
       
       if (isCategoryComplete && !nextCategoryKey) {
         console.log('All categories complete! Going to experience');
-        router.push("/onboarding/experience");
+
+        // Complete questionnaire to update state to QUESTIONNAIRE_COMPLETED
+        try {
+          const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null;
+          await completeQuestionnaire(token, sessionIdAtCompletion);
+          console.log("Questionnaire completed successfully");
+        } catch (completeErr) {
+          console.error("Error completing questionnaire:", completeErr);
+        }
+
+        console.log("Redirecting to /onboarding/experience (second location)...");
+        // Use window.location for more reliable redirect
+        if (typeof window !== 'undefined') {
+          window.location.href = '/onboarding/experience';
+        } else {
+          router.push("/onboarding/experience");
+        }
+        console.log("After router.push (second) - this should not appear if redirect works");
         return;
       }
 
@@ -1542,7 +1829,27 @@ if (submitRes?.category_complete) {
       console.log('Default: showing items screen');
       setItemsData(refreshed);
       setScreen("items");
-    } catch (err) {
+    }
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    catch (err) {
       console.error("Submit answer error:", err);
       alert("Failed to save answer. Please try again.");
     }
@@ -1591,7 +1898,7 @@ if (submitRes?.category_complete) {
             <img
               src={introData.intro.media_url}
               alt="intro"
-              className="w-80 h-96 rounded-2xl "
+              className=" w-[280px]  h-[430px]  rounded-3xl "
             />
           )}
 
@@ -1622,10 +1929,23 @@ if (submitRes?.category_complete) {
 
           {/* <p className="text-2xl font-semibold text-center">  {itemsData.category_description}</p> */}
 
-          <p className="text-center text-gray-400 font-Poppins">
+          {/* <p className="text-center text-gray-400 font-Poppins">
             Select up to <span className="text-white font-Poppins"> {itemsData.max_selection}{" "}
             {itemsData.category_title}  </span>
-          </p>
+          </p> */}
+<p className="text-center text-gray-400 font-Poppins">
+  Select up to{" "}
+  <span className="text-white font-Poppins">
+    {itemsData?.max_selection} {itemsData?.category_title}
+  </span>
+
+  {(remainingSlots ?? itemsData?.max_selection) > 0 && (
+    <span className="text-pink-400 ml-2">
+      ({remainingSlots ?? itemsData?.max_selection} more remaining)
+    </span>
+  )}
+</p>
+
 
         <div className=" grid grid-rows-2 grid-flow-col  gap-4 pt-10 font-Poppins">
           {itemsData.items.map((item) => (
@@ -1653,24 +1973,32 @@ if (submitRes?.category_complete) {
   disabled={
     item.disabled ||
     item.status === "completed" ||
-    item.is_completed === true
+    item.is_completed === true ||
+    (sessionData?.categories_progress?.find(c => c.category_key === currentCategoryKey)?.completed_items?.includes(item.key))
   }
   onClick={() => handleItemClick(item.key)}
   className={`w-52 py-3 rounded-lg border transition flex items-center justify-center gap-2
-    ${
-      item.status === "completed" || item.is_completed
-        ? "bg-green-700 border-green-600 opacity-70 cursor-not-allowed"
-        : item.disabled
-        ? "bg-gray-700 border-gray-600 opacity-60 cursor-not-allowed"
-        : "border-pink-500 hover:bg-pink-500"
-    }`}
->
-  {item.icon || "🏃"} {item.title || item.name || item.key}
 
-  {(item.status === "completed" || item.is_completed) && (
-    <span className="text-green-300 font-bold">✔</span>
+  ${
+    item.status === "completed" || 
+    item.is_completed === true ||
+    (sessionData?.categories_progress?.find(c => c.category_key === currentCategoryKey)?.completed_items?.includes(item.key))
+      ? "bg-pink-700 border-pink-600 text-white cursor-not-allowed"
+      : item.disabled
+      ? "bg-gray-700 border-gray-600 opacity-60 cursor-not-allowed"
+      : "border-[#ff02c8] hover:bg-[#ff03ea]"
+  }
+`}
+>
+  {item.icon || "🎯"} {item.title || item.name || item.key}
+
+  {(item.status === "completed" || 
+    item.is_completed === true ||
+    (sessionData?.categories_progress?.find(c => c.category_key === currentCategoryKey)?.completed_items?.includes(item.key))) && (
+    <span className="text-white font-bold">✓</span>
   )}
 </button>
+
           ))}
 
         </div> 
@@ -1697,42 +2025,106 @@ if (submitRes?.category_complete) {
       )}
 
 
-      {/* QUESTIONS */}
-      {screen === "questions" && questions && questions.length > 0 && (
-        <div className="max-w-md flex flex-col justify-center items-center w-full space-y-6">
-          {questions[qIndex] && qIndex < questions.length ? (
-            <>
-   {itemsData.items_title}
-              <div className="p-6 w-96 rounded-xl  bg-gradient-to-r from-[#1B5CD1] to-[#1EB9EC] text-lg text-white font-Poppins text-center">
-                
-                {questions[qIndex].question_text}
-              </div>
 
-              {questions[qIndex].options && questions[qIndex].options.map((opt) => (
-                <button
-                  key={opt.option_id}
-                  onClick={() => handleAnswer(opt.option_id)}
-                  className="w-96 py-3 border border-pink-500 hover:bg-[#e28010] font-Poppins rounded-lg"
-                >
-                  {opt.label}
-                </button>
-              ))}
-              
-              {/* Back button to return to items */}
-              <button
-                onClick={() => handleBackToItems()}
-                className="mt-4 text-gray-400 hover:text-white text-sm"
-              >
-                ← Back to Items
-              </button>
-            </>
-          ) : (
-            <div className="text-center text-gray-400">
-              No questions available for this item
-            </div>
-          )}
+{/* {rewardScreen && (
+  <div className="absolute inset-0 bg-black flex flex-col items-center justify-center text-center space-y-6">
+
+    <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+      Preferences Saved Successfully
+    </h1>
+
+    <p className="text-gray-400">
+      Your experience is now personalized for you.
+    </p>
+
+    <div className="text-7xl">🪙</div>
+
+    <h2 className="text-yellow-400 text-2xl font-semibold">
+      You've earned {earnedCoins} Coins
+    </h2>
+
+  </div>
+)} */}
+{screen === "completion" && completionData && (
+
+  <div className="max-w-md flex flex-col items-center text-center space-y-6">
+
+    <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+      {completionData.completion.title_text}
+    </h1>
+
+    <p className="text-gray-400">
+      {completionData.completion.subtitle_text}
+    </p>
+
+    {completionData.completion.media_type === "lottie" && (
+      <img
+        src={completionData.completion.media_url}
+        alt="celebration"
+        className="w-40 h-40"
+      />
+    )}
+
+    {completionData.completion.show_coins && completionData.coins_earned > 0 && (
+      <h2 className="text-yellow-400 text-2xl font-semibold">
+        You've earned {Math.floor(completionData.coins_earned)} Coins
+      </h2>
+    )}
+
+  </div>
+
+)}
+
+      {/* QUESTIONS */}
+   {screen === "questions" && questions && questions.length > 0 && (
+  <div className="max-w-md absolute flex flex-col justify-center items-center w-full ">
+<div className="relative top-4"> 
+ <SportProgressBar
+  percentage={progressPercentage}
+  pendingCoins={pendingCoins}
+  colorStart={gradient.card.split(" ")[0].replace("from-[", "").replace("]", "")}
+  colorEnd={gradient.card.split(" ")[1].replace("to-[", "").replace("]", "")}
+/>
+ </div>
+    {questions[qIndex] && qIndex < questions.length ? (
+      <>
+        <div className={`p-6 w-80  rounded-xl mb-2 bg-gradient-to-r ${gradient.card} text-lg text-white font-Poppins text-center`}>
+          {questions[qIndex].question_text}
         </div>
-      )}
+
+        {questions[qIndex].options &&
+          questions[qIndex].options.map((opt) => (
+            <button
+              key={opt.option_id}
+           onClick={() => {
+  setSelectedOption(opt.option_id);
+  handleAnswer(opt.option_id);
+}}
+             className={`w-80 py-3 mb-3 mt-2 border font-Poppins rounded-xl transition
+${
+  selectedOption === opt.option_id
+    ? "bg-[#474746] border-[#DBD8D4] text-white"
+    : `border-[#DBD8D4] ${gradient.hover}`
+}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+
+        <button
+          onClick={() => handleBackToItems()}
+          className="mt-4 text-gray-400 hover:text-white text-sm"
+        >
+          ← Back to Items
+        </button>
+      </>
+    ) : (
+      <div className="text-center text-gray-400">
+        No questions available for this item
+      </div>
+    )}
+  </div>
+)}
 
       {/* No questions available */}
       {screen === "questions" && (!questions || questions.length === 0) && (

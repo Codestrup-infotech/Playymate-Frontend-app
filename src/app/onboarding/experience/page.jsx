@@ -14,56 +14,69 @@ export default function CompleteExperience() {
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [introScreen, setIntroScreen] = useState(null);
+const [showIntro, setShowIntro] = useState(true);
 
   const currentScreen = screens[step];
 
   // FETCH API SCREENS
   useEffect(() => {
 
-   const checkOnboardingStatus = async () => {
-  try {
-    const statusResponse = await userService.getOnboardingStatus();
-    const data = statusResponse?.data?.data || {};
-    const nextStep = data.next_required_step;
-    const onboardingState = data.onboarding_state;
-
-    const completedSteps = [
-      "ACTIVE_USER",
-      "COMPLETED",
-      "HOME",
-      "DONE",
-      "ACTIVE",
-      "EXPERIENCE_COMPLETED",
-      "EXPERIENCE_COMPLETE",
-      "EXTENDED_PROFILE_COMPLETED",
-      "EXTENDED_PROFILE_INTRO",
-      "EXTENDED_PROFILE_PENDING",
-    ];
-
-    if (
-      completedSteps.includes(nextStep) ||
-      completedSteps.includes(onboardingState)
-    ) {
-      router.push("/home");
-      return;
-    }
-  } catch (err) {
-    console.error("Failed to check onboarding status:", err);
-  }
-
-  try {
-    const res = await experienceService.getScreens();
-    const apiScreens = res?.data?.data?.screens || [];
-    setScreens(apiScreens);
-  } catch (error) {
-    console.error("Failed to fetch screens:", error);
-  }
-
-  setPageLoading(false);
-};
-
+    const checkOnboardingStatus = async () => {
+  
+      try {
+  
+        const statusResponse = await userService.getOnboardingStatus();
+        const data = statusResponse?.data?.data || {};
+        const nextStep = data.next_required_step;
+        const onboardingState = data.onboarding_state;
+  
+        const completedSteps = [
+          "ACTIVE_USER",
+          "COMPLETED",
+          "HOME",
+          "DONE",
+          "ACTIVE",
+          "EXPERIENCE_COMPLETED",
+          "EXPERIENCE_COMPLETE",
+          "EXTENDED_PROFILE_COMPLETED",
+        ];
+  
+        if (
+          completedSteps.includes(nextStep) ||
+          completedSteps.includes(onboardingState)
+        ) {
+          router.push("/home");
+          return;
+        }
+  
+      } catch (err) {
+        console.error("Failed to check onboarding status:", err);
+      }
+  
+      try {
+  
+        // 🔹 FETCH EXTENDED INTRO SCREEN
+        const introRes = await experienceService.getExtendedIntro();
+        const introData = introRes?.data?.data?.screen;
+  
+        setIntroScreen(introData);
+  
+        // 🔹 FETCH EXPERIENCE SCREENS
+        const res = await experienceService.getScreens();
+        const apiScreens = res?.data?.data?.screens || [];
+  
+        setScreens(apiScreens);
+  
+      } catch (error) {
+        console.error("Failed to fetch screens:", error);
+      }
+  
+      setPageLoading(false);
+    };
+  
     checkOnboardingStatus();
-
+  
   }, [router]);
 
   // SELECT OPTION
@@ -132,6 +145,14 @@ export default function CompleteExperience() {
     setStep(step + 1);
     setAnswers({});
   } else {
+    // All screens completed - call the onboarding complete API to update state
+    try {
+      await userService.completeOnboarding();
+      console.log("Onboarding completed successfully");
+    } catch (completeErr) {
+      // Log error but don't block user from proceeding
+      console.error("Error completing onboarding:", completeErr);
+    }
     router.push("/home");
   }
 
@@ -142,12 +163,64 @@ export default function CompleteExperience() {
     setLoading(false);
   };
 
-  const skip = () => router.push("/home");
+  const skip = async () => {
+    // Call skip API and then complete onboarding
+    try {
+      await experienceService.skipAnswers();
+    } catch (skipErr) {
+      // Log error but don't block user from proceeding
+      console.error("Error skipping experience:", skipErr);
+    }
+    
+    // Complete onboarding after skip
+    try {
+      await userService.completeOnboarding();
+      console.log("Onboarding completed successfully");
+    } catch (completeErr) {
+      // Log error but don't block user from proceeding
+      console.error("Error completing onboarding:", completeErr);
+    }
+    
+    router.push("/home");
+  };
 
   if (pageLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white">
         Loading...
+      </div>
+    );
+  }
+
+  if (showIntro && introScreen) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col justify-between items-center text-white px-4 py-10">
+  
+        {/* Image */}
+        <div className="flex justify-center items-center flex-1">
+          <img
+            src={introScreen.image_url}
+            alt="extended intro"
+            className="w-80 rounded-xl"
+          />
+        </div>
+  
+        {/* Bottom section */}
+        <div className="text-center w-full max-w-sm">
+  
+          <h1 className="text-3xl font-bold mb-6">
+            {introScreen.title}
+          </h1>
+  
+          <button
+            onClick={() => setShowIntro(false)}
+            className="w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 text-white font-semibold"
+          >
+            Continue
+          </button>
+  
+        </div>
+  
       </div>
     );
   }
@@ -177,13 +250,13 @@ export default function CompleteExperience() {
         </div>
 
         {/* QUESTIONS */}
-        <div className="space-y-6">
+        <div className="space-y-6 font-Poppins ">
 
         {currentScreen?.questions?.map((question) => (
 
             <div
               key={question.question_key}
-              className="bg-[#121212] p-4 rounded-xl border border-cyan-500/40"
+              className="bg-[#121212] p-4   rounded-xl border border-cyan-500/40"
             >
 
               <p className="text-gray-300 text-sm mb-3">
@@ -231,7 +304,7 @@ export default function CompleteExperience() {
         </div>
 
         {/* ACTION BUTTONS */}
-        <div className="mt-8 space-y-4">
+        <div className="mt-8 space-y-4 font-Poppins ">
 
           <button
             onClick={handleNext}

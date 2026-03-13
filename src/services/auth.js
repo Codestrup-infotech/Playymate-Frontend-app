@@ -118,27 +118,34 @@ sendPhoneOTP: async (phone) => {
       sessionStorage.removeItem('accessToken');
       sessionStorage.removeItem('refreshToken');
       
-      // Store ONLY in sessionStorage - tokens will be cleared when browser tab is closed
+      // Store in sessionStorage
       sessionStorage.setItem('accessToken', tokens.accessToken);
       sessionStorage.setItem('refreshToken', tokens.refreshToken);
       
-      console.log('Tokens stored in sessionStorage only - will be cleared on tab close');
+      // ✅ ALSO store in localStorage - app auth guards/middleware check localStorage
+      // (Google login also stores here)
+      localStorage.setItem('accessToken', tokens.accessToken);
+      localStorage.setItem('refreshToken', tokens.refreshToken);
+      
+      console.log('Tokens stored in both sessionStorage and localStorage');
     }
   },
   getAccessToken: () => {
     if (typeof window !== 'undefined') {
-      // Only check sessionStorage - tokens should only be stored there now
-      return sessionStorage.getItem('accessToken');
+      // Check sessionStorage first, then localStorage (for phone login)
+      return sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
     }
     return null;
   },
 
   clearTokens: () => {
-    // Clear ONLY sessionStorage tokens
+    // Clear both sessionStorage and localStorage tokens
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('accessToken');
       sessionStorage.removeItem('refreshToken');
-      console.log('Session tokens cleared (tab close behavior)');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      console.log('Tokens cleared from both sessionStorage and localStorage');
     }
   },
 
@@ -193,13 +200,17 @@ sendPhoneOTP: async (phone) => {
       'AADHAAR_VERIFIED': '/verification/liveness',
       'FACE_LIVENESS_PASSED': '/verification/complete',
       'VERIFICATION_PENDING': '/onboarding/physical',
-      'KYC_COMPLETED': '/physical-activity',
-      'PHYSICAL_PROFILE_CONSENT': '/physical-activity',
-      'PHYSICAL_PROFILE_COMPLETED': '/physical-questions',
-      'QUESTIONNAIRE_STARTED': '/physical-questions',
-      'QUESTIONNAIRE_COMPLETED': '/',
-      'COMPLETED': '/',
-      'ACTIVE_USER': '/'
+      'KYC_COMPLETED': '/onboarding/physical',
+      'PHYSICAL_PROFILE_CONSENT': '/onboarding/physical',
+      'PHYSICAL_PROFILE_COMPLETED': '/onboarding/physical',
+      'QUESTIONNAIRE_STARTED': '/onboarding/questionnaire',
+      'QUESTIONNAIRE_COMPLETED': '/onboarding/experience',
+      // Extended profile states
+      'EXTENDED_PROFILE_INTRO': '/onboarding/experience',
+      'EXTENDED_PROFILE_PENDING': '/home',
+      'EXTENDED_PROFILE_COMPLETED': '/home',
+      'COMPLETED': '/home',
+      'ACTIVE_USER': '/home'
     };
     
     return stateToScreen[onboardingState] || '/onboarding/gender';

@@ -270,9 +270,49 @@ export default function OnboardingProfilePhotoPage() {
   // Track successful uploads
   const [uploadedUrls, setUploadedUrls] = useState([null, null, null]);
   const [screenConfig, setScreenConfig] = useState(null);
+
   const clearError = () => setError(null);
 
   // Check onboarding status on mount
+  // useEffect(() => {
+  //   // ✅ Use stored next step — no API call needed
+  //   const nextStep = sessionStorage.getItem("onboarding_next_step");
+  //   const token = sessionStorage.getItem("access_token") || 
+  //                 sessionStorage.getItem("accessToken") || 
+  //                 localStorage.getItem("accessToken") ||
+  //                 localStorage.getItem("playymate_access_token");
+
+  //   if (!token) {
+  //     router.push("/login/phone");
+  //     return;
+  //   }
+
+  //   // If the backend says user's next step is PAST photo, skip forward
+  //   if (nextStep && nextStep !== "PROFILE_PHOTO_CAPTURED" && nextStep !== "LOCATION_CAPTURED") {
+  //     const stepRoutes = {
+  //       "KYC_INFO": "/onboarding/kyc",
+  //       "KYC_COMPLETED": "/onboarding/physical",
+  //       "PHYSICAL_PROFILE_QUESTIONS": "/onboarding/physical",
+  //       "ACTIVE_USER": "/onboarding/home",
+  //       "COMPLETED": "/onboarding/home",
+  //       "HOME": "/onboarding/home",
+  //       "ACTIVE": "/onboarding/home",
+  //     };
+  //     const route = stepRoutes[nextStep];
+  //     if (route) {
+  //       router.push(route);
+  //       return;
+  //     }
+  //   }
+
+  //   // Otherwise, user belongs on this page — let them stay
+  //   setInitialLoading(false);
+  // }, [router]);
+
+
+
+
+// Check onboarding status on mount
   useEffect(() => {
     const initialize = async () => {
       try {
@@ -325,6 +365,15 @@ export default function OnboardingProfilePhotoPage() {
     initialize();
   
   }, [router]);
+
+
+
+
+
+
+
+
+
 
   const handleFileSelect = (e, index) => {
     const file = e.target.files?.[0];
@@ -520,6 +569,23 @@ export default function OnboardingProfilePhotoPage() {
         return;
       }
 
+      // Handle 403 or FORBIDDEN - skip to next step (user already has photo set)
+      if (status === 403 || errorCode === 'FORBIDDEN') {
+        console.log("Got 403/FORBIDDEN on photo upload - skipping to next step");
+        const nextStep = sessionStorage.getItem("onboarding_next_step");
+        if (nextStep && nextStep !== "PROFILE_PHOTO_CAPTURED") {
+          const route = getRouteFromStep(nextStep);
+          if (route) {
+            router.push(route);
+            return;
+          }
+        }
+        // Default skip to KYC
+        sessionStorage.setItem("onboarding_next_step", "KYC_COMPLETED");
+        router.push('/onboarding/kyc');
+        return;
+      }
+
       // Handle specific face validation errors
       if (errorCode === 'FACE_NOT_DETECTED') {
         setError('No face detected. Please upload a photo with your face visible.');
@@ -572,7 +638,7 @@ export default function OnboardingProfilePhotoPage() {
 
         {/* Content */}
         <div className="space-y-6">
-          <div className="text-center">
+         <div className="text-center">
           <h1 className="text-3xl font-bold">
   {screenConfig?.title
     ?.split(" ")
@@ -593,7 +659,6 @@ export default function OnboardingProfilePhotoPage() {
         {screenConfig?.subtitle}
        </p>
           </div>
-
           {error && (
             <div className="flex items-center justify-center gap-2 text-red-400 text-sm py-2">
               <AlertCircle className="w-4 h-4" />
@@ -630,17 +695,19 @@ export default function OnboardingProfilePhotoPage() {
                 </div>
               ) : (
                 <div
-                  onClick={() => fileInputRefs[0].current?.click()}
-                  className="w-44 h-52 rounded-2xl border-2 border-dashed border-pink-500/60 bg-white/5 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors"
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    {/* Person icon */}
-                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                      <circle cx="24" cy="16" r="10" fill="#6b7280" />
-                      <ellipse cx="24" cy="38" rx="16" ry="10" fill="#6b7280" />
-                    </svg>
-                  </div>
-                </div>
+  onClick={() => fileInputRefs[0].current?.click()}
+  className="w-44 h-52 rounded-2xl bg-gradient-to-r from-pink-500 to-orange-500 p-[1px] cursor-pointer"
+>
+  <div className="w-full h-full rounded-2xl bg-black flex items-center justify-center transition-colors">
+    <div className="flex flex-col items-center gap-2">
+      {/* Person icon */}
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="16" r="10" fill="#6b7280" />
+        <ellipse cx="24" cy="38" rx="16" ry="10" fill="#6b7280" />
+      </svg>
+    </div>
+  </div>
+</div>
               )}
               {/* Camera badge */}
               <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 flex items-center justify-center border-2 border-black">
@@ -680,7 +747,7 @@ export default function OnboardingProfilePhotoPage() {
                 ) : (
                   <div
                     onClick={() => fileInputRefs[index].current?.click()}
-                    className="w-36 h-40 rounded-2xl border-2 border-dashed border-pink-500/40 bg-white/5 flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition-colors gap-2"
+                    className="w-36 h-40 rounded-2xl border-2 border-dotted border-[#F97317]/60 bg-white/5 flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition-colors gap-2"
                   >
                     {/* Person icon */}
                     <svg width="36" height="36" viewBox="0 0 48 48" fill="none">

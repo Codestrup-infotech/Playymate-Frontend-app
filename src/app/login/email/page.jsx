@@ -1222,7 +1222,9 @@ export default function EmailLogin() {
     step === "email" ? emailScreen : emailOtpScreen;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col justify-center  items-center px-6 py-20">
+    <> 
+    <div className=" h-screen bg-black  flex  justify-center items-center "> 
+    <div className="text-white flex  flex-col px-6 space-y-14 ">
 
       {/* Back */}
       {/* <div className="w-full max-w-md">
@@ -1333,7 +1335,7 @@ export default function EmailLogin() {
       </div>
 
       {/* CTA */}
-      <div className="w-full flex  justify-center items-center ">
+     
 
         <button
           onClick={
@@ -1351,7 +1353,9 @@ export default function EmailLogin() {
             : currentScreen?.cta_text?.primary}
         </button>
 
-      </div>
+     
+    </div> 
     </div>
+    </> 
   );
 }

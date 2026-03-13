@@ -1,6 +1,4 @@
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "https://api-dev.playymate.com/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 /* ======================================================
    HANDLE RESPONSE (Supports success OR status format)
@@ -47,7 +45,7 @@ export async function startQuestionnaireSession(
 ) {
   console.log('[startQuestionnaireSession] Starting new session...');
   const res = await fetch(
-    `${BASE_URL}/questionnaire/session/start`,
+    `${API_BASE_URL}/questionnaire/session/start`,
     {
       method: "POST",
       headers: authHeaders(token),
@@ -79,7 +77,7 @@ export async function getQuestionnaireSession(token, sessionId = null) {
     console.log('📡 Calling /session/status to find existing session...');
     
     // Build URL with session_id if provided
-    let url = `${BASE_URL}/questionnaire/session/status`;
+    let url = `${API_BASE_URL}/questionnaire/session/status`;
     if (sessionId) {
       url += `?session_id=${sessionId}`;
     }
@@ -139,7 +137,7 @@ export async function getQuestionnaireSession(token, sessionId = null) {
 
 export async function getCategoryIntro(categoryKey) {
   const res = await fetch(
-    `${BASE_URL}/questionnaire/categories/${categoryKey}/intro`
+    `${API_BASE_URL}/questionnaire/categories/${categoryKey}/intro`
   );
 
   return await handleResponse(res);
@@ -155,11 +153,57 @@ export async function getCategoryItems(
   sessionId
 ) {
   const res = await fetch(
-    `${BASE_URL}/questionnaire/categories/${categoryKey}/items?session_id=${sessionId}`
+    `${API_BASE_URL}/questionnaire/categories/${categoryKey}/items?session_id=${sessionId}`
   );
 
   return await handleResponse(res);
 }
+
+
+// export async function getCategoryCompletion(token, categoryKey, sessionId) {
+//   const res = await fetch(
+//     `${API_BASE_URL}/questionnaire/categories/${categoryKey}/completion?session_id=${sessionId}`,
+//     {
+//       method: "GET",
+//       headers: {
+//         Authorization: `Bearer ${token}`,
+//         "Content-Type": "application/json",
+//       },
+//     }
+//   );
+
+//   return await handleResponse(res);
+// }
+
+export async function getCategoryCompletion(token, categoryKey, sessionId) {
+
+  console.log("Calling completion API with:");
+  console.log("token:", token);
+  console.log("categoryKey:", categoryKey);
+  console.log("sessionId:", sessionId);
+
+  const url = `${API_BASE_URL}/questionnaire/categories/${categoryKey}/completion?session_id=${sessionId}`;
+
+  console.log("Completion API URL:", url);
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  console.log("Completion API response status:", res.status);
+
+  const data = await res.json();
+
+  console.log("Completion API response data:", data);
+
+  return data;
+}
+
+
 
 /* ======================================================
    SAVE SELECTION (VERY IMPORTANT FOR ITERATIVE MODE)
@@ -173,7 +217,7 @@ export async function getCategoryItems(
 //   selectedItems
 // ) {
 //   const res = await fetch(
-//     `${BASE_URL}/questionnaire/selection`,
+//     `${API_BASE_URL}/questionnaire/selection`,
 //     {
 //       method: "POST",
 //       headers: authHeaders(token),
@@ -194,7 +238,7 @@ export async function saveSelection(
   itemKey
 ) {
   const res = await fetch(
-    `${BASE_URL}/questionnaire/selection`,
+    `${API_BASE_URL}/questionnaire/selection`,
     {
       method: "POST",
       headers: authHeaders(token),
@@ -219,7 +263,7 @@ export async function getItemQuestions(
   sessionId
 ) {
   const res = await fetch(
-    `${BASE_URL}/questionnaire/items/${itemKey}/questions?session_id=${sessionId}`,
+    `${API_BASE_URL}/questionnaire/items/${itemKey}/questions?session_id=${sessionId}`,
     {
       headers: authHeaders(token),
     }
@@ -238,7 +282,7 @@ export async function submitAnswer(
   payload
 ) {
   const res = await fetch(
-    `${BASE_URL}/questionnaire/answer`,
+    `${API_BASE_URL}/questionnaire/answer`,
     {
       method: "POST",
       headers: authHeaders(token),
@@ -259,7 +303,7 @@ export async function completeCategory(
   categoryKey
 ) {
   const res = await fetch(
-    `${BASE_URL}/questionnaire/category/complete`,
+    `${API_BASE_URL}/questionnaire/category/complete`,
     {
       method: "POST",
       headers: authHeaders(token),
@@ -282,7 +326,7 @@ export async function completeQuestionnaire(
   sessionId
 ) {
   const res = await fetch(
-    `${BASE_URL}/questionnaire/complete`,
+    `${API_BASE_URL}/questionnaire/complete`,
     {
       method: "POST",
       headers: authHeaders(token),
@@ -292,11 +336,20 @@ export async function completeQuestionnaire(
     }
   );
 
-  return await handleResponse(res);
+  // Check if response is ok
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('completeQuestionnaire API error:', res.status, errorText);
+    throw new Error(`API error: ${res.status} - ${errorText}`);
+  }
+
+  const data = await res.json();
+  console.log('completeQuestionnaire response:', data);
+  return data;
 }
 
-// const BASE_URL =
-//   process.env.NEXT_PUBLIC_API_BASE_URL ||
+// const API_BASE_URL =
+//   process.env.NEXT_PUBLIC_API_API_BASE_URL ||
 //   "http://localhost:5000/api/v1";
 
 // /* ======================================================
@@ -344,7 +397,7 @@ export async function completeQuestionnaire(
 
 // export async function getQuestionnaireSession(token) {
 //   const res = await fetch(
-//     `${BASE_URL}/questionnaire/session`,
+//     `${API_BASE_URL}/questionnaire/session`,
 //     {
 //       headers: authHeaders(token),
 //     }
@@ -379,7 +432,7 @@ export async function completeQuestionnaire(
 //   loopMode = false
 // ) {
 //   const res = await fetch(
-//     `${BASE_URL}/questionnaire/session/start`,
+//     `${API_BASE_URL}/questionnaire/session/start`,
 //     {
 //       method: "POST",
 //       headers: authHeaders(token),
@@ -399,7 +452,7 @@ export async function completeQuestionnaire(
 
 // export async function getCategoryIntro(categoryKey) {
 //   const res = await fetch(
-//     `${BASE_URL}/questionnaire/categories/${categoryKey}/intro`
+//     `${API_BASE_URL}/questionnaire/categories/${categoryKey}/intro`
 //   );
 
 //   return await handleResponse(res);
@@ -415,7 +468,7 @@ export async function completeQuestionnaire(
 //   sessionId
 // ) {
 //   const res = await fetch(
-//     `${BASE_URL}/questionnaire/categories/${categoryKey}/items?session_id=${sessionId}`
+//     `${API_BASE_URL}/questionnaire/categories/${categoryKey}/items?session_id=${sessionId}`
 //   );
 
 //   return await handleResponse(res);
@@ -433,7 +486,7 @@ export async function completeQuestionnaire(
 //   itemKey
 // ) {
 //   const res = await fetch(
-//     `${BASE_URL}/questionnaire/selection`,
+//     `${API_BASE_URL}/questionnaire/selection`,
 //     {
 //       method: "POST",
 //       headers: authHeaders(token),
@@ -459,7 +512,7 @@ export async function completeQuestionnaire(
 //   sessionId
 // ) {
 //   const res = await fetch(
-//     `${BASE_URL}/questionnaire/items/${itemKey}/questions?session_id=${sessionId}`,
+//     `${API_BASE_URL}/questionnaire/items/${itemKey}/questions?session_id=${sessionId}`,
 //     {
 //       headers: authHeaders(token),
 //     }
@@ -478,7 +531,7 @@ export async function completeQuestionnaire(
 //   payload
 // ) {
 //   const res = await fetch(
-//     `${BASE_URL}/questionnaire/answer`,
+//     `${API_BASE_URL}/questionnaire/answer`,
 //     {
 //       method: "POST",
 //       headers: authHeaders(token),
@@ -500,7 +553,7 @@ export async function completeQuestionnaire(
 //   sessionId
 // ) {
 //   const res = await fetch(
-//     `${BASE_URL}/questionnaire/categories/${categoryKey}/completion?session_id=${sessionId}`,
+//     `${API_BASE_URL}/questionnaire/categories/${categoryKey}/completion?session_id=${sessionId}`,
 //     {
 //       headers: authHeaders(token),
 //     }
@@ -520,7 +573,7 @@ export async function completeQuestionnaire(
 //   categoryKey
 // ) {
 //   const res = await fetch(
-//     `${BASE_URL}/questionnaire/category/complete`,
+//     `${API_BASE_URL}/questionnaire/category/complete`,
 //     {
 //       method: "POST",
 //       headers: authHeaders(token),
@@ -541,7 +594,7 @@ export async function completeQuestionnaire(
 
 // export async function getRewardStatus(token) {
 //   const res = await fetch(
-//     `${BASE_URL}/questionnaire/reward-status`,
+//     `${API_BASE_URL}/questionnaire/reward-status`,
 //     {
 //       headers: authHeaders(token),
 //     }
@@ -560,7 +613,7 @@ export async function completeQuestionnaire(
 //   sessionId
 // ) {
 //   const res = await fetch(
-//     `${BASE_URL}/questionnaire/complete`,
+//     `${API_BASE_URL}/questionnaire/complete`,
 //     {
 //       method: "POST",
 //       headers: authHeaders(token),
