@@ -217,21 +217,27 @@ export default function HomePage() {
               <span className={`text-xs mt-2 ${mutedText}`}>Your Story</span>
             </div>
 
-            {/* Suggested users as stories */}
-            {suggestedFollows.slice(0, 5).map((u) => (
-              <div key={u.user_id} className="flex flex-col items-center shrink-0">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-500 to-orange-500 p-[2px]">
-                  {u.profile_image_url ? (
-                    <img src={u.profile_image_url} alt={u.full_name} className="w-full h-full rounded-full object-cover" />
-                  ) : (
-                    <div className={`w-full h-full rounded-full ${isDark ? "bg-gray-700" : "bg-gray-200"}`} />
-                  )}
-                </div>
-                <span className={`text-xs mt-2 truncate max-w-[72px] text-center ${mutedText}`}>
-                  {u.username || u.full_name}
-                </span>
-              </div>
-            ))}
+     
+
+{suggestedFollows.slice(0, 5).map((u, index) => (
+  <div key={u.user_id || index} className="flex flex-col items-center shrink-0">
+    <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-500 to-orange-500 p-[2px]">
+      {u.profile_image_url ? (
+        <img
+          src={u.profile_image_url}
+          alt={u.full_name}
+          className="w-full h-full rounded-full object-cover"
+        />
+      ) : (
+        <div className="w-full h-full rounded-full bg-gray-300 flex items-center justify-center text-sm font-semibold">
+          {u.full_name?.charAt(0)}
+        </div>
+      )}
+    </div>
+    <p className="text-xs mt-1">{u.full_name}</p>
+  </div>
+))}
+
           </div>
 
           {/* Upload Modal */}
