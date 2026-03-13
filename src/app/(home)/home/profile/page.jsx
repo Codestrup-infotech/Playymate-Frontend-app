@@ -29,6 +29,8 @@ import {
 import { userService } from "@/services/user";
 import { useTheme } from "@/lib/ThemeContext";
 import postService from "@/app/user/post";
+import Activity from "../components/Activity.jsx";
+import BioPopup from "@/app/components/profileCompletion/BioPopup.jsx";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -67,11 +69,15 @@ function VerificationBadge({ status }) {
   return <XCircle size={14} className="text-gray-500 inline ml-1" />;
 }
 
-function StatBox({ value, label }) {
+function StatBox({ value, label ,isDark}) {
   return (
     <div className="text-center">
-      <p className="text-xl font-bold text-white">{value ?? 0}</p>
-      <p className="text-xs text-gray-400 mt-0.5">{label}</p>
+      <p  className={`text-2xl font-medium font-Poppins ${isDark ? "text-white " : "text-black "}`}>{value ?? 0}</p>
+      <p className={`text-sm font-Poppins mt-1 ${isDark ? "text-white " : "text-slate-800 "}`}>{label}</p>
+
+
+
+
     </div>
   );
 }
@@ -95,6 +101,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showBioPopup, setShowBioPopup] = useState(false);
   
   // Posts and Reels data
   const [posts, setPosts] = useState([]);
@@ -123,19 +130,38 @@ export default function ProfilePage() {
     fetchProfile();
   }, []);
 
+  // Handle bio save from popup
+  const handleBioSave = (newBio) => {
+    setProfile((prev) => ({ ...prev, bio: newBio }));
+    setShowBioPopup(false);
+  };
+
   // Fetch posts when Posts tab is active
   useEffect(() => {
     const loadPosts = async () => {
       if (activeTab === "Posts" && profile?.user_id && !postsLoading) {
         setPostsLoading(true);
         try {
-          const response = await postService.getMyPosts(20, null);
-          const newPosts = response.data?.data?.posts || [];
+          const response = await postService.getUserPosts(profile.user_id, 20, null);
+          console.log('Posts API response:', response);
+          const newPosts = response.data?.data?.posts || response.data?.data?.items || [];
           setPosts(newPosts);
           setPostsCursor(response.data?.data?.next_cursor);
           setHasMorePosts(response.data?.data?.has_more || false);
         } catch (error) {
           console.error("Error fetching posts:", error);
+          // Try alternate endpoint
+          try {
+            const altResponse = await postService.getMyPosts(20, null);
+            console.log('Alternate Posts API response:', altResponse);
+            const newPosts = altResponse.data?.data?.posts || altResponse.data?.data?.items || [];
+            setPosts(newPosts);
+            setPostsCursor(altResponse.data?.data?.next_cursor);
+            setHasMorePosts(altResponse.data?.data?.has_more || false);
+          } catch (altError) {
+            console.error("Error fetching posts (alternate):", altError);
+            setPosts([]);
+          }
         } finally {
           setPostsLoading(false);
         }
@@ -150,13 +176,26 @@ export default function ProfilePage() {
       if (activeTab === "Reels" && profile?.user_id && !reelsLoading) {
         setReelsLoading(true);
         try {
-          const response = await postService.getMyReels(20, null);
-          const newReels = response.data?.data?.reels || [];
+          const response = await postService.getUserReels(profile.user_id, 20, null);
+          console.log('Reels API response:', response);
+          const newReels = response.data?.data?.reels || response.data?.data?.items || [];
           setReels(newReels);
           setReelsCursor(response.data?.data?.next_cursor);
           setHasMoreReels(response.data?.data?.has_more || false);
         } catch (error) {
           console.error("Error fetching reels:", error);
+          // Try alternate endpoint
+          try {
+            const altResponse = await postService.getMyReels(20, null);
+            console.log('Alternate Reels API response:', altResponse);
+            const newReels = altResponse.data?.data?.reels || altResponse.data?.data?.items || [];
+            setReels(newReels);
+            setReelsCursor(altResponse.data?.data?.next_cursor);
+            setHasMoreReels(altResponse.data?.data?.has_more || false);
+          } catch (altError) {
+            console.error("Error fetching reels (alternate):", altError);
+            setReels([]);
+          }
         } finally {
           setReelsLoading(false);
         }
@@ -169,8 +208,8 @@ export default function ProfilePage() {
     if (postsCursor && hasMorePosts && !postsLoading) {
       setPostsLoading(true);
       try {
-        const response = await postService.getMyPosts(20, postsCursor);
-        const newPosts = response.data?.data?.posts || [];
+        const response = await postService.getUserPosts(profile.user_id, 20, postsCursor);
+        const newPosts = response.data?.data?.posts || response.data?.data?.items || [];
         setPosts(prev => [...prev, ...newPosts]);
         setPostsCursor(response.data?.data?.next_cursor);
         setHasMorePosts(response.data?.data?.has_more || false);
@@ -186,8 +225,8 @@ export default function ProfilePage() {
     if (reelsCursor && hasMoreReels && !reelsLoading) {
       setReelsLoading(true);
       try {
-        const response = await postService.getMyReels(20, reelsCursor);
-        const newReels = response.data?.data?.reels || [];
+        const response = await postService.getUserReels(profile.user_id, 20, reelsCursor);
+        const newReels = response.data?.data?.reels || response.data?.data?.items || [];
         setReels(prev => [...prev, ...newReels]);
         setReelsCursor(response.data?.data?.next_cursor);
         setHasMoreReels(response.data?.data?.has_more || false);
@@ -280,7 +319,7 @@ export default function ProfilePage() {
 >
 
   {/* ───── COVER PHOTO ───── */}
-  <div className="relative h-60 w-full bg-gradient-to-tr from-pink-400 via-blue-500 to-orange-500">
+  <div className="relative h-52 w-full bg-gradient-to-tl from-[#FF8319] via-[#FF8319] to-[#EF3AFF] ">
 
     {/* overlay */}
     <div className="absolute inset-0 bg-black/20" />
@@ -332,59 +371,48 @@ export default function ProfilePage() {
 
       {/* avatar */}
       <div className="flex-shrink-0">
-        <div className="w-28 h-28 md:w-36 md:h-36 rounded-full p-[3px] bg-gradient-to-tr from-purple-500 to-orange-500">
+        <div className="w-28 h-28 md:w-36 md:h-36 rounded-[30px] p-[3px] bg-gradient-to-tr from-purple-500 to-orange-500">
           <img
-            src={profile_image_url || "/loginAvatars/profile.png"}
+            src={profile_photos?.[0]?.url || profile_image_url || "/loginAvatars/profile.png"}
             alt={full_name}
-            className={`w-full h-full rounded-full object-cover border-4 ${
+            className={`w-full h-full rounded-3xl object-cover border-4 ${
               isDark ? "border-[#12122a]" : "border-white"
             }`}
           />
         </div>
 
-        {/* status */}
-        <div className="mt-2 flex justify-center">
-          <span
-            className={`text-[10px] px-2 py-0.5 rounded-full font-medium capitalize ${
-              account_status === "active"
-                ? "bg-green-900/40 text-green-400 border border-green-700/40"
-                : "bg-red-900/40 text-red-400 border border-red-700/40"
-            }`}
-          >
-            {account_status || "active"}
-          </span>
-        </div>
+       
       </div>
 
 
       {/* DETAILS */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 mt-12">
 
         {/* name */}
-        <div className="flex flex-wrap items-center gap-2 mb-1">
+        <div className="flex flex-wrap items-center gap-2 mb-1 space-x-4  ">
 
           <h2 className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
             {full_name}
           </h2>
 
           {verification_badge === "verified" && (
-            <ShieldCheck size={18} className="text-purple-400" />
+            <ShieldCheck size={18} className="text-purple-500  " />
           )}
 
           {gender && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-800/40 text-purple-300 border border-purple-700/30 capitalize">
+            <span className="text-[14px] px-2 py-0.5 rounded-full bg-[#6913A7] text-purple-300 border border-purple-700/30 capitalize">
               {gender}
             </span>
           )}
 
           {age && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700/40 text-orange-400 border border-gray-600/30">
+            <span className="text-[14px] px-2 py-0.5 rounded-full bg-[#6913A7] text-purple-300 border border-gray-600/30">
               {age} yrs
             </span>
           )}
 
           {role_type && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-orange-800/30 text-orange-300 border border-orange-700/30 capitalize">
+            <span className="text-[14px] px-2 py-0.5 rounded-full bg-[#6913A7] text-purple-300 border border-orange-700/30 capitalize">
               {capitalize(role_type)}
             </span>
           )}
@@ -392,79 +420,55 @@ export default function ProfilePage() {
         </div>
 
 
-        {/* contact */}
-        <div className="flex flex-wrap gap-4 mt-2 mb-4">
-
-          {email && (
-            <span className="text-xs text-gray-400 flex items-center gap-1">
-              <Mail size={12} />
-              {email}
-            </span>
-          )}
-
-          {phone && (
-            <span className="text-xs text-gray-400 flex items-center gap-1">
-              <Phone size={12} />
-              {phone}
-            </span>
-          )}
-
-          {location && (
-            <span className="text-xs text-gray-400 flex items-center gap-1">
-              <MapPin size={12} />
-              {location}
-            </span>
-          )}
-
-        </div>
+      
 
 
         {/* stats */}
         <div
-          className={`flex gap-6 py-3 px-5 rounded-xl mb-4 w-fit ${
-            isDark ? "bg-[#1a1a38]" : "bg-gray-100"
+          className={`flex gap-6 py-2.5 mt-4 px-5 rounded-xl mb-4 w-fit border  border-slate-100 shadow-md  text-blue-900 ${
+            isDark ? "bg-[#1a1a38]" : " bg-gray-200 "
           }`}
         >
-          <StatBox value={stats?.posts_count} label="Posts" />
-          <StatBox value={stats?.followers_count} label="Followers" />
-          <StatBox value={stats?.following_count} label="Following" />
-          <StatBox value={stats?.reels_count} label="Reels" />
-          <StatBox value={stats?.events_count} label="Events" />
+         <StatBox value={stats?.posts_count} label="Posts" isDark={isDark} />
+<StatBox value={stats?.followers_count} label="Followers" isDark={isDark} />
+<StatBox value={stats?.following_count} label="Following" isDark={isDark} />
+
         </div>
 
 
         {/* bio */}
         {bio ? (
-          <p className={`text-sm leading-relaxed ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+          <div 
+            onClick={() => is_own_profile && setShowBioPopup(true)}
+            className={`text-sm leading-relaxed cursor-pointer hover:opacity-80 ${isDark ? "text-gray-300" : "text-gray-600"} ${is_own_profile ? 'border-dashed w-80 border border-gray-500/30 p-2 rounded-xl  ' : ''}`}
+          >
             {bio}
-          </p>
-        ) : (
-          <p className="text-sm text-gray-500 italic">
-            No bio yet · Add one in Edit Profile
-          </p>
-        )}
-
-
-        {/* interests */}
-        {allInterests?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {allInterests.slice(0, 8).map((tag) => (
-              <span
-                key={tag}
-                className="text-xs px-2 py-1 rounded-full bg-purple-800/30 text-purple-300 border border-purple-700/30"
-              >
-                {tag}
-              </span>
-            ))}
-
-            {allInterests.length > 8 && (
-              <span className="text-xs text-gray-500">
-                +{allInterests.length - 8} more
-              </span>
-            )}
           </div>
+        ) : is_own_profile ? (
+          <button
+            onClick={() => setShowBioPopup(true)}
+            className={`text-sm text-gray-500 italic bg-transparent border-none outline-none w-full text-left px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition ${isDark ? "placeholder-gray-500" : "placeholder-gray-400"}`}
+          >
+            No bio yet · Click to add one
+          </button>
+        ) : (
+          <p className={`text-sm text-gray-500 italic ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+            No bio yet
+          </p>
         )}
 
+
+ <p className="text-sm text-gray-500 italic  mt-2 flex  items-center text-center  rounded-md shadow-2xl ">
+        
+         <MapPin size={14} className="text-slate-500 flex-shrink-0 " />  
+         
+         <span  className="ml-2"> 
+            {profile_location?.display_text || profile_location?.city || profile_location?.state || "No location added"}</span>
+          </p>
+          
+          
+          <div className="border border-orange-300 w-96 mt-3 py-3 flex justify-center items-center text-center rounded-md "> My Teams</div>
+      
       </div>
     </div>
   </div>
@@ -472,165 +476,10 @@ export default function ProfilePage() {
       {/* ── INFO CARDS ROW ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-Poppins ">
 
-        {/* Activity Intent + Role Details */}
-        <div
-          className={`rounded-2xl p-5 ${isDark ? "bg-[#12122a] border border-white/5" : "bg-white shadow"
-            }`}
-        >
-          <h3 className={`text-sm font-semibold mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-gray-800"}`}>
-            <Briefcase size={16} className="text-purple-400" /> Activity & Role
-          </h3>
-
-          {activity_intent?.type && (
-            <div className="mb-3">
-              <p className="text-xs text-gray-800 mb-1">Activity Intent</p>
-              <span className="text-sm font-medium text-[#F47022] capitalize">
-                {capitalize(activity_intent.type)}
-              </span>
-              {activity_intent.details && (
-                <p className="text-md text-blue-950 mt-0.5">{activity_intent.details}</p>
-              )}
-            </div>
-          )}
-
-          {/* role specific fields */}
-          {Object.keys(roleSpecific).length > 0 && (
-            <div className="space-y-2 mt-3">
-              {roleSpecific.college_name && (
-                <div className="flex items-center gap-2">
-                  <GraduationCap size={14} className="text-purple-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-gray-500">College</p>
-                    <p className="text-sm text-gray-600">{roleSpecific.college_name}</p>
-                  </div>
-                </div>
-              )}
-              {roleSpecific.course && (
-                <div className="flex items-center gap-2">
-                  <GraduationCap size={14} className="text-purple-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-gray-500">Course</p>
-                    <p className="text-sm text-gray-200">{roleSpecific.course}</p>
-                  </div>
-                </div>
-              )}
-              {roleSpecific.year_of_study && (
-                <div className="flex items-center gap-2">
-                  <Calendar size={14} className="text-purple-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-gray-500">Year of Study</p>
-                    <p className="text-sm text-gray-200">{capitalize(roleSpecific.year_of_study)}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* common fields */}
-          {(commonFields.current_city || commonFields.hometown || commonFields.qualification) && (
-            <div className="space-y-2 mt-3 pt-3 border-t border-white/5">
-              {commonFields.current_city && (
-                <div className="flex items-center gap-2">
-                  <MapPin size={14} className="text-orange-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-[14px] text-[#9A37DB] ">Current City</p>
-                    <p className="text-sm text-gray-500 capitalize">{commonFields.current_city}</p>
-                  </div>
-                </div>
-              )}
-              {commonFields.hometown && (
-                <div className="flex items-center gap-2">
-                  <MapPin size={14} className="text-orange-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-[14px] text-[#9A37DB]">Hometown</p>
-                    <p className="text-sm text-gray-500 capitalize">{commonFields.hometown}</p>
-                  </div>
-                </div>
-              )}
-              {commonFields.qualification && (
-                <div className="flex items-center gap-2">
-                  <User size={14} className="text-orange-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-[14px] text-[#9A37DB]">Qualification</p>
-                    <p className="text-sm text-gray-500">{commonFields.qualification}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Interests by Category */}
-        <div
-          className={`rounded-2xl p-5 ${isDark ? "bg-[#12122a] border border-white/5" : "bg-white shadow"
-            }`}
-        >
-          <h3 className={`text-sm font-semibold mb-4 ${isDark ? "text-white" : "text-gray-800"}`}>
-            🎯 Interests
-          </h3>
-
-          {interestCategories.length > 0 ? (
-            <div className="space-y-4">
-              {interestCategories.map((cat) => (
-                <div key={cat.label}>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
-                    {cat.label}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {cat.items.map((item) => (
-                      <InterestPill key={item} label={item} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500 italic">No interests added yet</p>
-          )}
-        </div>
+        {/* Placeholder - Activity moved to Activity tab */}
       </div>
 
-      {/* ── VERIFICATION CARD ───────────────────────────────────────────── */}
-      <div
-        className={`rounded-2xl p-5 ${isDark ? "bg-[#12122a] border border-white/5" : "bg-white shadow"
-          }`}
-      >
-        <h3 className={`text-md font-semibold mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-gray-800"}`}>
-          <ShieldCheck size={16} className="text-green-400" /> Verification Status
-        </h3>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { label: "Email", status: verification?.email?.status, date: verification?.email?.verified_at },
-            { label: "Phone", status: verification?.phone?.status, date: verification?.phone?.verified_at },
-            { label: "Aadhaar", status: verification?.aadhaar?.status, date: verification?.aadhaar?.verified_at },
-            { label: "Face", status: verification?.face?.status, date: verification?.face?.verified_at },
-          ].map((v) => (
-            <div
-              key={v.label}
-              className={`rounded-xl p-3 flex flex-col gap-1 ${v.status
-                  ? isDark ? "bg-green-900/20 border border-green-700/30" : "bg-green-50 border border-green-200"
-                  : isDark ? "bg-gray-800/40 border border-white/5" : "bg-gray-50 border border-gray-200"
-                }`}
-            >
-              <div className="flex items-center justify-between">
-                <p className={`text-md font-Poppins font-medium ${isDark ? "text-gray-300" : "text-gray-700"}`}>{v.label}</p>
-                {v.status
-                  ? <CheckCircle size={14} className="text-green-400 text-md" />
-                  : <XCircle size={14} className="text-gray-500 text-md" />}
-              </div>
-              <p className={`text-[10px] ${v.status ? "text-green-400" : "text-gray-500"}`}>
-                {v.status ? "Verified" : "Not Verified"}
-              </p>
-              {v.date && (
-                <p className="text-[12px] font-Poppins text-gray-500">
-                  {new Date(v.date).toLocaleDateString()}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+    
 
       {/* ── POSTS / TABS CARD ────────────────────────────────────────────── */}
       <div
@@ -639,17 +488,18 @@ export default function ProfilePage() {
       >
         {/* tabs */}
         <div className="flex gap-6 border-b border-white/90 pb-4 mb-6 overflow-x-auto">
-          {["Posts", "Reels", "Events", "Community"].map((tab) => (
+          {["Posts", "Reels", "Events", "Activity"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`text-sm font-medium pb-2 -mb-4 whitespace-nowrap transition-colors ${activeTab === tab
-                  ? "text-white border-b-2 border-purple-500"
+                  ? isDark ? "text-white border-b-2 border-white" : "text-pink-500 border-b-2 border-pink-500"
                   : "text-gray-500 hover:text-gray-300"
                 }`}
             >
               {tab === "Posts" && <Grid size={16} className="inline mr-1" />}
               {tab === "Reels" && <Film size={16} className="inline mr-1" />}
+              {tab === "Activity" && <Briefcase size={16} className="inline mr-1" />}
               {tab}
             </button>
           ))}
@@ -799,8 +649,8 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Events and Community tabs - empty state */}
-        {(activeTab === "Events" || activeTab === "Community") && (
+        {/* Events and  tabs - empty state */}
+        {(activeTab === "Events") && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-full bg-purple-900/30 flex items-center justify-center mb-4">
               <MessageCircle size={28} className="text-purple-400" />
@@ -809,7 +659,21 @@ export default function ProfilePage() {
             <p className="text-gray-600 text-xs mt-1">Start exploring to see {activeTab.toLowerCase()} here</p>
           </div>
         )}
+
+        {/* Activity Tab */}
+        {activeTab === "Activity" && (
+          <Activity profile={profile} isDark={isDark} />
+        )}
       </div>
+
+      {/* Bio Popup */}
+      {showBioPopup && (
+        <BioPopup
+          onClose={() => setShowBioPopup(false)}
+          onSave={handleBioSave}
+          initialBio={bio}
+        />
+      )}
     </div>
   );
 }
