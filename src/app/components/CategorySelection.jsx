@@ -1366,9 +1366,9 @@ if (submitRes?.reward?.pending_coins !== undefined) {
       console.log('All questions answered for item:', itemKeyAtCompletion);
       console.log('Session info - sessionId:', sessionIdAtCompletion, 'categoryKey:', categoryKeyAtCompletion);
       
-      // Show popup after item completed
-      setShowPopup(true);
-      setTimeout(() => setShowPopup(false), 4000);
+      // Don't show popup here - it will be shown in the completion screen instead
+      // setShowPopup(true);
+      // setTimeout(() => setShowPopup(false), 4000);
 
       // Use the submitAnswer response directly to determine next steps
       // This is more reliable than calling getCategoryItems
@@ -1606,21 +1606,28 @@ if (submitRes?.category_complete) {
 
   const nextCategoryKey = submitRes?.next_category_key;
 
-  // fallback data from submitRes
-  setCompletionData({
+  // Set completion data - combine message and coins in ONE screen
+  // Fetch from backend API, with fallback
+  const coinsEarned = Math.floor(submitRes.reward?.pending_coins || 0);
+  
+  // Set initial completion data with coins
+  const initialCompletionData = {
     completion: {
-      title_text: "Great Choice!",
-      subtitle_text: `You've completed ${submitRes.reward.category_key}`,
+      title_text: "Great job! Your preferences are saved",
+      subtitle_text: `You've completed ${submitRes.reward?.category_key || 'all categories'}`,
       media_url: "/coin.png",
       media_type: "image",
-      show_coins: (submitRes.reward.pending_coins || 0) > 0
+      show_coins: coinsEarned > 0
     },
-    coins_earned: Math.floor(submitRes.reward.pending_coins)
-  });
+    coins_earned: coinsEarned
+  };
+  
+  setCompletionData(initialCompletionData);
 
+  // Show completion screen (ONE screen with both message and coins)
   setScreen("completion");
 
-  // fetch dynamic completion data
+  // fetch dynamic completion data from backend - but preserve coins if API doesn't return them
   try {
     const res = await getCategoryCompletion(
       token,
@@ -1629,32 +1636,45 @@ if (submitRes?.category_complete) {
     );
 
     if (res?.data) {
-      setCompletionData(res.data);
+      // Only update with API data if it has coins, otherwise keep our coins
+      const apiCoins = res.data.coins_earned || 0;
+      if (apiCoins > 0) {
+        setCompletionData(res.data);
+      } else if (coinsEarned > 0) {
+        // Keep our coins data since API didn't return any
+        setCompletionData({
+          ...res.data,
+          coins_earned: coinsEarned,
+          completion: {
+            ...res.data.completion,
+            show_coins: true
+          }
+        });
+      }
     }
 
   } catch (err) {
     console.log("Completion API failed, using fallback");
   }
 
+  // After 4 seconds, move to next category OR redirect to experience
   setTimeout(async () => {
 
     if (nextCategoryKey) {
-
+      // Show intro screen for next category
       setCurrentItemKey(null);
       setCurrentCategoryKey(nextCategoryKey);
 
       const nextIntro = await getCategoryIntro(nextCategoryKey);
-
       setIntroData(nextIntro);
       setScreen("intro");
 
     } else {
-
+      // All categories complete - redirect to experience
       router.push("/onboarding/experience");
-
     }
 
-  }, 5000);
+  }, 4000);
 
   return;
 }
@@ -1781,37 +1801,54 @@ if (submitRes?.category_complete) {
         console.log('Max items completed or category complete, checking for next category...');
         
         // Try to get next category from session status
+        let nextCatKey = null;
         try {
           const sessionData = await getQuestionnaireSession(token, sessionId);
           console.log('Session data for next category:', sessionData);
           
           if (sessionData && sessionData.next_category_key) {
             console.log('Found next category from session:', sessionData.next_category_key);
-            setCurrentCategoryKey(sessionData.next_category_key);
-            const nextIntro = await getCategoryIntro(sessionData.next_category_key);
-            setIntroData(nextIntro);
-            setScreen("intro");
-            return;
+            nextCatKey = sessionData.next_category_key;
           }
           
           // Also check for next_category in response
-          if (refreshed.next_category_key) {
+          if (!nextCatKey && refreshed.next_category_key) {
             console.log('Found next category from refresh:', refreshed.next_category_key);
-            setCurrentCategoryKey(refreshed.next_category_key);
-            const nextIntro = await getCategoryIntro(refreshed.next_category_key);
-            setIntroData(nextIntro);
-            setScreen("intro");
-            return;
+            nextCatKey = refreshed.next_category_key;
           }
         } catch (err) {
           console.log('Error getting session for next category:', err);
         }
         
-        // If we still can't find next category but max items reached, try to get from categories list
+        // If there's a next category, skip completion screen and go directly to next category intro
+        if (nextCatKey) {
+          setCurrentCategoryKey(nextCatKey);
+          const nextIntro = await getCategoryIntro(nextCatKey);
+          setIntroData(nextIntro);
+          setScreen("intro");
+          return;
+        }
+        
+        // If we still can't find next category but max items reached, all categories are done
         if (effectiveCompletedCount >= maxSelection) {
-          console.log('Max items completed but no next category found - all categories might be done');
-          // Could redirect to experience or show completion
-          router.push("/onboarding/experience");
+          console.log('Max items completed but no next category found - all categories are done');
+          // Show completion screen only when ALL categories are done
+          setCompletionData({
+            completion: {
+              title_text: "Great job! Your preferences are saved",
+              subtitle_text: "You've completed all categories",
+              media_url: "/coin.png",
+              media_type: "image",
+              show_coins: true
+            },
+            coins_earned: effectiveCompletedCount * 10
+          });
+          setScreen("completion");
+          
+          // After 4 seconds, redirect to experience
+          setTimeout(() => {
+            router.push("/onboarding/experience");
+          }, 4000);
           return;
         }
       }
@@ -2057,7 +2094,8 @@ if (submitRes?.category_complete) {
       {completionData.completion.subtitle_text}
     </p>
 
-    {completionData.completion.media_type === "lottie" && (
+    {/* Show coin image for both lottie and image media types */}
+    {(completionData.completion.media_type === "lottie" || completionData.completion.media_type === "image") && completionData.completion.media_url && (
       <img
         src={completionData.completion.media_url}
         alt="celebration"
@@ -2065,7 +2103,8 @@ if (submitRes?.category_complete) {
       />
     )}
 
-    {completionData.completion.show_coins && completionData.coins_earned > 0 && (
+    {/* Show earned coins */}
+    {completionData.coins_earned > 0 && (
       <h2 className="text-yellow-400 text-2xl font-semibold">
         You've earned {Math.floor(completionData.coins_earned)} Coins
       </h2>
