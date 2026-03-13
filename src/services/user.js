@@ -192,10 +192,17 @@ api.post("/api/v1/auth/signup/email-password", {
   updateProfilePhoto: (imageUrl) => 
     api.post('/users/profile-photo', { image_url: imageUrl }),
 
-  // ============ PARENT CONSENT (MINORS) ============
+  // ============ PARENT CONSENT (MINORS) - NEW API WITH ID PROOF ============
+  // Submit parent consent with ID proof document (RECOMMENDED)
+  submitParentConsentWithID: (data) => api.post('/users/parent/consent/submit', data),
+  
+  // Get parent consent request details
+  getParentConsentRequest: (requestId) => api.get(`/users/parent/consent/request/${requestId}`),
+  
+  // Legacy methods (kept for backward compatibility)
   giveParentConsent: () => api.post('/users/parent/consent/give', { accepted: true }),
   getParentConsentStatus: () => api.get('/users/parent/consent/status'),
-  revokeParentConsent: () => api.post('/users/parent/consent/revoke'),
+  revokeParentConsent: (reason) => api.post('/users/parent/consent/revoke', { reason: reason || '' }),
 
   // ============ KYC ============
 
@@ -212,6 +219,7 @@ api.post("/api/v1/auth/signup/email-password", {
       file_name: fileName,
       mime_type: file.type,
       size_bytes: file.size,
+      purpose: 'parent_consent',
     }),
 
   // Upload file using presigned URL

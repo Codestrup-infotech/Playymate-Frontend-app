@@ -122,9 +122,25 @@ export default function CompleteExperience() {
       const res = await experienceService.getCompletionCelebration();
       setCelebrationData(res?.data?.data);
       setFlowState('celebration');
+      
+      // Mark onboarding as complete on the backend
+      try {
+        await userService.completeOnboarding();
+        console.log('Onboarding marked as complete');
+      } catch (completeErr) {
+        console.error('Error completing onboarding:', completeErr);
+      }
     } catch (error) {
       console.error("Failed to fetch completion celebration:", error);
-      // Still redirect to home even if API fails
+      // Even if celebration screen fetch fails, try to complete onboarding
+      // This handles the case where completion-celebration screen returns 404
+      try {
+        await userService.completeOnboarding();
+        console.log('Onboarding marked as complete after celebration fetch error');
+      } catch (completeErr) {
+        console.error('Error completing onboarding:', completeErr);
+      }
+      // Still redirect to home
       router.push("/home");
     }
   };
