@@ -61,28 +61,18 @@ export default function OnboardingParentConsentPage() {
         const state = response?.data?.data?.onboarding_state;
         const nextStep = response?.data?.next_required_step;
 
-        console.log("[ParentConsent] Onboarding Status Check:", {
-          onboardingState: state,
-          nextRequiredStep: nextStep,
-          fullResponse: response?.data
-        });
-
-        // If already approved, redirect to location
         if (state === "PARENT_CONSENT_APPROVED") {
           router.push("/onboarding/location");
           return;
         }
 
-        // If location already captured, go to profile photo
         if (state === "LOCATION_CAPTURED" || state === "PROFILE_PHOTO_CAPTURED") {
           router.push("/onboarding/photo");
           return;
         }
 
-        // If not in pending state, handle accordingly
         if (state !== "PARENT_CONSENT_PENDING") {
           if (state === "DOB_CAPTURED") {
-            console.log("[ParentConsent] State is DOB_CAPTURED - staying on parent consent page");
             setInitialLoading(false);
             return;
           }
@@ -102,13 +92,10 @@ export default function OnboardingParentConsentPage() {
           return;
         }
 
-        // Check existing consent status
         try {
           const statusResponse = await userService.getParentConsentStatus();
           const statusData = statusResponse?.data?.data;
-          
-          console.log("[ParentConsent] Parent Consent Status Response:", statusData);
-          
+
           if (statusData) {
             setConsentStatus(statusData.parent_consent_status);
             if (statusData.latest_request?.request_id) {
@@ -133,13 +120,11 @@ export default function OnboardingParentConsentPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!ALLOWED_FILE_TYPES.includes(file.type)) {
       setError("Please upload a valid image (JPEG, PNG) or PDF file");
       return;
     }
 
-    // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       setError("File size must be less than 10MB");
       return;
@@ -148,7 +133,6 @@ export default function OnboardingParentConsentPage() {
     setIdProofFile(file);
     clearError();
 
-    // Create preview for images
     if (file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -175,24 +159,14 @@ export default function OnboardingParentConsentPage() {
       setIsUploading(true);
       setUploadProgress(10);
 
-      // Get presigned URL
       const presignedResponse = await userService.getPresignedUrl(file.name, file);
-      console.log('[ParentConsent] Presigned response:', presignedResponse.data);
-      
       const { upload_url, file_url } = presignedResponse.data.data;
-      
-      if (!upload_url) {
-        throw new Error('Failed to get upload URL from server');
-      }
+
+      if (!upload_url) throw new Error("Failed to get upload URL from server");
 
       setUploadProgress(40);
-
-      // Upload file to presigned URL
-      console.log('[ParentConsent] Uploading file to presigned URL...');
       await userService.uploadToPresigned(upload_url, file, file.type);
-
       setUploadProgress(100);
-      console.log('[ParentConsent] File uploaded successfully, URL:', file_url);
 
       return file_url;
     } catch (err) {
@@ -205,49 +179,23 @@ export default function OnboardingParentConsentPage() {
 
   // Handle form submission
   const handleSubmit = async () => {
-    // Validate form
-    if (!parentFullName.trim()) {
-      setError("Please enter parent's full name");
-      return;
-    }
-
-    if (!parentPhone.trim()) {
-      setError("Please enter parent's phone number");
-      return;
-    }
-
-    if (!relationship) {
-      setError("Please select your relationship to the minor");
-      return;
-    }
-
-    if (!idProofType) {
-      setError("Please select ID proof document type");
-      return;
-    }
-
-    if (!idProofFile) {
-      setError("Please upload ID proof document");
-      return;
-    }
-
-    if (!consentChecked) {
-      setError("Please accept the consent checkbox");
-      return;
-    }
+    if (!parentFullName.trim()) { setError("Please enter parent's full name"); return; }
+    if (!parentPhone.trim()) { setError("Please enter parent's phone number"); return; }
+    if (!relationship) { setError("Please select your relationship to the minor"); return; }
+    if (!idProofType) { setError("Please select ID proof document type"); return; }
+    if (!idProofFile) { setError("Please upload ID proof document"); return; }
+    if (!consentChecked) { setError("Please accept the consent checkbox"); return; }
 
     try {
       setLoading(true);
       clearError();
 
-      // Upload ID proof file
       const fileUrl = await uploadFile(idProofFile);
 
-      // Prepare consent data
       const consentData = {
         parent_full_name: parentFullName.trim(),
         parent_phone: parentPhone.trim(),
-        relationship: relationship,
+        relationship,
         id_proof_document_type: idProofType,
         id_proof_file_url: fileUrl,
         id_proof_file_type: idProofFile.type,
@@ -256,15 +204,7 @@ export default function OnboardingParentConsentPage() {
         consent_checkbox: consentChecked,
       };
 
-      console.log("[ParentConsent] Submitting parent consent with ID proof:", consentData);
-
-      // Submit consent with ID proof
       const response = await userService.submitParentConsentWithID(consentData);
-
-      console.log('[ParentConsent] Parent consent API Response:', response);
-      console.log('[ParentConsent] Parent consent Response Data:', response?.data);
-      console.log('[ParentConsent] Parent consent Response Data Data:', response?.data?.data);
-
       const responseData = response?.data?.data;
 
       if (responseData) {
@@ -272,48 +212,32 @@ export default function OnboardingParentConsentPage() {
         setConsentStatus(responseData.status);
       }
 
-      // Navigate based on next_required_step from API
       const nextStep = response?.data?.next_required_step;
       if (nextStep && typeof nextStep === "string") {
         const route = getRouteFromStep(nextStep);
         router.push(route);
       } else {
-        // Default to location after consent submission
         router.push("/onboarding/location");
       }
     } catch (err) {
       console.error("[ParentConsent] Error submitting parent consent:", err);
-      console.error("[ParentConsent] Error response:", err.response?.data);
 
       const errorCode = err.response?.data?.error_code;
       const status = err.response?.status;
       const errorMsg = err.response?.data?.message;
 
-      // Handle authentication errors
-      if (status === 401) {
-        window.location.href = "/login";
-        return;
-      }
+      if (status === 401) { window.location.href = "/login"; return; }
 
-      // Handle 404 - endpoint not implemented on backend
       if (status === 404) {
-        console.log("[ParentConsent] Parent consent endpoint not implemented (404)");
         setError("Parent consent feature is not available yet. Please try again later.");
         return;
       }
 
-      // Handle state mismatch errors
       if (status === 400) {
         const nextStep = err.response?.data?.next_required_step;
-
-        if (nextStep && typeof nextStep === "string") {
-          const route = getRouteFromStep(nextStep);
-          router.push(route);
-          return;
-        }
+        if (nextStep && typeof nextStep === "string") { router.push(getRouteFromStep(nextStep)); return; }
 
         if (errorCode === "INVALID_ONBOARDING_STATE") {
-          console.log("[ParentConsent] Invalid onboarding state, redirecting to location");
           window.location.href = `${window.location.origin}/onboarding/location`;
           return;
         }
@@ -324,23 +248,9 @@ export default function OnboardingParentConsentPage() {
             const currentState = statusResponse?.data?.data?.onboarding_state;
             const nextRequiredStep = statusResponse?.data?.next_required_step;
 
-            console.log("[ParentConsent] State error - checking current state:", currentState);
-
-            if (currentState === "PARENT_CONSENT_APPROVED") {
-              router.push("/onboarding/location");
-              return;
-            }
-
-            if (nextRequiredStep && typeof nextRequiredStep === "string") {
-              const route = getRouteFromStep(nextRequiredStep);
-              router.push(route);
-              return;
-            }
-
-            if (currentState === "LOCATION_CAPTURED") {
-              router.push("/onboarding/photo");
-              return;
-            }
+            if (currentState === "PARENT_CONSENT_APPROVED") { router.push("/onboarding/location"); return; }
+            if (nextRequiredStep && typeof nextRequiredStep === "string") { router.push(getRouteFromStep(nextRequiredStep)); return; }
+            if (currentState === "LOCATION_CAPTURED") { router.push("/onboarding/photo"); return; }
           } catch (statusErr) {
             console.error("[ParentConsent] Error fetching status:", statusErr);
           }
@@ -350,99 +260,94 @@ export default function OnboardingParentConsentPage() {
         return;
       }
 
-      if (errorMsg) {
-        setError(errorMsg);
-        return;
-      }
-
+      if (errorMsg) { setError(errorMsg); return; }
       setError("Failed to submit parent consent. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Show loading while checking status
+  // ─── Loading screen ────────────────────────────────────────────────────────
   if (initialLoading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-        <div className="w-full max-w-sm">
-          <div className="flex items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
-          </div>
-        </div>
+      <div className="min-h-screen bg-[#0e0e0e] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
       </div>
     );
   }
 
-  // Show status if already submitted
+  // ─── Status screen ─────────────────────────────────────────────────────────
   if (consentStatus && consentStatus !== "PENDING" && requestId) {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center px-4 py-8">
+      <div className="min-h-screen bg-[#0e0e0e] text-white flex flex-col px-5 py-8">
         <button
           onClick={() => router.push("/onboarding/dob")}
-          className="self-start mb-6 p-2 rounded-full hover:bg-white/10 transition-colors"
+          className="self-start mb-8 p-2 rounded-full hover:bg-white/10 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
 
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center space-y-4">
-            {consentStatus === "PENDING_REVIEW" && (
-              <>
-                <div className="w-16 h-16 mx-auto rounded-full bg-yellow-500/20 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-yellow-500 animate-spin" />
-                </div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 max-w-sm mx-auto w-full">
+          {consentStatus === "PENDING_REVIEW" && (
+            <>
+              <div className="w-20 h-20 rounded-full bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center">
+                <Loader2 className="w-9 h-9 text-yellow-400 animate-spin" />
+              </div>
+              <div className="text-center space-y-2">
                 <h1 className="text-2xl font-bold">Consent Submitted</h1>
-                <p className="text-gray-400">
-                  Your parent consent request is under review. This usually takes 24-48 hours.
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  Your parent consent request is under review. This usually takes 24–48 hours.
                 </p>
-              </>
-            )}
+              </div>
+            </>
+          )}
 
-            {consentStatus === "APPROVED" && (
-              <>
-                <div className="w-16 h-16 mx-auto rounded-full bg-green-500/20 flex items-center justify-center">
-                  <CheckCircle className="w-8 h-8 text-green-500" />
-                </div>
+          {consentStatus === "APPROVED" && (
+            <>
+              <div className="w-20 h-20 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center">
+                <CheckCircle className="w-9 h-9 text-green-400" />
+              </div>
+              <div className="text-center space-y-2">
                 <h1 className="text-2xl font-bold">Consent Approved</h1>
-                <p className="text-gray-400">
+                <p className="text-gray-400 text-sm leading-relaxed">
                   Parent consent has been verified. You can now continue with onboarding.
                 </p>
-                <button
-                  onClick={() => router.push("/onboarding/location")}
-                  className="w-full py-4 mt-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 font-semibold"
-                >
-                  Continue
-                </button>
-              </>
-            )}
+              </div>
+              <button
+                onClick={() => router.push("/onboarding/location")}
+                className="w-full py-4 rounded-full font-semibold text-white"
+                style={{ background: "linear-gradient(90deg, #f43f8a, #fb923c)" }}
+              >
+                Continue
+              </button>
+            </>
+          )}
 
-            {consentStatus === "REJECTED" && (
-              <>
-                <div className="w-16 h-16 mx-auto rounded-full bg-red-500/20 flex items-center justify-center">
-                  <AlertCircle className="w-8 h-8 text-red-500" />
-                </div>
+          {consentStatus === "REJECTED" && (
+            <>
+              <div className="w-20 h-20 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+                <AlertCircle className="w-9 h-9 text-red-400" />
+              </div>
+              <div className="text-center space-y-2">
                 <h1 className="text-2xl font-bold">Consent Rejected</h1>
-                <p className="text-gray-400">
+                <p className="text-gray-400 text-sm leading-relaxed">
                   Your parent consent request was rejected. Please resubmit with valid documents.
                 </p>
-                <button
-                  onClick={() => {
-                    setConsentStatus(null);
-                    setRequestId(null);
-                  }}
-                  className="w-full py-4 mt-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 font-semibold"
-                >
-                  Resubmit
-                </button>
-              </>
-            )}
-          </div>
+              </div>
+              <button
+                onClick={() => { setConsentStatus(null); setRequestId(null); }}
+                className="w-full py-4 rounded-full font-semibold text-white"
+                style={{ background: "linear-gradient(90deg, #f43f8a, #fb923c)" }}
+              >
+                Resubmit
+              </button>
+            </>
+          )}
 
           {requestId && (
-            <div className="p-4 bg-gray-900 rounded-lg">
-              <p className="text-sm text-gray-400">Request ID:</p>
-              <p className="font-mono text-xs">{requestId}</p>
+            <div className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl">
+              <p className="text-xs text-gray-500 mb-1">Request ID</p>
+              <p className="font-mono text-xs text-gray-300 break-all">{requestId}</p>
             </div>
           )}
         </div>
@@ -450,83 +355,92 @@ export default function OnboardingParentConsentPage() {
     );
   }
 
+  // ─── Main form ─────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* Header */}
-      <div className="flex items-center p-4">
+    <div className="min-h-screen bg-[#0e0e0e] text-white flex flex-col">
+
+      {/* Top bar */}
+      <div className="flex items-center gap-3 px-4 pt-12 pb-2">
         <button
           onClick={() => router.push("/onboarding/dob")}
           className="p-2 rounded-full hover:bg-white/10 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-lg font-semibold ml-2">Parent Consent</h1>
+        <span className="text-base font-semibold tracking-wide">Parent Consent</span>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 pb-8">
-        <div className="max-w-md mx-auto space-y-6">
-          {/* Header */}
-          <div className="text-center space-y-2 pt-4">
-            <h1 className="text-2xl font-bold">
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto px-5 pb-10">
+        <div className="max-w-md mx-auto">
+
+          {/* Hero heading */}
+          <div className="text-center pt-6 pb-7">
+            <h1 className="text-[28px] font-extrabold leading-tight">
               Parent{" "}
-              <span className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent">
+              <span
+                style={{
+                  background: "linear-gradient(90deg, #f43f8a, #fb923c)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >
                 Consent
               </span>
             </h1>
-            <p className="text-gray-400 text-sm">
-              Please provide parent/guardian details and ID proof for verification
+            <p className="text-gray-400 text-sm mt-2 leading-relaxed">
+              Provide guardian details &amp; ID proof for verification
             </p>
           </div>
 
-          {/* Error Message */}
+          {/* Error banner */}
           {error && (
-            <div className="flex items-center gap-2 text-red-400 text-sm py-2 px-3 bg-red-400/10 rounded-lg">
+            <div className="flex items-center gap-2 text-red-400 text-sm px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-2xl mb-5">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* Form Fields */}
-          <div className="space-y-4">
+          <div className="space-y-5">
+
             {/* Parent Full Name */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-300">
-                Parent/Guardian Full Name <span className="text-red-400">*</span>
+                Parent / Guardian Full Name <span className="text-pink-500">*</span>
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-pink-400" />
                 <input
                   type="text"
                   value={parentFullName}
                   onChange={(e) => setParentFullName(e.target.value)}
                   placeholder="Enter parent's full name"
-                  className="w-full pl-10 pr-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:border-pink-500 focus:outline-none"
+                  className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-[#1a1a1a] border border-[#2e2e2e] focus:border-pink-500 focus:outline-none text-sm text-white placeholder-gray-600 transition-colors"
                 />
               </div>
             </div>
 
             {/* Parent Phone */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-300">
-                Parent/Guardian Phone <span className="text-red-400">*</span>
+                Parent / Guardian Phone <span className="text-pink-500">*</span>
               </label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-pink-400" />
                 <input
                   type="tel"
                   value={parentPhone}
                   onChange={(e) => setParentPhone(e.target.value)}
                   placeholder="Enter phone number"
-                  className="w-full pl-10 pr-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:border-pink-500 focus:outline-none"
+                  className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-[#1a1a1a] border border-[#2e2e2e] focus:border-pink-500 focus:outline-none text-sm text-white placeholder-gray-600 transition-colors"
                 />
               </div>
             </div>
 
             {/* Relationship */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-300">
-                Relationship to Minor <span className="text-red-400">*</span>
+                Relationship to Minor <span className="text-pink-500">*</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {RELATIONSHIP_OPTIONS.map((option) => (
@@ -534,11 +448,20 @@ export default function OnboardingParentConsentPage() {
                     key={option.value}
                     type="button"
                     onClick={() => setRelationship(option.value)}
-                    className={`py-3 px-4 rounded-lg border transition-all ${
+                    className="py-3 px-4 rounded-2xl border text-sm font-medium transition-all"
+                    style={
                       relationship === option.value
-                        ? "border-pink-500 bg-pink-500/20 text-white"
-                        : "border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-600"
-                    }`}
+                        ? {
+                            background: "linear-gradient(135deg, rgba(244,63,138,0.18), rgba(251,146,60,0.18))",
+                            borderColor: "#f43f8a",
+                            color: "#fff",
+                          }
+                        : {
+                            background: "#1a1a1a",
+                            borderColor: "#2e2e2e",
+                            color: "#9ca3af",
+                          }
+                    }
                   >
                     {option.label}
                   </button>
@@ -546,72 +469,75 @@ export default function OnboardingParentConsentPage() {
               </div>
             </div>
 
-            {/* ID Proof Document Type */}
-            <div className="space-y-2">
+            {/* ID Proof Type */}
+            <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-300">
-                ID Proof Document Type <span className="text-red-400">*</span>
+                ID Proof Document Type <span className="text-pink-500">*</span>
               </label>
-              <select
-                value={idProofType}
-                onChange={(e) => setIdProofType(e.target.value)}
-                className="w-full py-3 px-4 bg-gray-900 border border-gray-700 rounded-lg focus:border-pink-500 focus:outline-none text-gray-300"
-              >
-                <option value="">Select document type</option>
-                {ID_PROOF_TYPES.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                {/* custom arrow */}
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-xs">▾</span>
+                <select
+                  value={idProofType}
+                  onChange={(e) => setIdProofType(e.target.value)}
+                  className="w-full appearance-none py-3.5 px-4 rounded-2xl bg-[#1a1a1a] border border-[#2e2e2e] focus:border-pink-500 focus:outline-none text-sm text-gray-300 transition-colors"
+                >
+                  <option value="">Select document type</option>
+                  {ID_PROOF_TYPES.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            {/* ID Proof File Upload */}
-            <div className="space-y-2">
+            {/* File Upload */}
+            <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-300">
-                Upload ID Proof <span className="text-red-400">*</span>
+                Upload ID Proof <span className="text-pink-500">*</span>
               </label>
-              
+
               {!idProofFile ? (
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-gray-600 transition-colors"
+                  className="border-2 border-dashed border-[#2e2e2e] hover:border-pink-500/60 rounded-2xl p-8 text-center cursor-pointer transition-colors bg-[#1a1a1a]"
                 >
-                  <Upload className="w-8 h-8 mx-auto text-gray-500 mb-2" />
-                  <p className="text-sm text-gray-400">
-                    Click to upload ID proof document
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    JPEG, PNG or PDF (max 10MB)
-                  </p>
+                  <div
+                    className="w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-3"
+                    style={{ background: "linear-gradient(135deg, rgba(244,63,138,0.15), rgba(251,146,60,0.15))" }}
+                  >
+                    <Upload className="w-5 h-5 text-pink-400" />
+                  </div>
+                  <p className="text-sm text-gray-300 font-medium">Tap to upload document</p>
+                  <p className="text-xs text-gray-600 mt-1">JPEG, PNG or PDF · max 10 MB</p>
                 </div>
               ) : (
-                <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    {idProofPreview ? (
-                      <img
-                        src={idProofPreview}
-                        alt="ID Proof Preview"
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center">
-                        <FileText className="w-8 h-8 text-gray-500" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{idProofFile.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {(idProofFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
+                <div className="flex items-center gap-3 bg-[#1a1a1a] border border-[#2e2e2e] rounded-2xl p-4">
+                  {idProofPreview ? (
+                    <img
+                      src={idProofPreview}
+                      alt="ID Proof"
+                      className="w-14 h-14 object-cover rounded-xl flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-xl bg-[#252525] flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-6 h-6 text-pink-400" />
                     </div>
-                    <button
-                      type="button"
-                      onClick={removeFile}
-                      className="p-2 hover:bg-gray-800 rounded-full transition-colors"
-                    >
-                      <X className="w-5 h-5 text-gray-400" />
-                    </button>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate text-white">{idProofFile.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {(idProofFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={removeFile}
+                    className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+                  >
+                    <X className="w-4 h-4 text-gray-400" />
+                  </button>
                 </div>
               )}
 
@@ -624,37 +550,64 @@ export default function OnboardingParentConsentPage() {
               />
             </div>
 
-            {/* Consent Checkbox */}
-            <label className="flex items-start gap-3 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={consentChecked}
-                onChange={(e) => setConsentChecked(e.target.checked)}
-                className="mt-1 accent-pink-500 w-5 h-5"
-              />
-              <span className="text-gray-400">
-                I confirm that I am the parent or legal guardian of the minor and I consent to their participation on Playmate. I have read and agree to the Terms & Privacy Policy.
+            {/* Consent checkbox */}
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <div className="relative mt-0.5 flex-shrink-0">
+                <input
+                  type="checkbox"
+                  checked={consentChecked}
+                  onChange={(e) => setConsentChecked(e.target.checked)}
+                  className="sr-only"
+                />
+                <div
+                  className="w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all"
+                  style={
+                    consentChecked
+                      ? { background: "linear-gradient(135deg, #f43f8a, #fb923c)", borderColor: "transparent" }
+                      : { background: "transparent", borderColor: "#3e3e3e" }
+                  }
+                >
+                  {consentChecked && (
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              <span className="text-xs text-gray-400 leading-relaxed">
+                I confirm that I am the parent or legal guardian of the minor and I consent to their
+                participation on Playmate. I have read and agree to the{" "}
+                <span className="text-pink-400">Terms &amp; Privacy Policy</span>.
               </span>
             </label>
           </div>
 
-          {/* Submit Button */}
-          <div className="pt-4">
+          {/* CTA */}
+          <div className="mt-8 space-y-4">
             <button
               disabled={!consentChecked || loading || isUploading}
               onClick={handleSubmit}
-              className="w-full py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40 flex items-center justify-center font-semibold"
+              className="w-full py-4 rounded-full font-semibold text-white text-base flex items-center justify-center transition-opacity disabled:opacity-40"
+              style={{ background: "linear-gradient(90deg, #f43f8a, #fb923c)" }}
             >
               {loading || isUploading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  {isUploading ? `Uploading... ${uploadProgress}%` : "Submitting..."}
+                  {isUploading ? `Uploading… ${uploadProgress}%` : "Submitting…"}
                 </>
               ) : (
                 "Submit Consent"
               )}
             </button>
+
+            <button
+              onClick={() => router.push("/onboarding/dob")}
+              className="w-full text-sm text-gray-500 hover:text-gray-300 transition-colors py-1"
+            >
+              Go back
+            </button>
           </div>
+
         </div>
       </div>
     </div>
