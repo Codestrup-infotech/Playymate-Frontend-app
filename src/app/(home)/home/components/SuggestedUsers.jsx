@@ -21,9 +21,7 @@ const SUGGESTED_USERS = [
     { id: 5, avatar: null, username: "raj.kulkarni", subtitle: "Popular near you" },
 ];
 
-const FOOTER_LINKS = [
-    "About", "Help", "Press", "API", "Jobs", "Privacy", "Terms",
-];
+
 
 export default function SuggestedUsers() {
     const { theme } = useTheme();
@@ -32,7 +30,7 @@ export default function SuggestedUsers() {
     const panelBg = isDark ? "" : "";  // transparent — inherits from layout
 
     return (
-        <div className="w-full">
+        <div className="w-full ">
 
             {/* ── Current User Row ── */}
             <div className="flex items-center justify-between mb-6">
@@ -81,22 +79,7 @@ export default function SuggestedUsers() {
                 ))}
             </div>
 
-            {/* ── Footer Links ── */}
-            <div className={`mt-6 flex flex-wrap gap-x-2 gap-y-1 ${isDark ? "text-gray-600" : "text-gray-400"}`}>
-                {FOOTER_LINKS.map((link, i) => (
-                    <span key={link}>
-                        <button className="text-xs hover:underline transition-all">{link}</button>
-                        {i < FOOTER_LINKS.length - 1 && (
-                            <span className="text-xs ml-2">·</span>
-                        )}
-                    </span>
-                ))}
-            </div>
-
-            {/* ── Copyright ── */}
-            <p className={`text-xs mt-3 ${isDark ? "text-gray-700" : "text-gray-400"}`}>
-                © 2026 Playymate
-            </p>
+           
         </div>
     );
 }

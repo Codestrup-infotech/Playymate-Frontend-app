@@ -1,12 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { userService } from "@/services/user";
 import { kycService } from "@/services/kyc";
 import { getRouteFromStep } from "@/lib/api/navigation";
 
-export default function ActivityIntentPage() {
+function ActivityIntentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -79,7 +79,13 @@ useEffect(() => {
   );
 }
 
-/* ---------------- ROLE SELECTION COMPONENT (STEP 1) ---------------- */
+export default function ActivityIntentPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>}>
+      <ActivityIntentPageContent />
+    </Suspense>
+  );
+}
 
 function RoleSelection({ onBack, activityScreenConfig }) {
   const router = useRouter();
@@ -129,16 +135,16 @@ function RoleSelection({ onBack, activityScreenConfig }) {
 
   return (
     <div className="bg-black">
-      <div className="w-[390px]  h-screen text-white mx-auto">
+      <div className="w-[500px]  flex   flex-col justify-center items-center text-center h-screen text-white mx-auto">
         {/* HEADER */}
-        <div className="flex  gap-6 mb-6 pt-6">
+        <div className="flex   mb-6 ">
           {/* <button
             onClick={onBack}
             className="text-3xl text-gray-400 font-bold"
           >
             ← 
           </button> */}
-<div className="flex  flex-col space-y-3 "> 
+<div className=" space-y-3 "> 
 <h1 className="text-2xl font-semibold font-Playfair Display">
   {(activityScreenConfig?.title || "What are you doing right now?")
     .split(" ")
@@ -188,7 +194,7 @@ function RoleSelection({ onBack, activityScreenConfig }) {
     key={role.value}
     onClick={() => handleSelectRole(role)}
     disabled={loading}
-    className="w-full px-4 py-2 rounded-xl border border-blue-600 bg-[#0B0B0F] flex items-center gap-3 disabled:opacity-50"
+    className="w-80 px-4  py-2 rounded-xl border border-blue-600 bg-[#0B0B0F] hover:bg-blue-600 flex items-center gap-3 disabled:opacity-50"
   >
     {role.icon && <span className="text-2xl">{role.icon}</span>}
 
@@ -388,11 +394,11 @@ router.push(route);
 
   return (
     <div className="bg-black py-8 ">
-      <div className="relative mb-6 text-center">
+      <div className="relative mb-6  text-center">
   {/* Back Button */}
   <button
     onClick={onBack}
-    className="absolute left-0 text-3xl text-gray-400 font-bold"
+    className="absolute left-96 text-3xl text-gray-400 font-bold"
   >
     ←
   </button>
@@ -416,7 +422,7 @@ router.push(route);
 </h1>
 
   {/* Subtitle */}
-  <p className="mt-2 text-gray-400 text-sm">
+  <p className="mt-2 text-gray-400 text-sm font-Poppins">
     {basicScreenConfig?.subtitle || "Add a few more details so people can know you better"}
   </p>
 </div>

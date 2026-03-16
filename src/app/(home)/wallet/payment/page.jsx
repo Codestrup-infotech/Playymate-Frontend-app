@@ -1,11 +1,10 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { Suspense } from "react";
 
-export default function PaymentPage() {
+function PaymentContent() {
   const params = useSearchParams();
   const router = useRouter();
 
@@ -41,5 +40,13 @@ export default function PaymentPage() {
         Confirm purchase ₹{amount}
       </button>
     </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={<div className="bg-black text-white min-h-screen p-6">Loading...</div>}>
+      <PaymentContent />
+    </Suspense>
   );
 }

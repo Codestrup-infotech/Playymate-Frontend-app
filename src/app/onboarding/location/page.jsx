@@ -329,7 +329,7 @@ export default function OnboardingLocationPage() {
 
           {/* Search Overlay */}
           <div className="absolute bottom-4 left-4 right-4 font-Poppins ">
-            <div className="bg-black/90 backdrop-blur rounded-xl p-3 space-y-3">
+            <div className="">
               {/* Search Input */}
               <div className="relative">
                 {/* <div className="flex items-center gap-2 border border-pink-500/40 rounded-lg px-3 py-2 bg-black/50">
@@ -380,7 +380,7 @@ export default function OnboardingLocationPage() {
 
               {/* Buttons */}
               <div className="flex gap-2">
-                <button
+                {/* <button
                   onClick={handleDetectLocation}
                   disabled={detectingLocation || loading}
                   className="flex-1 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50"
@@ -391,11 +391,11 @@ export default function OnboardingLocationPage() {
                     <Navigation className="w-4 h-4" />
                   )}
                   <span>Detect</span>
-                </button>
+                </button> */}
                 <button
                   onClick={handleConfirmLocation}
                   disabled={loading || !coords}
-                  className="flex-1 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-orange-400 font-medium text-sm disabled:opacity-50"
+                  className="flex-1 py-3 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 font-medium text-sm disabled:opacity-50"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -403,7 +403,7 @@ export default function OnboardingLocationPage() {
                       Saving...
                     </span>
                   ) : (
-                    'Confirm'
+                    'Get Started'
                   )}
                 </button>
               </div>

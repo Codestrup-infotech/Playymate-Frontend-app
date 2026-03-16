@@ -3,8 +3,9 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { products } from "../data/products";
 import { ArrowLeft } from "lucide-react";
+import { Suspense } from "react";
 
-export default function Checkout() {
+function CheckoutContent() {
   const router = useRouter();
   const params = useSearchParams();
   const id = params.get("id");
@@ -160,5 +161,13 @@ export default function Checkout() {
       </div>
 
     </div>
+  );
+}
+
+export default function Checkout() {
+  return (
+    <Suspense fallback={<div className="bg-black text-white min-h-screen flex items-center justify-center">Loading...</div>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }

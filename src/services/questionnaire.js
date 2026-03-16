@@ -8,6 +8,25 @@ export const questionnaireService = {
   completeQuestionnaire: () =>
     api.post('/questionnaire/complete'),
 
+
+
+
+  // ============ PHYSICAL PROFILE CONSENT ============
+
+
+// Get consent screen
+getPhysicalProfileConsentScreen: () =>
+api.get('/questionnaire/physical-profile/consent-screen'),
+
+// Submit physical profile consent
+submitConsent: (consentGiven, sessionId = null) =>
+api.post('/questionnaire/physical-profile/consent', {
+  session_id: sessionId,
+  consent_given: consentGiven,
+}),
+
+
+
   // ============ PHYSICAL PROFILE CONSENT ============
 
 

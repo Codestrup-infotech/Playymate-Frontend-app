@@ -46,8 +46,18 @@ export default function useFeed() {
             setHasMore(data?.has_more ?? false);
             cursorRef.current = data?.next_cursor ?? null;
 
+            // Log feed data for debugging
+            console.log("[useFeed] Feed loaded successfully:", {
+                itemCount: items.length,
+                hasMore: data?.has_more,
+                nextCursor: data?.next_cursor,
+                profileCompletionCard: data?.profile_completion_card ? "present" : "not present",
+                feedTypes: items.map(item => item.type)
+            });
+
             if (data?.profile_completion_card) {
                 setProfileCard(data.profile_completion_card);
+                console.log("[useFeed] Profile completion card:", data.profile_completion_card);
             }
         } catch (err) {
             console.error("[useFeed] getFeed error:", err);
@@ -62,6 +72,7 @@ export default function useFeed() {
         try {
             const items = await getSuggestedFollows();
             setSuggestedFollows(items);
+            console.log("[useFeed] Suggested follows loaded:", { count: items.length, users: items.map(u => u.username) });
         } catch (err) {
             console.warn("[useFeed] getSuggestedFollows error:", err.message);
         }
@@ -71,6 +82,7 @@ export default function useFeed() {
         try {
             const items = await getNearbyVenues();
             setNearbyVenues(items);
+            console.log("[useFeed] Nearby venues loaded:", { count: items.length, venues: items.map(v => v.name) });
         } catch (err) {
             console.warn("[useFeed] getNearbyVenues error:", err.message);
         }
@@ -81,11 +93,17 @@ export default function useFeed() {
         try {
             const userId = localStorage.getItem("user_id");
             if (userId) {
+                console.log("[useFeed] Fetching user profile for ID:", userId);
                 const profile = await getUserProfile(userId);
                 setUserData({
                     username: profile.username || null,
                     profile_main_type: profile.profile_main_type?.value || null,
                     bio: profile.bio || null,
+                });
+                console.log("[useFeed] User profile loaded:", {
+                    username: profile.username,
+                    profile_main_type: profile.profile_main_type,
+                    bio: profile.bio
                 });
             }
         } catch (err) {
@@ -96,11 +114,14 @@ export default function useFeed() {
     // Initial load — all three in parallel
     useEffect(() => {
         setError(null);
+        console.log("[useFeed] Starting initial feed load...");
         Promise.all([
             loadFeed(true),
             loadSuggestedFollows(),
             loadNearbyVenues(),
-        ]);
+        ]).then(() => {
+            console.log("[useFeed] Initial feed load completed");
+        });
     }, [loadFeed, loadSuggestedFollows, loadNearbyVenues]);
 
     // Fetch user profile data when profile card shows pending tasks
@@ -116,17 +137,20 @@ export default function useFeed() {
 
     const refresh = useCallback(async () => {
         try {
+            console.log("[useFeed] Refreshing feed cache...");
             await refreshFeedCache();
         } catch (_) {
             // cache refresh is best-effort
         }
         cursorRef.current = null;
         setError(null);
+        console.log("[useFeed] Refreshing all feed data...");
         await Promise.all([
             loadFeed(true),
             loadSuggestedFollows(),
             loadNearbyVenues(),
         ]);
+        console.log("[useFeed] Feed refresh completed");
     }, [loadFeed, loadSuggestedFollows, loadNearbyVenues]);
 
     return {

@@ -3,7 +3,7 @@
 ## QUICK START CHECKLIST
 
 Use this checklist while building your backend APIs. Cross off each as you implement.
-
+;
 ---
 
 ## SECTION 1: SUBSCRIPTION APIS

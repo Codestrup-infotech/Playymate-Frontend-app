@@ -1,6 +1,6 @@
 "use client";
 import Sidebar from "./components/Sidebar";
-import Topbar from "./components/Topbar";
+// import Topbar from "./components/Topbar";
 import { useState } from "react";
 import { ThemeProvider, useTheme } from "@/lib/ThemeContext";
 import MessagesFloatingButton from "@/app/(home)/home/components/MessagesFloatingButton";
@@ -13,7 +13,7 @@ function AppLayoutInner({ children }) {
     <div
       className={`flex h-screen overflow-hidden font-Poppins transition-colors duration-300 ${theme === "dark"
         ? "bg-[#0f0f1a] text-white"
-        : "bg-gray-100 text-gray-900"
+        : "bg-[#F2F4F7] text-gray-900"
         }`}
     >
       {/* Sidebar */}
@@ -21,14 +21,14 @@ function AppLayoutInner({ children }) {
 
       {/* Main Content Area */}
       <div
-        style={{ marginLeft: sidebarOpen ? "240px" : "72px" }}
-        className="flex flex-col flex-1 mt-[50px] transition-all duration-300 ease-in-out"
+        style={{ marginLeft: sidebarOpen ? "160px" : "72px" }}
+        className="flex flex-col flex-1 mt-[25px] transition-all duration-300 ease-in-out"
       >
         {/* Fixed Topbar */}
-        <Topbar isSidebarOpen={sidebarOpen} />
+        {/* <Topbar isSidebarOpen={sidebarOpen} /> */}
 
         {/* Scrollable Content */}
-        <main className="flex-1 pt-24 p-4 md:p-6 overflow-y-auto">
+        <main className="flex-1  overflow-y-auto">
           {children}
         </main>
       </div>

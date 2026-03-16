@@ -463,8 +463,12 @@ export default function OnboardingProfilePhotoPage() {
 
         try {
           // Step 1: Get presigned URL
+          console.log("Profile photo is uploading...");
+          console.log("Calling presign endpoint for photo index:", i);
           const fileName = `profile_${Date.now()}_${i}_${photo.name}`;
           const presignResponse = await userService.getPresignedUrl(fileName, photo);
+          
+          console.log("Presign endpoint response:", presignResponse);
           
           // Use wasabi_url as per API documentation (not file_url)
           const { upload_url, wasabi_url } = presignResponse.data.data;
@@ -698,17 +702,19 @@ export default function OnboardingProfilePhotoPage() {
                 </div>
               ) : (
                 <div
-                  onClick={() => fileInputRefs[0].current?.click()}
-                  className="w-44 h-52 rounded-2xl border-2 border-dashed border-pink-500/60 bg-white/5 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors"
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    {/* Person icon */}
-                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                      <circle cx="24" cy="16" r="10" fill="#6b7280" />
-                      <ellipse cx="24" cy="38" rx="16" ry="10" fill="#6b7280" />
-                    </svg>
-                  </div>
-                </div>
+  onClick={() => fileInputRefs[0].current?.click()}
+  className="w-44 h-52 rounded-2xl bg-gradient-to-r from-pink-500 to-orange-500 p-[1px] cursor-pointer"
+>
+  <div className="w-full h-full rounded-2xl bg-black flex items-center justify-center transition-colors">
+    <div className="flex flex-col items-center gap-2">
+      {/* Person icon */}
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="16" r="10" fill="#6b7280" />
+        <ellipse cx="24" cy="38" rx="16" ry="10" fill="#6b7280" />
+      </svg>
+    </div>
+  </div>
+</div>
               )}
               {/* Camera badge */}
               <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 flex items-center justify-center border-2 border-black">
@@ -748,7 +754,7 @@ export default function OnboardingProfilePhotoPage() {
                 ) : (
                   <div
                     onClick={() => fileInputRefs[index].current?.click()}
-                    className="w-36 h-40 rounded-2xl border-2 border-dashed border-pink-500/40 bg-white/5 flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition-colors gap-2"
+                    className="w-36 h-40 rounded-2xl border-2 border-dotted border-[#F97317]/60 bg-white/5 flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition-colors gap-2"
                   >
                     {/* Person icon */}
                     <svg width="36" height="36" viewBox="0 0 48 48" fill="none">

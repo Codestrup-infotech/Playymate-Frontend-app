@@ -366,6 +366,437 @@ import PhysicalTopProgress from "@/app/components/PhysicalTopProgress";
 
 
 
+// export default function PhysicalPreferences() {
+//   const router = useRouter();
+
+//   const TOTAL_STEPS = 5;
+
+//   const [step, setStep] = useState(1);
+//   const [weight, setWeight] = useState(62);
+//   const [height, setHeight] = useState(160);
+//   const [blood, setBlood] = useState("A+");
+
+//   const [pendingCoins, setPendingCoins] = useState(0);
+//   const progress = Math.round(((step - 1) / TOTAL_STEPS) * 100);
+
+//   const [screenData, setScreenData] = useState(null);
+//   const [basicMetricsQuestions, setBasicMetricsQuestions] = useState([]);
+//   const [questionsLoading, setQuestionsLoading] = useState(false);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [apiFetched, setApiFetched] = useState(false);
+
+//   const [introAgree, setIntroAgree] = useState(false);
+//   const [weightAgree, setWeightAgree] = useState(false);
+//   const [heightAgree, setHeightAgree] = useState(false);
+
+//   const [consentLoading, setConsentLoading] = useState(false);
+//   const [consentError, setConsentError] = useState(null);
+
+//   const [answerLoading, setAnswerLoading] = useState(false);
+//   const [answerError, setAnswerError] = useState(null);
+
+//   const [showLoader, setShowLoader] = useState(true);
+
+//   useEffect(() => {
+//     const fetchScreenData = async () => {
+//       try {
+//         setLoading(true);
+
+//         const response = await questionnaireService.getOnboardingScreen(
+//           "physical_intro",
+//           "mobile"
+//         );
+
+//         if (response.data?.data?.screens?.[0]) {
+//           setScreenData(response.data.data.screens[0]);
+//         }
+
+//         setLoading(false);
+
+//         setTimeout(() => {
+//           setShowLoader(false);
+//         }, 6000);
+//       } catch (err) {
+//         console.error("Failed to fetch screen:", err);
+//         setError(err.message);
+//         setLoading(false);
+//       }
+//     };
+
+//     fetchScreenData();
+//   }, []);
+
+//  const submitAnswer = async (questionId, answer, questionData = null) => {
+//   try {
+//     setAnswerLoading(true);
+//     setAnswerError(null);
+
+//     const questionType = questionData?.question_type || "number";
+//     let payload = {};
+
+//     if (questionType === "single_select" || questionId === "blood_group") {
+//       let optionId = null;
+
+//       if (answer && typeof answer === "string" && answer.startsWith("opt_")) {
+//         optionId = answer;
+//       }
+
+//       if (!optionId && answer && typeof answer === "string") {
+//         const byId = questionData?.options?.find(
+//           (opt) => opt.option_id === answer
+//         );
+//         if (byId) optionId = answer;
+//       }
+
+//       if (!optionId && answer && typeof answer === "string") {
+//         const normalizedAnswer = answer.toLowerCase().replace(/\s+/g, "");
+
+//         const byLabel = questionData?.options?.find(
+//           (opt) =>
+//             opt.label?.toLowerCase().replace(/\s+/g, "") === normalizedAnswer ||
+//             opt.value?.toLowerCase().replace(/\s+/g, "") === normalizedAnswer
+//         );
+
+//         if (byLabel?.option_id) optionId = byLabel.option_id;
+//       }
+
+//       if (!optionId && questionId === "blood_group") {
+//         const bloodGroupMap = {
+//           "A+": "opt_a+",
+//           "A-": "opt_a-",
+//           "B+": "opt_b+",
+//           "B-": "opt_b-",
+//           "AB+": "opt_ab+",
+//           "AB-": "opt_ab-",
+//           "O+": "opt_o+",
+//           "O-": "opt_o-",
+//           unknown: "opt_unknown",
+//         };
+
+//         optionId = bloodGroupMap[answer];
+//       }
+
+//       if (optionId) payload.selected_option_ids = [optionId];
+
+//     } else if (questionType === "number" || questionType === "range") {
+//       payload.answer_number =
+//         typeof answer === "number"
+//           ? answer
+//           : parseInt(answer) || parseFloat(answer);
+
+//     } else if (questionType === "text") {
+//       payload.answer_text = answer;
+
+//     } else if (questionType === "boolean") {
+//       payload.answer_boolean =
+//         answer === true || answer === "true" || answer === 1;
+//     }
+
+//     const response = await questionnaireService.submitAnswer(
+//       questionId,
+//       payload
+//     );
+
+//     const coins = response.data?.data?.reward?.pending_coins;
+
+//     if (coins !== undefined) {
+//       setPendingCoins(coins);
+//     }
+
+//     return true;
+
+//   } catch (err) {
+//     console.error(err);
+
+//     setAnswerError(
+//       err.response?.data?.message ||
+//         `Failed to submit ${questionId} answer`
+//     );
+
+//     return false;
+
+//   } finally {
+//     setAnswerLoading(false);
+//   }
+// };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//   const nextDisabled =
+//     (step === 1 && !introAgree) ||
+//     (step === 2 && !weightAgree) ||
+//     (step === 3 && !heightAgree);
+
+//   const goNext = async () => {
+//     if (step === 1 && introAgree) {
+//       try {
+//         setConsentLoading(true);
+//         setConsentError(null);
+
+//         await questionnaireService.submitConsent(true);
+
+//         setQuestionsLoading(true);
+
+//         try {
+//           const questionsRes =
+//             await questionnaireService.getQuestions("basic_metrics");
+
+//           const questions =
+//             questionsRes.data?.data?.questions?.basic_metrics || [];
+
+//           const sortedQuestions = questions.sort(
+//             (a, b) => a.flow_order - b.flow_order
+//           );
+
+//           setBasicMetricsQuestions(sortedQuestions);
+
+//           const weightQuestion = sortedQuestions.find(
+//             (q) => q.question_id === "weight"
+//           );
+//           const heightQuestion = sortedQuestions.find(
+//             (q) => q.question_id === "height"
+//           );
+
+//           if (weightQuestion?.range_config) {
+//             const { min, max } = weightQuestion.range_config;
+//             setWeight(Math.round((min + max) / 2));
+//           }
+
+//           if (heightQuestion?.range_config) {
+//             const { min, max } = heightQuestion.range_config;
+//             setHeight(Math.round((min + max) / 2));
+//           }
+//         } catch (qErr) {
+//           console.error(qErr);
+//         } finally {
+//           setQuestionsLoading(false);
+//         }
+
+//         setStep((s) => s + 1);
+//       } catch (err) {
+//         console.error(err);
+//         setConsentError(
+//           err.response?.data?.message ||
+//             "Failed to submit consent."
+//         );
+//         setStep((s) => s + 1);
+//       } finally {
+//         setConsentLoading(false);
+//       }
+//     } else if (!nextDisabled) {
+//       setStep((s) => s + 1);
+//     }
+//   };
+
+//   const goBack = () => {
+//     setStep((s) => s - 1);
+//   };
+
+//  return (
+//   <div className="min-h-screen flex flex-col justify-center items-center bg-black text-white px-4 overflow-hidden">
+
+//     {step >= 2 && (
+//       <div className="w-96">
+//         <PhysicalTopProgress progress={progress} pendingCoins={pendingCoins} />
+//       </div>
+//     )}
+
+//     <div className="w-full max-w-sm">
+//       {loading ? (
+//         <div className="flex justify-center items-center min-h-[400px]">
+//           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+//         </div>
+//       ) : (
+//         <>
+//           {step === 1 && showLoader ? (
+//             <IntroLoader image={screenData?.image_url} />
+//           ) : step === 1 ? (
+//             <Intro
+//               agree={introAgree}
+//               setAgree={setIntroAgree}
+//               onNext={goNext}
+//               disabled={nextDisabled}
+//               screenData={screenData}
+//               loading={consentLoading}
+//               error={consentError}
+//             />
+//           ) : null}
+
+//           {step === 2 && (
+//             <WeightStep
+//               value={weight}
+//               agree={weightAgree}
+//               setAgree={setWeightAgree}
+//               setValue={setWeight}
+//               questionData={basicMetricsQuestions.find(
+//                 (q) => q.question_id === "weight"
+//               )}
+//               onNext={async () => {
+//                 const q = basicMetricsQuestions.find(
+//                   (q) => q.question_id === "weight"
+//                 );
+//                 if (q) await submitAnswer(q.question_id, weight, q);
+//                 setStep(3);
+//               }}
+//               onBack={() => setStep(1)}
+//               disabled={nextDisabled}
+//             />
+//           )}
+
+//           {step === 3 && (
+//             <HeightStep
+//               value={height}
+//               setValue={setHeight}
+//               agree={heightAgree}
+//               setAgree={setHeightAgree}
+//               questionData={basicMetricsQuestions.find(
+//                 (q) => q.question_id === "height"
+//               )}
+//               onNext={async () => {
+//                 const q = basicMetricsQuestions.find(
+//                   (q) => q.question_id === "height"
+//                 );
+//                 if (q) await submitAnswer(q.question_id, height, q);
+//                 setStep(4);
+//               }}
+//               onBack={() => setStep(2)}
+//               disabled={nextDisabled}
+//             />
+//           )}
+
+//           {step === 4 && (
+//             <BloodStep
+//               value={blood}
+//               setValue={setBlood}
+//               questionData={basicMetricsQuestions.find(
+//                 (q) => q.question_id === "blood_group"
+//               )}
+//               onBack={() => setStep(3)}
+//               onComplete={async () => {
+//                 const q = basicMetricsQuestions.find(
+//                   (q) => q.question_id === "blood_group"
+//                 );
+//                 if (q && blood)
+//                   await submitAnswer(q.question_id, blood, q);
+
+//                 setStep(5);
+//               }}
+//             />
+//           )}
+
+//           {step === 5 && (
+//             <Fitness
+//               onBack={() => setStep(4)}
+//               onComplete={() => {
+//                 router.push("/onboarding/questionnaire");
+//               }}
+//             />
+//           )}
+//         </>
+//       )}
+//     </div>
+//   </div>
+// ); 
+// }
+
+// function IntroLoader({ image }) {
+//   return (
+//     <> 
+    
+//     <div className="flex items-center justify-center min-h-screen bg-black">
+//       <img
+//         src={image}
+//         alt="loading"
+//         className=" h-[500px] w-[350px]  rounded-2xl "
+//       />
+//     </div> </>
+//   );
+// }
+
+
+// function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }) {
+//   const title = screenData?.title || "Physical Profile";
+//   const description =
+//     screenData?.description || "Help us understand your physical attributes";
+
+//   const securityNote = "Your information is secure and never shared";
+
+//   const checkboxLabel =
+//     "I understand and agree to answer questions about my physical activity preferences";
+
+//   return (
+//     <div className="flex flex-col justify-between py-10">
+      
+     
+
+//       <div className="rounded-2xl border border-blue-500/40 bg-[#1c1c1c] py-12 px-4 text-center">
+
+//         <h2 className="text-4xl font-bold mb-5 bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+//           {title}
+//         </h2>
+
+//         <p className="text-sm text-gray-300 mb-5 font-Poppins">
+//           {description}
+//         </p>
+
+//         <p className="text-[14px] text-gray-400 mb-4 font-Poppins">
+//           {securityNote}
+//         </p>
+
+//         <label className="flex items-start gap-3 text-xs text-gray-300 text-left font-Poppins">
+//           <input
+//             type="checkbox"
+//             checked={agree}
+//             onChange={(e) => setAgree(e.target.checked)}
+//             className="mt-1 accent-pink-500"
+//           />
+//           <span>{checkboxLabel}</span>
+//         </label>
+
+//       </div>
+
+//       {error && (
+//         <p className="text-center text-red-400 py-2 text-sm">{error}</p>
+//       )}
+
+//       <button
+//         onClick={onNext}
+//         disabled={disabled}
+//         className={`w-full py-4 rounded-full transition mt-10 font-Poppins ${
+//           disabled
+//             ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+//             : "bg-gradient-to-r from-pink-500 to-orange-400 text-white"
+//         }`}
+//       >
+//         {loading ? "Loading..." : "Continue"}
+//       </button>
+//     </div>
+//   );
+// }
+
 export default function PhysicalPreferences() {
   const router = useRouter();
 
@@ -520,7 +951,10 @@ useEffect(() => {
       questionId,
       payload
     );
-
+console.log("FULL API RESPONSE:", response);
+console.log("API DATA:", response.data);
+console.log("REWARD DATA:", response.data?.data?.reward);
+console.log("PENDING COINS:", response.data?.data?.reward?.pending_coins);
     const coins = response.data?.data?.reward?.pending_coins;
 
     if (coins !== undefined) {
@@ -630,12 +1064,17 @@ const goNext = async () => {
  return (
   <div className="min-h-screen flex flex-col justify-center items-center bg-black text-white px-4 overflow-hidden">
 
-    {step >= 2 && (
+    {/* {step >= 2 && (
       <div className="w-96">
         <PhysicalTopProgress progress={progress} pendingCoins={pendingCoins} />
       </div>
-    )}
+    )} */}
 
+{step >= 3 && step <= 6 && (
+  <div className="w-96">
+    <PhysicalTopProgress progress={progress} pendingCoins={pendingCoins} />
+  </div>
+)}
     <div className="w-full max-w-sm">
       {loading ? (
         <div className="flex justify-center items-center min-h-[400px]">
@@ -744,7 +1183,7 @@ function IntroLoader({ image }) {
       <img
         src={image}
         alt="loading"
-        className="w-96 h-[450px]  rounded-xl"
+        className="w-80 h-[450px]  rounded-2xl "
       />
     </div> </>
   );
@@ -838,11 +1277,427 @@ function Intro({ agree, setAgree, onNext, disabled, screenData, loading, error }
 
 
 // Clamp limits
+// const KG_MIN = 1;
+// const KG_MAX = 250;
+// const LBS_MIN = 2;
+// const LBS_MAX = 550;
+
+
+// function WeightStep({
+//   value,
+//   setValue,
+//   setAgree,
+//   agree,
+//   onNext,
+//   onBack,
+//   disabled,
+//   questionData,
+// }) {
+//   const [unit, setUnit] = useState("kg");
+
+//   // Get dynamic config from API or use defaults
+//   const rangeConfig = questionData?.range_config || {};
+//   const minWeight = rangeConfig?.min || 30;
+//   const maxWeight = rangeConfig?.max || 200;
+//   const stepWeight = rangeConfig?.step || 0.5;
+//   const defaultUnit = rangeConfig?.unit || 'kg';
+//   const questionText = questionData?.question_text || "What's your Weight";
+//   const helpText = questionData?.help_text || "If you do not know your current weight, select 'Not Sure' and visit your nearest Playmate Center for proper weight check.";
+//   const placeholder = questionData?.placeholder || "Enter weight";
+
+
+//   const convertWeight = (val, from, to) => {
+//     if (from === to) return val;
+//     if (from === "kg" && to === "lbs") return Math.round(val * 2.20462);
+//     if (from === "lbs" && to === "kg") return Math.round(val / 2.20462);
+//     return val;
+//   };
+
+//   const handleUnitChange = (newUnit) => {
+//     if (newUnit === unit) return;
+//     const converted = convertWeight(value, unit, newUnit);
+//     setUnit(newUnit);
+//     setValue(converted);
+//   };
+
+//   const handleAgree = (e) => {
+//     setAgree(e.target.checked);
+//     onAgreeChange && onAgreeChange(e.target.checked);
+//   };
+
+//   return (
+//     <>
+//       <link
+//         href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;600;700&display=swap"
+//         rel="stylesheet"
+//       />
+//       <div
+//         style={{
+//           background: "#0a0a0a",
+//           minHeight: "100vh",
+//           display: "flex",
+//           flexDirection: "column",
+//           alignItems: "center",
+//           padding: "24px 20px",
+//           fontFamily: "'Poppins', sans-serif",
+//           color: "white",
+//           maxWidth: 390,
+//           margin: "0 auto",
+//         }}
+//       >
+     
+//         <h2
+//           style={{
+//             fontFamily: "'Playfair Display', serif",
+//             fontSize: 30,
+//             fontWeight: 600,
+//             textAlign: "center",
+//             marginBottom: 24,
+//             marginTop: 4,
+//             letterSpacing: "-0.3px",
+//           }}
+//         >
+//           {questionText}
+//         </h2>
+
+//         {/* Unit toggle — Lbs left, Kg right, Kg active by default */}
+//         <div
+//           style={{
+//             background: "#1f1f1f",
+//             borderRadius: 999,
+//             padding: 4,
+//             display: "flex",
+//             width: 200,
+//             height: 42,
+//             alignItems: "center",
+//             position: "relative",
+//             marginBottom: 32,
+//           }}
+//         >
+//           {/* Sliding pill — right when kg, left when lbs */}
+//           <div
+//             style={{
+//               position: "absolute",
+//               top: 4,
+//               bottom: 4,
+//               width: "calc(50% - 4px)",
+//               borderRadius: 999,
+//               background: "linear-gradient(to right, #1A43CA, #1FCCF2)",
+//               transition: "left 0.3s ease",
+//               left: unit === "lbs" ? 4 : "calc(50% + 0px)",
+//             }}
+//           />
+//           <button
+//             onClick={() => handleUnitChange("lbs")}
+//             style={{
+//               flex: 1,
+//               background: "transparent",
+//               border: "none",
+//               color: unit === "lbs" ? "white" : "#888",
+//               fontWeight: 600,
+//               fontSize: 14,
+//               cursor: "pointer",
+//               position: "relative",
+//               zIndex: 1,
+//               fontFamily: "'Poppins', sans-serif",
+//             }}
+//           >
+//             Lbs
+//           </button>
+//           <button
+//             onClick={() => handleUnitChange("kg")}
+//             style={{
+//               flex: 1,
+//               background: "transparent",
+//               border: "none",
+//               color: unit === "kg" ? "white" : "#888",
+//               fontWeight: 600,
+//               fontSize: 14,
+//               cursor: "pointer",
+//               position: "relative",
+//               zIndex: 1,
+//               fontFamily: "'Poppins', sans-serif",
+//             }}
+//           >
+//             kg
+//           </button>
+//         </div>
+
+//         {/* Big value display */}
+//         <div
+//           style={{
+//             fontSize: 64,
+//             fontWeight: 700,
+//             lineHeight: 1,
+//             marginBottom: 32,
+//             fontFamily: "'Poppins', sans-serif",
+//             display: "flex",
+//             alignItems: "baseline",
+//             gap: 8,
+//           }}
+//         >
+//           {value}
+//           <span style={{ fontSize: 22, fontWeight: 300, color: "white" }}>
+//             {unit}
+//           </span>
+//         </div>
+
+//         {/* Horizontal Ruler */}
+//         <WeightRuler value={value} setValue={setValue} unit={unit} />
+
+//         {/* Note */}
+//         <div
+//           style={{
+//             marginTop: 32,
+//             background: "#141414",
+//             borderRadius: 12,
+//             padding: "14px 16px",
+//             fontSize: 12,
+//             color: "#888",
+//             lineHeight: 1.65,
+//             width: "100%",
+//           }}
+//         >
+//           <p style={{ margin: 0 }}>
+//             <strong style={{ color: "#aaa" }}>Note:</strong> If you do not know your current weight, select "Not Sure" and visit your nearest Playmate Center for proper weight check.
+//           </p>
+//           <label
+//             style={{
+//               display: "flex",
+//               alignItems: "center",
+//               gap: 8,
+//               marginTop: 10,
+//               cursor: "pointer",
+//             }}
+//           >
+//             <input
+//               type="checkbox"
+//               checked={agree}
+//               onChange={(e) => setAgree(e.target.checked)}
+//               style={{ accentColor: "#ec4899", width: 15, height: 15 }}
+//             />
+//             <span style={{ fontSize: 11, color: "#666" }}>
+//               Not Sure – Visit nearest Playmate Center
+//             </span>
+//           </label>
+//         </div>
+
+//         {/* Next button */}
+//         <button
+//           onClick={onNext}
+//           disabled={disabled}
+//           style={{
+//             marginTop: 32,
+//             width: 60,
+//             height: 60,
+//             borderRadius: "50%",
+//             background: "linear-gradient(135deg, #ec4899, #f97316)",
+//             border: "none",
+//             color: "white",
+//             fontSize: 22,
+//             cursor: disabled ? "not-allowed" : "pointer",
+//             display: "flex",
+//             alignItems: "center",
+//             justifyContent: "center",
+//             boxShadow: "0 4px 20px rgba(249,115,22,0.4)",
+//             opacity: disabled ? 0.5 : 1,
+//           }}
+//         >
+//           ✓
+//         </button>
+//       </div>
+//     </>
+//   );
+// }
+
+// function WeightRuler({ value, setValue, unit }) {
+//   const containerRef = useRef(null);
+//   const touchStart = useRef(0);
+
+//   const min = unit === "kg" ? KG_MIN : LBS_MIN;
+//   const max = unit === "kg" ? KG_MAX : LBS_MAX;
+
+//   // Visual range extends beyond hard limits
+//   const visMin = min - VISUAL_EXTRA;
+//   const visMax = max + VISUAL_EXTRA;
+
+//   const stepWidth = 14; // px per tick
+
+//   // Clamp displayed value
+//   const clampedValue = Math.min(Math.max(value, min), max);
+
+//   // Offset from visMin to center the selected tick
+//   const scrollOffset = (clampedValue - visMin) * stepWidth;
+
+//   useEffect(() => {
+//     const el = containerRef.current;
+//     if (!el) return;
+
+//     const handleWheel = (e) => {
+//       e.preventDefault();
+//       const direction = e.deltaY > 0 ? 1 : -1;
+//       setValue((prev) => Math.min(Math.max(prev + direction, min), max));
+//     };
+
+//     const handleTouchStart = (e) => {
+//       touchStart.current = e.touches[0].clientX;
+//     };
+
+//     const handleTouchMove = (e) => {
+//       e.preventDefault();
+//       const touchEnd = e.touches[0].clientX;
+//       const delta = touchStart.current - touchEnd;
+//       if (Math.abs(delta) > 10) {
+//         const direction = delta > 0 ? 1 : -1;
+//         setValue((prev) => Math.min(Math.max(prev + direction, min), max));
+//         touchStart.current = touchEnd;
+//       }
+//     };
+
+//     el.addEventListener("wheel", handleWheel, { passive: false });
+//     el.addEventListener("touchstart", handleTouchStart, { passive: false });
+//     el.addEventListener("touchmove", handleTouchMove, { passive: false });
+
+//     return () => {
+//       el.removeEventListener("wheel", handleWheel);
+//       el.removeEventListener("touchstart", handleTouchStart);
+//       el.removeEventListener("touchmove", handleTouchMove);
+//     };
+//   }, [setValue, min, max]);
+
+//   return (
+//     <div
+//       style={{
+//         width: "100%",
+//         position: "relative",
+//       }}
+//     >
+//       {/* Ruler viewport */}
+//       <div
+//         ref={containerRef}
+//         style={{
+//           position: "relative",
+//           width: "100%",
+//           height: 80,
+//           overflow: "hidden",
+//           cursor: "ew-resize",
+//           touchAction: "none",
+//         }}
+//       >
+//         {/* Left fade */}
+//         <div
+//           style={{
+//             position: "absolute",
+//             left: 0,
+//             top: 0,
+//             bottom: 0,
+//             width: 48,
+//             background: "linear-gradient(to right, #0a0a0a, transparent)",
+//             zIndex: 10,
+//             pointerEvents: "none",
+//           }}
+//         />
+//         {/* Right fade */}
+//         <div
+//           style={{
+//             position: "absolute",
+//             right: 0,
+//             top: 0,
+//             bottom: 0,
+//             width: 48,
+//             background: "linear-gradient(to left, #0a0a0a, transparent)",
+//             zIndex: 10,
+//             pointerEvents: "none",
+//           }}
+//         />
+
+//         {/* Center selection line */}
+//         <div
+//           style={{
+//             position: "absolute",
+//             left: "50%",
+//             bottom: 0,
+//             transform: "translateX(-50%)",
+//             width: 2,
+//             height: 56,
+//             background: "#ec4899",
+//             zIndex: 20,
+//             borderRadius: 1,
+//           }}
+//         />
+
+//         {/* Tick strip */}
+//         <div
+//           style={{
+//             display: "flex",
+//             alignItems: "flex-end",
+//             height: "100%",
+//             transition: "transform 0.1s ease-out",
+//             transform: `translateX(calc(50% - ${scrollOffset}px - ${stepWidth / 2}px))`,
+//           }}
+//         >
+//           {Array.from({ length: visMax - visMin + 1 }).map((_, i) => {
+//             const v = visMin + i;
+//             const isMajor = v % 5 === 0;
+//             const isSelected = v === clampedValue;
+//             const isOutOfRange = v < min || v > max;
+
+//             return (
+//               <div
+//                 key={v}
+//                 style={{
+//                   display: "flex",
+//                   flexDirection: "column",
+//                   alignItems: "center",
+//                   justifyContent: "flex-end",
+//                   width: stepWidth,
+//                   flexShrink: 0,
+//                   opacity: isOutOfRange ? 0.2 : 1,
+//                   paddingBottom: 0,
+//                 }}
+//               >
+//                 {/* Label above major ticks */}
+//                 {isMajor && (
+//                   <span
+//                     style={{
+//                       fontSize: 11,
+//                       color: isSelected ? "white" : "#666",
+//                       fontWeight: isSelected ? 700 : 400,
+//                       marginBottom: 6,
+//                       fontFamily: "'Poppins', sans-serif",
+//                       whiteSpace: "nowrap",
+//                     }}
+//                   >
+//                     {v}
+//                   </span>
+//                 )}
+//                 {/* Tick line */}
+//                 <div
+//                   style={{
+//                     width: isSelected ? 2 : 1,
+//                     height: isMajor ? 32 : 16,
+//                     background: isSelected
+//                       ? "#ec4899"
+//                       : "rgba(255,255,255,0.7)",
+//                     borderRadius: 1,
+//                   }}
+//                 />
+//               </div>
+//             );
+//           })}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+// Clamp limits
 const KG_MIN = 1;
 const KG_MAX = 250;
 const LBS_MIN = 2;
 const LBS_MAX = 550;
-
 
 function WeightStep({
   value,
@@ -861,11 +1716,14 @@ function WeightStep({
   const minWeight = rangeConfig?.min || 30;
   const maxWeight = rangeConfig?.max || 200;
   const stepWeight = rangeConfig?.step || 0.5;
-  const defaultUnit = rangeConfig?.unit || 'kg';
-  const questionText = questionData?.question_text || "What's your Weight";
-  const helpText = questionData?.help_text || "If you do not know your current weight, select 'Not Sure' and visit your nearest Playmate Center for proper weight check.";
-  const placeholder = questionData?.placeholder || "Enter weight";
-
+  const defaultUnit = rangeConfig?.unit || "kg";
+  const questionText =
+    questionData?.question_text || "What's your Weight";
+  const helpText =
+    questionData?.help_text ||
+    "If you do not know your current weight, select 'Not Sure' and visit your nearest Playmate Center for proper weight check.";
+  const placeholder =
+    questionData?.placeholder || "Enter weight";
 
   const convertWeight = (val, from, to) => {
     if (from === to) return val;
@@ -892,6 +1750,7 @@ function WeightStep({
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;600;700&display=swap"
         rel="stylesheet"
       />
+<<<<<<< HEAD
       <div
         style={{
           background: "#0a0a0a",
@@ -931,85 +1790,60 @@ function WeightStep({
     </span>
   ))}
 </h2>
+=======
 
-        {/* Unit toggle — Lbs left, Kg right, Kg active by default */}
-        <div
-          style={{
-            background: "#1f1f1f",
-            borderRadius: 999,
-            padding: 4,
-            display: "flex",
-            width: 200,
-            height: 42,
-            alignItems: "center",
-            position: "relative",
-            marginBottom: 32,
-          }}
-        >
-          {/* Sliding pill — right when kg, left when lbs */}
+      <div className=" flex  flex-col items-center   font-[Poppins] text-white">
+
+        {/* Title */}
+        <h2 className="font-Playfair Display text-[30px] font-semibold text-center mb-6 mt-1 tracking-[-0.3px]">
+          {questionText?.split(" ").map((word, index) => (
+            <span
+              key={index}
+              className={
+                index === 3
+                  ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
+                  : ""
+              }
+            >
+              {word + " "}
+            </span>
+          ))}
+        </h2>
+>>>>>>> fd0a87bf53d3ffab7189ca5144e66c4887576c53
+
+        {/* Unit Toggle */}
+        <div className="bg-[#1f1f1f] rounded-full p-1 flex w-[200px] h-[42px] items-center relative mb-8">
+
+          {/* Sliding pill */}
           <div
-            style={{
-              position: "absolute",
-              top: 4,
-              bottom: 4,
-              width: "calc(50% - 4px)",
-              borderRadius: 999,
-              background: "linear-gradient(to right, #1A43CA, #1FCCF2)",
-              transition: "left 0.3s ease",
-              left: unit === "lbs" ? 4 : "calc(50% + 0px)",
-            }}
+            className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-gradient-to-r from-[#1A43CA] to-[#1FCCF2] transition-all duration-300 ${
+              unit === "lbs" ? "left-1" : "left-[calc(50%+0px)]"
+            }`}
           />
+
           <button
             onClick={() => handleUnitChange("lbs")}
-            style={{
-              flex: 1,
-              background: "transparent",
-              border: "none",
-              color: unit === "lbs" ? "white" : "#888",
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: "pointer",
-              position: "relative",
-              zIndex: 1,
-              fontFamily: "'Poppins', sans-serif",
-            }}
+            className={`flex-1 bg-transparent border-none text-sm font-semibold cursor-pointer relative z-10 ${
+              unit === "lbs" ? "text-white" : "text-[#888]"
+            }`}
           >
             Lbs
           </button>
+
           <button
             onClick={() => handleUnitChange("kg")}
-            style={{
-              flex: 1,
-              background: "transparent",
-              border: "none",
-              color: unit === "kg" ? "white" : "#888",
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: "pointer",
-              position: "relative",
-              zIndex: 1,
-              fontFamily: "'Poppins', sans-serif",
-            }}
+            className={`flex-1 bg-transparent border-none text-sm font-semibold cursor-pointer relative z-10 ${
+              unit === "kg" ? "text-white" : "text-[#888]"
+            }`}
           >
             kg
           </button>
         </div>
 
-        {/* Big value display */}
-        <div
-          style={{
-            fontSize: 64,
-            fontWeight: 700,
-            lineHeight: 1,
-            marginBottom: 32,
-            fontFamily: "'Poppins', sans-serif",
-            display: "flex",
-            alignItems: "baseline",
-            gap: 8,
-          }}
-        >
+        {/* Weight Display */}
+        <div className="text-[60px] font-semibold leading-none mb-8 flex items-baseline gap-2">
           {value}
-          <span style={{ fontSize: 22, fontWeight: 300, color: "white" }}>
+          <span className="text-[22px] font-light text-white">
             {unit}
           </span>
         </div>
@@ -1018,62 +1852,37 @@ function WeightStep({
         <WeightRuler value={value} setValue={setValue} unit={unit} />
 
         {/* Note */}
-        <div
-          style={{
-            marginTop: 32,
-            background: "#141414",
-            borderRadius: 12,
-            padding: "14px 16px",
-            fontSize: 12,
-            color: "#888",
-            lineHeight: 1.65,
-            width: "100%",
-          }}
-        >
-          <p style={{ margin: 0 }}>
-            <strong style={{ color: "#aaa" }}>Note:</strong> If you do not know your current weight, select "Not Sure" and visit your nearest Playmate Center for proper weight check.
+        <div className="mt-3 flex flex-col justify-center items-center text-center  rounded-xl px-4 py-3 text-xs text-[#888] leading-[1.65] w-full">
+
+          <p className="m-0">
+          Note:If you do not
+            know your current weight, select "Not Sure" and visit your
+            nearest Playmate Center for proper weight check.
           </p>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginTop: 10,
-              cursor: "pointer",
-            }}
-          >
+
+          <label className="flex items-center gap-2 mt-2.5 cursor-pointer">
             <input
               type="checkbox"
               checked={agree}
               onChange={(e) => setAgree(e.target.checked)}
-              style={{ accentColor: "#ec4899", width: 15, height: 15 }}
+              className="accent-pink-500 w-[15px] h-[15px]"
             />
-            <span style={{ fontSize: 11, color: "#666" }}>
+
+            <span className="text-[11px] text-[#666]">
               Not Sure – Visit nearest Playmate Center
             </span>
           </label>
         </div>
 
-        {/* Next button */}
+        {/* Next Button */}
         <button
           onClick={onNext}
           disabled={disabled}
-          style={{
-            marginTop: 32,
-            width: 60,
-            height: 60,
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #ec4899, #f97316)",
-            border: "none",
-            color: "white",
-            fontSize: 22,
-            cursor: disabled ? "not-allowed" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 4px 20px rgba(249,115,22,0.4)",
-            opacity: disabled ? 0.5 : 1,
-          }}
+          className={`mt-3 w-[55px] h-[55px] rounded-full bg-gradient-to-br from-pink-500 to-orange-500 border-none text-white text-[22px] flex items-center justify-center ${
+            disabled
+              ? "opacity-50 cursor-not-allowed"
+              : "cursor-pointer"
+          }`}
         >
           ✓
         </button>
@@ -1081,6 +1890,7 @@ function WeightStep({
     </>
   );
 }
+
 
 function WeightRuler({ value, setValue, unit }) {
   const containerRef = useRef(null);
@@ -1138,73 +1948,43 @@ function WeightRuler({ value, setValue, unit }) {
   }, [setValue, min, max]);
 
   return (
-    <div
-      style={{
-        width: "100%",
-        position: "relative",
-      }}
-    >
+    <div className="w-full relative">
+
       {/* Ruler viewport */}
       <div
         ref={containerRef}
-        style={{
-          position: "relative",
-          width: "100%",
-          height: 80,
-          overflow: "hidden",
-          cursor: "ew-resize",
-          touchAction: "none",
-        }}
+        className="relative w-full h-[80px] overflow-hidden cursor-ew-resize touch-none"
       >
-        {/* Left fade */}
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 48,
-            background: "linear-gradient(to right, #0a0a0a, transparent)",
-            zIndex: 10,
-            pointerEvents: "none",
-          }}
-        />
-        {/* Right fade */}
-        <div
-          style={{
-            position: "absolute",
-            right: 0,
-            top: 0,
-            bottom: 0,
-            width: 48,
-            background: "linear-gradient(to left, #0a0a0a, transparent)",
-            zIndex: 10,
-            pointerEvents: "none",
-          }}
-        />
+
+    
+{/* Minus Button */}
+<button
+  onClick={() => setValue((prev) => Math.max(prev - 1, min))}
+  className="absolute left-[10%] bottom-[-1px] -translate-x-full 
+  w-8 h-8 flex items-center justify-center 
+  rounded-full bg-[#1f1f1f] text-pink-500 text-lg font-bold z-30"
+>
+  −
+</button>
+
+{/* Plus Button */}
+<button
+  onClick={() => setValue((prev) => Math.min(prev + 1, max))}
+  className="absolute left-[90%] bottom-[-1px] 
+  w-8 h-8 flex items-center justify-center 
+  rounded-full bg-[#1f1f1f] text-pink-500 text-lg font-bold z-30"
+>
+  +
+</button>
+
 
         {/* Center selection line */}
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            bottom: 0,
-            transform: "translateX(-50%)",
-            width: 2,
-            height: 56,
-            background: "#ec4899",
-            zIndex: 20,
-            borderRadius: 1,
-          }}
-        />
+        <div className="absolute left-1/2 bottom-3 -translate-x-1/2 w-[2px] h-[56px] bg-pink-500 z-20 rounded-[1px]" />
 
         {/* Tick strip */}
         <div
+          className="flex items-end h-full transition-transform duration-100 ease-out"
           style={{
-            display: "flex",
-            alignItems: "flex-end",
-            height: "100%",
-            transition: "transform 0.1s ease-out",
             transform: `translateX(calc(50% - ${scrollOffset}px - ${stepWidth / 2}px))`,
           }}
         >
@@ -1217,41 +1997,35 @@ function WeightRuler({ value, setValue, unit }) {
             return (
               <div
                 key={v}
+                className={`flex flex-col items-center justify-end flex-shrink-0 pb-2`}
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
                   width: stepWidth,
-                  flexShrink: 0,
                   opacity: isOutOfRange ? 0.2 : 1,
-                  paddingBottom: 0,
                 }}
               >
+
                 {/* Label above major ticks */}
                 {isMajor && (
                   <span
-                    style={{
-                      fontSize: 11,
-                      color: isSelected ? "white" : "#666",
-                      fontWeight: isSelected ? 700 : 400,
-                      marginBottom: 6,
-                      fontFamily: "'Poppins', sans-serif",
-                      whiteSpace: "nowrap",
-                    }}
+                    className={`text-[16px] font-Poppins mb-[6px] whitespace-nowrap  ${
+                      isSelected
+                        ? "text-white "
+                        : "text-[#666] font-normal "
+                    }`}
                   >
                     {v}
                   </span>
                 )}
+
                 {/* Tick line */}
                 <div
+                  className="rounded-[1px] mb-2"
                   style={{
-                    width: isSelected ? 2 : 1,
+                    width: isSelected ? 2 : 2,
                     height: isMajor ? 32 : 16,
                     background: isSelected
                       ? "#ec4899"
-                      : "rgba(255,255,255,0.7)",
-                    borderRadius: 1,
+                      : "#E8EAEC",
                   }}
                 />
               </div>
@@ -1262,6 +2036,7 @@ function WeightRuler({ value, setValue, unit }) {
     </div>
   );
 }
+
 
 
 // Scroll clamp limits (value cannot go beyond these)
@@ -1388,7 +2163,7 @@ function HeightStep({ value,
   <button
     onClick={onNext}
     disabled={disabled}
-    className="mt-7 w-[60px] h-[60px] rounded-full bg-gradient-to-br from-pink-500 to-orange-500 border-none text-white text-[22px] cursor-pointer flex items-center justify-center shadow-[0_4px_20px_rgba(249,115,22,0.4)]"
+    className="mt-1 w-[50px] h-[50px] rounded-full bg-gradient-to-br from-pink-500 to-orange-500 border-none text-white text-[22px] cursor-pointer flex items-center justify-center "
   >
     ✓
   </button>
@@ -1411,7 +2186,7 @@ function HeightRuler({ value, setValue, unit }) {
   const visMax = max + VISUAL_EXTRA;
 
   const stepHeight = 10;
-  const viewHeight = 300;
+  const viewHeight = 250;
   const center = viewHeight / 2;
 
   // Clamped selected value
@@ -1458,7 +2233,7 @@ function HeightRuler({ value, setValue, unit }) {
   }, [setValue, min, max]);
 
   return (
-    <div className="flex items-center justify-between w-full  px-3">
+    <div className="flex items-center  justify-between w-full  px-3">
 
       {/* Left big value */}
       <div>
@@ -1474,18 +2249,39 @@ function HeightRuler({ value, setValue, unit }) {
       {/* Ruler */}
       <div
         ref={containerRef}
-        className="relative w-[110px] overflow-hidden cursor-ns-resize   "
+        className="relative w-[140px] overflow-hidden cursor-ns-resize   "
         style={{ height: viewHeight }}
       >
 
         {/* Pink arrow indicator */}
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-0 h-0 border-t-[9px] border-t-transparent border-b-[9px] border-b-transparent border-r-[16px] border-r-pink-500" />
+        {/* <div className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-0 h-0 border-t-[9px] border-t-transparent border-b-[9px] border-b-transparent border-r-[16px] border-r-pink-500" /> */}
+     
+        {/* + Button (Top) */}
+<div
+  onClick={() => setValue((prev) => Math.min(prev + 1, max))}
+  className="absolute right-0  top-2 z-20 w-[30px] h-[30px] bg-white/10 rounded-full flex items-center justify-center text-pink-500 text-[18px] font-bold cursor-pointer"
+>
+  +
+</div>
+
+{/* Pink arrow indicator */}
+<div
+  className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-0 h-0 border-t-[9px] border-t-transparent border-b-[9px] border-b-transparent border-r-[16px] border-r-pink-500"
+/>
+
+{/* - Button (Bottom) */}
+<div
+  onClick={() => setValue((prev) => Math.max(prev - 1, min))}
+  className="absolute right-0 bottom-2 z-20 w-[30px] h-[30px] bg-white/10 rounded-full flex items-center justify-center text-pink-500 text-[20px] font-bold cursor-pointer"
+>
+  −
+</div>
 
       
 
         {/* Tick strip */}
         <div
-          className="absolute left-0 w-full transition-transform duration-100 ease-out"
+          className="absolute right-3 w-full transition-transform duration-100 ease-out"
           style={{
             transform: `translateY(${center - offset}px)`
           }}
@@ -1556,7 +2352,7 @@ function BloodStep({ value, setValue, onBack, onComplete, questionData }) {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col px-4 mt-2">
+    <div className=" bg-black text-white flex flex-col px-4 mt-2">
 
 
 
@@ -1628,14 +2424,14 @@ function BloodStep({ value, setValue, onBack, onComplete, questionData }) {
       <div className="flex justify-center mb-2">
         <button
           onClick={onComplete}
-          className="w-16 h-16 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-2xl shadow-lg"
+          className=" py-2.5 px-4  rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-2xl shadow-lg"
         >
           ✓
         </button>
       </div>
 
       {/* NOTE */}
-      <p className="text-[14px] text-white/80 font-normal  text-center mb-2 font-Poppins  ">
+      <p className="text-[12px] text-white font-normal  text-center mb-2 font-Poppins  ">
         Note: If you do not know your current blood group,
         select “Not Sure” and visit your nearest Playmate
         Center for proper check.

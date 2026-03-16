@@ -18,6 +18,7 @@ module.exports = {
         'Playfair Display':['Playfair Display','serif']
       },
       
+      
 
   }
 

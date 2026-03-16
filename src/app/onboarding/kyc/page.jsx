@@ -759,7 +759,7 @@
 
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Shield, X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
@@ -776,7 +776,7 @@ const STEPS = {
   ERROR: "error",
 };
 
-export default function KYCPage() {
+function KYCPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -1075,11 +1075,11 @@ export default function KYCPage() {
       {/* Buttons */}
       <div className="flex gap-4">
 
-        {/* Skip */}
+        {/* Skip - only show if configured */}
         {screenConfig?.button_text?.skip && (
           <button
             onClick={handleSkip}
-            className="flex-1 py-3 rounded-full border  border-pink-500 text-white font-medium"
+            className="flex-1 py-3 rounded-full border border-pink-500 text-white font-medium"
           >
             {screenConfig.button_text.skip}
           </button>
@@ -1096,13 +1096,6 @@ export default function KYCPage() {
           ) : (
             screenConfig?.button_text?.primary || "Continue"
           )}
-        </button>
-
-        <button
-          onClick={handleSkip}
-          className="flex-1 py-3 rounded-full font-Poppins border border-pink-500 text-white font-medium"
-        >
-          {screenConfig?.button_text?.skip || "Skip"}
         </button>
 
       </div>
@@ -1134,5 +1127,13 @@ export default function KYCPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function KYCPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>}>
+      <KYCPageContent />
+    </Suspense>
   );
 }

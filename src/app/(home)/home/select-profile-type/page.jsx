@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { X, Check, ArrowLeft, Loader2 } from "lucide-react";
 import { userService } from "@/services/user";
 import { updateProfileMainType } from "@/services/profile.service";
+import { useTheme } from "@/lib/ThemeContext";
 
 export default function SelectProfileTypePage() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [selectedType, setSelectedType] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [loading, setLoading] = useState(true);
@@ -20,6 +22,19 @@ export default function SelectProfileTypePage() {
     additional: []
   });
   const [currentMainType, setCurrentMainType] = useState(null);
+  
+  // Theme colors
+  const colors = {
+    bgPrimary: theme === "dark" ? "#0f1021" : "#ffffff",
+    bgSecondary: theme === "dark" ? "#1b1d3a" : "#f3f4f6",
+    bgCard: theme === "dark" ? "#1b1d3a" : "#ffffff",
+    bgInput: theme === "dark" ? "#1b1d3a" : "#f9fafb",
+    textPrimary: theme === "dark" ? "#ffffff" : "#111827",
+    textSecondary: theme === "dark" ? "#9ca3af" : "#6b7280",
+    textMuted: theme === "dark" ? "#6b7280" : "#9ca3af",
+    border: theme === "dark" ? "rgba(139, 92, 246, 0.3)" : "#e5e7eb",
+    borderActive: theme === "dark" ? "rgba(139, 92, 246, 0.5)" : "#8b5cf6",
+  };
 
   const categories = {
     sports: [
@@ -157,7 +172,10 @@ export default function SelectProfileTypePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f1021] p-6">
+    <div 
+      className="min-h-screen p-6"
+      style={{ backgroundColor: colors.bgPrimary }}
+    >
       <div className="max-w-2xl mx-auto">
         {/* Loading State */}
         {loading ? (
@@ -170,18 +188,27 @@ export default function SelectProfileTypePage() {
             <div className="flex items-center justify-between mb-8">
           <button 
             onClick={handleSkip}
-            className="flex items-center gap-2 text-gray-400 hover:text-white"
+            className="flex items-center gap-2 hover:text-white"
+            style={{ color: colors.textMuted }}
           >
             <ArrowLeft size={20} />
             <span>Skip</span>
           </button>
-          <h1 className="text-white text-xl font-semibold">Select Profile Type</h1>
+          <h1 
+            className="text-xl font-semibold"
+            style={{ color: colors.textPrimary }}
+          >
+            Select Profile Type
+          </h1>
           <div className="w-16"></div>
         </div>
 
         {/* Description */}
         <div className="mb-8">
-          <p className="text-gray-400 text-sm">
+          <p 
+            className="text-sm"
+            style={{ color: colors.textSecondary }}
+          >
             Choose the activity that best represents your profile. This helps Playymate show better player matches, relevant posts, and sports communities.
           </p>
         </div>
@@ -192,12 +219,17 @@ export default function SelectProfileTypePage() {
           (userInterests.activities?.length > 0) || 
           (userInterests.nostalgia?.length > 0)) && (
           <div className="mb-8">
-            <h3 className="text-gray-400 text-sm font-medium mb-4">Select from your interests</h3>
+            <h3 
+              className="text-sm font-medium mb-4"
+              style={{ color: colors.textSecondary }}
+            >
+              Select from your interests
+            </h3>
             
             {/* Sports Interests */}
             {userInterests.sports?.length > 0 && (
               <div className="mb-4">
-                <h4 className="text-purple-400 text-xs font-medium mb-2">Sports</h4>
+                <h4 className="text-xs font-medium mb-2" style={{ color: colors.primary }}>Sports</h4>
                 <div className="flex flex-wrap gap-2">
                   {userInterests.sports.map((interest) => (
                     <button
@@ -206,8 +238,13 @@ export default function SelectProfileTypePage() {
                       className={`px-4 py-2 rounded-lg text-sm transition-all ${
                         selectedType === interest
                           ? "bg-gradient-to-r from-purple-500 to-orange-500 text-white"
-                          : "bg-[#1b1d3a] text-gray-300 hover:bg-purple-500/30 border border-purple-500/30"
+                          : "hover:bg-purple-500/30 border"
                       }`}
+                      style={{
+                        backgroundColor: selectedType === interest ? undefined : colors.bgCard,
+                        color: selectedType === interest ? "white" : colors.textSecondary,
+                        borderColor: colors.border
+                      }}
                     >
                       {getIconForInterest(interest)} {getNameForInterest(interest)}
                     </button>
@@ -219,7 +256,7 @@ export default function SelectProfileTypePage() {
             {/* Hobbies Interests */}
             {userInterests.hobbies?.length > 0 && (
               <div className="mb-4">
-                <h4 className="text-purple-400 text-xs font-medium mb-2">Hobbies</h4>
+                <h4 className="text-xs font-medium mb-2" style={{ color: colors.primary }}>Hobbies</h4>
                 <div className="flex flex-wrap gap-2">
                   {userInterests.hobbies.map((interest) => (
                     <button
@@ -228,8 +265,13 @@ export default function SelectProfileTypePage() {
                       className={`px-4 py-2 rounded-lg text-sm transition-all ${
                         selectedType === interest
                           ? "bg-gradient-to-r from-purple-500 to-orange-500 text-white"
-                          : "bg-[#1b1d3a] text-gray-300 hover:bg-purple-500/30 border border-purple-500/30"
+                          : "hover:bg-purple-500/30 border"
                       }`}
+                      style={{
+                        backgroundColor: selectedType === interest ? undefined : colors.bgCard,
+                        color: selectedType === interest ? "white" : colors.textSecondary,
+                        borderColor: colors.border
+                      }}
                     >
                       {getIconForInterest(interest)} {getNameForInterest(interest)}
                     </button>
@@ -241,7 +283,7 @@ export default function SelectProfileTypePage() {
             {/* Activities Interests */}
             {userInterests.activities?.length > 0 && (
               <div className="mb-4">
-                <h4 className="text-purple-400 text-xs font-medium mb-2">Activities</h4>
+                <h4 className="text-xs font-medium mb-2" style={{ color: colors.primary }}>Activities</h4>
                 <div className="flex flex-wrap gap-2">
                   {userInterests.activities.map((interest) => (
                     <button
@@ -250,8 +292,13 @@ export default function SelectProfileTypePage() {
                       className={`px-4 py-2 rounded-lg text-sm transition-all ${
                         selectedType === interest
                           ? "bg-gradient-to-r from-purple-500 to-orange-500 text-white"
-                          : "bg-[#1b1d3a] text-gray-300 hover:bg-purple-500/30 border border-purple-500/30"
+                          : "hover:bg-purple-500/30 border"
                       }`}
+                      style={{
+                        backgroundColor: selectedType === interest ? undefined : colors.bgCard,
+                        color: selectedType === interest ? "white" : colors.textSecondary,
+                        borderColor: colors.border
+                      }}
                     >
                       {getIconForInterest(interest)} {getNameForInterest(interest)}
                     </button>
@@ -263,7 +310,7 @@ export default function SelectProfileTypePage() {
             {/* Nostalgia Interests */}
             {userInterests.nostalgia?.length > 0 && (
               <div className="mb-4">
-                <h4 className="text-purple-400 text-xs font-medium mb-2">Nostalgia</h4>
+                <h4 className="text-xs font-medium mb-2" style={{ color: colors.primary }}>Nostalgia</h4>
                 <div className="flex flex-wrap gap-2">
                   {userInterests.nostalgia.map((interest) => (
                     <button
@@ -272,8 +319,13 @@ export default function SelectProfileTypePage() {
                       className={`px-4 py-2 rounded-lg text-sm transition-all ${
                         selectedType === interest
                           ? "bg-gradient-to-r from-purple-500 to-orange-500 text-white"
-                          : "bg-[#1b1d3a] text-gray-300 hover:bg-purple-500/30 border border-purple-500/30"
+                          : "hover:bg-purple-500/30 border"
                       }`}
+                      style={{
+                        backgroundColor: selectedType === interest ? undefined : colors.bgCard,
+                        color: selectedType === interest ? "white" : colors.textSecondary,
+                        borderColor: colors.border
+                      }}
                     >
                       {getIconForInterest(interest)} {getNameForInterest(interest)}
                     </button>
@@ -292,7 +344,7 @@ export default function SelectProfileTypePage() {
           <>
         {/* Sports Category */}
         <div className="mb-8">
-          <h3 className="text-gray-400 text-sm font-medium mb-4">Sports</h3>
+          <h3 className="text-sm font-medium mb-4" style={{ color: colors.textSecondary }}>Sports</h3>
           <div className="grid grid-cols-3 gap-2">
             {categories.sports.map((sport) => (
               <button
@@ -301,8 +353,12 @@ export default function SelectProfileTypePage() {
                 className={`p-3 rounded-lg text-center transition-all ${
                   selectedType === sport.id
                     ? "bg-gradient-to-r from-purple-500 to-orange-500 text-white"
-                    : "bg-[#1b1d3a] text-gray-300 hover:bg-purple-500/30"
+                    : "hover:bg-purple-500/30"
                 }`}
+                style={{
+                  backgroundColor: selectedType === sport.id ? undefined : colors.bgCard,
+                  color: selectedType === sport.id ? "white" : colors.textSecondary
+                }}
               >
                 <span className="text-xl mb-1 block">{sport.icon}</span>
                 <span className="text-xs font-medium">{sport.name}</span>
@@ -313,7 +369,7 @@ export default function SelectProfileTypePage() {
 
         {/* Hobbies Category */}
         <div className="mb-8">
-          <h3 className="text-gray-400 text-sm font-medium mb-4">Hobbies</h3>
+          <h3 className="text-sm font-medium mb-4" style={{ color: colors.textSecondary }}>Hobbies</h3>
           <div className="grid grid-cols-3 gap-2">
             {categories.hobbies.map((hobby) => (
               <button
@@ -322,8 +378,12 @@ export default function SelectProfileTypePage() {
                 className={`p-3 rounded-lg text-center transition-all ${
                   selectedType === hobby.id
                     ? "bg-gradient-to-r from-purple-500 to-orange-500 text-white"
-                    : "bg-[#1b1d3a] text-gray-300 hover:bg-purple-500/30"
+                    : "hover:bg-purple-500/30"
                 }`}
+                style={{
+                  backgroundColor: selectedType === hobby.id ? undefined : colors.bgCard,
+                  color: selectedType === hobby.id ? "white" : colors.textSecondary
+                }}
               >
                 <span className="text-xl mb-1 block">{hobby.icon}</span>
                 <span className="text-xs font-medium">{hobby.name}</span>
@@ -334,7 +394,7 @@ export default function SelectProfileTypePage() {
 
         {/* Activities Category */}
         <div className="mb-8">
-          <h3 className="text-gray-400 text-sm font-medium mb-4">Activities</h3>
+          <h3 className="text-sm font-medium mb-4" style={{ color: colors.textSecondary }}>Activities</h3>
           <div className="grid grid-cols-3 gap-2">
             {categories.activities.map((activity) => (
               <button
@@ -343,8 +403,12 @@ export default function SelectProfileTypePage() {
                 className={`p-3 rounded-lg text-center transition-all ${
                   selectedType === activity.id
                     ? "bg-gradient-to-r from-purple-500 to-orange-500 text-white"
-                    : "bg-[#1b1d3a] text-gray-300 hover:bg-purple-500/30"
+                    : "hover:bg-purple-500/30"
                 }`}
+                style={{
+                  backgroundColor: selectedType === activity.id ? undefined : colors.bgCard,
+                  color: selectedType === activity.id ? "white" : colors.textSecondary
+                }}
               >
                 <span className="text-xl mb-1 block">{activity.icon}</span>
                 <span className="text-xs font-medium">{activity.name}</span>
@@ -355,7 +419,7 @@ export default function SelectProfileTypePage() {
 
         {/* Nostalgia Category */}
         <div className="mb-8">
-          <h3 className="text-gray-400 text-sm font-medium mb-4">Nostalgia</h3>
+          <h3 className="text-sm font-medium mb-4" style={{ color: colors.textSecondary }}>Nostalgia</h3>
           <div className="grid grid-cols-3 gap-2">
             {categories.nostalgia.map((item) => (
               <button
@@ -364,8 +428,12 @@ export default function SelectProfileTypePage() {
                 className={`p-3 rounded-lg text-center transition-all ${
                   selectedType === item.id
                     ? "bg-gradient-to-r from-purple-500 to-orange-500 text-white"
-                    : "bg-[#1b1d3a] text-gray-300 hover:bg-purple-500/30"
+                    : "hover:bg-purple-500/30"
                 }`}
+                style={{
+                  backgroundColor: selectedType === item.id ? undefined : colors.bgCard,
+                  color: selectedType === item.id ? "white" : colors.textSecondary
+                }}
               >
                 <span className="text-xl mb-1 block">{item.icon}</span>
                 <span className="text-xs font-medium">{item.name}</span>
@@ -377,8 +445,17 @@ export default function SelectProfileTypePage() {
         )}
 
         {/* Info Box */}
-        <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-8">
-          <p className="text-purple-300 text-sm">
+        <div 
+          className="border rounded-xl p-4 mb-8"
+          style={{ 
+            backgroundColor: theme === "dark" ? "rgba(139, 92, 246, 0.1)" : "rgba(139, 92, 246, 0.1)",
+            borderColor: colors.borderActive
+          }}
+        >
+          <p 
+            className="text-sm"
+            style={{ color: theme === "dark" ? "#c4b5fd" : "#7c3aed" }}
+          >
             This helps Playymate show better player matches, relevant posts, sports communities, and suggested follows.
           </p>
         </div>
