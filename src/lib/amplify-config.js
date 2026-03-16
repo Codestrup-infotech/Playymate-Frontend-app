@@ -11,21 +11,23 @@ import { Amplify } from 'aws-amplify';
 
 const amplifyConfig = {
   Auth: {
-    // Required for AWS services
-    identityPoolId: process.env.NEXT_PUBLIC_AWS_IDENTITY_POOL_ID,
-    region: process.env.NEXT_PUBLIC_AWS_REGION || 'ap-south-1',
+    Cognito: {
+      // Required for Face Liveness Detector (@aws-amplify/ui-react-liveness)
+      identityPoolId: process.env.NEXT_PUBLIC_AWS_IDENTITY_POOL_ID || "ap-south-1:XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+      region: process.env.NEXT_PUBLIC_AWS_REGION || "ap-south-1",
+    },
     credentials: {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     },
   },
   AWSRekognitionStreaming: {
-    region: process.env.NEXT_PUBLIC_AWS_REGION || 'ap-south-1',
+    region: process.env.NEXT_PUBLIC_AWS_REGION || "ap-south-1",
   },
 };
 
-// Only configure if credentials are provided
-if (typeof window !== 'undefined' && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+// Only configure if running in browser and credentials are provided
+if (typeof window !== 'undefined') {
   try {
     Amplify.configure({
       ...amplifyConfig,

@@ -185,6 +185,7 @@ export const postService = {
   uploadToPresignedUrl: async (presignedUrl, file, contentType) => {
     return axios.put(presignedUrl, file, {
       headers: { 'Content-Type': contentType },
+      timeout: 300000, // 5 minutes timeout for large files
     });
   },
 
@@ -220,7 +221,11 @@ export const postService = {
       size_bytes: data.sizeBytes,
       purpose: data.purpose || 'reel' // 'reel' or 'thumbnail'
     };
-    return api.post('/reels/presign', payload);
+    // Call the Next.js API route
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
+    return axios.post('/api/v1/reels/presign', payload, {
+      headers: token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
+    });
   },
 
   /**
@@ -242,14 +247,23 @@ export const postService = {
       allow_duets: data.allowDuets !== false,
       allow_stitches: data.allowStitches !== false
     };
-    return api.post('/reels/create', payload);
+    // Call the Next.js API route
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
+    return axios.post('/api/v1/reels/create', payload, {
+      headers: token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
+    });
   },
 
   /**
    * Get reel by ID
    * GET /api/v1/reels/:id
    */
-  getReel: (reelId) => api.get(`/reels/${reelId}`),
+  getReel: (reelId) => {
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
+    return axios.get(`/api/v1/reels/${reelId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+  },
 
   /**
    * Update reel
@@ -321,7 +335,12 @@ export const postService = {
   getUserReels: (userId, limit = 20, cursor = null) => {
     const params = { limit };
     if (cursor) params.cursor = cursor;
-    return api.get(`/users/${userId}/reels`, { params });
+    // Call the Next.js API route with auth headers
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
+    return axios.get(`/api/v1/users/${userId}/reels`, { 
+      params,
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
   },
 
   /**
@@ -331,7 +350,12 @@ export const postService = {
   getMyReels: (limit = 20, cursor = null) => {
     const params = { limit };
     if (cursor) params.cursor = cursor;
-    return api.get('/users/me/reels', { params });
+    // Call the Next.js API route with auth headers
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
+    return axios.get(`/api/v1/users/me/reels`, { 
+      params,
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
   },
 
   // ============ LIKES MODULE ============

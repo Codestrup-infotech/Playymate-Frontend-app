@@ -248,14 +248,26 @@ export const kycService = {
   ========================================================== */
 
   // Create a new liveness session with AWS Rekognition
-  createLivenessSession: () =>
-    api.post("/kyc/liveness/session"),
+  createLivenessSession: async (userId) => {
+    const response = await fetch("/api/kyc/liveness/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    const data = await response.json();
+    return { data };
+  },
 
   // Verify the liveness session
-  verifyLivenessSession: (sessionId) =>
-    api.post("/kyc/liveness/verify", {
-      sessionId,
-    }),
+  verifyLivenessSession: async (sessionId, userId) => {
+    const response = await fetch("/api/kyc/liveness/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId, userId }),
+    });
+    const data = await response.json();
+    return { data };
+  },
 
   // Legacy face liveness (photo-based)
   faceLiveness: (imageUrl) =>
