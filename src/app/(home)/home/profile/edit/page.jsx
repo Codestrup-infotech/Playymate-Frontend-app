@@ -27,6 +27,7 @@ export default function EditProfilePage() {
   const fileInputRef = useRef(null);
 
   const [profileImage, setProfileImage] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [userId, setUserId] = useState(null);
@@ -50,22 +51,30 @@ export default function EditProfilePage() {
   useEffect(() => {
     async function fetchProfile() {
       try {
-        // replace with real API
-        const profileData = {
-          username: "your-name",
-          name: "XYZ",
-          bio: "Cricket lover",
-          website: "https://playymate.com",
-          location: "Pune, Maharashtra",
-          gender: "Male",
-          dob: "1998-08-12",
-          phone: "+91 9876543210",
-          email: "email@example.com",
-          profileImage: "/profile.jpg"
-        };
-
-        setFormData(profileData);
-        setProfileImage(profileData.profileImage);
+        // Call the real API to get user profile
+        const res = await userService.getMe();
+        const data = res?.data?.data || res?.data;
+        
+        if (data) {
+          // Store user ID for updates
+          setUserId(data._id);
+          
+          // Extract profile image - prioritize profile_photos then profile_image_url
+          const profileImg = data.profile_photos?.[0]?.url || data.profile_image_url || "/loginAvatars/profile.png";
+          
+          setProfileImage(profileImg);
+          setFormData({
+            username: data.username || data.full_name?.toLowerCase().replace(/\s+/g, '.') || "",
+            name: data.full_name || "",
+            bio: data.bio || "",
+            website: data.website || "",
+            location: data.profile_location?.display_text || data.profile_location?.city || "",
+            gender: data.gender || "",
+            dob: data.dob ? new Date(data.dob).toISOString().split('T')[0] : "",
+            phone: data.phone || "",
+            email: data.email || ""
+          });
+        }
       } catch (error) {
         console.error("Failed to load profile", error);
       }
@@ -78,8 +87,10 @@ export default function EditProfilePage() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Create preview URL
       const imageUrl = URL.createObjectURL(file);
       setProfileImage(imageUrl);
+      setSelectedFile(file);
     }
   };
 
@@ -88,17 +99,33 @@ export default function EditProfilePage() {
     setIsLoading(true);
 
     try {
+      // First, upload the profile image if a new one was selected
+      if (selectedFile && userId) {
+        setIsUploading(true);
+        try {
+          await uploadAvatar(userId, selectedFile);
+          console.log("Profile image uploaded successfully");
+        } catch (uploadError) {
+          console.error("Failed to upload image:", uploadError);
+          // Continue with profile update even if image upload fails
+        }
+        setIsUploading(false);
+      }
+
+      // Update profile data
       const payload = {
-        username: formData.username,
-        name: formData.name,
+        full_name: formData.name,
         bio: formData.bio,
-        website: formData.website,
-        location: formData.location
+        username: formData.username,
+        profile_location: {
+          display_text: formData.location,
+          city: formData.location?.split(',')[0] || '',
+          state: formData.location?.split(',')[1]?.trim() || ''
+        }
       };
 
-      // await api.updateProfile(payload)
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Call the API to update profile
+      await updateUserProfile(userId, payload);
 
       router.push("/home/profile");
     } catch (error) {
@@ -260,48 +287,7 @@ export default function EditProfilePage() {
 
         </div>
 
-        {/* Additional Info (READ ONLY) */}
-        <div className="rounded-xl p-6 space-y-4 bg-white dark:bg-[#17172b] border border-gray-200 dark:border-white/5">
-
-          <h2 className="text-lg font-semibold">Additional Information</h2>
-
-          <div>
-            <label className="text-sm text-gray-500">Gender</label>
-            <input
-              disabled
-              value={formData.gender}
-              className="w-full mt-1 px-4 py-3 rounded-lg bg-gray-200 dark:bg-[#22223a] opacity-70"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm text-gray-500">Date of Birth</label>
-            <input
-              disabled
-              value={formData.dob}
-              className="w-full mt-1 px-4 py-3 rounded-lg bg-gray-200 dark:bg-[#22223a] opacity-70"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm text-gray-500">Phone</label>
-            <input
-              disabled
-              value={formData.phone}
-              className="w-full mt-1 px-4 py-3 rounded-lg bg-gray-200 dark:bg-[#22223a] opacity-70"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm text-gray-500">Email</label>
-            <input
-              disabled
-              value={formData.email}
-              className="w-full mt-1 px-4 py-3 rounded-lg bg-gray-200 dark:bg-[#22223a] opacity-70"
-            />
-          </div>
-
-        </div>
+     
 
       </div>
     </div>

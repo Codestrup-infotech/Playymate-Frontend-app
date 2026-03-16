@@ -463,8 +463,12 @@ export default function OnboardingProfilePhotoPage() {
 
         try {
           // Step 1: Get presigned URL
+          console.log("Profile photo is uploading...");
+          console.log("Calling presign endpoint for photo index:", i);
           const fileName = `profile_${Date.now()}_${i}_${photo.name}`;
           const presignResponse = await userService.getPresignedUrl(fileName, photo);
+          
+          console.log("Presign endpoint response:", presignResponse);
           
           // Use wasabi_url as per API documentation (not file_url)
           const { upload_url, wasabi_url } = presignResponse.data.data;
