@@ -240,6 +240,7 @@ export const uploadAvatar = async (userId, file) => {
   try {
     // Step 1: Get presigned URL from API
     console.log("=== UPLOAD AVATAR FLOW ===");
+    console.log("Profile photo is uploading...");
     console.log("User ID:", userId);
     console.log("File name:", file.name);
     console.log("File size:", file.size);
@@ -252,6 +253,7 @@ export const uploadAvatar = async (userId, file) => {
       size_bytes: file.size
     });
 
+    console.log("Presign endpoint response:", presignResponse);
     console.log("Presign response status:", presignResponse.status);
     
     if (presignResponse.status !== "success") {

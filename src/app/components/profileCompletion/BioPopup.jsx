@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X, Check, Sparkles, MessageSquare, Edit3, Loader2 } from "lucide-react";
-import { generateAIBio, updateUserProfile, getCurrentUserId } from "@/services/profile.service";
+import { updateBio, generateAIBioFromProfile, generateBioFromPrompt, getCurrentUserProfile } from "@/app/user/bio";
 
 export default function BioPopup({ onClose, onSave, initialBio }) {
   const [activeTab, setActiveTab] = useState(initialBio ? "manual" : "ai");
@@ -20,7 +20,8 @@ export default function BioPopup({ onClose, onSave, initialBio }) {
 
     try {
       // Call API with ai_generate: true to generate from profile
-      const generated = await generateAIBio(null);
+      const response = await generateAIBioFromProfile();
+      const generated = response.data.bio;
       setGeneratedBio(generated);
       setBio(generated);
     } catch (err) {
@@ -46,7 +47,8 @@ export default function BioPopup({ onClose, onSave, initialBio }) {
 
     try {
       // Call API with custom prompt
-      const generated = await generateAIBio(prompt);
+      const response = await generateBioFromPrompt(prompt);
+      const generated = response.data.bio;
       setGeneratedBio(generated);
       setBio(generated);
     } catch (err) {
@@ -76,12 +78,15 @@ export default function BioPopup({ onClose, onSave, initialBio }) {
     setError(null);
 
     try {
-      const userId = getCurrentUserId();
+      // Get current user profile to get user ID
+      const profileResponse = await getCurrentUserProfile();
+      const userId = profileResponse.data._id;
+      
       if (!userId) {
         throw new Error("User not found");
       }
 
-      await updateUserProfile(userId, { bio: bio });
+      await updateBio(userId, bio);
       onSave(bio);
     } catch (err) {
       console.error("Failed to save bio:", err);
