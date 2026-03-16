@@ -1751,6 +1751,7 @@ function WeightStep({
         rel="stylesheet"
       />
 <<<<<<< HEAD
+<<<<<<< HEAD
       <div
         style={{
           background: "#0a0a0a",
@@ -1791,6 +1792,8 @@ function WeightStep({
   ))}
 </h2>
 =======
+=======
+>>>>>>> 8e8d1265be2a591c6d717225eae8693c3022bdf8
 
       <div className=" flex  flex-col items-center   font-[Poppins] text-white">
 
@@ -1809,7 +1812,10 @@ function WeightStep({
             </span>
           ))}
         </h2>
+<<<<<<< HEAD
 >>>>>>> fd0a87bf53d3ffab7189ca5144e66c4887576c53
+=======
+>>>>>>> 8e8d1265be2a591c6d717225eae8693c3022bdf8
 
         {/* Unit Toggle */}
         <div className="bg-[#1f1f1f] rounded-full p-1 flex w-[200px] h-[42px] items-center relative mb-8">
@@ -1849,8 +1855,13 @@ function WeightStep({
         </div>
 
         {/* Horizontal Ruler */}
-        <WeightRuler value={value} setValue={setValue} unit={unit} />
-
+        <WeightRuler
+  value={value}
+  setValue={setValue}
+  unit={unit}
+  min={minWeight}
+  max={maxWeight}
+/>
         {/* Note */}
         <div className="mt-3 flex flex-col justify-center items-center text-center  rounded-xl px-4 py-3 text-xs text-[#888] leading-[1.65] w-full">
 
@@ -2060,7 +2071,7 @@ function HeightStep({ value,
 
   // Get dynamic config from API or use defaults
   const rangeConfig = questionData?.range_config || {};
-  const minHeight = rangeConfig?.min || 100;
+  const minHeight = rangeConfig?.min || 50;
   const maxHeight = rangeConfig?.max || 250;
   const stepHeight = rangeConfig?.step || 1;
   const defaultUnit = rangeConfig?.unit || 'cm';
@@ -2093,6 +2104,7 @@ function HeightStep({ value,
 
   {/* Title */}
   <h2 className="font-['Playfair_Display'] text-[27px] font-semibold text-center mb-4 mt-1 tracking-[-0.3px]">
+<<<<<<< HEAD
   {questionText?.split(" ").map((word, index) => (
     <span
       key={index}
@@ -2106,6 +2118,10 @@ function HeightStep({ value,
     </span>
   ))}
 </h2>
+=======
+    {questionText}
+  </h2>
+>>>>>>> 8e8d1265be2a591c6d717225eae8693c3022bdf8
 
   {/* Unit toggle */}
   <div className="bg-[#1f1f1f] rounded-full p-1 flex border border-[#F57264] w-[200px] h-[48px] items-center relative mb-2">
@@ -2173,13 +2189,13 @@ function HeightStep({ value,
   );
 }
 
-function HeightRuler({ value, setValue, unit }) {
+function HeightRuler({ value, setValue, unit, min, max }){
   const containerRef = useRef(null);
   const touchStart = useRef(0);
 
-  // Hard scroll clamp boundaries
-  const min = unit === "in" ? IN_MIN : FT_MIN;
-  const max = unit === "in" ? IN_MAX : FT_MAX;
+  // // Hard scroll clamp boundaries
+  // const min = unit === "in" ? IN_MIN : FT_MIN;
+  // const max = unit === "in" ? IN_MAX : FT_MAX;
 
   // Visual render range — extends VISUAL_EXTRA ticks beyond each hard limit
   const visMin = min - VISUAL_EXTRA;

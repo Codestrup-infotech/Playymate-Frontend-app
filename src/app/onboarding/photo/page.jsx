@@ -761,7 +761,7 @@ export default function OnboardingProfilePhotoPage() {
                       <circle cx="24" cy="16" r="10" fill="#6b7280" />
                       <ellipse cx="24" cy="38" rx="16" ry="10" fill="#6b7280" />
                     </svg>
-                    <span className="text-gray-400 text-xs">Upload Photo</span>
+                    <span className="text-gray-400 text-xs">{screenConfig?.option_labels?.upload_photo || "Upload Photo"}</span>
                   </div>
                 )}
               </div>

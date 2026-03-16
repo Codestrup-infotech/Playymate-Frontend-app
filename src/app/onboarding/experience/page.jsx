@@ -18,6 +18,8 @@ export default function CompleteExperience() {
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [introScreen, setIntroScreen] = useState(null);
+const [showIntro, setShowIntro] = useState(true);
 
   const currentScreen = screens[step];
 
@@ -103,7 +105,7 @@ export default function CompleteExperience() {
 };
 
     checkOnboardingStatus();
-
+  
   }, [router]);
 
   // Handle celebration screen auto-redirect (4 seconds)
