@@ -1,16 +1,18 @@
 "use client";
 
+export const dynamic = "force-dynamic"; // ← ADD THIS LINE
+
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, useEffect } from "react";
 import { userService } from "@/services/user";
 import { kycService } from "@/services/kyc";
 import { getRouteFromStep } from "@/lib/api/navigation";
 
+
 function ActivityIntentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Check if we have role info from URL (user came from role selection)
   const roleValue = searchParams.get("roleValue");
   const roleLabel = searchParams.get("roleLabel");
   const [activityScreenConfig, setActivityScreenConfig] = useState(null);
@@ -58,7 +60,6 @@ useEffect(() => {
     router.back();
   };
 
-  // If we have role info, show DetailsForm; otherwise show RoleSelection
   if (roleValue && roleLabel) {
     return (
       <DetailsForm
@@ -94,7 +95,6 @@ function RoleSelection({ onBack, activityScreenConfig }) {
   const [rolesLoading, setRolesLoading] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  /* ---------------- FETCH ROLES ---------------- */
   useEffect(() => {
     setRolesLoading(true);
 
@@ -109,15 +109,12 @@ function RoleSelection({ onBack, activityScreenConfig }) {
       .finally(() => setRolesLoading(false));
   }, []);
 
-  /* ---------------- SELECT ROLE AND NAVIGATE TO DETAILS ---------------- */
   const handleSelectRole = async (role) => {
     try {
       setLoading(true);
 
-      // Save activity intent
       await userService.setActivityIntent(role.value, "");
 
-      // Navigate to details page with role data
       router.push(
         `/onboarding/activity?roleValue=${encodeURIComponent(
           role.value
@@ -136,14 +133,7 @@ function RoleSelection({ onBack, activityScreenConfig }) {
   return (
     <div className="bg-black">
       <div className="w-[500px]  flex   flex-col justify-center items-center text-center h-screen text-white mx-auto">
-        {/* HEADER */}
         <div className="flex   mb-6 ">
-          {/* <button
-            onClick={onBack}
-            className="text-3xl text-gray-400 font-bold"
-          >
-            ← 
-          </button> */}
 <div className=" space-y-3 "> 
 <h1 className="text-2xl font-semibold font-Playfair Display">
   {(activityScreenConfig?.title || "What are you doing right now?")
@@ -167,7 +157,6 @@ function RoleSelection({ onBack, activityScreenConfig }) {
           </div>
         </div>
 
-        {/* ---------------- STEP 1: ROLE SELECTION ---------------- */}
         {rolesLoading ? (
           <p className="text-gray-400">Loading options...</p>
         ) : roles.length === 0 ? (
@@ -175,21 +164,6 @@ function RoleSelection({ onBack, activityScreenConfig }) {
         ) : (
           <div className="space-y-3 font-Poppins ">
             {roles.map((role) => (
-              // <button
-              //   key={role.value}
-              //   onClick={() => handleSelectRole(role)}
-              //   disabled={loading}
-              //   className="w-full px-4 py-2 rounded-xl border border-[#1A43CA] hover:border-white transition disabled:opacity-50 flex items-center gap-3"
-              // >
-              //   {role.icon && <span className="text-2xl">{role.icon}</span>}
-              //   <div className="text-left">
-              //     <div className="font-medium">{role.label}</div>
-              //     {role.description && (
-              //       <div className="text-sm text-gray-400">{role.description}</div>
-              //     )}
-              //   </div>
-              // </button>
-            
   <button
     key={role.value}
     onClick={() => handleSelectRole(role)}
@@ -205,20 +179,12 @@ function RoleSelection({ onBack, activityScreenConfig }) {
       )}
     </div>
 
-  {/* Right side circular double ring button */}
 <div className="ml-auto flex items-center justify-center w-6 h-6 bg-white rounded-full">
-  
-  {/* Gradient ring */}
   <div className="flex items-center justify-center w-4 h-4 p-[2px] rounded-full bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] hover:from-green-500 hover:to-yellow-500 transition">
-    
-    {/* Inner white circle */}
     <div className="w-full h-full bg-white rounded-full"></div>
-
   </div>
-
 </div>
   </button>
-
             ))}
           </div>
         )}
@@ -226,8 +192,6 @@ function RoleSelection({ onBack, activityScreenConfig }) {
     </div>
   );
 }
-
-/* ---------------- DYNAMIC FORM COMPONENT (STEP 2) ---------------- */
 
 function DetailsForm({
   roleValue,
@@ -242,68 +206,47 @@ function DetailsForm({
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
 
-  /* ---------------- FETCH PROFILE ROLE CONFIG ---------------- */
   useEffect(() => {
     const fetchConfig = async () => {
       try {
         setLoading(true);
 
-        console.log('Fetching profile config for role:', roleValue);
-        
-        // Call with role parameter to get specific role config
         const configRes = await userService.getProfileRoleConfig(roleValue);
         
-        console.log('Full API Response:', configRes);
-        
-        // The actual API response structure is: data.data.config.fields
-        // Also contains: data.data.config.common_fields
         let fields = [];
         
         const responseData = configRes?.data?.data;
         const config = responseData?.config || responseData;
         
-        console.log('Config:', config);
-        console.log('Config fields:', config?.fields);
-        
         if (config?.fields) {
-          // Combine fields from config.fields and config.common_fields
-          // Use a Map to avoid duplicates (common_fields may overlap with fields)
           const fieldMap = new Map();
           
-          // Add common fields first
           if (config.common_fields) {
             config.common_fields.forEach(field => {
               fieldMap.set(field.key, field);
             });
           }
           
-          // Add role-specific fields (will override common fields with same key)
           if (config.fields) {
             config.fields.forEach(field => {
               fieldMap.set(field.key, field);
             });
           }
           
-          // Convert map to array and map to our format
           fields = Array.from(fieldMap.values()).map(field => ({
             key: field.key,
             name: field.name,
-            field_type: field.type, // API uses 'type'
-            icon: field.icon, // Include icon from API
+            field_type: field.type,
+            icon: field.icon,
             required: field.required,
-            placeholder: field.placeholder || `Enter ${field.name}`, // Handle null placeholder
+            placeholder: field.placeholder || `Enter ${field.name}`,
             options: field.options,
           }));
-          
-          console.log('Mapped fields:', fields);
-        } else {
-          console.log('No fields found in config');
         }
 
         setFormFields(fields);
       } catch (err) {
         console.error("Failed to load profile config:", err);
-        // Don't show error to user, just continue with empty fields
         setFormFields([]);
       } finally {
         setLoading(false);
@@ -315,7 +258,6 @@ function DetailsForm({
     }
   }, [roleValue]);
 
-  /* ---------------- HANDLE CHANGE ---------------- */
   const handleChange = (key, value) => {
     setFormData((prev) => ({
       ...prev,
@@ -323,9 +265,7 @@ function DetailsForm({
     }));
   };
 
-  /* ---------------- SUBMIT FORM ---------------- */
   const handleSubmit = async () => {
-    // Check required fields
     const missingFields = formFields
       .filter((field) => field.required && !formData[field.key])
       .map((field) => field.name || field.key);
@@ -340,11 +280,8 @@ function DetailsForm({
 
       const response = await userService.setProfileDetails(roleValue, formData);
       
-      // Navigate based on next_required_step from the API response
       const nextStep = response?.data?.next_required_step || 'PROFILE_DETAILS';
       
-      // Check KYC screen visibility to determine navigation
-    // Check KYC screen visibility to determine navigation
 try {
   const screensRes = await kycService.getKycScreens();
   const { screens } = screensRes.data?.data || {};
@@ -353,25 +290,21 @@ try {
   const livenessEnabled = screens?.liveness?.enabled ?? true;
 
   if (!aadhaarEnabled && !livenessEnabled) {
-    // Both disabled → skip KYC
     router.push("/onboarding/physical");
     return;
   }
 
   if (aadhaarEnabled && livenessEnabled) {
-    // Both enabled
     router.push("/onboarding/kyc");
     return;
   }
 
   if (aadhaarEnabled && !livenessEnabled) {
-    // Only Aadhaar enabled
     router.push("/onboarding/kyc");
     return;
   }
 
   if (!aadhaarEnabled && livenessEnabled) {
-    // Only Liveness enabled
     router.push("/onboarding/kyc/liveness");
     return;
   }
@@ -379,7 +312,6 @@ try {
   console.error("Failed to fetch KYC screens:", screenErr);
 }
 
-// Fallback: use default behavior based on next_required_step
 const route = getRouteFromStep(nextStep);
 router.push(route);
     } catch (err) {
@@ -395,7 +327,6 @@ router.push(route);
   return (
     <div className="bg-black py-8 ">
       <div className="relative mb-6  text-center">
-  {/* Back Button */}
   <button
     onClick={onBack}
     className="absolute left-96 text-3xl text-gray-400 font-bold"
@@ -403,7 +334,6 @@ router.push(route);
     ←
   </button>
 
-  {/* Title */}
   <h1 className="text-2xl font-Playfair Display font-bold text-white">
   {(basicScreenConfig?.title || "Complete your profile")
     .split(" ")
@@ -421,17 +351,12 @@ router.push(route);
     )}
 </h1>
 
-  {/* Subtitle */}
   <p className="mt-2 text-gray-400 text-sm font-Poppins">
     {basicScreenConfig?.subtitle || "Add a few more details so people can know you better"}
   </p>
 </div>
 
       <div className="w-[390px] text-white mx-auto font-Poppins ">
-        {/* HEADER */}
-        
-
-        {/* ---------------- STEP 2: DYNAMIC FORM ---------------- */}
         {loading && !formFields.length ? (
           <p className="text-gray-400">Loading...</p>
         ) : formFields.length === 0 ? (
@@ -526,19 +451,12 @@ router.push(route);
     ? "Saving..."
     : basicScreenConfig?.button_text?.primary || "Save & Continue"}
 </button>
-{/* <button
-  className="text-gray-400 mt-3"
-  onClick={() => router.push("/")}
->
-  {basicScreenConfig?.button_text?.skip || "Skip for now"}
-</button> */}
           </div>
         )}
       </div>
     </div>
   );
 }
-
 
 
 // "use client";
