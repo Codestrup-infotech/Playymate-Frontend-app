@@ -59,8 +59,13 @@ export default function LivenessPage() {
 
       console.log("Creating AWS Rekognition liveness session...");
 
+      // Get userId from localStorage
+      const userId = typeof window !== 'undefined' 
+        ? localStorage.getItem("user_id") 
+        : null;
+
       // Create liveness session with AWS Rekognition
-      const response = await kycService.createLivenessSession();
+      const response = await kycService.createLivenessSession(userId);
 
       console.log("Session response:", response.data);
 
@@ -89,8 +94,13 @@ export default function LivenessPage() {
     try {
       setStep("verifying");
 
+      // Get userId from session data or localStorage
+      const userId = sessionData?.userId || (typeof window !== 'undefined' 
+        ? localStorage.getItem("user_id") 
+        : null);
+
       // Verify the liveness session with the backend
-      const response = await kycService.verifyLivenessSession(sessionData.sessionId);
+      const response = await kycService.verifyLivenessSession(sessionData.sessionId, userId);
 
       console.log("Verification response:", response.data);
 
@@ -140,7 +150,6 @@ export default function LivenessPage() {
   const handleRetry = () => {
     setError("");
     setSessionData(null);
-    setSessionId(null);
     setStep("initializing");
     initializeLiveness();
   };
