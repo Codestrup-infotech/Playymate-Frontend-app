@@ -365,29 +365,34 @@ import { ArrowLeft, Smartphone, CreditCard, Wallet, Zap, AlertCircle, CheckCircl
 const API_BASE     = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_SN6ZSPuY8lfpxY";
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
-const BG_PAGE     = "#0F0F1A";
-const BG_SURFACE  = "#181828";
-const BG_ELEVATED = "#1F1F32";
-const BG_BORDER   = "#2E2E48";
-const BG_MUTED    = "#252540";
-const TEXT_1      = "#F2F0FF";
-const TEXT_2      = "#9090B8";
-const TEXT_3      = "#50506A";
-const GRAD_PINK   = "linear-gradient(135deg,#FF3E87,#FF6B35)";
-const GRAD_VIP    = "linear-gradient(135deg,#9333EA,#6B21A8)";
-const GOLD        = "#F5B731";
-const GOLD_BG     = "#201A00";
-const GOLD_BDR    = "#403200";
-const GOLD_ACTIVE_BG  = "#2A2000";
-const GOLD_ACTIVE_BDR = "#F5B731";
-const GREEN       = "#22C55E";
-const GREEN_BG    = "#052211";
-const GREEN_BDR   = "#14532D";
-const RED         = "#F87171";
-const RED_BG      = "#1A0A0A";
-const RED_BDR     = "#7F1D1D";
-const PINK        = "#FF3E87";
+// ─── Design tokens (matched to pro-plan page) ─────────────────────────────────
+const BG_PAGE     = "#FFFFFF";
+const BG_SURFACE  = "#F9FAFB";
+const BG_ELEVATED = "#F3F4F6";
+const BG_BORDER   = "#E5E7EB";
+const BG_MUTED    = "#F3F4F6";
+const TEXT_1      = "#111827";
+const TEXT_2      = "#6B7280";
+const TEXT_3      = "#9CA3AF";
+
+// Accent colors — dynamic per plan type (same logic as pro-plan page)
+// Default to Pro pink; VIP uses purple, Starter uses blue
+const ACCENT_PRO     = "#EC4899";
+const ACCENT_VIP     = "#8B5CF6";
+const ACCENT_STARTER = "#3B82F6";
+const ACCENT_FREE    = "#6B7280";
+
+const GOLD        = "#D97706";
+const GOLD_BG     = "#FFFBEB";
+const GOLD_BDR    = "#FDE68A";
+const GOLD_ACTIVE_BG  = "#FEF3C7";
+const GOLD_ACTIVE_BDR = "#D97706";
+const GREEN       = "#059669";
+const GREEN_BG    = "#ECFDF5";
+const GREEN_BDR   = "#A7F3D0";
+const RED         = "#DC2626";
+const RED_BG      = "#FEF2F2";
+const RED_BDR     = "#FECACA";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function getToken() {
@@ -425,19 +430,19 @@ const PAYMENT_METHODS = [
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-function SectionLabel({ title }) {
+function SectionLabel({ title, accentColor }) {
   return (
     <p style={{
-      fontSize: "11px", fontWeight: 700, color: TEXT_3,
-      letterSpacing: "0.1em", textTransform: "uppercase",
-      marginBottom: "12px", marginTop: "28px",
+      fontSize: "13px", fontWeight: 600, color: accentColor,
+      letterSpacing: "0.6px", textTransform: "uppercase",
+      marginBottom: "12px", marginTop: "24px",
     }}>
       {title}
     </p>
   );
 }
 
-function PaymentMethodRow({ method, selected, onSelect, walletBalance }) {
+function PaymentMethodRow({ method, selected, onSelect, walletBalance, accentColor }) {
   const isSelected = selected === method.id;
   const Icon = method.icon;
   const subtitle = method.id === "WALLET"
@@ -449,43 +454,36 @@ function PaymentMethodRow({ method, selected, onSelect, walletBalance }) {
       onClick={() => onSelect(method.id)}
       style={{
         background: isSelected
-          ? `linear-gradient(135deg,rgba(255,62,135,0.1),rgba(255,107,53,0.06))`
+          ? `${accentColor}10`
           : BG_SURFACE,
-        border: `1.5px solid ${isSelected ? PINK : BG_BORDER}`,
-        borderRadius: "14px", padding: "16px",
+        border: `1px solid ${isSelected ? `${accentColor}60` : BG_BORDER}`,
+        borderRadius: "12px", padding: "14px 16px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        cursor: "pointer", marginBottom: "10px", transition: "all 0.2s",
-        position: "relative", overflow: "hidden",
+        cursor: "pointer", marginBottom: "8px", transition: "all 0.2s",
       }}
     >
-      {isSelected && (
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <div style={{
-          position: "absolute", top: 0, left: 0, bottom: 0, width: "3px",
-          background: GRAD_PINK, borderRadius: "3px 0 0 3px",
-        }} />
-      )}
-      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-        <div style={{
-          width: "42px", height: "42px", borderRadius: "12px",
-          background: isSelected ? "rgba(255,62,135,0.12)" : BG_ELEVATED,
+          width: "40px", height: "40px", borderRadius: "10px",
+          background: isSelected ? `${accentColor}18` : BG_ELEVATED,
           display: "flex", alignItems: "center", justifyContent: "center",
-          border: `1px solid ${isSelected ? "rgba(255,62,135,0.3)" : BG_BORDER}`,
+          border: `1px solid ${isSelected ? `${accentColor}40` : BG_BORDER}`,
         }}>
-          <Icon size={20} color={isSelected ? PINK : TEXT_2} />
+          <Icon size={18} color={isSelected ? accentColor : TEXT_2} />
         </div>
         <div>
-          <p style={{ fontSize: "14px", fontWeight: 600, color: TEXT_1 }}>{method.title}</p>
+          <p style={{ fontSize: "14px", fontWeight: 500, color: TEXT_1 }}>{method.title}</p>
           <p style={{ fontSize: "12px", color: TEXT_3, marginTop: "2px" }}>{subtitle}</p>
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "5px" }}>
         <div style={{
-          width: "20px", height: "20px", borderRadius: "50%",
-          border: `2px solid ${isSelected ? PINK : BG_BORDER}`,
-          background: isSelected ? PINK : "transparent",
+          width: "18px", height: "18px", borderRadius: "50%",
+          border: `2px solid ${isSelected ? accentColor : BG_BORDER}`,
+          background: isSelected ? accentColor : "transparent",
           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>
-          {isSelected && <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#fff" }} />}
+          {isSelected && <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#fff" }} />}
         </div>
         <span style={{ fontSize: "9px", color: TEXT_3, fontWeight: 700, letterSpacing: "0.05em" }}>
           COMING SOON
@@ -525,41 +523,26 @@ function CoinToggleRow({ useCoins, onToggle, coinDiscount, userCoinBalance }) {
       onClick={() => hasCoins && onToggle()}
       style={{
         background: useCoins ? GOLD_ACTIVE_BG : BG_SURFACE,
-        border: `1.5px solid ${useCoins ? GOLD_ACTIVE_BDR : BG_BORDER}`,
-        borderRadius: "14px", padding: "16px",
+        border: `1px solid ${useCoins ? GOLD_ACTIVE_BDR : BG_BORDER}`,
+        borderRadius: "12px", padding: "14px 16px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
         cursor: hasCoins ? "pointer" : "not-allowed",
         transition: "all 0.2s",
-        position: "relative", overflow: "hidden",
-        marginBottom: "0px",
         opacity: hasCoins ? 1 : 0.5,
       }}
     >
-      {/* left gold stripe when active */}
-      {useCoins && (
-        <div style={{
-          position: "absolute", top: 0, left: 0, bottom: 0, width: "3px",
-          background: `linear-gradient(180deg,${GOLD},#D97706)`,
-          borderRadius: "3px 0 0 3px",
-        }} />
-      )}
-
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        {/* coin icon box */}
         <div style={{
-          width: "42px", height: "42px", borderRadius: "12px",
-          background: useCoins ? "rgba(245,183,49,0.15)" : BG_ELEVATED,
-          border: `1px solid ${useCoins ? "rgba(245,183,49,0.4)" : BG_BORDER}`,
+          width: "40px", height: "40px", borderRadius: "10px",
+          background: useCoins ? "#FEF9C3" : BG_ELEVATED,
+          border: `1px solid ${useCoins ? GOLD_BDR : BG_BORDER}`,
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "20px",
+          fontSize: "18px",
         }}>
           🪙
         </div>
-
         <div>
-          <p style={{ fontSize: "14px", fontWeight: 600, color: TEXT_1 }}>
-            Gold Coins
-          </p>
+          <p style={{ fontSize: "14px", fontWeight: 500, color: TEXT_1 }}>Gold Coins</p>
           <p style={{ fontSize: "12px", color: TEXT_3, marginTop: "2px" }}>
             {hasCoins
               ? `Balance: ${userCoinBalance} coins · Max 10% off`
@@ -569,35 +552,24 @@ function CoinToggleRow({ useCoins, onToggle, coinDiscount, userCoinBalance }) {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "5px" }}>
-        {/* toggle pill */}
         <div style={{
           width: "44px", height: "24px", borderRadius: "12px",
-          background: useCoins
-            ? `linear-gradient(135deg,${GOLD},#D97706)`
-            : BG_MUTED,
-          position: "relative",
-          transition: "background 0.2s",
+          background: useCoins ? GOLD : BG_MUTED,
+          position: "relative", transition: "background 0.2s",
           border: `1px solid ${useCoins ? GOLD : BG_BORDER}`,
           flexShrink: 0,
         }}>
           <div style={{
-            position: "absolute",
-            top: "2px",
+            position: "absolute", top: "2px",
             left: useCoins ? "20px" : "2px",
             width: "18px", height: "18px",
             borderRadius: "50%", background: "#fff",
             transition: "left 0.2s",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
           }} />
         </div>
-
-        {/* discount amount badge */}
         {useCoins && (
-          <span style={{
-            fontSize: "11px", fontWeight: 700,
-            color: GOLD,
-            animation: "fadeIn 0.2s ease both",
-          }}>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: GOLD, animation: "fadeIn 0.2s ease both" }}>
             −₹{coinDiscount.toFixed(0)}
           </span>
         )}
@@ -620,7 +592,7 @@ function CheckoutPageContent() {
   const [loading,        setLoading]        = useState(true);
   const [selectedMethod, setSelectedMethod] = useState("UPI");
   const [promoCode,      setPromoCode]      = useState("");
-  const [useCoins,       setUseCoins]       = useState(false);   // ← coin toggle
+  const [useCoins,       setUseCoins]       = useState(false);
   const [agreed,         setAgreed]         = useState(false);
   const [paying,         setPaying]         = useState(false);
   const [error,          setError]          = useState(null);
@@ -640,12 +612,10 @@ function CheckoutPageContent() {
       try {
         const token = getToken();
         if (token) {
-          // wallet balance
           const wRes  = await fetch(`${API_BASE}/wallet/balance`, { headers: { Authorization: `Bearer ${token}` } });
           const wData = await wRes.json();
           setWalletBalance(wData?.data?.balance ?? null);
 
-          // coin balance
           const cRes  = await fetch(`${API_BASE}/coins/balance`, { headers: { Authorization: `Bearer ${token}` } });
           const cData = await cRes.json();
           setUserCoinBalance(cData?.data?.gold_coins?.balance ?? 0);
@@ -658,19 +628,22 @@ function CheckoutPageContent() {
     }
   };
 
-  const isAnnual = plan?.duration?.value === 365;
-  const price    = plan?.price?.amount ?? 0;
-  const coins    = plan?.gold_coins?.amount ?? 0;
-  const isVIP    = plan?.key?.startsWith("vip");
+  const isAnnual  = plan?.duration?.value === 365;
+  const price     = plan?.price?.amount ?? 0;
+  const coins     = plan?.gold_coins?.amount ?? 0;
+  const isVIP     = plan?.key?.startsWith("vip");
+  const isPro     = plan?.key?.startsWith("pro");
+  const isStarter = plan?.key?.startsWith("starter");
 
-  // ── Coin logic — max 10% of plan price ───────────────────────────────────
-  const coinDiscount     = Math.floor(price * 0.10);          // 10% of plan price
-  const coinsRequired    = coinDiscount;                       // 1 coin = ₹1 (adjust ratio if needed)
-  const canUseCoin       = userCoinBalance >= coinsRequired && coinsRequired > 0;
-  const appliedDiscount  = useCoins && canUseCoin ? coinDiscount : 0;
-  const total            = price - appliedDiscount;
+  // Match pro-plan page accent logic exactly
+  const accentColor = isVIP ? ACCENT_VIP : isPro ? ACCENT_PRO : isStarter ? ACCENT_STARTER : ACCENT_FREE;
 
-  // ── Payment handler ───────────────────────────────────────────────────────
+  const coinDiscount    = Math.floor(price * 0.10);
+  const coinsRequired   = coinDiscount;
+  const canUseCoin      = userCoinBalance >= coinsRequired && coinsRequired > 0;
+  const appliedDiscount = useCoins && canUseCoin ? coinDiscount : 0;
+  const total           = price - appliedDiscount;
+
   const handlePayment = async () => {
     if (!agreed) {
       setError("Please agree to the Terms & Conditions first.");
@@ -692,17 +665,14 @@ function CheckoutPageContent() {
     try {
       const purchaseRes = await fetch(`${API_BASE}/subscriptions/purchase`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           plan_id:        planId,
           duration:       isAnnual ? "YEARLY" : "MONTHLY",
           payment_method: METHOD_API_MAP[selectedMethod],
           auto_renew:     true,
-          use_coins:      useCoins && canUseCoin,   // ← tell API whether coins were applied
-          coin_discount:  appliedDiscount,           // ← actual rupee discount from coins
+          use_coins:      useCoins && canUseCoin,
+          coin_discount:  appliedDiscount,
         }),
       });
 
@@ -741,7 +711,7 @@ function CheckoutPageContent() {
               router.push(`/home/subscription/activation-screen?plan=${planId}&key=${planKey}&coins=${coins}`);
             }, 600);
           },
-          theme: { color: PINK },
+          theme: { color: accentColor },
           modal: { ondismiss: () => { setPaying(false); setPayStatus(null); } },
         }).open();
         return;
@@ -760,10 +730,10 @@ function CheckoutPageContent() {
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: BG_PAGE, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans',sans-serif" }}>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}} @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');`}</style>
+      <div style={{ minHeight: "100vh", background: BG_PAGE, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         <div style={{ textAlign: "center" }}>
-          <div style={{ width: "38px", height: "38px", border: `3px solid ${BG_BORDER}`, borderTop: `3px solid ${PINK}`, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 14px" }} />
+          <div style={{ width: "32px", height: "32px", border: `3px solid ${BG_BORDER}`, borderTop: `3px solid ${ACCENT_PRO}`, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }} />
           <p style={{ color: TEXT_2, fontSize: "13px" }}>Loading checkout...</p>
         </div>
       </div>
@@ -772,46 +742,50 @@ function CheckoutPageContent() {
 
   if (!plan) {
     return (
-      <div style={{ minHeight: "100vh", background: BG_PAGE, color: TEXT_1, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans',sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: BG_PAGE, color: TEXT_1, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p>{error || "Plan not found"}</p>
       </div>
     );
   }
 
-  const planGrad = isVIP ? GRAD_VIP : "linear-gradient(135deg,#3B82F6,#6366F1)";
-
   return (
-    <div style={{ minHeight: "100vh", background: BG_PAGE, color: TEXT_1, fontFamily: "'DM Sans',sans-serif", paddingBottom: "120px", position: "relative" }}>
+    <div style={{ minHeight: "100vh", background: BG_PAGE, color: TEXT_1, paddingBottom: "120px" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
         @keyframes spin   { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
 
-      {/* Ambient glow */}
-      <div style={{ position: "fixed", top: "-80px", left: "50%", transform: "translateX(-50%)", width: "500px", height: "260px", borderRadius: "50%", background: "radial-gradient(ellipse,rgba(255,62,135,0.07) 0%,transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
-
-      {/* ── Nav ── */}
-      <div style={{ display: "flex", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid ${BG_BORDER}`, background: BG_SURFACE, position: "sticky", top: 0, zIndex: 10 }}>
-        <button onClick={() => router.back()} style={{ background: "none", border: "none", color: TEXT_2, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", fontFamily: "inherit", fontWeight: 500 }}>
-          <ArrowLeft size={17} /> Checkout
+      {/* ── Nav — matches pro-plan page exactly ── */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: "12px",
+        padding: "16px 20px", borderBottom: `1px solid ${BG_BORDER}`,
+        background: BG_PAGE, position: "sticky", top: 0, zIndex: 10,
+      }}>
+        <button
+          onClick={() => router.back()}
+          style={{ background: "none", border: "none", color: TEXT_2, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontSize: "14px" }}
+        >
+          <ArrowLeft size={18} /> Checkout
         </button>
       </div>
 
-      <div style={{ maxWidth: "480px", margin: "0 auto", padding: "20px 20px 0", position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: "480px", margin: "0 auto", padding: "24px 20px 0" }}>
 
-        {/* ── Plan summary ── */}
+        {/* ── Plan summary — matches pro-plan hero card ── */}
         <div style={{
-          background: BG_SURFACE,
-          border: `1.5px solid ${isVIP ? "rgba(147,51,234,0.4)" : "rgba(255,62,135,0.35)"}`,
-          borderRadius: "18px", padding: "18px",
+          background: `linear-gradient(135deg, ${accentColor}22, #F9FAFB)`,
+          border: `1px solid ${accentColor}40`,
+          borderRadius: "20px", padding: "24px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          marginBottom: "14px",
-          boxShadow: isVIP ? "0 0 28px rgba(147,51,234,0.12)" : "0 0 28px rgba(255,62,135,0.1)",
+          marginBottom: "12px",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-            <div style={{ width: "50px", height: "50px", borderRadius: "50%", background: planGrad, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
+            <div style={{
+              width: "48px", height: "48px", borderRadius: "50%",
+              background: `linear-gradient(135deg, ${accentColor}, ${accentColor}CC)`,
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px",
+            }}>
               {isVIP ? "👑" : "⭐"}
             </div>
             <div>
@@ -820,35 +794,35 @@ function CheckoutPageContent() {
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <span style={{ fontSize: "24px", fontWeight: 800, color: PINK }}>₹{price}</span>
-            <span style={{ fontSize: "12px", color: TEXT_3 }}>/{isAnnual ? "yr" : "mo"}</span>
+            <span style={{ fontSize: "26px", fontWeight: 800, color: accentColor }}>₹{price}</span>
+            <span style={{ fontSize: "12px", color: TEXT_2 }}>/{isAnnual ? "yr" : "mo"}</span>
           </div>
         </div>
 
         {/* ── Test mode ── */}
-        <div style={{ background: "#1A1200", border: "1px solid #854D0E", borderRadius: "12px", padding: "12px 16px", display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ background: GOLD_BG, border: `1px solid ${GOLD_BDR}`, borderRadius: "12px", padding: "12px 16px", display: "flex", alignItems: "center", gap: "10px" }}>
           <span>🧪</span>
           <div>
-            <p style={{ fontSize: "12px", fontWeight: 700, color: "#FCD34D", margin: 0 }}>Test Mode Active</p>
+            <p style={{ fontSize: "12px", fontWeight: 700, color: GOLD, margin: 0 }}>Test Mode Active</p>
             <p style={{ fontSize: "11px", color: "#92400E", margin: "2px 0 0" }}>Payments are simulated. No real money charged.</p>
           </div>
         </div>
 
         {/* ── Payment methods ── */}
-        <SectionLabel title="Payment Method" />
+        <SectionLabel title="Payment Method" accentColor={accentColor} />
         {PAYMENT_METHODS.map(m => (
           <PaymentMethodRow
             key={m.id} method={m}
             selected={selectedMethod}
             onSelect={id => { setSelectedMethod(id); setError(null); setErrorCode(null); setPayStatus(null); }}
             walletBalance={walletBalance}
+            accentColor={accentColor}
           />
         ))}
 
-        {/* ── Gold Coins section ── */}
-        <SectionLabel title="Gold Coins" />
+        {/* ── Gold Coins ── */}
+        <SectionLabel title="Gold Coins" accentColor={accentColor} />
 
-        {/* Info line */}
         <p style={{ fontSize: "12px", color: TEXT_3, marginBottom: "10px", lineHeight: 1.5 }}>
           Gold Coins can cover up to <span style={{ color: GOLD, fontWeight: 700 }}>10%</span> of your plan price.
           {userCoinBalance > 0 && (
@@ -858,70 +832,70 @@ function CheckoutPageContent() {
 
         <CoinToggleRow
           useCoins={useCoins}
-          onToggle={() => {
-            setUseCoins(prev => !prev);
-            setError(null);
-            setErrorCode(null);
-          }}
+          onToggle={() => { setUseCoins(prev => !prev); setError(null); setErrorCode(null); }}
           coinDiscount={coinDiscount}
           userCoinBalance={userCoinBalance}
         />
 
-        {/* Animated coin applied feedback */}
         {useCoins && canUseCoin && (
           <div style={{
-            marginTop: "10px",
-            background: GOLD_ACTIVE_BG,
-            border: `1px solid rgba(245,183,49,0.3)`,
+            marginTop: "10px", background: GOLD_ACTIVE_BG, border: `1px solid ${GOLD_BDR}`,
             borderRadius: "10px", padding: "10px 14px",
             display: "flex", alignItems: "center", justifyContent: "space-between",
             animation: "fadeIn 0.25s ease both",
           }}>
-            <span style={{ fontSize: "12px", color: TEXT_2 }}>
-              🪙 {coinsRequired} coins will be deducted
-            </span>
-            <span style={{ fontSize: "13px", fontWeight: 700, color: GOLD }}>
-              −₹{coinDiscount.toFixed(0)} off
-            </span>
+            <span style={{ fontSize: "12px", color: TEXT_2 }}>🪙 {coinsRequired} coins will be deducted</span>
+            <span style={{ fontSize: "13px", fontWeight: 700, color: GOLD }}>−₹{coinDiscount.toFixed(0)} off</span>
           </div>
         )}
 
         {/* ── Promo code ── */}
-        <SectionLabel title="Promo Code" />
+        <SectionLabel title="Promo Code" accentColor={accentColor} />
         <div style={{ display: "flex", gap: "10px" }}>
           <input
             type="text" placeholder="Enter Code" value={promoCode}
             onChange={e => setPromoCode(e.target.value)}
-            style={{ flex: 1, background: BG_SURFACE, border: `1px solid ${BG_BORDER}`, borderRadius: "12px", padding: "13px 16px", color: TEXT_1, fontSize: "14px", outline: "none", fontFamily: "inherit" }}
-            onFocus={e => e.target.style.borderColor = PINK}
+            style={{
+              flex: 1, background: BG_SURFACE, border: `1px solid ${BG_BORDER}`,
+              borderRadius: "12px", padding: "13px 16px", color: TEXT_1,
+              fontSize: "14px", outline: "none",
+            }}
+            onFocus={e => e.target.style.borderColor = accentColor}
             onBlur={e  => e.target.style.borderColor = BG_BORDER}
           />
-          <button style={{ padding: "13px 20px", borderRadius: "12px", border: `1px solid ${BG_BORDER}`, background: BG_ELEVATED, color: TEXT_2, fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = PINK; e.currentTarget.style.color = TEXT_1; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = BG_BORDER; e.currentTarget.style.color = TEXT_2; }}>
+          <button
+            style={{
+              padding: "13px 20px", borderRadius: "12px",
+              border: `1px solid ${BG_BORDER}`, background: BG_ELEVATED,
+              color: TEXT_2, fontSize: "14px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = accentColor; e.currentTarget.style.color = TEXT_1; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = BG_BORDER;   e.currentTarget.style.color = TEXT_2; }}
+          >
             Apply
           </button>
         </div>
 
-        {/* ── Order Summary ── */}
-        <SectionLabel title="Order Summary" />
-        <div style={{ background: BG_SURFACE, border: `1px solid ${BG_BORDER}`, borderRadius: "18px", padding: "20px" }}>
+        {/* ── Order Summary — matches pro-plan feature rows ── */}
+        <SectionLabel title="Order Summary" accentColor={accentColor} />
+        <div style={{ background: BG_SURFACE, border: `1px solid ${accentColor}30`, borderRadius: "20px", padding: "20px" }}>
 
-          {/* Plan name + billing badge */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
             <span style={{ fontSize: "14px", fontWeight: 600, color: TEXT_1 }}>{plan.name} Plan</span>
-            <span style={{ fontSize: "11px", fontWeight: 700, color: GREEN, background: GREEN_BG, border: `1px solid ${GREEN_BDR}`, borderRadius: "20px", padding: "3px 10px" }}>
+            <span style={{
+              fontSize: "11px", fontWeight: 700, color: accentColor,
+              background: `${accentColor}18`, border: `1px solid ${accentColor}40`,
+              borderRadius: "20px", padding: "3px 10px",
+            }}>
               {isAnnual ? "Yearly" : "Monthly"}
             </span>
           </div>
 
-          {/* Subtotal */}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: TEXT_2, marginBottom: "10px" }}>
             <span>Plan Price</span>
             <span style={{ color: TEXT_1 }}>₹ {price.toFixed(2)}</span>
           </div>
 
-          {/* Coin discount row — only show when coins applied */}
           {useCoins && canUseCoin && (
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", marginBottom: "10px", animation: "fadeIn 0.25s ease both" }}>
               <span style={{ display: "flex", alignItems: "center", gap: "5px", color: GOLD }}>
@@ -931,10 +905,8 @@ function CheckoutPageContent() {
             </div>
           )}
 
-          {/* Divider */}
           <div style={{ borderTop: `1px solid ${BG_BORDER}`, marginBottom: "14px" }} />
 
-          {/* Total — updates live */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "15px", fontWeight: 700, color: TEXT_1 }}>Total Payable</span>
             <div style={{ textAlign: "right" }}>
@@ -943,33 +915,42 @@ function CheckoutPageContent() {
                   ₹ {price.toFixed(2)}
                 </div>
               )}
-              <span style={{ fontSize: "22px", fontWeight: 800, color: PINK }}>
+              <span style={{ fontSize: "24px", fontWeight: 800, color: accentColor }}>
                 ₹ {total.toFixed(2)}
               </span>
             </div>
           </div>
 
-          {/* Coins included (earned after purchase) */}
-          <div style={{ marginTop: "14px", paddingTop: "14px", borderTop: `1px solid ${BG_BORDER}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "12px", color: TEXT_2 }}>Coins you'll earn</span>
-            <span style={{ fontSize: "13px", fontWeight: 700, color: GOLD }}>🪙 +{coins}</span>
+          {/* Coins earned — matches pro-plan gold coin badge */}
+          <div style={{
+            marginTop: "14px", paddingTop: "14px", borderTop: `1px solid ${BG_BORDER}`,
+            display: "inline-flex", alignItems: "center", gap: "6px",
+            background: GOLD_BG, border: `1px solid ${GOLD_BDR}`,
+            borderRadius: "20px", padding: "6px 14px",
+            fontSize: "13px", color: GOLD, fontWeight: 600,
+          }}>
+            🪙 +{coins} coins you'll earn
           </div>
         </div>
 
         {/* ── Paying via ── */}
-        <div style={{ marginTop: "12px", padding: "12px 16px", background: BG_ELEVATED, borderRadius: "12px", border: `1px solid ${BG_BORDER}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{
+          marginTop: "12px", padding: "12px 16px",
+          background: BG_SURFACE, borderRadius: "12px", border: `1px solid ${BG_BORDER}`,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
           <span style={{ fontSize: "12px", color: TEXT_2 }}>Paying via</span>
-          <span style={{ fontSize: "13px", fontWeight: 700, color: TEXT_1 }}>
+          <span style={{ fontSize: "13px", fontWeight: 600, color: TEXT_1 }}>
             {PAYMENT_METHODS.find(m => m.id === selectedMethod)?.title}
             {useCoins && canUseCoin && <span style={{ color: GOLD, marginLeft: "6px" }}>+ 🪙 Coins</span>}
           </span>
         </div>
 
         {/* ── Terms ── */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginTop: "20px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", marginTop: "20px" }}>
           <input type="checkbox" id="terms" checked={agreed}
             onChange={e => { setAgreed(e.target.checked); if (error?.includes("Terms")) { setError(null); setErrorCode(null); } }}
-            style={{ marginTop: "2px", accentColor: PINK, cursor: "pointer" }}
+            style={{ marginTop: "2px", accentColor: accentColor, cursor: "pointer" }}
           />
           <label htmlFor="terms" style={{ fontSize: "12px", color: TEXT_2, lineHeight: 1.6, cursor: "pointer" }}>
             I agree to the Terms &amp; Conditions and authorize recurring payments
@@ -981,15 +962,23 @@ function CheckoutPageContent() {
 
         {/* ── Success ── */}
         {payStatus === "success" && (
-          <div style={{ marginTop: "14px", background: GREEN_BG, border: `1px solid ${GREEN_BDR}`, borderRadius: "12px", padding: "14px 16px", display: "flex", alignItems: "center", gap: "10px", animation: "fadeIn 0.3s ease both" }}>
+          <div style={{
+            marginTop: "14px", background: GREEN_BG, border: `1px solid ${GREEN_BDR}`,
+            borderRadius: "12px", padding: "14px 16px",
+            display: "flex", alignItems: "center", gap: "10px",
+            animation: "fadeIn 0.3s ease both",
+          }}>
             <CheckCircle2 size={16} color={GREEN} style={{ flexShrink: 0 }} />
             <p style={{ fontSize: "13px", color: GREEN, margin: 0 }}>Payment successful! Redirecting…</p>
           </div>
         )}
 
-        {/* ── Retry hint on payment fail ── */}
         {errorCode === "PAYMENT_FAILED" && (
-          <div style={{ marginTop: "10px", padding: "12px 16px", background: BG_ELEVATED, borderRadius: "12px", border: `1px solid ${BG_BORDER}`, animation: "fadeIn 0.3s ease both" }}>
+          <div style={{
+            marginTop: "10px", padding: "12px 16px",
+            background: BG_SURFACE, borderRadius: "12px", border: `1px solid ${BG_BORDER}`,
+            animation: "fadeIn 0.3s ease both",
+          }}>
             <p style={{ fontSize: "12px", color: TEXT_2, margin: 0, lineHeight: 1.6 }}>
               💡 <strong style={{ color: TEXT_1 }}>Try another method</strong> — select a different payment option above and try again.
             </p>
@@ -998,22 +987,27 @@ function CheckoutPageContent() {
 
       </div>
 
-      {/* ── Fixed CTA ── */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: "16px 20px", background: `linear-gradient(to top,${BG_PAGE} 70%,transparent)`, zIndex: 20 }}>
+      {/* ── Fixed CTA — matches pro-plan "Continue to Checkout" button exactly ── */}
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0,
+        padding: "16px 20px",
+        background: "linear-gradient(to top,#FFFFFF 70%,transparent)",
+        display: "flex", justifyContent: "center", zIndex: 20,
+      }}>
         <button
           onClick={handlePayment}
           disabled={paying || payStatus === "success"}
           style={{
-            width: "100%", maxWidth: "440px",
+            width: "100%", maxWidth: "440px", marginLeft:"160px",
             display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-            margin: "0 auto", padding: "16px",
-            borderRadius: "14px", border: "none",
+            padding: "15px", borderRadius: "14px", border: "none",
             cursor: paying || payStatus === "success" ? "not-allowed" : "pointer",
-            fontSize: "15px", fontWeight: 700, letterSpacing: "0.3px", fontFamily: "inherit",
-            background: paying || payStatus === "success" ? BG_MUTED : GRAD_PINK,
+            fontSize: "15px", fontWeight: 700,
+            background: paying || payStatus === "success"
+              ? BG_MUTED
+              : `linear-gradient(135deg, ${accentColor}, ${accentColor}CC)`,
             color: paying || payStatus === "success" ? TEXT_3 : "#fff",
             opacity: paying ? 0.7 : 1, transition: "opacity 0.2s",
-            boxShadow: paying || payStatus === "success" ? "none" : "0 4px 24px rgba(255,62,135,0.28)",
           }}
           onMouseEnter={e => { if (!paying && payStatus !== "success") e.currentTarget.style.opacity = "0.88"; }}
           onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}

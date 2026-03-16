@@ -65,9 +65,9 @@ export default function ComparePlansPage() {
             ← Back
           </button>
 
-          <h1 className="text-2xl font-bold text-gray-900">Compare Plans</h1>
+          <h1 className="text-2xl font-bold text-center text-gray-900">Compare Plans</h1>
 
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-gray-500 text-sm mt-1 text-center">
             Find the perfect plan for your game 🎯
           </p>
         </div>
