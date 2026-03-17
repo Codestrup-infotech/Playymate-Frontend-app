@@ -8,6 +8,8 @@ export async function GET(request, { params }) {
   try {
     const { id } = params;
 
+    console.log(`[API /reels/${id}] 📥 GET request received`, { id });
+
     if (!id) {
       return NextResponse.json(
         {
@@ -32,47 +34,9 @@ export async function GET(request, { params }) {
 
     return NextResponse.json(response.data);
   } catch (error) {
-    console.error("Error getting reel:", error.response?.data || error.message);
+    console.error(`[API /reels/${id}] ❌ GET Error:`, error.response?.data || error.message);
 
-    // If backend is not available, return mock data for demo
-    if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
-      // Mock reel data for demo
-      const mockReel = {
-        reel_id: id,
-        video_url: "https://s3.wasabisys.com/playymate/social/demo/reel/sample.mp4",
-        thumbnail_url: "https://s3.wasabisys.com/playymate/social/demo/reel/thumbnail/sample.jpg",
-        caption: "This is a demo reel #playymate #sports",
-        hashtags: ["playymate", "sports", "demo"],
-        likes_count: Math.floor(Math.random() * 1000),
-        comments_count: Math.floor(Math.random() * 50),
-        views_count: Math.floor(Math.random() * 5000),
-        duration: 30,
-        aspect_ratio: "9:16",
-        visibility: "public",
-        allow_comments: true,
-        allow_duets: false,
-        allow_stitches: false,
-        created_at: new Date().toISOString(),
-        author: {
-          user_id: "demo_user_123",
-          username: "demo_user",
-          full_name: "Demo User",
-          profile_image_url: "https://via.placeholder.com/150",
-        },
-      };
-
-      return NextResponse.json(
-        {
-          status: "success",
-          data: mockReel,
-          error_code: null,
-          _demo: true,
-          _message: "Demo mode - data is mocked (backend not connected)",
-        },
-        { status: 200 }
-      );
-    }
-
+    // Return actual error (no mock fallback)
     return NextResponse.json(
       {
         status: "error",
@@ -89,6 +53,8 @@ export async function PUT(request, { params }) {
   try {
     const { id } = params;
     const body = await request.json();
+
+    console.log(`[API /reels/${id}] 📥 PUT request received`, { id, body });
 
     if (!id) {
       return NextResponse.json(
@@ -163,58 +129,9 @@ export async function PUT(request, { params }) {
 
     return NextResponse.json(response.data);
   } catch (error) {
-    console.error("Error updating reel:", error.response?.data || error.message);
+    console.error(`[API /reels/${id}] ❌ PUT Error:`, error.response?.data || error.message);
 
-    // If backend is not available, return mock response for demo
-    if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
-      const body = await request.json();
-      
-      // Mock successful update response
-      const mockUpdatedReel = {
-        _id: id,
-        reel_id: id,
-        author_id: "demo_user_123",
-        video: {
-          url: "https://s3.wasabisys.com/playymate/social/demo/reel/sample.mp4",
-          duration: 30,
-          thumbnail_url: "https://s3.wasabisys.com/playymate/social/demo/reel/thumbnail/sample.jpg",
-          aspect_ratio: "9:16"
-        },
-        caption: body.caption || "Updated caption!",
-        hashtags: body.hashtags || ["updated"],
-        mentions: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        likes_count: 0,
-        comments_count: 0,
-        shares_count: 0,
-        views_count: 0,
-        saves_count: 0,
-        viewers: [],
-        moderation_status: "pending",
-        moderation_flags: [],
-        visibility: body.visibility || "public",
-        allow_comments: body.allow_comments !== false,
-        allow_duets: false,
-        allow_stitches: false,
-        is_deleted: false,
-      };
-
-      return NextResponse.json(
-        {
-          status: "success",
-          message: "Reel updated",
-          error_code: null,
-          data: {
-            reel: mockUpdatedReel,
-          },
-          _demo: true,
-          _message: "Demo mode - reel updated locally (backend not connected)",
-        },
-        { status: 200 }
-      );
-    }
-
+    // Return actual error (no mock fallback)
     return NextResponse.json(
       {
         status: "error",
@@ -230,6 +147,8 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = params;
+
+    console.log(`[API /reels/${id}] 📥 DELETE request received`, { id });
 
     if (!id) {
       return NextResponse.json(
@@ -255,22 +174,9 @@ export async function DELETE(request, { params }) {
 
     return NextResponse.json(response.data);
   } catch (error) {
-    console.error("Error deleting reel:", error.response?.data || error.message);
+    console.error(`[API /reels/${id}] ❌ DELETE Error:`, error.response?.data || error.message);
 
-    // If backend is not available, return mock response for demo
-    if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
-      return NextResponse.json(
-        {
-          status: "success",
-          message: "Reel deleted",
-          error_code: null,
-          _demo: true,
-          _message: "Demo mode - reel deleted locally (backend not connected)",
-        },
-        { status: 200 }
-      );
-    }
-
+    // Return actual error (no mock fallback)
     return NextResponse.json(
       {
         status: "error",

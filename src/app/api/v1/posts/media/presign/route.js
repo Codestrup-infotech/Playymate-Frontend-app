@@ -19,41 +19,41 @@ const BUCKET_NAME = process.env.WASABI_SOCIAL_BUCKET || process.env.WASABI_BUCKE
 const BASE_PATH = "social";
 
 // Generate unique file key
-function generateFileKey(purpose, fileName, userId) {
+function generateFileKey(type, fileName, userId) {
   const timestamp = Date.now();
   const randomId = Math.random().toString(36).substring(2, 10);
   const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-  const folder = purpose === "thumbnail" ? "reel/thumbnail" : "reel";
+  const folder = type === "video" ? "video" : "image";
   return `${BASE_PATH}/${userId || "anonymous"}/${folder}/${timestamp}-${randomId}-${sanitizedFileName}`;
 }
 
-// POST /api/v1/reels/presign
+// POST /api/v1/posts/media/presign
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { file_name, mime_type, size_bytes, purpose = "reel" } = body;
+    const { filename, mime_type, type } = body;
 
-    console.log(`[API /reels/presign] 📥 POST request received`, { file_name, mime_type, size_bytes, purpose });
+    console.log(`[API /posts/media/presign] 📥 POST request received`, { filename, mime_type, type });
 
     // Validate required fields
-    if (!file_name || !mime_type || !size_bytes) {
+    if (!filename || !mime_type || !type) {
       return NextResponse.json(
         {
           status: "error",
           error_code: "MISSING_REQUIRED_FIELDS",
-          message: "Missing required fields: file_name, mime_type, size_bytes",
+          message: "Missing required fields: filename, mime_type, type",
         },
         { status: 400 }
       );
     }
 
-    // Validate purpose
-    if (!["reel", "thumbnail"].includes(purpose)) {
+    // Validate type
+    if (!["image", "video"].includes(type)) {
       return NextResponse.json(
         {
           status: "error",
-          error_code: "INVALID_PURPOSE",
-          message: "Purpose must be 'reel' or 'thumbnail'",
+          error_code: "INVALID_TYPE",
+          message: "Type must be 'image' or 'video'",
         },
         { status: 400 }
       );
@@ -63,7 +63,7 @@ export async function POST(request) {
     const userId = request.headers.get("x-user-id") || "anonymous";
 
     // Generate file key
-    const key = generateFileKey(purpose, file_name, userId);
+    const key = generateFileKey(type, filename, userId);
     const fullKey = `${key}`;
 
     // Create S3 client
@@ -74,7 +74,6 @@ export async function POST(request) {
       Bucket: BUCKET_NAME,
       Key: fullKey,
       ContentType: mime_type,
-      ContentLength: size_bytes,
     });
 
     const uploadUrl = await getSignedUrl(s3Client, uploadCommand, { expiresIn: 300 });
@@ -85,27 +84,25 @@ export async function POST(request) {
       Key: fullKey,
     });
 
-    const viewUrl = await getSignedUrl(s3Client, viewCommand, { expiresIn: 604800 });
+    const fileUrl = await getSignedUrl(s3Client, viewCommand, { expiresIn: 604800 });
 
-    // Construct full URLs - use path-style for Wasabi compatibility
+    // Construct direct URL for Wasabi
     const wasabiDirectUrl = `https://s3.${REGION}.wasabisys.com/${BUCKET_NAME}/${fullKey}`;
-    
+
     // Build the response
     const responseData = {
       upload_url: uploadUrl,
-      file_url: viewUrl,
-      wasabi_url: uploadUrl,
+      file_url: fileUrl,
       wasabi_direct_url: wasabiDirectUrl,
       key: fullKey,
       expires_in: 300,
-      view_url_expires_in: 604800,
+      url_expires_in: 604800,
     };
 
-    console.log(`[API /reels/presign] ✅ Presign generated`, {
-      file_name,
+    console.log(`[API /posts/media/presign] ✅ Presign generated`, {
+      filename,
       mime_type,
-      size_bytes,
-      purpose,
+      type,
       key: fullKey,
     });
 
@@ -115,7 +112,7 @@ export async function POST(request) {
       data: responseData,
     });
   } catch (error) {
-    console.error(`[API /reels/presign] ❌ Error:`, error);
+    console.error(`[API /posts/media/presign] ❌ Error:`, error);
     return NextResponse.json(
       {
         status: "error",

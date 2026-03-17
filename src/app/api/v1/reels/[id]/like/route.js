@@ -38,22 +38,7 @@ export async function POST(request, { params }) {
   } catch (error) {
     console.error("Error liking reel:", error.response?.data || error.message);
 
-    // If backend is not available, return mock response for demo
-    if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
-      return NextResponse.json(
-        {
-          status: "success",
-          message: "Reel liked",
-          error_code: null,
-          data: {
-            liked: true,
-          },
-          _demo: true,
-        },
-        { status: 200 }
-      );
-    }
-
+    // Return actual error (no mock fallback)
     return NextResponse.json(
       {
         status: "error",
@@ -96,22 +81,7 @@ export async function DELETE(request, { params }) {
   } catch (error) {
     console.error("Error unliking reel:", error.response?.data || error.message);
 
-    // If backend is not available, return mock response for demo
-    if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
-      return NextResponse.json(
-        {
-          status: "success",
-          message: "Reel unliked",
-          error_code: null,
-          data: {
-            liked: false,
-          },
-          _demo: true,
-        },
-        { status: 200 }
-      );
-    }
-
+    // Return actual error (no mock fallback)
     return NextResponse.json(
       {
         status: "error",

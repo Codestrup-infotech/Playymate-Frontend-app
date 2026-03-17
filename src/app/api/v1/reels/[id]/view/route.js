@@ -9,6 +9,8 @@ export async function POST(request, { params }) {
     const { id } = params;
     const body = await request.json();
 
+    console.log(`[API /reels/${id}/view] 📥 POST request received`, { id, body });
+
     if (!id) {
       return NextResponse.json(
         {
@@ -54,25 +56,9 @@ export async function POST(request, { params }) {
 
     return NextResponse.json(response.data);
   } catch (error) {
-    console.error("Error tracking view:", error.response?.data || error.message);
+    console.error(`[API /reels/${id}/view] ❌ Error:`, error.response?.data || error.message);
 
-    // If backend is not available, return mock response for demo
-    if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
-      // Mock successful view tracking
-      return NextResponse.json(
-        {
-          status: "success",
-          error_code: null,
-          data: {
-            view_count: 1,
-          },
-          _demo: true,
-          _message: "Demo mode - view tracked locally (backend not connected)",
-        },
-        { status: 200 }
-      );
-    }
-
+    // Return actual error (no mock fallback)
     return NextResponse.json(
       {
         status: "error",

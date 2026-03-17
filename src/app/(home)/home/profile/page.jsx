@@ -645,9 +645,10 @@ export default function ProfilePage() {
                       className="aspect-[9/16] relative bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-80 transition"
                       onClick={() => handleReelClick(reel)}
                     >
-                      {reel.thumbnail_url ? (
+                      {/* Check for thumbnail in both locations: reel.thumbnail_url or reel.video.thumbnail_url */}
+                      {(reel.thumbnail_url || reel.video?.thumbnail_url) ? (
                         <img 
-                          src={reel.thumbnail_url} 
+                          src={reel.thumbnail_url || reel.video?.thumbnail_url} 
                           alt="Reel" 
                           className="w-full h-full object-cover"
                         />
