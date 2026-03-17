@@ -11,7 +11,7 @@ export default function CompleteExperience() {
 
   // Flow states: 'loading' -> 'questions' -> 'celebration' -> 'home'
   const [flowState, setFlowState] = useState('loading');
-  const [introScreen, setIntroScreen] = useState(null);
+  
   const [celebrationData, setCelebrationData] = useState(null);
   const [screens, setScreens] = useState([]);
   const [step, setStep] = useState(0);

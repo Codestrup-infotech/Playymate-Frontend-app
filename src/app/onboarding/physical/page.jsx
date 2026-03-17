@@ -1705,25 +1705,17 @@ function WeightStep({
   setAgree,
   agree,
   onNext,
-  onBack,
   disabled,
   questionData,
 }) {
   const [unit, setUnit] = useState("kg");
 
-  // Get dynamic config from API or use defaults
   const rangeConfig = questionData?.range_config || {};
   const minWeight = rangeConfig?.min || 30;
   const maxWeight = rangeConfig?.max || 200;
-  const stepWeight = rangeConfig?.step || 0.5;
-  const defaultUnit = rangeConfig?.unit || "kg";
+
   const questionText =
     questionData?.question_text || "What's your Weight";
-  const helpText =
-    questionData?.help_text ||
-    "If you do not know your current weight, select 'Not Sure' and visit your nearest Playmate Center for proper weight check.";
-  const placeholder =
-    questionData?.placeholder || "Enter weight";
 
   const convertWeight = (val, from, to) => {
     if (from === to) return val;
@@ -1734,173 +1726,129 @@ function WeightStep({
 
   const handleUnitChange = (newUnit) => {
     if (newUnit === unit) return;
-    const converted = convertWeight(value, unit, newUnit);
     setUnit(newUnit);
-    setValue(converted);
-  };
-
-  const handleAgree = (e) => {
-    setAgree(e.target.checked);
-    onAgreeChange && onAgreeChange(e.target.checked);
+    setValue(convertWeight(value, unit, newUnit));
   };
 
   return (
-    <>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;600;700&display=swap"
-        rel="stylesheet"
-      />
-<<<<<<< HEAD
-<<<<<<< HEAD
-      <div
+    <div
+      style={{
+        background: "#0a0a0a",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "24px 20px",
+        fontFamily: "'Poppins', sans-serif",
+        color: "white",
+        maxWidth: 390,
+        margin: "0 auto",
+      }}
+    >
+
+      {/* Title */}
+      <h2
         style={{
-          background: "#0a0a0a",
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          padding: "24px 20px",
-          fontFamily: "'Poppins', sans-serif",
-          color: "white",
-          maxWidth: 390,
-          margin: "0 auto",
+          fontFamily: "'Playfair Display', serif",
+          fontSize: 30,
+          fontWeight: 600,
+          textAlign: "center",
+          marginBottom: 24,
+          marginTop: 4,
+          letterSpacing: "-0.3px",
         }}
       >
-     
-        <h2
-  style={{
-    fontFamily: "'Playfair Display', serif",
-    fontSize: 30,
-    fontWeight: 600,
-    textAlign: "center",
-    marginBottom: 24,
-    marginTop: 4,
-    letterSpacing: "-0.3px",
-  }}
->
-  {questionText?.split(" ").map((word, index) => (
-    <span
-      key={index}
-      className={
-        index === 2
-          ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
-          : ""
-      }
-    >
-      {word + " "}
-    </span>
-  ))}
-</h2>
-=======
-=======
->>>>>>> 8e8d1265be2a591c6d717225eae8693c3022bdf8
-
-      <div className=" flex  flex-col items-center   font-[Poppins] text-white">
-
-        {/* Title */}
-        <h2 className="font-Playfair Display text-[30px] font-semibold text-center mb-6 mt-1 tracking-[-0.3px]">
-          {questionText?.split(" ").map((word, index) => (
-            <span
-              key={index}
-              className={
-                index === 3
-                  ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
-                  : ""
-              }
-            >
-              {word + " "}
-            </span>
-          ))}
-        </h2>
-<<<<<<< HEAD
->>>>>>> fd0a87bf53d3ffab7189ca5144e66c4887576c53
-=======
->>>>>>> 8e8d1265be2a591c6d717225eae8693c3022bdf8
-
-        {/* Unit Toggle */}
-        <div className="bg-[#1f1f1f] rounded-full p-1 flex w-[200px] h-[42px] items-center relative mb-8">
-
-          {/* Sliding pill */}
-          <div
-            className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-gradient-to-r from-[#1A43CA] to-[#1FCCF2] transition-all duration-300 ${
-              unit === "lbs" ? "left-1" : "left-[calc(50%+0px)]"
-            }`}
-          />
-
-          <button
-            onClick={() => handleUnitChange("lbs")}
-            className={`flex-1 bg-transparent border-none text-sm font-semibold cursor-pointer relative z-10 ${
-              unit === "lbs" ? "text-white" : "text-[#888]"
-            }`}
+        {questionText?.split(" ").map((word, index) => (
+          <span
+            key={index}
+            className={
+              index === 2
+                ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
+                : ""
+            }
           >
-            Lbs
-          </button>
-
-          <button
-            onClick={() => handleUnitChange("kg")}
-            className={`flex-1 bg-transparent border-none text-sm font-semibold cursor-pointer relative z-10 ${
-              unit === "kg" ? "text-white" : "text-[#888]"
-            }`}
-          >
-            kg
-          </button>
-        </div>
-
-        {/* Weight Display */}
-        <div className="text-[60px] font-semibold leading-none mb-8 flex items-baseline gap-2">
-          {value}
-          <span className="text-[22px] font-light text-white">
-            {unit}
+            {word + " "}
           </span>
-        </div>
+        ))}
+      </h2>
 
-        {/* Horizontal Ruler */}
-        <WeightRuler
-  value={value}
-  setValue={setValue}
-  unit={unit}
-  min={minWeight}
-  max={maxWeight}
-/>
-        {/* Note */}
-        <div className="mt-3 flex flex-col justify-center items-center text-center  rounded-xl px-4 py-3 text-xs text-[#888] leading-[1.65] w-full">
+      {/* Unit Toggle */}
+      <div className="bg-[#1f1f1f] rounded-full p-1 flex w-[200px] h-[42px] items-center relative mb-8">
 
-          <p className="m-0">
-          Note:If you do not
-            know your current weight, select "Not Sure" and visit your
-            nearest Playmate Center for proper weight check.
-          </p>
+        <div
+          className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-gradient-to-r from-[#1A43CA] to-[#1FCCF2] transition-all duration-300 ${
+            unit === "lbs" ? "left-1" : "left-[calc(50%)]"
+          }`}
+        />
 
-          <label className="flex items-center gap-2 mt-2.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={agree}
-              onChange={(e) => setAgree(e.target.checked)}
-              className="accent-pink-500 w-[15px] h-[15px]"
-            />
-
-            <span className="text-[11px] text-[#666]">
-              Not Sure – Visit nearest Playmate Center
-            </span>
-          </label>
-        </div>
-
-        {/* Next Button */}
         <button
-          onClick={onNext}
-          disabled={disabled}
-          className={`mt-3 w-[55px] h-[55px] rounded-full bg-gradient-to-br from-pink-500 to-orange-500 border-none text-white text-[22px] flex items-center justify-center ${
-            disabled
-              ? "opacity-50 cursor-not-allowed"
-              : "cursor-pointer"
+          onClick={() => handleUnitChange("lbs")}
+          className={`flex-1 text-sm font-semibold ${
+            unit === "lbs" ? "text-white" : "text-[#888]"
           }`}
         >
-          ✓
+          Lbs
+        </button>
+
+        <button
+          onClick={() => handleUnitChange("kg")}
+          className={`flex-1 text-sm font-semibold ${
+            unit === "kg" ? "text-white" : "text-[#888]"
+          }`}
+        >
+          kg
         </button>
       </div>
-    </>
+
+      {/* Weight Display */}
+      <div className="text-[60px] font-semibold mb-8 flex items-baseline gap-2">
+        {value}
+        <span className="text-[22px] font-light">{unit}</span>
+      </div>
+
+      {/* Ruler */}
+      <WeightRuler
+        value={value}
+        setValue={setValue}
+        unit={unit}
+        min={minWeight}
+        max={maxWeight}
+      />
+
+      {/* Note */}
+      <div className="mt-3 text-center text-xs text-[#888]">
+        <p>
+          Note: If you do not know your current weight, select "Not Sure"
+          and visit nearest Playmate Center.
+        </p>
+
+        <label className="flex items-center justify-center gap-2 mt-2">
+          <input
+            type="checkbox"
+            checked={agree}
+            onChange={(e) => setAgree(e.target.checked)}
+            className="accent-pink-500"
+          />
+          <span className="text-[11px] text-[#666]">
+            Not Sure – Visit nearest Playmate Center
+          </span>
+        </label>
+      </div>
+
+      {/* Next Button */}
+      <button
+        onClick={onNext}
+        disabled={disabled}
+        className="mt-3 w-[55px] h-[55px] rounded-full bg-gradient-to-br from-pink-500 to-orange-500 text-white text-[22px]"
+      >
+        ✓
+      </button>
+
+    </div>
   );
 }
+
+
 
 
 function WeightRuler({ value, setValue, unit }) {
@@ -2059,25 +2007,23 @@ const IN_MAX = 200;
 // Extra visual ticks to show above/below the clamp limits (display only, not selectable)
 const VISUAL_EXTRA = 4;
 
-function HeightStep({ value,
+function HeightStep({
+  value,
   setValue,
   setAgree,
   agree,
   onNext,
-  onBack,
   disabled,
-  questionData }) {
+  questionData
+}) {
   const [unit, setUnit] = useState("in");
 
-  // Get dynamic config from API or use defaults
   const rangeConfig = questionData?.range_config || {};
   const minHeight = rangeConfig?.min || 50;
   const maxHeight = rangeConfig?.max || 250;
-  const stepHeight = rangeConfig?.step || 1;
-  const defaultUnit = rangeConfig?.unit || 'cm';
-  const questionText = questionData?.question_text || "What's your Height";
-  const helpText = questionData?.help_text || "Stand straight against a wall and measure";
 
+  const questionText =
+    questionData?.question_text || "What's your Height";
 
   const convertHeight = (val, from, to) => {
     if (from === to) return val;
@@ -2094,110 +2040,96 @@ function HeightStep({ value,
   };
 
   return (
-    <>
-   <link
-  href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;600;700&display=swap"
-  rel="stylesheet"
-/>
+    <div className="flex flex-col items-center px-5 font-['Poppins'] text-white max-w-[390px] mx-auto">
 
-<div className=" flex flex-col items-center px-5  font-['Poppins'] text-white max-w-[390px] mx-auto relative">
+      {/* Title */}
+      <h2 className="font-['Playfair_Display'] text-[27px] font-semibold text-center mb-4 mt-1 tracking-[-0.3px]">
+        {questionText?.split(" ").map((word, index) => (
+          <span
+            key={index}
+            className={
+              index === 2
+                ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
+                : ""
+            }
+          >
+            {word + " "}
+          </span>
+        ))}
+      </h2>
 
-  {/* Title */}
-  <h2 className="font-['Playfair_Display'] text-[27px] font-semibold text-center mb-4 mt-1 tracking-[-0.3px]">
-<<<<<<< HEAD
-  {questionText?.split(" ").map((word, index) => (
-    <span
-      key={index}
-      className={
-        index === 2
-          ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
-          : ""
-      }
-    >
-      {word + " "}
-    </span>
-  ))}
-</h2>
-=======
-    {questionText}
-  </h2>
->>>>>>> 8e8d1265be2a591c6d717225eae8693c3022bdf8
+      {/* Unit Toggle */}
+      <div className="bg-[#1f1f1f] rounded-full p-1 flex border border-[#F57264] w-[200px] h-[48px] items-center relative mb-2">
+        <div
+          className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-gradient-to-r from-[#1A43CA] to-[#1FCCF2] transition-all duration-300"
+          style={{ left: unit === "ft" ? 4 : "calc(50% + 0px)" }}
+        />
 
-  {/* Unit toggle */}
-  <div className="bg-[#1f1f1f] rounded-full p-1 flex border border-[#F57264] w-[200px] h-[48px] items-center relative mb-2">
-    
-    {/* Sliding pill */}
-    <div
-      className="absolute top-1 bottom-1 w-[calc(50%-4px)]  rounded-full bg-gradient-to-r from-[#1A43CA] to-[#1FCCF2] transition-all duration-300"
-      style={{
-        left: unit === "ft" ? 4 : "calc(50% + 0px)",
-      }}
-    />
+        <button
+          onClick={() => handleUnitChange("ft")}
+          className={`flex-1 text-[14px] relative z-10 ${
+            unit === "ft" ? "text-white" : "text-[#888]"
+          }`}
+        >
+          Ft
+        </button>
 
-    <button
-      onClick={() => handleUnitChange("ft")}
-      className={`flex-1 bg-transparent border-none font-medium text-[14px] cursor-pointer relative z-[1] ${
-        unit === "ft" ? "text-white" : "text-[#888]"
-      }`}
-    >
-      Ft
-    </button>
+        <button
+          onClick={() => handleUnitChange("in")}
+          className={`flex-1 text-[14px] relative z-10 ${
+            unit === "in" ? "text-white" : "text-[#888]"
+          }`}
+        >
+          Inches
+        </button>
+      </div>
 
-    <button
-      onClick={() => handleUnitChange("in")}
-      className={`flex-1 bg-transparent border-none font-Poppins font-medium text-[14px] cursor-pointer relative z-[1] ${
-        unit === "in" ? "text-white" : "text-[#888]"
-      }`}
-    >
-      Inches
-    </button>
-  </div>
-
-  {/* Ruler + value section */}
-  <HeightRuler value={value} setValue={setValue} unit={unit} />
-
-  {/* Note */} 
-  <div className=" flex flex-col justify-center items-center text-center font-Poppins  px-4 py-3.5 text-[11.5px] text-[#888] leading-[1.6] w-full">
-    <p className="text-white/90">
-    Note:If you do not know your current weight, select "Not Sure" and visit your nearest Playmate Center for proper weight check.
-    </p>
-
-    <label className="flex items-start gap-2 text-gray-800 font-Poppins text-center">
-      <input
-        type="checkbox"
-        checked={agree}
-        onChange={(e) => setAgree(e.target.checked)}
-        className="mt-1 accent-pink-500"
+      {/* Ruler */}
+      <HeightRuler
+        value={value}
+        setValue={setValue}
+        unit={unit}
+        min={minHeight}
+        max={maxHeight}
       />
-      <span>
-        Not Sure – Visit nearest Playmate Center
-      </span>
-    </label>
-  </div>
 
-  {/* Next button */}
-  <button
-    onClick={onNext}
-    disabled={disabled}
-    className="mt-1 w-[50px] h-[50px] rounded-full bg-gradient-to-br from-pink-500 to-orange-500 border-none text-white text-[22px] cursor-pointer flex items-center justify-center "
-  >
-    ✓
-  </button>
+      {/* Note */}
+      <div className="text-center px-4 py-3 text-[11px] text-[#888]">
+        <p className="text-white/90">
+          Note: If you do not know your height, select "Not Sure"
+          and visit your nearest Playmate Center.
+        </p>
 
-</div>
-    </>
+        <label className="flex items-center justify-center gap-2 mt-2">
+          <input
+            type="checkbox"
+            checked={agree}
+            onChange={(e) => setAgree(e.target.checked)}
+            className="accent-pink-500"
+          />
+          <span>Not Sure – Visit nearest Playmate Center</span>
+        </label>
+      </div>
+
+      {/* Next Button */}
+      <button
+        onClick={onNext}
+        disabled={disabled}
+        className="mt-2 w-[50px] h-[50px] rounded-full bg-gradient-to-br from-pink-500 to-orange-500 text-white text-[22px] flex items-center justify-center"
+      >
+        ✓
+      </button>
+
+    </div>
   );
 }
 
-function HeightRuler({ value, setValue, unit, min, max }){
+function HeightRuler({ value, setValue, unit, min, max }) {
   const containerRef = useRef(null);
   const touchStart = useRef(0);
 
-  // // Hard scroll clamp boundaries
-  // const min = unit === "in" ? IN_MIN : FT_MIN;
-  // const max = unit === "in" ? IN_MAX : FT_MAX;
+  const VISUAL_EXTRA = 4;
 
-  // Visual render range — extends VISUAL_EXTRA ticks beyond each hard limit
   const visMin = min - VISUAL_EXTRA;
   const visMax = max + VISUAL_EXTRA;
 
@@ -2205,10 +2137,7 @@ function HeightRuler({ value, setValue, unit, min, max }){
   const viewHeight = 250;
   const center = viewHeight / 2;
 
-  // Clamped selected value
   const clampedValue = Math.min(Math.max(value, min), max);
-
-  // Offset is relative to visMin so the ruler strip positions correctly
   const offset = (clampedValue - visMin) * stepHeight;
 
   useEffect(() => {
@@ -2218,46 +2147,23 @@ function HeightRuler({ value, setValue, unit, min, max }){
     const handleWheel = (e) => {
       e.preventDefault();
       const direction = e.deltaY > 0 ? 1 : -1;
-      setValue((prev) => Math.min(Math.max(prev + direction, min), max));
-    };
-
-    const handleTouchStart = (e) => {
-      touchStart.current = e.touches[0].clientY;
-    };
-
-    const handleTouchMove = (e) => {
-      e.preventDefault();
-      const touchEnd = e.touches[0].clientY;
-      const delta = touchStart.current - touchEnd;
-
-      if (Math.abs(delta) > 8) {
-        const direction = delta > 0 ? 1 : -1;
-        setValue((prev) => Math.min(Math.max(prev + direction, min), max));
-        touchStart.current = touchEnd;
-      }
+      setValue((prev) =>
+        Math.min(Math.max(prev + direction, min), max)
+      );
     };
 
     el.addEventListener("wheel", handleWheel, { passive: false });
-    el.addEventListener("touchstart", handleTouchStart, { passive: false });
-    el.addEventListener("touchmove", handleTouchMove, { passive: false });
 
-    return () => {
-      el.removeEventListener("wheel", handleWheel);
-      el.removeEventListener("touchstart", handleTouchStart);
-      el.removeEventListener("touchmove", handleTouchMove);
-    };
+    return () => el.removeEventListener("wheel", handleWheel);
   }, [setValue, min, max]);
 
   return (
-    <div className="flex items-center  justify-between w-full  px-3">
+    <div className="flex items-center justify-between w-full px-3">
 
-      {/* Left big value */}
+      {/* Value */}
       <div>
-        <div className="text-[40px] font-semibold leading-none text-white font-Poppins ">
-          {clampedValue}
-        </div>
-
-        <div className="text-[16px] text-white mt-1  font-['Poppins']">
+        <div className="text-[40px] font-semibold">{clampedValue}</div>
+        <div className="text-[16px]">
           {unit === "in" ? "Inches" : "Feet"}
         </div>
       </div>
@@ -2265,79 +2171,54 @@ function HeightRuler({ value, setValue, unit, min, max }){
       {/* Ruler */}
       <div
         ref={containerRef}
-        className="relative w-[140px] overflow-hidden cursor-ns-resize   "
+        className="relative w-[140px] overflow-hidden cursor-ns-resize"
         style={{ height: viewHeight }}
       >
 
-        {/* Pink arrow indicator */}
-        {/* <div className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-0 h-0 border-t-[9px] border-t-transparent border-b-[9px] border-b-transparent border-r-[16px] border-r-pink-500" /> */}
-     
-        {/* + Button (Top) */}
-<div
-  onClick={() => setValue((prev) => Math.min(prev + 1, max))}
-  className="absolute right-0  top-2 z-20 w-[30px] h-[30px] bg-white/10 rounded-full flex items-center justify-center text-pink-500 text-[18px] font-bold cursor-pointer"
->
-  +
-</div>
-
-{/* Pink arrow indicator */}
-<div
-  className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-0 h-0 border-t-[9px] border-t-transparent border-b-[9px] border-b-transparent border-r-[16px] border-r-pink-500"
-/>
-
-{/* - Button (Bottom) */}
-<div
-  onClick={() => setValue((prev) => Math.max(prev - 1, min))}
-  className="absolute right-0 bottom-2 z-20 w-[30px] h-[30px] bg-white/10 rounded-full flex items-center justify-center text-pink-500 text-[20px] font-bold cursor-pointer"
->
-  −
-</div>
-
-      
-
-        {/* Tick strip */}
+        {/* + Button */}
         <div
-          className="absolute right-3 w-full transition-transform duration-100 ease-out"
-          style={{
-            transform: `translateY(${center - offset}px)`
-          }}
+          onClick={() => setValue((p) => Math.min(p + 1, max))}
+          className="absolute right-0 top-2 z-20 w-[30px] h-[30px] bg-white/10 rounded-full flex items-center justify-center text-pink-500 cursor-pointer"
+        >
+          +
+        </div>
+
+        {/* Center indicator */}
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[9px] border-b-[9px] border-r-[16px] border-t-transparent border-b-transparent border-r-pink-500" />
+
+        {/* - Button */}
+        <div
+          onClick={() => setValue((p) => Math.max(p - 1, min))}
+          className="absolute right-0 bottom-2 z-20 w-[30px] h-[30px] bg-white/10 rounded-full flex items-center justify-center text-pink-500 cursor-pointer"
+        >
+          −
+        </div>
+
+        {/* Ticks */}
+        <div
+          className="absolute right-3 w-full transition-transform duration-100"
+          style={{ transform: `translateY(${center - offset}px)` }}
         >
           {Array.from({ length: visMax - visMin + 1 }).map((_, i) => {
             const v = visMin + i;
             const isMajor = v % 10 === 0;
             const isSelected = v === clampedValue;
-            const isOutOfRange = v < min || v > max;
 
             return (
               <div
                 key={v}
                 className="flex items-center justify-end pr-[22px]"
-                style={{
-                  height: stepHeight,
-                  opacity: isOutOfRange ? 0.25 : 1
-                }}
+                style={{ height: stepHeight }}
               >
-
                 {isMajor && (
-                  <span
-                    className={`text-[14px] mr-[6px] font-Poppins font-normal ${
-                      isSelected ? "text-white font-normal " : "text-white font-normal"
-                    }`}
-                  >
-                    {v}
-                  </span>
+                  <span className="text-[14px] mr-[6px]">{v}</span>
                 )}
 
                 <div
-                  className="rounded-[1px]"
                   style={{
                     width: isMajor ? 60 : 30,
                     height: isSelected ? 4 : isMajor ? 3 : 1,
-                    background: isSelected
-                      ? "#ec4899"
-                      : isMajor
-                      ? "#FFFFFF"
-                      : "#FFFFFF",
+                    background: isSelected ? "#ec4899" : "#fff"
                   }}
                 />
               </div>
@@ -2352,14 +2233,12 @@ function HeightRuler({ value, setValue, unit, min, max }){
 
 
 
-function BloodStep({ value, setValue, onBack, onComplete, questionData }) {
+function BloodStep({ value, setValue, onComplete, questionData }) {
   const [group, setGroup] = useState(value?.replace(/[+-]/, "") || "A");
   const [rh, setRh] = useState(value?.includes("-") ? "-" : "+");
 
-  // Get dynamic config from API
-  const options = questionData?.options || [];
-  const questionText = questionData?.question_text || "What's your Blood Group";
-  const helpText = questionData?.help_text || "This helps in case of medical emergencies";
+  const questionText =
+    questionData?.question_text || "What's your Blood Group";
 
   const updateValue = (g, r) => {
     setGroup(g);
@@ -2368,38 +2247,36 @@ function BloodStep({ value, setValue, onBack, onComplete, questionData }) {
   };
 
   return (
-    <div className=" bg-black text-white flex flex-col px-4 mt-2">
+    <div className="bg-black text-white flex flex-col px-4 mt-2">
 
+      {/* Title */}
+      <h2 className="text-3xl text-center mb-6 font-semibold font-['Playfair_Display']">
+        {questionText?.split(" ").map((word, index) => (
+          <span
+            key={index}
+            className={
+              index === 2
+                ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
+                : ""
+            }
+          >
+            {word + " "}
+          </span>
+        ))}
+      </h2>
 
-
-      {/* TITLE */}
-      <h2 className="text-3xl text-center mb-6 font-semibold font-Playfair Display">
-  {questionText?.split(" ").map((word, index) => (
-    <span
-      key={index}
-      className={
-        index === 2
-          ? "bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent"
-          : ""
-      }
-    >
-      {word + " "}
-    </span>
-  ))}
-</h2>
-
-      {/* GROUP SELECTOR */}
-      <div className="flex justify-center mb-10 font-Poppins ">
+      {/* Blood Group Selector */}
+      <div className="flex justify-center mb-10">
         <div className="flex bg-[#1f1f1f] border border-[#FF8319] rounded-full p-1 w-[260px]">
           {["A", "B", "AB", "O"].map((g) => (
             <button
               key={g}
               onClick={() => updateValue(g, rh)}
-              className={`flex-1 py-2 rounded-full text-sm font-semibold transition
-                ${group === g
+              className={`flex-1 py-2 rounded-full text-sm font-semibold transition ${
+                group === g
                   ? "bg-gradient-to-r from-pink-500 to-orange-400 text-white"
                   : "text-gray-300"
-                }`}
+              }`}
             >
               {g}
             </button>
@@ -2407,61 +2284,62 @@ function BloodStep({ value, setValue, onBack, onComplete, questionData }) {
         </div>
       </div>
 
-      {/* BIG VALUE */}
-      <div className="text-center font-Poppins ">
-        <div className="text-[90px] font-extrabold leading-none text-red-500">
-          {group}
-          <span className="text-4xl align-top ml-1">{rh}</span>
-        </div>
-      </div>
+      
+      {/* Big Value */}
+      <div className="text-center mb-6">
+  <div className="text-[90px] font-extrabold leading-none text-red-500">
+    {group}
+    <sup className="text-[40px] ml-1">{rh}</sup>
+  </div>
+</div>
 
-      {/* + / - SELECTOR */}
-      <div className="flex justify-center items-center gap-6 mb-10 font-Poppins">
-        <button
-          onClick={() => updateValue(group, "+")}
-          className={`text-3xl font-bold ${rh === "+" ? "text-red-500" : "text-gray-500"
-            }`}
-        >
-          +
-        </button>
+{/* RH Selector */}
+<div className="flex justify-center items-center gap-6 mb-10">
+  <button
+    onClick={() => updateValue(group, "+")}
+    className={`text-3xl font-bold ${
+      rh === "+" ? "text-red-500" : "text-gray-500"
+    }`}
+  >
+    +
+  </button>
 
-        <span className="text-sm text-gray-400">or</span>
+  <span className="text-sm text-gray-400">or</span>
 
-        <button
-          onClick={() => updateValue(group, "-")}
-          className={`text-3xl font-bold ${rh === "-" ? "text-red-500" : "text-gray-500"
-            }`}
-        >
-          −
-        </button>
-      </div>
-
-      {/* CONFIRM */}
+  <button
+    onClick={() => updateValue(group, "-")}
+    className={`text-3xl font-bold ${
+      rh === "-" ? "text-red-500" : "text-gray-500"
+    }`}
+  >
+    −
+  </button>
+</div>
+      {/* Confirm Button */}
       <div className="flex justify-center mb-2">
         <button
           onClick={onComplete}
-          className=" py-2.5 px-4  rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-2xl shadow-lg"
+          className="py-2 px-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-2xl shadow-lg"
         >
           ✓
         </button>
       </div>
 
-      {/* NOTE */}
-      <p className="text-[12px] text-white font-normal  text-center mb-2 font-Poppins  ">
-        Note: If you do not know your current blood group,
-        select “Not Sure” and visit your nearest Playmate
-        Center for proper check.
+      {/* Note */}
+      <p className="text-[12px] text-white text-center mb-2">
+        Note: If you do not know your blood group,
+        visit your nearest Playmate Center.
       </p>
 
-      {/* CHECKBOX */}
-      <label className="flex items-center gap-2 text-xs text-gray-400 font-Poppins justify-center">
+      {/* Checkbox */}
+      <label className="flex items-center gap-2 text-xs text-gray-400 justify-center">
         <input type="checkbox" className="accent-pink-500" />
         Not Sure – Visit nearest Playmate Center
       </label>
+
     </div>
   );
 }
-
 
 
 

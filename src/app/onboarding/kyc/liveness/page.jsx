@@ -155,6 +155,7 @@ export default function LivenessPage() {
   ========================================================== */
 
   return (
+
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
 
 
@@ -177,7 +178,7 @@ export default function LivenessPage() {
      </p>
       )}
 
-        <div className="text-center ">
+        
          
 
          
