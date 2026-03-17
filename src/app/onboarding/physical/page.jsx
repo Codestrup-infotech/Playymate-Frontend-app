@@ -984,10 +984,8 @@ console.log("PENDING COINS:", response.data?.data?.reward?.pending_coins);
 
 
 const nextDisabled =
-(step === 1 && !introAgree) ||
-(step === 2 && !introAgree) ||
-(step === 3 && !weightAgree) ||
-(step === 4 && !heightAgree);
+(step === 1 && !introAgree) ;
+
 
 const goNext = async () => {
 
@@ -2285,13 +2283,13 @@ function BloodStep({ value, setValue, onComplete, questionData }) {
       </div>
 
       
-      {/* Big Value */}
-      <div className="text-center mb-6">
-  <div className="text-[90px] font-extrabold leading-none text-red-500">
-    {group}
-    <sup className="text-[40px] ml-1">{rh}</sup>
-  </div>
-</div>
+     {/* BIG VALUE */}
+     <div className="text-center font-Poppins ">
+        <div className="text-[90px] font-extrabold leading-none text-red-500">
+          {group}
+          <span className="text-4xl align-top ml-1">{rh}</span>
+        </div>
+      </div>
 
 {/* RH Selector */}
 <div className="flex justify-center items-center gap-6 mb-10">

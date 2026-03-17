@@ -1,159 +1,183 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+
+const getToken = () => {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem("access_token") || localStorage.getItem("access_token") || null;
+};
+
+const formatLabel = (str) =>
+  (str || "").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+const iconForSource = (source) => {
+  const map = { SUBSCRIPTION: "🎁", ADJUSTMENT: "⚙️", BOOKING: "🎟️", PURCHASE: "💎", REFERRAL: "🤝", BONUS: "⚡" };
+  return map[source] || "🪙";
+};
 
 export default function TransactionsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
+  const [coinHistory, setCoinHistory] = useState([]);
+  const [diamondHistory, setDiamondHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [coinTotal, setCoinTotal] = useState(0);
 
-  const tabs = ["All", "Gold Coin", "Diamonds"];
+  useEffect(() => {
+    const token = getToken();
+    if (!token) { setLoading(false); return; }
+    fetchHistory(token, page);
+  }, [page]);
 
-  const transactions = [
-    {
-      id: 1,
-      title: "Monthly Pro Credit",
-      date: "Jan 12",
-      type: "Gold Coin",
-      amount: 800,
-      icon: "🎁",
-    },
-    {
-      id: 2,
-      title: "Booking Discount",
-      date: "Jan 15",
-      type: "Gold Coin",
-      amount: -120,
-      icon: "🎟️",
-    },
-    {
-      id: 3,
-      title: "Pro Diamond Pack",
-      date: "Jan 16",
-      type: "Diamonds",
-      amount: 800,
-      icon: "💎",
-    },
-    {
-      id: 4,
-      title: "Event Hosting Bonus",
-      date: "Jan 18",
-      type: "Gold Coin",
-      amount: 50,
-      icon: "⚡",
-    },
-    {
-      id: 5,
-      title: "Super Boost Event",
-      date: "Jan 19",
-      type: "Diamonds",
-      amount: -30,
-      icon: "🚀",
-    },
-    {
-      id: 6,
-      title: "Team Event",
-      date: "Jan 19",
-      type: "Gold Coin",
-      amount: -50,
-      icon: "🏀",
-    },
-  ];
+  const fetchHistory = async (token, pg) => {
+    setLoading(true);
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const [coinRes, diaRes] = await Promise.all([
+        fetch(`${API_BASE}/coins/history?page=${pg}&limit=20&type=ALL`, { headers }),
+        fetch(`${API_BASE}/diamonds/history?page=${pg}&limit=20`, { headers }),
+      ]);
+      const [coinData, diaData] = await Promise.all([coinRes.json(), diaRes.json()]);
+      if (coinData?.status === "success") {
+        const txns = coinData.data?.transactions || [];
+        setCoinHistory(pg === 1 ? txns.map((t) => ({ ...t, coinType: "GOLD" })) :
+          (prev) => [...prev, ...txns.map((t) => ({ ...t, coinType: "GOLD" }))]);
+        setCoinTotal(coinData.data?.pagination?.total || 0);
+      }
+      if (diaData?.status === "success") {
+        const txns = diaData.data?.transactions || [];
+        setDiamondHistory(pg === 1 ? txns.map((t) => ({ ...t, coinType: "DIAMOND" })) :
+          (prev) => [...prev, ...txns.map((t) => ({ ...t, coinType: "DIAMOND" }))]);
+      }
+    } catch (err) {
+      console.error("Transaction fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filtered = transactions
+  const allTransactions = [...coinHistory, ...diamondHistory].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+  );
+
+  const filtered = allTransactions
+    .filter((t) => {
+      if (activeTab === "Gold Coin") return t.coinType === "GOLD";
+      if (activeTab === "Diamonds") return t.coinType === "DIAMOND";
+      return true;
+    })
     .filter((t) =>
-      activeTab === "All" ? true : t.type === activeTab
-    )
-    .filter((t) =>
-      t.title.toLowerCase().includes(search.toLowerCase())
+      formatLabel(t.source_reference || t.source || "")
+        .toLowerCase()
+        .includes(search.toLowerCase())
     );
 
   return (
-    <div className="bg-black text-white min-h-screen px-6 pt-6 pb-10">
-
-      {/* Back + Title */}
-      <div className="flex items-center mb-6">
-        <button onClick={() => router.back()} className="mr-3">
-          <ArrowLeft size={22} />
+    <div className="min-h-screen bg-[#F5F6FA] text-gray-900 pb-10 font-sans">
+      {/* Header */}
+      <div className=" px-5 pb-4 flex items-center gap-4 shadow-sm">
+        <button
+          onClick={() => router.back()}
+          className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center"
+        >
+          <ArrowLeft size={18} className="text-gray-700" />
         </button>
-        <h1 className="text-xl font-semibold">Transactions</h1>
+        <h1 className="text-xl font-bold">Transactions</h1>
       </div>
 
       {/* Search */}
-      <div className="flex items-center bg-zinc-900 border border-pink-500 rounded-xl px-4 py-3 mb-6">
-        <Search size={18} className="text-pink-400 mr-3" />
-        <input
-          placeholder="Search"
-          className="bg-transparent outline-none text-sm w-full"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      <div className="px-4 mt-4 mb-4">
+        <div className="flex items-center bg-white border border-gray-200 rounded-2xl px-4 py-3 gap-3 shadow-sm">
+          <Search size={16} className="text-pink-400 shrink-0" />
+          <input
+            placeholder="Search transactions..."
+            className="bg-transparent outline-none text-sm w-full text-gray-700 placeholder-gray-400"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-zinc-900 rounded-full p-1 flex mb-6">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2 text-sm rounded-full transition ${
-              activeTab === tab
-                ? "bg-gradient-to-r from-pink-500 to-orange-500"
-                : "text-gray-400"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {/* Transaction Cards */}
-      <div className="space-y-4">
-        {filtered.map((t) => (
-          <div
-            key={t.id}
-            className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl flex justify-between items-center"
-          >
-            <div className="flex items-center gap-4">
-              <div className="text-2xl">{t.icon}</div>
-
-              <div>
-                <p className="font-medium">{t.title}</p>
-
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-gray-400">
-                    {t.date}
-                  </span>
-
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${
-                      t.type === "Gold Coin"
-                        ? "bg-yellow-500/20 text-yellow-400"
-                        : "bg-blue-500/20 text-blue-400"
-                    }`}
-                  >
-                    {t.type === "Gold Coin" ? "Gold" : "Diamond"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <span
-              className={`font-semibold ${
-                t.amount > 0
-                  ? "text-green-400"
-                  : "text-red-400"
+      <div className="px-4 mb-5">
+        <div className="bg-gray-200/60 rounded-full p-1 flex">
+          {["All", "Gold Coin", "Diamonds"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-2 text-sm font-semibold rounded-full transition-all duration-200 ${
+                activeTab === tab
+                  ? "bg-gradient-to-r from-pink-500 to-orange-500 text-white shadow"
+                  : "text-gray-500"
               }`}
             >
-              {t.amount > 0 ? "+" : ""}
-              {t.amount}
-            </span>
-          </div>
-        ))}
+              {tab}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* List */}
+      <div className="px-4 space-y-3">
+        {loading && page === 1 ? (
+          Array(6).fill(0).map((_, i) => (
+            <div key={i} className="h-16 rounded-2xl bg-gray-200 animate-pulse" />
+          ))
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16 text-gray-400">
+            <p className="text-5xl mb-3">📭</p>
+            <p className="text-sm">No transactions found</p>
+          </div>
+        ) : (
+          filtered.map((t) => (
+            <div
+              key={t._id}
+              className="bg-white border border-gray-100 p-4 rounded-2xl flex justify-between items-center shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-xl shrink-0">
+                  {iconForSource(t.source)}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    {formatLabel(t.source_reference || t.source)}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-gray-400">
+                      {new Date(t.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                      t.coinType === "GOLD" ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-500"
+                    }`}>
+                      {t.coinType === "GOLD" ? "Gold" : "Diamond"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <span className={`text-base font-bold shrink-0 ml-3 ${
+                t.type === "CREDIT" ? "text-green-500" : "text-red-400"
+              }`}>
+                {t.type === "CREDIT" ? "+" : "-"}{t.amount}
+              </span>
+            </div>
+          ))
+        )}
+
+        {!loading && coinTotal > coinHistory.length && (
+          <button
+            onClick={() => setPage((p) => p + 1)}
+            className="w-full py-3 rounded-2xl border border-gray-200 bg-white text-gray-500 text-sm font-medium shadow-sm"
+          >
+            Load more
+          </button>
+        )}
+      </div>
     </div>
   );
 }

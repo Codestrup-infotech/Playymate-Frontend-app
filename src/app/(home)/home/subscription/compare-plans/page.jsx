@@ -248,55 +248,48 @@
 
 import React, { useState } from "react";
 
-const USER_ACTIVE_PLAN = "Pro";
+// ── User's actual active subscription ─────────────────────────────────────────
+// Replace these with real values from your API (GET /api/v1/subscriptions/me)
+// plan_name comes from the response, billing_cycle from billing_cycle.unit (DAYS 30=monthly, 365=yearly)
+const USER_ACTIVE_PLAN  = "Pro";      // e.g. res.data.plan_name
+const USER_ACTIVE_CYCLE = "monthly";  // "monthly" | "yearly" — derived from billing_cycle
 
 const plans = ["Free", "Starter", "Pro", "Premium"];
-const prices = ["₹0/mo", "₹99/mo", "₹299/mo", "₹499/mo"];
+
+const pricing = {
+  monthly: ["₹0/mo",  "₹99/mo",   "₹299/mo",   "₹499/mo"],
+  yearly:  ["₹0/yr",  "₹949/yr",  "₹2,869/yr", "₹4,789/yr"],
+};
 
 const features = [
-  { name: "Teams", values: ["2", "5", "∞", "∞"] },
-  { name: "Events/mo", values: ["3", "10", "∞", "∞"] },
-  { name: "Participants", values: ["20", "50", "200", "∞"] },
-  { name: "Gold Coins/mo", values: ["50", "200", "800", "2000"] },
-  { name: "Passport PDF", values: ["✖", "✔", "✔", "✔"] },
-  { name: "Physical Passport", values: ["✖", "✖", "✔", "✔"] },
-  { name: "AI Suggestions", values: ["✖", "Basic", "Advanced", "Priority"] },
-  { name: "Boost Posts", values: ["✖", "✖", "✔", "✔"] },
-  { name: "Ad-Free", values: ["✖", "✖", "✔", "✔"] },
-  { name: "Priority Support", values: ["✖", "✖", "✖", "✔"] },
-  { name: "VIP Passport", values: ["✖", "✖", "✖", "✔"] },
+  { name: "Teams",             values: ["2",   "5",     "∞",        "∞"]        },
+  { name: "Events/mo",         values: ["3",   "10",    "∞",        "∞"]        },
+  { name: "Participants",      values: ["20",  "50",    "200",      "∞"]        },
+  { name: "Gold Coins/mo",     values: ["50",  "200",   "800",      "2000"]     },
+  { name: "Passport PDF",      values: ["✖",   "✔",     "✔",        "✔"]        },
+  { name: "Physical Passport", values: ["✖",   "✖",     "✔",        "✔"]        },
+  { name: "AI Suggestions",    values: ["✖",   "Basic", "Advanced", "Priority"] },
+  { name: "Boost Posts",       values: ["✖",   "✖",     "✔",        "✔"]        },
+  { name: "Ad-Free",           values: ["✖",   "✖",     "✔",        "✔"]        },
+  { name: "Priority Support",  values: ["✖",   "✖",     "✖",        "✔"]        },
+  { name: "VIP Passport",      values: ["✖",   "✖",     "✖",        "✔"]        },
 ];
 
 const planMeta = {
-  Free: {
-    color: "text-gray-600",
-    border: "border-gray-200",
-    glow: "",
-    gradient: "from-gray-400 to-gray-300",
-  },
-  Starter: {
-    color: "text-blue-600",
-    border: "border-blue-400",
-    glow: "shadow-blue-200",
-    gradient: "from-blue-500 to-blue-400",
-  },
-  Pro: {
-    color: "text-orange-600",
-    border: "border-orange-400",
-    glow: "shadow-orange-200",
-    gradient: "from-pink-500 to-orange-400",
-  },
-  Premium: {
-    color: "text-pink-600",
-    border: "border-pink-400",
-    glow: "shadow-pink-200",
-    gradient: "from-pink-500 to-purple-500",
-  },
+  Free:    { color: "text-gray-600",   border: "border-gray-200",  glow: "",                 },
+  Starter: { color: "text-blue-600",   border: "border-blue-400",  glow: "shadow-blue-200",  },
+  Pro:     { color: "text-orange-600", border: "border-orange-400",glow: "shadow-orange-200",},
+  Premium: { color: "text-pink-600",   border: "border-pink-400",  glow: "shadow-pink-200",  },
 };
 
 export default function ComparePlansPage() {
-  const [billingCycle, setBillingCycle] = useState("monthly");
+  const [billingCycle, setBillingCycle] = useState(USER_ACTIVE_CYCLE);
   const activeIdx = plans.indexOf(USER_ACTIVE_PLAN);
+  const prices    = pricing[billingCycle];
+
+  // A column is "active" only when BOTH plan name AND billing cycle match the user's subscription
+  const isActivePlan = (plan) =>
+    plan === USER_ACTIVE_PLAN && billingCycle === USER_ACTIVE_CYCLE;
 
   return (
     <div className="min-h-screen bg-white text-gray-800 px-4 py-10 flex justify-center">
@@ -310,9 +303,7 @@ export default function ComparePlansPage() {
           >
             ← Back
           </button>
-
           <h1 className="text-2xl font-bold text-center text-gray-900">Compare Plans</h1>
-
           <p className="text-gray-500 text-sm mt-1 text-center">
             Find the perfect plan for your game 🎯
           </p>
@@ -332,12 +323,11 @@ export default function ComparePlansPage() {
                 }`}
               >
                 {cycle}
-
-                {cycle === "yearly" && (
+                {/* {cycle === "yearly" && (
                   <span className="ml-1.5 text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full">
                     Save 20%
                   </span>
-                )}
+                )} */}
               </button>
             ))}
           </div>
@@ -348,20 +338,16 @@ export default function ComparePlansPage() {
           <div style={{ minWidth: 520 }}>
 
             {/* Column Headers */}
-            <div
-              className="grid mb-0"
-              style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr" }}
-            >
+            <div className="grid" style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr" }}>
               <div />
-
               {plans.map((plan, i) => {
-                const isActive = plan === USER_ACTIVE_PLAN;
-                const meta = planMeta[plan];
+                const active = isActivePlan(plan); // ← only true on matching cycle
+                const meta   = planMeta[plan];
 
                 return (
                   <div key={plan} className="flex flex-col items-center px-1">
-
-                    {isActive ? (
+                    {/* Active badge — only shows on the correct cycle */}
+                    {active ? (
                       <div className="mb-2 px-3 py-0.5 rounded-full text-[11px] font-bold bg-gradient-to-r from-pink-500 to-orange-500 text-white shadow tracking-wide">
                         ✦ Active
                       </div>
@@ -369,20 +355,14 @@ export default function ComparePlansPage() {
                       <div className="mb-2 h-[22px]" />
                     )}
 
-                    <div
-                      className={`w-full rounded-xl border-2 ${meta.border} ${
-                        isActive
-                          ? `shadow-md ${meta.glow} bg-gray-50`
-                          : "bg-white"
-                      } py-3 px-2 text-center`}
-                    >
-                      <p className={`text-sm font-bold ${meta.color}`}>
-                        {plan}
-                      </p>
-
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {prices[i]}
-                      </p>
+                    <div className={`w-full rounded-xl border-2 ${meta.border} ${
+                      active ? `shadow-md ${meta.glow} bg-gray-50` : "bg-white"
+                    } py-3 px-2 text-center`}>
+                      <p className={`text-sm font-bold ${meta.color}`}>{plan}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{prices[i]}</p>
+                      {billingCycle === "yearly" && i > 0 && (
+                        <p className="text-[10px] text-green-600 font-semibold mt-0.5">Save 20%</p>
+                      )}
                     </div>
                   </div>
                 );
@@ -394,43 +374,28 @@ export default function ComparePlansPage() {
               {features.map((feature, rowIdx) => (
                 <div
                   key={rowIdx}
-                  className={`grid items-center ${
-                    rowIdx !== 0 ? "border-t border-gray-200" : ""
-                  }`}
+                  className={`grid items-center ${rowIdx !== 0 ? "border-t border-gray-200" : ""}`}
                   style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr" }}
                 >
-
-                  <div className="py-3.5 pl-4 text-sm text-gray-700">
-                    {feature.name}
-                  </div>
-
+                  <div className="py-3.5 pl-4 text-sm text-gray-700">{feature.name}</div>
                   {feature.values.map((val, colIdx) => {
-                    const isActive = plans[colIdx] === USER_ACTIVE_PLAN;
-                    const isTick = val === "✔";
+                    const active  = isActivePlan(plans[colIdx]); // ← same check
+                    const isTick  = val === "✔";
                     const isCross = val === "✖";
-                    const isPaid = colIdx >= 2;
+                    const isPaid  = colIdx >= 2;
 
                     return (
-                      <div
-                        key={colIdx}
-                        className={`py-3.5 text-center text-sm ${
-                          isActive ? "bg-orange-50" : ""
-                        }`}
-                      >
+                      <div key={colIdx} className={`py-3.5 text-center text-sm ${active ? "bg-orange-50" : ""}`}>
                         {isTick ? (
                           <span className="text-green-500 font-bold">✔</span>
                         ) : isCross ? (
                           <span className="text-gray-400">✖</span>
                         ) : (
-                          <span
-                            className={`font-semibold ${
-                              isActive
-                                ? "text-orange-600"
-                                : isPaid
-                                ? "bg-gradient-to-r from-pink-500 to-orange-500 bg-clip-text text-transparent"
-                                : "text-gray-500"
-                            }`}
-                          >
+                          <span className={`font-semibold ${
+                            active  ? "text-orange-600"
+                            : isPaid ? "bg-gradient-to-r from-pink-500 to-orange-500 bg-clip-text text-transparent"
+                            : "text-gray-500"
+                          }`}>
                             {val}
                           </span>
                         )}
@@ -442,43 +407,38 @@ export default function ComparePlansPage() {
             </div>
 
             {/* CTA Buttons */}
-            <div
-              className="grid mt-4 gap-2"
-              style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr" }}
-            >
+            <div className="grid mt-4 gap-2" style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr" }}>
               <div />
-
               {plans.map((plan, i) => {
-                const isActive = plan === USER_ACTIVE_PLAN;
+                const active    = isActivePlan(plan); // ← same check
                 const isUpgrade = i > activeIdx;
 
                 return (
                   <button
                     key={plan}
-                    disabled={isActive}
+                    disabled={active}
                     className={`py-2 rounded-xl text-xs font-bold transition-all ${
-                      isActive
+                      active
                         ? "bg-orange-100 text-orange-600 border border-orange-300 cursor-default"
                         : isUpgrade
                         ? "bg-gradient-to-r from-pink-500 to-orange-500 text-white hover:opacity-90"
                         : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                     }`}
                   >
-                    {isActive
-                      ? "Current"
-                      : isUpgrade
-                      ? "Upgrade"
-                      : "Downgrade"}
+                    {active ? "Current" : isUpgrade ? "Upgrade" : "Downgrade"}
                   </button>
                 );
               })}
             </div>
+
           </div>
         </div>
 
         {/* Footer */}
         <p className="text-center text-xs text-gray-400 pb-4">
-          All plans include 30-day free trial · Cancel anytime · Prices in INR
+          {billingCycle === "yearly"
+            ? "Yearly plans billed annually · Cancel anytime · Prices in INR"
+            : "All plans include 30-day free trial · Cancel anytime · Prices in INR"}
         </p>
 
       </div>
