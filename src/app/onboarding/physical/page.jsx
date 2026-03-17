@@ -1775,30 +1775,30 @@ function WeightStep({
       {/* Unit Toggle */}
       <div className="bg-[#1f1f1f] rounded-full p-1 flex w-[200px] h-[42px] items-center relative mb-8">
 
-        <div
-          className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-gradient-to-r from-[#1A43CA] to-[#1FCCF2] transition-all duration-300 ${
-            unit === "lbs" ? "left-1" : "left-[calc(50%)]"
-          }`}
-        />
+      <div
+            className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-gradient-to-r from-[#1A43CA] to-[#1FCCF2] transition-all duration-300 ${
+              unit === "lbs" ? "left-1" : "left-[calc(50%+0px)]"
+            }`}
+          />
 
-        <button
-          onClick={() => handleUnitChange("lbs")}
-          className={`flex-1 text-sm font-semibold ${
-            unit === "lbs" ? "text-white" : "text-[#888]"
-          }`}
-        >
-          Lbs
-        </button>
+          <button
+            onClick={() => handleUnitChange("lbs")}
+            className={`flex-1 bg-transparent border-none text-sm font-semibold cursor-pointer relative z-10 ${
+              unit === "lbs" ? "text-white" : "text-[#888]"
+            }`}
+          >
+            Lbs
+          </button>
 
-        <button
-          onClick={() => handleUnitChange("kg")}
-          className={`flex-1 text-sm font-semibold ${
-            unit === "kg" ? "text-white" : "text-[#888]"
-          }`}
-        >
-          kg
-        </button>
-      </div>
+          <button
+            onClick={() => handleUnitChange("kg")}
+            className={`flex-1 bg-transparent border-none text-sm font-semibold cursor-pointer relative z-10 ${
+              unit === "kg" ? "text-white" : "text-[#888]"
+            }`}
+          >
+            kg
+          </button>
+        </div>
 
       {/* Weight Display */}
       <div className="text-[60px] font-semibold mb-8 flex items-baseline gap-2">
