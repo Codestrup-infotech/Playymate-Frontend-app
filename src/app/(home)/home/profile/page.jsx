@@ -157,7 +157,13 @@ export default function ProfilePage() {
         try {
           const response = await postService.getUserPosts(profile._id, 20, null);
           console.log('Posts API response:', response);
-          const newPosts = response.data?.data?.posts || response.data?.data?.items || [];
+          const newPosts = (response.data?.data?.posts || response.data?.data?.items || [])
+            .filter(post => {
+              // Filter out videos and GIFs - only show static images in Posts tab
+              if (!post.media || post.media.length === 0) return true;
+              const mediaType = post.media[0].type?.toLowerCase();
+              return mediaType !== 'video' && mediaType !== 'gif';
+            });
           setPosts(newPosts);
           setPostsCursor(response.data?.data?.next_cursor);
           setHasMorePosts(response.data?.data?.has_more || false);
@@ -167,7 +173,12 @@ export default function ProfilePage() {
           try {
             const altResponse = await postService.getMyPosts(20, null);
             console.log('Alternate Posts API response:', altResponse);
-            const newPosts = altResponse.data?.data?.posts || altResponse.data?.data?.items || [];
+            const newPosts = (altResponse.data?.data?.posts || altResponse.data?.data?.items || [])
+              .filter(post => {
+                if (!post.media || post.media.length === 0) return true;
+                const mediaType = post.media[0].type?.toLowerCase();
+                return mediaType !== 'video' && mediaType !== 'gif';
+              });
             setPosts(newPosts);
             setPostsCursor(altResponse.data?.data?.next_cursor);
             setHasMorePosts(altResponse.data?.data?.has_more || false);
@@ -189,9 +200,16 @@ export default function ProfilePage() {
       if (activeTab === "Reels" && profile?._id && !reelsLoading) {
         setReelsLoading(true);
         try {
-          const response = await postService.getUserReels(profile._id, 20, null);
-          console.log('Reels API response:', response);
-          const newReels = response.data?.data?.reels || response.data?.data?.items || [];
+          // Use posts API and filter for videos/GIFs (reels API may not work)
+          const response = await postService.getUserPosts(profile._id, 50, null);
+          console.log('Reels from posts API response:', response);
+          const allPosts = response.data?.data?.posts || response.data?.data?.items || [];
+          const newReels = allPosts.filter(post => {
+            if (!post.media || post.media.length === 0) return false;
+            const mediaType = post.media[0].type?.toLowerCase();
+            return mediaType === 'video' || mediaType === 'gif';
+          });
+          console.log('Filtered videos/GIFs for reels:', newReels);
           setReels(newReels);
           setReelsCursor(response.data?.data?.next_cursor);
           setHasMoreReels(response.data?.data?.has_more || false);
@@ -199,9 +217,14 @@ export default function ProfilePage() {
           console.error("Error fetching reels:", error);
           // Try alternate endpoint
           try {
-            const altResponse = await postService.getMyReels(20, null);
-            console.log('Alternate Reels API response:', altResponse);
-            const newReels = altResponse.data?.data?.reels || altResponse.data?.data?.items || [];
+            const altResponse = await postService.getMyPosts(50, null);
+            console.log('Alternate Reels from posts API response:', altResponse);
+            const allPosts = altResponse.data?.data?.posts || altResponse.data?.data?.items || [];
+            const newReels = allPosts.filter(post => {
+              if (!post.media || post.media.length === 0) return false;
+              const mediaType = post.media[0].type?.toLowerCase();
+              return mediaType === 'video' || mediaType === 'gif';
+            });
             setReels(newReels);
             setReelsCursor(altResponse.data?.data?.next_cursor);
             setHasMoreReels(altResponse.data?.data?.has_more || false);
@@ -222,7 +245,12 @@ export default function ProfilePage() {
       setPostsLoading(true);
       try {
         const response = await postService.getUserPosts(profile._id, 20, postsCursor);
-        const newPosts = response.data?.data?.posts || response.data?.data?.items || [];
+        const newPosts = (response.data?.data?.posts || response.data?.data?.items || [])
+          .filter(post => {
+            if (!post.media || post.media.length === 0) return true;
+            const mediaType = post.media[0].type?.toLowerCase();
+            return mediaType !== 'video' && mediaType !== 'gif';
+          });
         setPosts(prev => [...prev, ...newPosts]);
         setPostsCursor(response.data?.data?.next_cursor);
         setHasMorePosts(response.data?.data?.has_more || false);
@@ -238,8 +266,14 @@ export default function ProfilePage() {
     if (reelsCursor && hasMoreReels && !reelsLoading && profile?._id) {
       setReelsLoading(true);
       try {
-        const response = await postService.getUserReels(profile._id, 20, reelsCursor);
-        const newReels = response.data?.data?.reels || response.data?.data?.items || [];
+        // Use posts API and filter for videos/GIFs
+        const response = await postService.getUserPosts(profile._id, 50, reelsCursor);
+        const allPosts = response.data?.data?.posts || response.data?.data?.items || [];
+        const newReels = allPosts.filter(post => {
+          if (!post.media || post.media.length === 0) return false;
+          const mediaType = post.media[0].type?.toLowerCase();
+          return mediaType === 'video' || mediaType === 'gif';
+        });
         setReels(prev => [...prev, ...newReels]);
         setReelsCursor(response.data?.data?.next_cursor);
         setHasMoreReels(response.data?.data?.has_more || false);
@@ -638,38 +672,73 @@ export default function ProfilePage() {
               </div>
             ) : reels.length > 0 ? (
               <>
-                <div className="grid grid-cols-3 gap-1 mb-4">
+
+
+                {/* <div className="grid grid-cols-3 gap-1 mb-4">
                   {reels.map((reel) => (
                     <div 
-                      key={reel.reel_id} 
-                      className="aspect-[9/16] relative bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-80 transition"
+                      key={reel.reel_id || reel.post_id} 
+                      className="aspect-[9/16] relative rounded overflow-hidden cursor-pointer"
                       onClick={() => handleReelClick(reel)}
                     >
+
+                      
                       {reel.thumbnail_url ? (
-                        <img 
-                          src={reel.thumbnail_url} 
-                          alt="Reel" 
-                          className="w-full h-full object-cover"
-                        />
+                        <>
+                          <img 
+                            src={reel.thumbnail_url} 
+                            alt="Reel" 
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Play size={36} className="text-white drop-shadow-md" />
+                          </div>
+                        </>
+                      )
+                      
+                      
+                      : reel.media && reel.media[0]?.url ? (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                          <Play size={36} className="text-gray-800" />
+                        </div>
                       ) : (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gray-700">
-                          <Play size={20} className="text-gray-400" />
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                          <Play size={36} className="text-gray-800" />
                         </div>
                       )}
-                      {/* Play icon overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Play size={32} className="text-white drop-shadow-lg" />
-                      </div>
-                      {/* Overlay with stats */}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                        <div className="flex items-center gap-2 text-white text-xs">
-                          <Heart size={12} /> {reel.likes_count || 0}
-                          <MessageSquare size={12} /> {reel.comments_count || 0}
-                        </div>
-                      </div>
                     </div>
                   ))}
-                </div>
+                </div> */}
+
+
+<div className="grid grid-cols-3 gap-1 mb-4">
+  {reels.map((reel) => (
+    <div
+      key={reel.reel_id || reel.post_id}
+      className="aspect-[9/16] relative rounded overflow-hidden cursor-pointer"
+      onClick={() => handleReelClick(reel)}
+    >
+      {reel.media && reel.media[0]?.url ? (
+        <>
+          <video
+            src={reel.media[0].url}
+            className="w-full h-full object-cover"
+            muted
+            preload="metadata"
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Play size={40} className="text-white drop-shadow-md" />
+          </div>
+        </>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+          <Play size={36} className="text-gray-600" />
+        </div>
+      )}
+    </div>
+  ))}
+</div>
+
                 {hasMoreReels && (
                   <div className="flex justify-center py-4">
                     <button 

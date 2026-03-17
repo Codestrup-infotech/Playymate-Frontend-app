@@ -363,33 +363,49 @@ Post ID
 
 Success Response (200)
 {
-  "status": "success",
-  "data": {
-    "post": {
-      "post_id": "post_abc123",
-      "content": {
-        "text": "Great session at the court today! 🎾",
-        "location": null
-      },
-      "media": [],
-      "visibility": "public",
-      "likes_count": 42,
-      "comments_count": 15,
-      "shares_count": 3,
-      "created_at": "2025-01-15T10:30:00.000Z",
-      "is_auto_generated": false,
-      "allow_comments": true
+    "status": "success",
+    "data": {
+        "post": {
+            "post_id": "post_mmpzicd7ovul9x",
+            "content": {
+                "text": "beach vibes #beach # alibag # Goa ",
+                "mention_tags": [],
+                "hashtags": [
+                    "beach"
+                ],
+                "location": null
+            },
+            "media": [
+                {
+                    "type": "image",
+                    "url": "https://playymate.s3.wasabisys.com/posts/69b1517328c3fc04a36cfec8/1773472114538-j5konk.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260314%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260314T070834Z&X-Amz-Expires=604800&X-Amz-Signature=544f842e7c1ee1173766a73545f36dfe310f781b21a6339342a5e765f46566d7&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "thumbnail_url": null,
+                    "duration": null,
+                    "width": 960,
+                    "height": 1280,
+                    "_id": "69b50976e09445184af79392",
+                    "uploaded_at": "2026-03-14T07:08:38.297Z"
+                }
+            ],
+            "visibility": "public",
+            "likes_count": 0,
+            "comments_count": 0,
+            "shares_count": 0,
+            "created_at": "2026-03-14T07:08:38.297Z",
+            "is_auto_generated": false,
+            "allow_comments": true
+        },
+        "author": {
+            "user_id": "69b1517328c3fc04a36cfec8",
+            "full_name": "patil90",
+            "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773299892790-5a435a49-img2.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260312%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260312T071812Z&X-Amz-Expires=604800&X-Amz-Signature=d11ed3b6505b4b1b114eb7a7343768bc509b1b554f2a3e344dfbaf00073e34b9&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+            "username": "patil90",
+            "is_verified": false
+        }
     },
-    "author": {
-      "user_id": "user_123",
-      "full_name": "John Doe",
-      "profile_image_url": "https://...",
-      "username": "johndoe",
-      "is_verified": true
-    }
-  },
-  "error_code": null
+    "error_code": null
 }
+
 
 Error Responses
 404 Not Found: Post not found
@@ -564,13 +580,48 @@ null
 
 Success Response (200)
 {
-  "status": "success",
-  "data": {
-    "posts": [...],
-    "next_cursor": "abc123",
-    "has_more": true
-  },
-  "error_code": null
+    "status": "success",
+    "data": {
+        "posts": [
+            {
+                "post_id": "post_mmpylwmnz0hioe",
+                "content": {
+                    "text": "First post.  #instagram #playymate\n",
+                    "mention_tags": [],
+                    "hashtags": [
+                        "instagram",
+                        "playymate"
+                    ],
+                    "location": null
+                },
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "https://playymate.s3.wasabisys.com/posts/69b1517328c3fc04a36cfec8/1773470603510-qu3cb3.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260314%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260314T064323Z&X-Amz-Expires=604800&X-Amz-Signature=e89e4abc665a8ec5e8a8cff19403d945351652b1f6fac1df93b820f25fc6a014&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                        "thumbnail_url": null,
+                        "duration": null,
+                        "width": 192,
+                        "height": 148,
+                        "_id": "69b5038ce09445184af79271",
+                        "uploaded_at": "2026-03-14T06:43:24.909Z"
+                    }
+                ],
+                "visibility": "public",
+                "likes_count": 0,
+                "comments_count": 0,
+                "shares_count": 0,
+                "created_at": "2026-03-14T06:43:24.910Z",
+                "author": {
+                    "user_id": "69b1517328c3fc04a36cfec8",
+                    "full_name": "patil90",
+                    "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773299892790-5a435a49-img2.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260312%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260312T071812Z&X-Amz-Expires=604800&X-Amz-Signature=d11ed3b6505b4b1b114eb7a7343768bc509b1b554f2a3e344dfbaf00073e34b9&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+                }
+            }
+        ],
+        "next_cursor": null,
+        "has_more": false
+    },
+    "error_code": null
 }
 
 
@@ -818,7 +869,7 @@ Generate presigned URL for uploading media (images/videos)
 Endpoint
 POST /api/v1/posts/media/presign
 
-Request Body
+Request Body 
 {
   "filename": "post_image.jpg",
   "mime_type": "image/jpeg",
@@ -906,11 +957,12 @@ Request Body (Video)
 
 Request Body (Thumbnail)
 {
-  "file_name": "thumb.jpg",
-  "mime_type": "image/jpeg",
-  "size_bytes": 204800,
-  "purpose": "thumbnail"
+  "file_name": "my_reel.mp4",
+  "mime_type": "video/mp4",
+  "size_bytes": 10485760,
+  "purpose": "reel"
 }
+
 
 Validation
 purpose: reel | thumbnail (default: reel)
@@ -918,17 +970,19 @@ URL valid for 5 minutes
 View URL valid for 7 days
 Success Response (200)
 {
-  "status": "success",
-  "data": {
-    "upload_url": "https://wasabi.../put URL",
-    "file_url": "https://wasabi.../7-day signed GET URL",
-    "wasabi_url": "https://wasabi.../direct URL",
-    "key": "reels/user123/timestamp_my_reel.mp4",
-    "expires_in": 300,
-    "view_url_expires_in": 604800
-  },
-  "error_code": null
+    "status": "success",
+    "error_code": null,
+    "data": {
+        "upload_url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773663667136-5c98d8a1-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T122107Z&X-Amz-Expires=300&X-Amz-Signature=ea584524176a07645684eb87a5ba79d277aa1f51fcbda0954486767ec92a5799&X-Amz-SignedHeaders=content-length%3Bhost&x-amz-checksum-crc32=AAAAAA%3D%3D&x-amz-sdk-checksum-algorithm=CRC32&x-id=PutObject",
+        "file_url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773663667136-5c98d8a1-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T122107Z&X-Amz-Expires=604800&X-Amz-Signature=6e19440d43796954c3acb619e75db849364575a5d67a927210b402e71225003c&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+        "wasabi_url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773663667136-5c98d8a1-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T122107Z&X-Amz-Expires=300&X-Amz-Signature=ea584524176a07645684eb87a5ba79d277aa1f51fcbda0954486767ec92a5799&X-Amz-SignedHeaders=content-length%3Bhost&x-amz-checksum-crc32=AAAAAA%3D%3D&x-amz-sdk-checksum-algorithm=CRC32&x-id=PutObject",
+        "wasabi_direct_url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773663667136-5c98d8a1-my_reel.mp4",
+        "key": "social/69b1517328c3fc04a36cfec8/reel/1773663667136-5c98d8a1-my_reel.mp4",
+        "expires_in": 300,
+        "view_url_expires_in": 604800
+    }
 }
+
 
 
 Create Reel
@@ -1020,15 +1074,49 @@ Request Body
   "allow_comments": true
 }
 
+
 Success Response (200)
 {
-  "status": "success",
-  "data": {
-    "reel_id": "reel_abc123",
-    "updated_at": "2025-01-15T12:00:00.000Z"
-  },
-  "error_code": null
+    "status": "success",
+    "message": "Reel updated",
+    "error_code": null,
+    "data": {
+        "reel": {
+            "_id": "69b7f5e101e0a06c2e8a57e5",
+            "reel_id": "reel_69b7f5e101e0a06c2e8a57e4",
+            "author_id": "69b1517328c3fc04a36cfec8",
+            "video": {
+                "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773663667136-5c98d8a1-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T122107Z&X-Amz-Expires=604800&X-Amz-Signature=6e19440d43796954c3acb619e75db849364575a5d67a927210b402e71225003c&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "duration": 30,
+                "thumbnail_url": "{{reel_thumb_url}}",
+                "aspect_ratio": "9:16"
+            },
+            "caption": "Updated caption! #badminton #epic",
+            "hashtags": [
+                "badminton",
+                "epic"
+            ],
+            "mentions": [],
+            "created_at": "2026-03-16T12:21:53.468Z",
+            "updated_at": "2026-03-16T12:36:13.177Z",
+            "likes_count": 0,
+            "comments_count": 0,
+            "shares_count": 0,
+            "views_count": 0,
+            "saves_count": 0,
+            "viewers": [],
+            "moderation_status": "pending",
+            "moderation_flags": [],
+            "visibility": "public",
+            "allow_comments": true,
+            "allow_duets": false,
+            "allow_stitches": false,
+            "is_deleted": false,
+            "__v": 0
+        }
+    }
 }
+
 
 
 Track View (with watch duration)
@@ -1043,12 +1131,13 @@ Request Body
 
 Success Response (200)
 {
-  "status": "success",
-  "data": {
-    "view_recorded": true
-  },
-  "error_code": null
+    "status": "success",
+    "error_code": null,
+    "data": {
+        "view_count": 1
+    }
 }
+
 
 
 Get Reel Analytics
@@ -1092,14 +1181,239 @@ null
 
 Success Response (200)
 {
-  "status": "success",
-  "data": {
-    "reels": [...],
-    "next_cursor": "abc123",
-    "has_more": true
-  },
-  "error_code": null
+    "success": true,
+    "data": [
+        {
+            "content_id": "69b7f5e101e0a06c2e8a57e5",
+            "content_type": "reel",
+            "author": {
+                "user_id": "69b1517328c3fc04a36cfec8",
+                "username": "testuseraditya",
+                "full_name": "Test User Aditya",
+                "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+            },
+            "engagement": {
+                "likes_count": 0,
+                "comments_count": 0,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T12:21:53.468Z",
+            "personalization_score": 39.54,
+            "video": {
+                "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773663667136-5c98d8a1-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T122107Z&X-Amz-Expires=604800&X-Amz-Signature=6e19440d43796954c3acb619e75db849364575a5d67a927210b402e71225003c&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "thumbnail_url": "{{reel_thumb_url}}",
+                "duration": 30
+            },
+            "caption": "Updated caption! #badminton #epic",
+            "hashtags": [
+                "badminton",
+                "epic"
+            ],
+            "views_count": 1,
+            "rank": 1,
+            "trend_velocity": "+40%"
+        },
+        {
+            "content_id": "69b794d12d999271053ca9ae",
+            "content_type": "reel",
+            "author": {
+                "user_id": "69b1517328c3fc04a36cfec8",
+                "username": "testuseraditya",
+                "full_name": "Test User Aditya",
+                "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+            },
+            "engagement": {
+                "likes_count": 0,
+                "comments_count": 3,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T05:27:45.607Z",
+            "personalization_score": 33.38,
+            "video": {
+                "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773638856072-adf0e172-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T052736Z&X-Amz-Expires=604800&X-Amz-Signature=7f89de00a576f0b07fd0ceb2f399ac677d255c81d9e089b95ed57f7300c59743&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "thumbnail_url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/thumbnail/1773638861496-1c2c96fc-thumb.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T052741Z&X-Amz-Expires=604800&X-Amz-Signature=49e20f95e5d97f946e2a26c619567807f012d6992d62d585d430a60d53d4b60e&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "duration": 30
+            },
+            "caption": "Smash of the century! #badminton #sports",
+            "hashtags": [
+                "badminton",
+                "sports",
+                "playymate"
+            ],
+            "views_count": 0,
+            "rank": 2,
+            "trend_velocity": "+33%"
+        },
+        {
+            "content_id": "69b7a2eba08368b2106a3b0c",
+            "content_type": "post",
+            "author": {
+                "user_id": "69b25fe5324d8a481da5e0aa",
+                "username": null,
+                "full_name": "abc",
+                "profile_image_url": null
+            },
+            "engagement": {
+                "likes_count": 0,
+                "comments_count": 0,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T06:27:55.009Z",
+            "personalization_score": 33.35,
+            "content": {
+                "text": "",
+                "hashtags": [],
+                "location": null
+            },
+            "media": [
+                {
+                    "type": "image",
+                    "url": "https://playymate.s3.wasabisys.com/posts/69b25fe5324d8a481da5e0aa/1773642472385-cu1o8a.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T062752Z&X-Amz-Expires=604800&X-Amz-Signature=54f3a77892a44f514e7b517c7aafb776b732529d496d1272a06913188b04ac24&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "thumbnail_url": null,
+                    "duration": null,
+                    "width": 275,
+                    "height": 183,
+                    "_id": "69b7a2eba08368b2106a3b0d",
+                    "uploaded_at": "2026-03-16T06:27:55.008Z"
+                }
+            ],
+            "rank": 3,
+            "trend_velocity": "+33%"
+        },
+        {
+            "content_id": "69b7996205cb81f04ae3c574",
+            "content_type": "post",
+            "author": {
+                "user_id": "69b1517328c3fc04a36cfec8",
+                "username": "testuseraditya",
+                "full_name": "Test User Aditya",
+                "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+            },
+            "engagement": {
+                "likes_count": 1,
+                "comments_count": 1,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T05:47:14.513Z",
+            "personalization_score": 33.22,
+            "content": {
+                "text": "E2E test post #e2e",
+                "hashtags": [
+                    "e2e"
+                ],
+                "location": null
+            },
+            "media": [],
+            "rank": 4,
+            "trend_velocity": "+33%"
+        },
+        {
+            "content_id": "69b793383d44b16fcddd85eb",
+            "content_type": "reel",
+            "author": {
+                "user_id": "69b1517328c3fc04a36cfec8",
+                "username": "testuseraditya",
+                "full_name": "Test User Aditya",
+                "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+            },
+            "engagement": {
+                "likes_count": 1,
+                "comments_count": 0,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T05:20:56.857Z",
+            "personalization_score": 32.45,
+            "video": {
+                "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773637556732-26384cae-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T050556Z&X-Amz-Expires=604800&X-Amz-Signature=8c27140a5ea834e73e7808280af0319de95385aad074d45bb91791d95ff6b876&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "thumbnail_url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/thumbnail/1773637567247-58829bf8-thumb.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T050607Z&X-Amz-Expires=604800&X-Amz-Signature=a979fdc796bd6cf20b1e79fa2b49597acba432cb618f19006903499f768181de&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "duration": 30
+            },
+            "caption": "Smash of the century! #badminton #sports",
+            "hashtags": [
+                "badminton",
+                "sports",
+                "playymate"
+            ],
+            "views_count": 0,
+            "rank": 5,
+            "trend_velocity": "+32%"
+        },
+        {
+            "content_id": "69b78fd58089bfbbc4c40014",
+            "content_type": "reel",
+            "author": {
+                "user_id": "69b1517328c3fc04a36cfec8",
+                "username": "testuseraditya",
+                "full_name": "Test User Aditya",
+                "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+            },
+            "engagement": {
+                "likes_count": 0,
+                "comments_count": 0,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T05:06:29.164Z",
+            "personalization_score": 32.07,
+            "video": {
+                "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773637556732-26384cae-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T050556Z&X-Amz-Expires=604800&X-Amz-Signature=8c27140a5ea834e73e7808280af0319de95385aad074d45bb91791d95ff6b876&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "thumbnail_url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/thumbnail/1773637567247-58829bf8-thumb.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T050607Z&X-Amz-Expires=604800&X-Amz-Signature=a979fdc796bd6cf20b1e79fa2b49597acba432cb618f19006903499f768181de&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "duration": 30
+            },
+            "caption": "Smash of the century! #badminton #sports",
+            "hashtags": [
+                "badminton",
+                "sports",
+                "playymate"
+            ],
+            "views_count": 1,
+            "rank": 6,
+            "trend_velocity": "+32%"
+        }
+    ],
+    "pagination": {
+        "page": 1,
+        "limit": 20,
+        "cursor": null,
+        "has_next": false
+    }
 }
+
 
 
 Trending Reels
@@ -1119,11 +1433,142 @@ No
 
 Success Response (200)
 {
-  "status": "success",
-  "data": {
-    "reels": [...]
-  },
-  "error_code": null
+    "status": "success",
+    "error_code": null,
+    "data": {
+        "reels": [
+            {
+                "reel_id": "reel_69b794d12d999271053ca9ad",
+                "video": {
+                    "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773638856072-adf0e172-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T052736Z&X-Amz-Expires=604800&X-Amz-Signature=7f89de00a576f0b07fd0ceb2f399ac677d255c81d9e089b95ed57f7300c59743&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "duration": 30,
+                    "thumbnail_url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/thumbnail/1773638861496-1c2c96fc-thumb.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T052741Z&X-Amz-Expires=604800&X-Amz-Signature=49e20f95e5d97f946e2a26c619567807f012d6992d62d585d430a60d53d4b60e&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "aspect_ratio": "9:16"
+                },
+                "caption": "Smash of the century! #badminton #sports",
+                "hashtags": [
+                    "badminton",
+                    "sports",
+                    "playymate"
+                ],
+                "likes_count": 0,
+                "comments_count": 3,
+                "views_count": 0,
+                "created_at": "2026-03-16T05:27:45.607Z",
+                "trending_score": 4.5,
+                "author": {
+                    "_id": "69b1517328c3fc04a36cfec8",
+                    "full_name": "Test User Aditya",
+                    "username": "testuseraditya",
+                    "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+                }
+            },
+            {
+                "reel_id": "reel_69b793383d44b16fcddd85ea",
+                "video": {
+                    "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773637556732-26384cae-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T050556Z&X-Amz-Expires=604800&X-Amz-Signature=8c27140a5ea834e73e7808280af0319de95385aad074d45bb91791d95ff6b876&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "duration": 30,
+                    "thumbnail_url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/thumbnail/1773637567247-58829bf8-thumb.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T050607Z&X-Amz-Expires=604800&X-Amz-Signature=a979fdc796bd6cf20b1e79fa2b49597acba432cb618f19006903499f768181de&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "aspect_ratio": "9:16"
+                },
+                "caption": "Smash of the century! #badminton #sports",
+                "hashtags": [
+                    "badminton",
+                    "sports",
+                    "playymate"
+                ],
+                "likes_count": 1,
+                "comments_count": 0,
+                "views_count": 0,
+                "created_at": "2026-03-16T05:20:56.857Z",
+                "trending_score": 1,
+                "author": {
+                    "_id": "69b1517328c3fc04a36cfec8",
+                    "full_name": "Test User Aditya",
+                    "username": "testuseraditya",
+                    "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+                }
+            },
+            {
+                "reel_id": "reel_69b7f5e101e0a06c2e8a57e4",
+                "video": {
+                    "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773663667136-5c98d8a1-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T122107Z&X-Amz-Expires=604800&X-Amz-Signature=6e19440d43796954c3acb619e75db849364575a5d67a927210b402e71225003c&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "duration": 30,
+                    "thumbnail_url": "{{reel_thumb_url}}",
+                    "aspect_ratio": "9:16"
+                },
+                "caption": "Updated caption! #badminton #epic",
+                "hashtags": [
+                    "badminton",
+                    "epic"
+                ],
+                "likes_count": 0,
+                "comments_count": 0,
+                "views_count": 1,
+                "created_at": "2026-03-16T12:21:53.468Z",
+                "trending_score": 0.1,
+                "author": {
+                    "_id": "69b1517328c3fc04a36cfec8",
+                    "full_name": "Test User Aditya",
+                    "username": "testuseraditya",
+                    "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+                }
+            },
+            {
+                "reel_id": "reel_69b78fd58089bfbbc4c40013",
+                "video": {
+                    "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773637556732-26384cae-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T050556Z&X-Amz-Expires=604800&X-Amz-Signature=8c27140a5ea834e73e7808280af0319de95385aad074d45bb91791d95ff6b876&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "duration": 30,
+                    "thumbnail_url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/thumbnail/1773637567247-58829bf8-thumb.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T050607Z&X-Amz-Expires=604800&X-Amz-Signature=a979fdc796bd6cf20b1e79fa2b49597acba432cb618f19006903499f768181de&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "aspect_ratio": "9:16"
+                },
+                "caption": "Smash of the century! #badminton #sports",
+                "hashtags": [
+                    "badminton",
+                    "sports",
+                    "playymate"
+                ],
+                "likes_count": 0,
+                "comments_count": 0,
+                "views_count": 1,
+                "created_at": "2026-03-16T05:06:29.164Z",
+                "trending_score": 0.1,
+                "author": {
+                    "_id": "69b1517328c3fc04a36cfec8",
+                    "full_name": "Test User Aditya",
+                    "username": "testuseraditya",
+                    "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+                }
+            },
+            {
+                "reel_id": "reel_69b004c20cf47767df704265",
+                "video": {
+                    "url": "https://s3.wasabisys.com/playymate/premium_photo-1669750817438-3f7f3112de8d?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T124846Z&X-Amz-Expires=604800&X-Amz-Signature=51c47913d42b141a0be3b9789fd08609af95c7027c4314c4052c58f52c40477b&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "duration": 30,
+                    "thumbnail_url": "https://s3.wasabisys.com/playymate/premium_photo-1669750817438-3f7f3112de8d?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T124846Z&X-Amz-Expires=604800&X-Amz-Signature=51c47913d42b141a0be3b9789fd08609af95c7027c4314c4052c58f52c40477b&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "aspect_ratio": "9:16",
+                    "file_key": "premium_photo-1669750817438-3f7f3112de8d",
+                    "thumbnail_file_key": "premium_photo-1669750817438-3f7f3112de8d"
+                },
+                "caption": "Smash of the century! #badminton #sports",
+                "hashtags": [
+                    "badminton",
+                    "sports",
+                    "playymate"
+                ],
+                "likes_count": 0,
+                "comments_count": 0,
+                "views_count": 0,
+                "created_at": "2026-03-10T11:47:14.848Z",
+                "trending_score": 0,
+                "author": {
+                    "_id": "69af049dc7fea2ebdae7603f",
+                    "full_name": "sdsd sdf",
+                    "profile_image_url": null
+                }
+            }
+        ]
+    }
 }
 
 
@@ -1267,48 +1712,87 @@ null
 
 Success Response (200)
 {
-  "status": "success",
-  "data": {
-    "stories": [
-      {
-        "story_id": "story_abc123",
-        "media_url": "https://...",
-        "media_type": "image",
-        "caption": "Morning session!",
-        "created_at": "2025-01-15T10:30:00.000Z",
-        "expires_at": "2025-01-16T10:30:00.000Z",
-        "author": { ... },
-        "viewers_count": 10,
-        "has_been_viewed": false
-      }
-    ],
-    "next_cursor": "abc123",
-    "has_more": true
-  },
-  "error_code": null
+    "status": "success",
+    "error_code": null,
+    "data": {
+        "stories": [
+            {
+                "story_id": "story_69b7fd3b45878c9276f0b801",
+                "_id": "69b7fd3b45878c9276f0b802",
+                "media": {
+                    "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/story/1773665564522-ed2c07fa-my_story.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T125244Z&X-Amz-Expires=604800&X-Amz-Signature=9cde046ec5a88d2e9f1360f0e8ff0e8015d1c27b83ee4ed93c71f03e546aad8d&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "type": "image",
+                    "duration": 5
+                },
+                "caption": "Morning session at the court!",
+                "created_at": "2026-03-16T12:53:15.277Z",
+                "expires_at": "2026-03-17T12:53:15.277Z",
+                "viewer_count": 0,
+                "visibility": "public",
+                "author": {
+                    "_id": "69b1517328c3fc04a36cfec8",
+                    "full_name": "Test User Aditya",
+                    "username": "testuseraditya",
+                    "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+                }
+            },
+            {
+                "story_id": "story_69b797d7616a6affc887d4a1",
+                "_id": "69b797d7616a6affc887d4a2",
+                "media": {
+                    "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/story/1773639620438-0740e485-my_story.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T054020Z&X-Amz-Expires=604800&X-Amz-Signature=c1ba3f8296da118c27051d4afa2ed602e3b20bc1079619be6e02b0cca35d309c&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "type": "image",
+                    "duration": 5
+                },
+                "caption": "Morning session at the court!",
+                "created_at": "2026-03-16T05:40:39.368Z",
+                "expires_at": "2026-03-17T05:40:39.368Z",
+                "viewer_count": 0,
+                "visibility": "public",
+                "author": {
+                    "_id": "69b1517328c3fc04a36cfec8",
+                    "full_name": "Test User Aditya",
+                    "username": "testuseraditya",
+                    "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+                }
+            }
+        ],
+        "next_cursor": null,
+        "has_more": false
+    }
 }
+
 
 
 Get Story by ID
 Get a single story (marks as viewed)
 Endpoint
 GET /api/v1/stories/:id
-
 Success Response (200)
 {
-  "status": "success",
-  "data": {
-    "story_id": "story_abc123",
-    "media_url": "https://...",
-    "media_type": "image",
-    "caption": "Morning session!",
-    "overlays": [...],
-    "created_at": "2025-01-15T10:30:00.000Z",
-    "expires_at": "2025-01-16T10:30:00.000Z",
-    "author": { ... },
-    "has_been_viewed": true
-  },
-  "error_code": null
+    "status": "success",
+    "error_code": null,
+    "data": {
+        "story_id": "story_69b797d7616a6affc887d4a1",
+        "media": {
+            "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/story/1773639620438-0740e485-my_story.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T054020Z&X-Amz-Expires=604800&X-Amz-Signature=c1ba3f8296da118c27051d4afa2ed602e3b20bc1079619be6e02b0cca35d309c&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+            "type": "image",
+            "duration": 5
+        },
+        "caption": "Morning session at the court!",
+        "created_at": "2026-03-16T05:40:39.368Z",
+        "expires_at": "2026-03-17T05:40:39.368Z",
+        "visibility": "public",
+        "is_archived": false,
+        "viewer_count": 1,
+        "has_viewed": false,
+        "author": {
+            "_id": "69b1517328c3fc04a36cfec8",
+            "full_name": "Test User Aditya",
+            "username": "testuseraditya",
+            "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+        }
+    }
 }
 
 
@@ -1319,14 +1803,14 @@ POST /api/v1/stories/:id/view
 
 Request Body
 {}
-
 Success Response (200)
 {
-  "status": "success",
-  "data": {
-    "view_recorded": true
-  },
-  "error_code": null
+    "status": "success",
+    "error_code": null,
+    "data": {
+        "viewed": true,
+        "viewer_count": 1
+    }
 }
 
 
@@ -1347,19 +1831,22 @@ No
 
 Success Response (200)
 {
-  "status": "success",
-  "data": {
-    "viewers": [
-      {
-        "user_id": "user_123",
-        "full_name": "John Doe",
-        "username": "johndoe",
-        "profile_image_url": "https://...",
-        "viewed_at": "2025-01-15T10:35:00.000Z"
-      }
-    ]
-  },
-  "error_code": null
+    "status": "success",
+    "error_code": null,
+    "data": {
+        "viewers": [
+            {
+                "user": {
+                    "_id": "69b24942de0a4943749ea605",
+                    "full_name": "karan patil shinde",
+                    "profile_image_url": null
+                },
+                "viewed_at": "2026-03-16T13:21:36.778Z"
+            }
+        ],
+        "next_cursor": null,
+        "has_more": false
+    }
 }
 
 
@@ -1486,7 +1973,7 @@ Success Response (200)
 Likes Module
 Base path: /api/v1/likes
 Like Content
-Like a post, comment, or reel
+Like a post, comment, or reel, story
 Endpoint
 POST /api/v1/likes
 
@@ -2016,4 +2503,554 @@ Upload URLs expire after 5 minutes
 Story expiration: 24 hours from creation
 Comment edit window: 5 minutes
 Post delete undo window: 5 minutes
+
+
+                                            Trending Feeds
+
+
+GET {{baseUrl}}/api/v1/feed/trending?time_period=today&limit=20
+
+{
+    "success": true,
+    "data": [
+        {
+            "content_id": "69b7f5e101e0a06c2e8a57e5",
+            "content_type": "reel",
+            "author": {
+                "user_id": "69b1517328c3fc04a36cfec8",
+                "username": "testuseraditya",
+                "full_name": "Test User Aditya",
+                "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+            },
+            "engagement": {
+                "likes_count": 0,
+                "comments_count": 0,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T12:21:53.468Z",
+            "personalization_score": 39.54,
+            "video": {
+                "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773663667136-5c98d8a1-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T122107Z&X-Amz-Expires=604800&X-Amz-Signature=6e19440d43796954c3acb619e75db849364575a5d67a927210b402e71225003c&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "thumbnail_url": "{{reel_thumb_url}}",
+                "duration": 30
+            },
+            "caption": "Updated caption! #badminton #epic",
+            "hashtags": [
+                "badminton",
+                "epic"
+            ],
+            "views_count": 1,
+            "rank": 1,
+            "trend_velocity": "+40%"
+        },
+        {
+            "content_id": "69b794d12d999271053ca9ae",
+            "content_type": "reel",
+            "author": {
+                "user_id": "69b1517328c3fc04a36cfec8",
+                "username": "testuseraditya",
+                "full_name": "Test User Aditya",
+                "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+            },
+            "engagement": {
+                "likes_count": 0,
+                "comments_count": 3,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T05:27:45.607Z",
+            "personalization_score": 33.38,
+            "video": {
+                "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773638856072-adf0e172-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T052736Z&X-Amz-Expires=604800&X-Amz-Signature=7f89de00a576f0b07fd0ceb2f399ac677d255c81d9e089b95ed57f7300c59743&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "thumbnail_url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/thumbnail/1773638861496-1c2c96fc-thumb.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T052741Z&X-Amz-Expires=604800&X-Amz-Signature=49e20f95e5d97f946e2a26c619567807f012d6992d62d585d430a60d53d4b60e&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "duration": 30
+            },
+            "caption": "Smash of the century! #badminton #sports",
+            "hashtags": [
+                "badminton",
+                "sports",
+                "playymate"
+            ],
+            "views_count": 0,
+            "rank": 2,
+            "trend_velocity": "+33%"
+        },
+        {
+            "content_id": "69b7a2eba08368b2106a3b0c",
+            "content_type": "post",
+            "author": {
+                "user_id": "69b25fe5324d8a481da5e0aa",
+                "username": null,
+                "full_name": "abc",
+                "profile_image_url": null
+            },
+            "engagement": {
+                "likes_count": 0,
+                "comments_count": 0,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T06:27:55.009Z",
+            "personalization_score": 33.35,
+            "content": {
+                "text": "",
+                "hashtags": [],
+                "location": null
+            },
+            "media": [
+                {
+                    "type": "image",
+                    "url": "https://playymate.s3.wasabisys.com/posts/69b25fe5324d8a481da5e0aa/1773642472385-cu1o8a.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T062752Z&X-Amz-Expires=604800&X-Amz-Signature=54f3a77892a44f514e7b517c7aafb776b732529d496d1272a06913188b04ac24&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "thumbnail_url": null,
+                    "duration": null,
+                    "width": 275,
+                    "height": 183,
+                    "_id": "69b7a2eba08368b2106a3b0d",
+                    "uploaded_at": "2026-03-16T06:27:55.008Z"
+                }
+            ],
+            "rank": 3,
+            "trend_velocity": "+33%"
+        },
+        {
+            "content_id": "69b7996205cb81f04ae3c574",
+            "content_type": "post",
+            "author": {
+                "user_id": "69b1517328c3fc04a36cfec8",
+                "username": "testuseraditya",
+                "full_name": "Test User Aditya",
+                "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+            },
+            "engagement": {
+                "likes_count": 1,
+                "comments_count": 1,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T05:47:14.513Z",
+            "personalization_score": 33.22,
+            "content": {
+                "text": "E2E test post #e2e",
+                "hashtags": [
+                    "e2e"
+                ],
+                "location": null
+            },
+            "media": [],
+            "rank": 4,
+            "trend_velocity": "+33%"
+        },
+        {
+            "content_id": "69b793383d44b16fcddd85eb",
+            "content_type": "reel",
+            "author": {
+                "user_id": "69b1517328c3fc04a36cfec8",
+                "username": "testuseraditya",
+                "full_name": "Test User Aditya",
+                "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+            },
+            "engagement": {
+                "likes_count": 1,
+                "comments_count": 0,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T05:20:56.857Z",
+            "personalization_score": 32.45,
+            "video": {
+                "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773637556732-26384cae-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T050556Z&X-Amz-Expires=604800&X-Amz-Signature=8c27140a5ea834e73e7808280af0319de95385aad074d45bb91791d95ff6b876&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "thumbnail_url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/thumbnail/1773637567247-58829bf8-thumb.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T050607Z&X-Amz-Expires=604800&X-Amz-Signature=a979fdc796bd6cf20b1e79fa2b49597acba432cb618f19006903499f768181de&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "duration": 30
+            },
+            "caption": "Smash of the century! #badminton #sports",
+            "hashtags": [
+                "badminton",
+                "sports",
+                "playymate"
+            ],
+            "views_count": 0,
+            "rank": 5,
+            "trend_velocity": "+32%"
+        },
+        {
+            "content_id": "69b78fd58089bfbbc4c40014",
+            "content_type": "reel",
+            "author": {
+                "user_id": "69b1517328c3fc04a36cfec8",
+                "username": "testuseraditya",
+                "full_name": "Test User Aditya",
+                "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+            },
+            "engagement": {
+                "likes_count": 0,
+                "comments_count": 0,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T05:06:29.164Z",
+            "personalization_score": 32.07,
+            "video": {
+                "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773637556732-26384cae-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T050556Z&X-Amz-Expires=604800&X-Amz-Signature=8c27140a5ea834e73e7808280af0319de95385aad074d45bb91791d95ff6b876&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "thumbnail_url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/thumbnail/1773637567247-58829bf8-thumb.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T050607Z&X-Amz-Expires=604800&X-Amz-Signature=a979fdc796bd6cf20b1e79fa2b49597acba432cb618f19006903499f768181de&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "duration": 30
+            },
+            "caption": "Smash of the century! #badminton #sports",
+            "hashtags": [
+                "badminton",
+                "sports",
+                "playymate"
+            ],
+            "views_count": 1,
+            "rank": 6,
+            "trend_velocity": "+32%"
+        }
+    ],
+    "pagination": {
+        "page": 1,
+        "limit": 20,
+        "cursor": null,
+        "has_next": false
+    }
+}
+
+
+
+
+
+
+
+
+GET  {{baseUrl}}/api/v1/feed/trending?time_period=week&limit=20
+
+
+
+
+   "success": true,
+    "data": [
+        {
+            "content_id": "69b7fe6fbc1907255de7754e",
+            "content_type": "reel",
+            "author": {
+                "user_id": "69b1517328c3fc04a36cfec8",
+                "username": "testuseraditya",
+                "full_name": "Test User Aditya",
+                "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+            },
+            "engagement": {
+                "likes_count": 0,
+                "comments_count": 0,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T12:58:23.235Z",
+            "personalization_score": 39.85,
+            "video": {
+                "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773665898455-09431042-videoplayback.mp4",
+                "thumbnail_url": null,
+                "duration": 57
+            },
+            "caption": "#KapilSharma #comedy #videos #reeels",
+            "hashtags": [
+                "kapilsharma",
+                "comedy",
+                "videos",
+                "reeels"
+            ],
+            "views_count": 0,
+            "rank": 1,
+            "trend_velocity": "+40%"
+        },
+        {
+            "content_id": "69b7fe1901e0a06c2e8a63e8",
+            "content_type": "post",
+            "author": {
+                "user_id": "69b7e36801e0a06c2e8a50e5",
+                "username": null,
+                "full_name": "Mahi..",
+                "profile_image_url": null
+            },
+            "engagement": {
+                "likes_count": 0,
+                "comments_count": 0,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T12:56:57.178Z",
+            "personalization_score": 39.82,
+            "content": {
+                "text": "",
+                "hashtags": [],
+                "location": null
+            },
+            "media": [
+                {
+                    "type": "image",
+                    "url": "https://playymate.s3.wasabisys.com/posts/69b7e36801e0a06c2e8a50e5/1773665814955-kju3lf.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T125654Z&X-Amz-Expires=604800&X-Amz-Signature=74ed4994c69849d1b99d66559912fb48601c4ca8a4ed7c85b7dac72d074a1f80&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "thumbnail_url": null,
+                    "duration": null,
+                    "width": 201,
+                    "height": 251,
+                    "_id": "69b7fe1901e0a06c2e8a63e9",
+                    "uploaded_at": "2026-03-16T12:56:57.177Z"
+                }
+            ],
+            "rank": 2,
+            "trend_velocity": "+40%"
+        },
+        {
+            "content_id": "69b7f5e101e0a06c2e8a57e5",
+            "content_type": "reel",
+            "author": {
+                "user_id": "69b1517328c3fc04a36cfec8",
+                "username": "testuseraditya",
+                "full_name": "Test User Aditya",
+                "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+            },
+            "engagement": {
+                "likes_count": 0,
+                "comments_count": 0,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T12:21:53.468Z",
+            "personalization_score": 39.16,
+            "video": {
+                "url": "https://s3.wasabisys.com/playymate/social/69b1517328c3fc04a36cfec8/reel/1773663667136-5c98d8a1-my_reel.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T122107Z&X-Amz-Expires=604800&X-Amz-Signature=6e19440d43796954c3acb619e75db849364575a5d67a927210b402e71225003c&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                "thumbnail_url": "{{reel_thumb_url}}",
+                "duration": 30
+            },
+            "caption": "Updated caption! #badminton #epic",
+            "hashtags": [
+                "badminton",
+                "epic"
+            ],
+            "views_count": 1,
+            "rank": 3,
+            "trend_velocity": "+39%"
+        },
+        {
+            "content_id": "69b7a2eba08368b2106a3b0c",
+            "content_type": "post",
+            "author": {
+                "user_id": "69b25fe5324d8a481da5e0aa",
+                "username": null,
+                "full_name": "abc",
+                "profile_image_url": null
+            },
+
+
+
+And more…..
+
+
+
+
+
+
+
+GET {{baseUrl}}/api/v1/feed/trending?time_period=month&limit=20
+
+
+
+"success": true,
+    "data": [
+        {
+            "content_id": "69b8009c60692bcfe5ec7cb2",
+            "content_type": "post",
+            "author": {
+                "user_id": "69b1517328c3fc04a36cfec8",
+                "username": "testuseraditya",
+                "full_name": "Test User Aditya",
+                "profile_image_url": "https://playymate.s3.wasabisys.com/users/69b1517328c3fc04a36cfec8/avatar/1773657697610-8c9627ed-WhatsApp_Image_2026-03-16_at_12.47.53_AM.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T104137Z&X-Amz-Expires=604800&X-Amz-Signature=28330ae1c63b122dfef1a11eaabb90973cfb244078e551dba94e8e267a24b341&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+            },
+            "engagement": {
+                "likes_count": 0,
+                "comments_count": 0,
+                "shares_count": 0,
+                "saves_count": 0
+            },
+            "user_action": {
+                "liked_by_you": false,
+                "saved_by_you": false,
+                "commented_by_you": false
+            },
+            "created_at": "2026-03-16T13:07:40.677Z",
+            "personalization_score": 39.95,
+            "content": {
+                "text": "#kapilSharma #netflix #instagram",
+                "hashtags": [
+                    "kapilsharma",
+                    "netflix",
+                    "instagram"
+                ],
+                "location": null
+            },
+            "media": [
+                {
+                    "type": "video",
+                    "url": "https://playymate.s3.wasabisys.com/posts/69b1517328c3fc04a36cfec8/1773666455881-plxe62.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=1RXVFTHFD0H99E5I0OA4%2F20260316%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260316T130735Z&X-Amz-Expires=604800&X-Amz-Signature=2fe66ce0096a8a4b6329ec2a5840e13e38d134c05caa3a7729d3140fbfdd22ef&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+                    "thumbnail_url": null,
+
+……
+More like this
+…….
+
+
+
+
+GET
+{{baseUrl}}/api/v1/feed/trending?time_period=yesterday
+
+
+
+negative TEST
+
+{
+    "success": false,
+    "error": "INVALID_TIME_PERIOD",
+    "message": "time_period must be one of: today, week, month",
+    "data": null
+}
+
+
+
+
+
+
+GET  {{baseUrl}}/api/v1/feed/analytics/performance
+
+{
+    "success": true,
+    "data": {
+        "period": "last_7_days",
+        "content_performance": [],
+        "follower_activity": {
+            "new_followers": 0,
+            "engaged_followers": 0,
+            "inactive_followers": 0
+        },
+        "insights": []
+    }
+}
+
+
+
+PUT
+{{baseUrl}}/api/v1/feed/preferences
+
+{
+  "follow_suggestions": true,
+  "exclude_hashtags": ["politics", "nsfw"],
+  "preferred_content_types": ["reels", "posts"],
+  "algorithm_opt_in": true
+}
+
+
+
+
+
+Expected response 200:-
+
+{
+    "success": true,
+    "data": {
+        "algorithm_opt_in": true,
+        "exclude_hashtags": [
+            "politics",
+            "nsfw"
+        ],
+        "follow_suggestions": true,
+        "preferred_content_types": [
+            "reels",
+            "posts"
+        ]
+    }
+}               
+
+PUT
+{{baseUrl}}/api/v1/feed/preferences
+
+Negative TEST
+{} 
+
+
+{
+    "success": false,
+    "error": "EMPTY_BODY",
+    "message": "Request body must contain at least one preference field",
+    "data": null
+}
+
+
+Method: PUT
+URL: {{baseUrl}}/api/v1/feed/preferences
+Auth: Bearer {{authToken}}
+Headers: Content-Type: application/json
+Body (raw JSON):
+{
+  "preferred_content_types": ["videos"]
+}
+Expected response 400:
+{
+  "success": false,
+  "error": "VALIDATION_ERROR",
+  "message": "Invalid content types: videos. Must be \"posts\" or \"reels\"",
+  "data": null
+}
+POST
+{{baseUrl}}/api/v1/feed/social/refresh
+
+{
+    "success": true,
+    "message": "Social feed cache cleared. Next request will generate a fresh feed."
+}
+
+
+
 

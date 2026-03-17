@@ -1,9 +1,13 @@
 "use client";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   MessageCircle, Heart, Send, ShoppingCart, MapPin,
-  Users, Image, X, RefreshCw, Loader2
+  Users, Image, X, RefreshCw, Loader2, Plus, ChevronLeft, ChevronRight
 } from "lucide-react";
+import { getMyStory, getStoryFeed } from "@/app/user/homefeed";
+import { getUserProfile } from "@/services/profile.service";
+import userService from "@/services/user";
 import ProfileCompletionCard from "@/app/components/profileCompletion/ProfileCompletionCard";
 import { useTheme } from "@/lib/ThemeContext";
 import SuggestedUsers from "./components/SuggestedUsers";
@@ -163,10 +167,55 @@ function FeedItemRenderer({ item, isDark, cardBg, mutedText, iconBtn }) {
 /* ─── Main Page ─── */
 
 export default function HomePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [userStories, setUserStories] = useState([]);
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
+  const [isViewingStory, setIsViewingStory] = useState(false);
+  const [userProfile, setUserProfile] = useState({});
   const fileInputRef = useRef(null);
   const { theme } = useTheme();
   const isDark = theme === "dark";
+
+  // Get current story based on index
+  const currentStory = userStories[currentStoryIndex] || null;
+
+  // Refresh story when returning from story upload
+  useEffect(() => {
+    const storyUploaded = searchParams.get("storyUploaded");
+    if (storyUploaded === "true") {
+      console.log("[HomePage] Story uploaded, refreshing...");
+      // Remove the query param without refreshing
+      router.replace("/home");
+      
+      // Refresh user data and stories
+      const refreshStory = async () => {
+        try {
+          const res = await userService.getMe();
+          const profile = res?.data?.data || res?.data;
+          if (profile?._id) {
+            // Only use /stories/me endpoint
+            const result = await getMyStory(profile._id);
+            
+            // Handle both single story and array
+            let userStoriesArray = [];
+            if (Array.isArray(result)) {
+              userStoriesArray = result;
+            } else if (result) {
+              userStoriesArray = [result];
+            }
+            
+            console.log("[HomePage] Stories refreshed:", userStoriesArray);
+            setUserStories(userStoriesArray);
+          }
+        } catch (err) {
+          console.log("[HomePage] Error refreshing story:", err.message);
+        }
+      };
+      refreshStory();
+    }
+  }, [searchParams, router]);
 
   const {
     feedItems,
@@ -187,8 +236,102 @@ export default function HomePage() {
   const mutedText = isDark ? "text-gray-400" : "text-gray-500";
   const iconBtn = isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900";
 
-  const openUploadModal = () => setIsUploadModalOpen(true);
+  const openUploadModal = () => {
+    // Navigate to the dedicated create-story page
+    router.push("/home/create-story");
+  };
   const closeUploadModal = () => setIsUploadModalOpen(false);
+
+  // Fetch user's story and profile on mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // Fetch user profile using getMe (same as profile page)
+        try {
+          const res = await userService.getMe();
+          const profile = res?.data?.data || res?.data;
+          console.log("[HomePage] User profile loaded:", profile);
+          console.log("[HomePage] profile._id:", profile?._id);
+          console.log("[HomePage] profile_photos:", profile?.profile_photos);
+          console.log("[HomePage] profile_image_url:", profile?.profile_image_url);
+          
+          // Update userProfile state with profile info
+          if (profile) {
+            setUserProfile({
+              _id: profile._id,
+              profile_image_url: profile.profile_image_url,
+              profile_photos: profile.profile_photos,
+              full_name: profile.full_name,
+              username: profile.username
+            });
+            
+            // Fetch user's stories using profile._id directly
+            const userId = profile._id;
+            console.log("[HomePage] Fetching stories with userId:", userId);
+            
+            try {
+              // Use getMyStory - it may return single story or array
+              const result = await getMyStory(userId);
+              
+              // Handle both single story and array of stories
+              let userStoriesArray = [];
+              if (Array.isArray(result)) {
+                userStoriesArray = result;
+              } else if (result) {
+                userStoriesArray = [result];
+              }
+              
+              console.log("[HomePage] User stories loaded:", userStoriesArray);
+              setUserStories(userStoriesArray);
+            } catch (storyErr) {
+              console.log("[HomePage] Error fetching stories:", storyErr.message);
+              setUserStories([]);
+            }
+          }
+        } catch (profileErr) {
+          console.log("[HomePage] Profile fetch error:", profileErr.message);
+        }
+      } catch (err) {
+        console.log("[HomePage] Error fetching user data:", err.message);
+        setUserStories([]);
+      }
+    };
+    fetchUserData();
+  }, []);
+
+  // Handle viewing own story
+  const handleViewOwnStory = () => {
+    if (userStories.length > 0) {
+      setCurrentStoryIndex(0);
+      setIsViewingStory(true);
+    } else {
+      // If no story, open upload modal
+      openUploadModal();
+    }
+  };
+
+  // Close story viewer
+  const closeStoryViewer = () => {
+    setIsViewingStory(false);
+    setCurrentStoryIndex(0);
+  };
+
+  // Navigate to next story
+  const goToNextStory = () => {
+    if (currentStoryIndex < userStories.length - 1) {
+      setCurrentStoryIndex(currentStoryIndex + 1);
+    } else {
+      // If at last story, close viewer
+      closeStoryViewer();
+    }
+  };
+
+  // Navigate to previous story
+  const goToPrevStory = () => {
+    if (currentStoryIndex > 0) {
+      setCurrentStoryIndex(currentStoryIndex - 1);
+    }
+  };
 
   const handleSelectFromComputer = () => fileInputRef?.current?.click();
   const handleFileChange = (e) => {
@@ -205,13 +348,51 @@ export default function HomePage() {
 
           {/* Stories row */}
           <div className="flex gap-4 overflow-x-auto pb-2">
+            {/* Your Story */}
             <div className="flex flex-col items-center shrink-0">
-              <div
-                className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-purple-500 to-orange-500 cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={openUploadModal}
-              >
-                <div className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-200"}`}>
-                  <Image size={24} className={mutedText} />
+              <div className="relative">
+                <div
+                  className={`w-20 h-20 rounded-full p-[2px] cursor-pointer hover:opacity-80 transition-opacity ${
+                    (userStories.length > 0)
+                      ? "bg-gradient-to-tr from-purple-500 to-orange-500"
+                      : "bg-gray-300"
+                  }`}
+                  onClick={() => {
+                    if (userStories.length > 0) {
+                      handleViewOwnStory(); // view story
+                    } else {
+                      openUploadModal(); // upload story
+                    }
+                  }}
+                >
+                  <div className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-200"}`}>
+                    {userStories.length > 0 && userStories[0]?.media?.url || userStories[0]?.media_url ? (
+                      <img 
+                        src={userStories[0].media?.url || userStories[0].media_url} 
+                        alt="Your Story" 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : userProfile?.profile_photos?.[0]?.url || userProfile?.profile_image_url ? (
+                      <img 
+                        src={userProfile.profile_photos?.[0]?.url || userProfile.profile_image_url} 
+                        alt={userProfile.full_name || "Profile"} 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : (
+                      <Image size={24} className={mutedText} />
+                    )}
+                  </div>
+                </div>
+                {/* Plus Icon - Opens Upload Modal for creating story */}
+                <div 
+                  className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-md cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openUploadModal();
+                  }}
+                  title="Add Story"
+                >
+                  <Plus size={16} className="text-black" />
                 </div>
               </div>
               <span className={`text-xs mt-2 ${mutedText}`}>Your Story</span>
@@ -255,6 +436,86 @@ export default function HomePage() {
                   Select from computer
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFileChange} />
+              </div>
+            </div>
+          )}
+
+          {/* Own Story Viewer Modal */}
+          {isViewingStory && currentStory && (
+            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={closeStoryViewer}>
+              <div 
+                className="relative rounded-2xl overflow-hidden max-w-[500px] w-full mx-4" 
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Story Image/Video - Handle both API formats */}
+                {(currentStory.media?.type || currentStory.media_type) === "video" ? (
+                  <video 
+                    src={currentStory.media?.url || currentStory.media_url} 
+                    controls 
+                    className="w-full h-[550px]s object-contain bg-black py-8  "
+                  />
+                ) : (
+                  <img 
+                    src={currentStory.media?.url || currentStory.media_url} 
+                    alt="Your Story" 
+                    className="w-full h-[550px] object-contain bg-black py-8 px-14 "
+                  />
+                )}
+                
+                {/* Close button */}
+                <button 
+                  onClick={closeStoryViewer}
+                  className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors z-10"
+                >
+                  <X size={20} />
+                </button>
+                
+                {/* Left Arrow - Previous Story */}
+                {currentStoryIndex > 0 && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); goToPrevStory(); }}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+                )}
+                
+                {/* Right Arrow - Next Story */}
+                {currentStoryIndex < userStories.length - 1 && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); goToNextStory(); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                  >
+                    <ChevronRight size={24} />
+                  </button>
+                )}
+                
+                {/* Story Progress Indicator */}
+                {userStories.length > 1 && (
+                  <div className="absolute top-4 left-4 right-4 flex gap-1">
+                    {userStories.map((_, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`h-1 flex-1 rounded-full transition-colors ${
+                          idx < currentStoryIndex 
+                            ? "bg-white" 
+                            : idx === currentStoryIndex 
+                              ? "bg-white" 
+                              : "bg-white/30"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+                
+                {/* Story info */}
+                {currentStory.caption && (
+                  <div className="absolute bottom-16 left-0 right-0 text-center px-4">
+                    <p className="text-white text-sm bg-black/50 rounded-md py-2 px-4 inline-block">
+                      {currentStory.caption}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
