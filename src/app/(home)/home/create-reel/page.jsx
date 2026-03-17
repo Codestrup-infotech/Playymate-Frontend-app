@@ -214,12 +214,13 @@ export default function CreateReelPage() {
     
     try {
       setUploadProgress(15);
-      console.log('[CREATE-REEL] ⬆️ Progress:', 15, '- Uploading video file directly to backend...');
+      console.log('[CREATE-REEL] ⬆️ Progress:', 15, '- Uploading video file to backend...');
       
-      // Step 1: Upload video directly to backend (which handles S3 upload)
+      // Step 1: Upload video to backend (which handles S3 upload server-side)
+      // This avoids DNS/CORS issues from direct browser-to-S3 upload
       const videoUploadResponse = await postService.uploadReelFile(file, 'video');
-      const { wasabi_direct_url: videoUrl } = videoUploadResponse.data.data;
-      console.log('[CREATE-REEL] ✅ Video uploaded successfully!', { videoUrl });
+      const { wasabi_direct_url: uploadedVideoUrl } = videoUploadResponse.data.data;
+      console.log('[CREATE-REEL] ✅ Video uploaded successfully!', { uploadedVideoUrl });
       
       setUploadProgress(60);
       console.log('[CREATE-REEL] ⬆️ Progress:', 60);
@@ -239,7 +240,7 @@ export default function CreateReelPage() {
             type: thumbFile.type
           });
           
-          // Upload thumbnail directly to backend (avoids CORS)
+          // Upload thumbnail to backend (which handles S3 upload server-side)
           const thumbUploadResponse = await postService.uploadReelFile(thumbFile, 'thumbnail');
           const { wasabi_direct_url: thumbUrl } = thumbUploadResponse.data.data;
           console.log('[CREATE-REEL] ✅ Thumbnail uploaded successfully!', { thumbUrl });
@@ -273,8 +274,8 @@ export default function CreateReelPage() {
       console.log('[CREATE-REEL] @️⃣ Extracted mentions:', mentions);
       
       const reelData = {
-        videoUrl: videoUrl,
-        duration: duration,
+        videoUrl: uploadedVideoUrl,
+        duration: Math.floor(duration * 1000), // Convert to milliseconds
         thumbnailUrl: thumbnailUrlFinal,
         aspectRatio: cropAspect,
         title: caption.substring(0, 100),

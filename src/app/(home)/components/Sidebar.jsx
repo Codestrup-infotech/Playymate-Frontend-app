@@ -110,7 +110,7 @@ export default function Sidebar() {
           src="/playymate-icon.png"
           alt="icon"
           className={`w-10 h-10 object-contain transition-all duration-300
-          ${isHover ? "mr-2" : "mx-auto"}`}
+          ${isHover ? "hidden" : "mx-auto"}`}
         />
 
         <img

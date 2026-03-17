@@ -17,27 +17,27 @@ const s3Config = {
 const BUCKET_NAME = process.env.WASABI_SOCIAL_BUCKET || process.env.WASABI_BUCKET || "playymate-kyc";
 const BASE_PATH = "social";
 
-// Generate unique file key for reels
-function generateReelKey(fileName, userId) {
+// Generate unique file key for post images
+function generateImageKey(fileName, userId) {
   const timestamp = Date.now();
   const randomId = Math.random().toString(36).substring(2, 10);
   const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-  return `${BASE_PATH}/${userId || "anonymous"}/reel/${timestamp}-${randomId}-${sanitizedFileName}`;
+  return `${BASE_PATH}/${userId || "anonymous"}/image/${timestamp}-${randomId}-${sanitizedFileName}`;
 }
 
-// Generate unique file key for thumbnails
-function generateThumbnailKey(fileName, userId) {
+// Generate unique file key for post videos
+function generateVideoKey(fileName, userId) {
   const timestamp = Date.now();
   const randomId = Math.random().toString(36).substring(2, 10);
   const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-  return `${BASE_PATH}/${userId || "anonymous"}/reel/thumbnail/${timestamp}-${randomId}-${sanitizedFileName}`;
+  return `${BASE_PATH}/${userId || "anonymous"}/video/${timestamp}-${randomId}-${sanitizedFileName}`;
 }
 
-// POST /api/v1/reels/upload - Upload video/thumbnail directly to S3
+// POST /api/v1/posts/media/upload - Upload post media directly to S3
 export async function POST(request) {
   try {
     // Log configuration being used
-    console.log(`[API /reels/upload] 🔧 S3 Config:`, {
+    console.log(`[API /posts/media/upload] 🔧 S3 Config:`, {
       region: REGION,
       endpoint: `https://s3.${REGION}.wasabisys.com`,
       bucket: BUCKET_NAME,
@@ -46,9 +46,9 @@ export async function POST(request) {
     
     const formData = await request.formData();
     const file = formData.get("file");
-    const type = formData.get("type") || "video"; // 'video' or 'thumbnail'
+    const type = formData.get("type") || "image"; // 'image' or 'video'
 
-    console.log(`[API /reels/upload] 📥 POST request received`, { 
+    console.log(`[API /posts/media/upload] 📥 POST request received`, { 
       type, 
       fileName: file?.name,
       fileSize: file?.size,
@@ -67,6 +67,18 @@ export async function POST(request) {
       );
     }
 
+    // Validate type
+    if (!["image", "video"].includes(type)) {
+      return NextResponse.json(
+        {
+          status: "error",
+          error_code: "INVALID_TYPE",
+          message: "Type must be 'image' or 'video'",
+        },
+        { status: 400 }
+      );
+    }
+
     // Get user ID from headers (set by auth middleware)
     const userId = request.headers.get("x-user-id") || "anonymous";
 
@@ -76,10 +88,10 @@ export async function POST(request) {
 
     // Generate file key based on type
     let key;
-    if (type === "thumbnail") {
-      key = generateThumbnailKey(file.name, userId);
+    if (type === "video") {
+      key = generateVideoKey(file.name, userId);
     } else {
-      key = generateReelKey(file.name, userId);
+      key = generateImageKey(file.name, userId);
     }
 
     // Create S3 client and upload command
@@ -97,7 +109,7 @@ export async function POST(request) {
     // Construct direct URL for Wasabi
     const wasabiDirectUrl = `https://s3.${REGION}.wasabisys.com/${BUCKET_NAME}/${key}`;
 
-    console.log(`[API /reels/upload] ✅ File uploaded successfully`, {
+    console.log(`[API /posts/media/upload] ✅ File uploaded successfully`, {
       type,
       key,
       url: wasabiDirectUrl
@@ -115,24 +127,12 @@ export async function POST(request) {
       },
     });
   } catch (error) {
-    console.error(`[API /reels/upload] ❌ Error:`, error);
-    console.error(`[API /reels/upload] ❌ Error name:`, error.name);
-    console.error(`[API /reels/upload] ❌ Error stack:`, error.stack);
-    
-    // Log S3-specific error details
-    if (error.$metadata) {
-      console.error(`[API /reels/upload] ❌ S3 metadata:`, error.$metadata);
-    }
-    if (error.Code) {
-      console.error(`[API /reels/upload] ❌ S3 Error Code:`, error.Code);
-    }
-    
+    console.error(`[API /posts/media/upload] ❌ Error:`, error);
     return NextResponse.json(
       {
         status: "error",
         error_code: "UPLOAD_ERROR",
         message: error.message || "Failed to upload file",
-        details: error.name || undefined,
       },
       { status: 500 }
     );

@@ -134,53 +134,67 @@ export default function CreatePostPage() {
       if (file || videoUrl) {
         setUploadProgress(20);
         
-        // For now, we'll use the local URL as a placeholder
-        // In production, you would upload to presigned URL
-        const fileToUpload = file || videoUrl;
-        const fileName = file ? `image_${Date.now()}.jpg` : `video_${Date.now()}.mp4`;
-        const mimeType = file ? "image/jpeg" : "video/mp4";
+        // Convert object URL to File object
+        const sourceUrl = file || videoUrl;
+        const mimeType = fileType === 'image' ? 'image/jpeg' : 'video/mp4';
+        const fileName = `${fileType}_${Date.now()}.${fileType === 'image' ? 'jpg' : 'mp4'}`;
         
-        // Get presigned URL
-        const presignResponse = await postService.presignMediaUpload({
-          filename: fileName,
-          mimeType: mimeType,
-          type: fileType
+        // Convert URL to blob then to File object
+        const blob = await fetch(sourceUrl).then(r => r.blob());
+        const fileObj = new File([blob], fileName, { type: mimeType });
+        
+        console.log('[CREATE-POST] 📁 File object prepared:', {
+          name: fileObj.name,
+          size: fileObj.size,
+          type: fileObj.type
         });
-        
-        const { upload_url, file_url, key } = presignResponse.data.data;
         
         setUploadProgress(40);
         
-        // Upload the file
-        const fileBlob = await fetch(fileToUpload).then(r => r.blob());
-        await postService.uploadToPresignedUrl(upload_url, fileBlob, mimeType);
+        // Upload via backend (no direct S3 from browser - avoids DNS/CORS issues)
+        const uploadResponse = await postService.uploadPostMediaFile(fileObj, fileType);
+        const { wasabi_direct_url: fileUrl } = uploadResponse.data.data;
         
-        setUploadProgress(70);
+        console.log('[CREATE-POST] ✅ File uploaded via backend!', { fileUrl });
         
-        // Get image dimensions
+        setUploadProgress(75);
+        
+        // Get image/video dimensions
         let width = 1920;
         let height = 1080;
+        let duration = null;
         
         if (fileType === "image") {
           const img = new Image();
           await new Promise((resolve) => {
             img.onload = resolve;
-            img.src = file;
+            img.src = sourceUrl;
           });
-          width = img.width;
-          height = img.height;
+          width = img.naturalWidth || img.width;
+          height = img.naturalHeight || img.height;
+        } else if (fileType === "video") {
+          // Get video dimensions
+          const video = document.createElement('video');
+          video.src = videoUrl;
+          await new Promise((resolve) => {
+            video.onloadedmetadata = resolve;
+          });
+          width = video.videoWidth;
+          height = video.videoHeight;
+          duration = Math.floor(video.duration * 1000); // Convert to milliseconds
         }
         
+        setUploadProgress(85);
+        
+        // Use the file_url directly for the post
         mediaData = [{
           type: fileType,
-          url: file_url,
+          url: fileUrl,
           thumbnail_url: null,
-          duration: null,
+          duration: duration,
           width,
           height
         }];
-        
-        setUploadProgress(85);
       }
       
       // Extract hashtags from caption

@@ -10,8 +10,10 @@ export async function POST(request) {
     console.log(`[API /reels/create] 📥 POST request received`, body);
     const {
       video_url,
+      video_file_key,
       duration,
       thumbnail_url,
+      thumbnail_file_key,
       aspect_ratio,
       title,
       caption,
@@ -35,19 +37,12 @@ export async function POST(request) {
       );
     }
 
-    if (!duration) {
-      return NextResponse.json(
-        {
-          status: "error",
-          error_code: "MISSING_DURATION",
-          message: "duration is required",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate duration (max 60 seconds)
-    if (duration > 60) {
+    // Duration is now optional - can be provided in milliseconds or seconds
+    // If duration > 1000, assume it's in milliseconds
+    const durationInSeconds = duration > 1000 ? Math.floor(duration / 1000) : duration;
+    
+    // Validate duration (max 60 seconds = 60000 ms)
+    if (duration && duration > 60000) {
       return NextResponse.json(
         {
           status: "error",
@@ -104,8 +99,10 @@ export async function POST(request) {
       `${API_BASE_URL}/reels/create`,
       {
         video_url,
-        duration,
+        video_file_key,
+        duration: durationInSeconds,
         thumbnail_url,
+        thumbnail_file_key,
         aspect_ratio: aspect_ratio || "9:16",
         title,
         caption,

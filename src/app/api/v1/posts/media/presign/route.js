@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // Wasabi/S3 Configuration - Use correct regional endpoint
@@ -79,7 +79,7 @@ export async function POST(request) {
     const uploadUrl = await getSignedUrl(s3Client, uploadCommand, { expiresIn: 300 });
 
     // Generate presigned URL for viewing (expires in 7 days = 604800 seconds)
-    const viewCommand = new PutObjectCommand({
+    const viewCommand = new GetObjectCommand({
       Bucket: BUCKET_NAME,
       Key: fullKey,
     });
