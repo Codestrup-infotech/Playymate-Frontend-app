@@ -402,7 +402,7 @@ export default function ProfilePage() {
 >
 
   {/* ───── COVER PHOTO ───── */}
-  <div className="relative h-52 w-full bg-gradient-to-tl from-[#FF8319] via-[#FF8319] to-[#EF3AFF] ">
+  <div className="relative h-52 w-full bg-gradient-to-l from-[#FF8319] to-[#EF3AFF]  ">
 
     {/* overlay */}
     <div className="absolute inset-0 bg-black/20" />

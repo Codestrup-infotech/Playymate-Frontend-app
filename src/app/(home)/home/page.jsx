@@ -1,16 +1,16 @@
 "use client";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   MessageCircle, Heart, Send, ShoppingCart, MapPin,
   Users, Image, X, RefreshCw, Loader2, Plus, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { getMyStory, getStoryFeed } from "@/app/user/homefeed";
-import { getUserProfile } from "@/services/profile.service";
 import userService from "@/services/user";
 import ProfileCompletionCard from "@/app/components/profileCompletion/ProfileCompletionCard";
 import { useTheme } from "@/lib/ThemeContext";
 import SuggestedUsers from "./components/SuggestedUsers";
+import OwnStoryViewerModal from "./profile/story";
 import useFeed from "@/hooks/useFeed";
 
 /* ─── Small helper components ─── */
@@ -186,7 +186,6 @@ export default function HomePage() {
     const storyUploaded = searchParams.get("storyUploaded");
     if (storyUploaded === "true") {
       console.log("[HomePage] Story uploaded, refreshing...");
-      // Remove the query param without refreshing
       router.replace("/home");
       
       // Refresh user data and stories
@@ -195,18 +194,13 @@ export default function HomePage() {
           const res = await userService.getMe();
           const profile = res?.data?.data || res?.data;
           if (profile?._id) {
-            // Only use /stories/me endpoint
             const result = await getMyStory(profile._id);
-            
-            // Handle both single story and array
             let userStoriesArray = [];
             if (Array.isArray(result)) {
               userStoriesArray = result;
             } else if (result) {
               userStoriesArray = [result];
             }
-            
-            console.log("[HomePage] Stories refreshed:", userStoriesArray);
             setUserStories(userStoriesArray);
           }
         } catch (err) {
@@ -216,6 +210,45 @@ export default function HomePage() {
       refreshStory();
     }
   }, [searchParams, router]);
+
+  // Fetch user profile and stories on mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const res = await userService.getMe();
+        const profile = res?.data?.data || res?.data;
+        console.log("[HomePage] User profile loaded:", profile);
+        
+        if (profile) {
+          setUserProfile({
+            _id: profile._id,
+            profile_image_url: profile.profile_image_url,
+            profile_photos: profile.profile_photos,
+            full_name: profile.full_name,
+            username: profile.username
+          });
+          
+          // Fetch user's stories
+          try {
+            const result = await getMyStory(profile._id);
+            let userStoriesArray = [];
+            if (Array.isArray(result)) {
+              userStoriesArray = result;
+            } else if (result) {
+              userStoriesArray = [result];
+            }
+            console.log("[HomePage] User stories loaded:", userStoriesArray);
+            setUserStories(userStoriesArray);
+          } catch (storyErr) {
+            console.log("[HomePage] Error fetching stories:", storyErr.message);
+          }
+        }
+      } catch (err) {
+        console.log("[HomePage] Error fetching user data:", err.message);
+      }
+    };
+    fetchUserData();
+  }, []);
 
   const {
     feedItems,
@@ -242,70 +275,12 @@ export default function HomePage() {
   };
   const closeUploadModal = () => setIsUploadModalOpen(false);
 
-  // Fetch user's story and profile on mount
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        // Fetch user profile using getMe (same as profile page)
-        try {
-          const res = await userService.getMe();
-          const profile = res?.data?.data || res?.data;
-          console.log("[HomePage] User profile loaded:", profile);
-          console.log("[HomePage] profile._id:", profile?._id);
-          console.log("[HomePage] profile_photos:", profile?.profile_photos);
-          console.log("[HomePage] profile_image_url:", profile?.profile_image_url);
-          
-          // Update userProfile state with profile info
-          if (profile) {
-            setUserProfile({
-              _id: profile._id,
-              profile_image_url: profile.profile_image_url,
-              profile_photos: profile.profile_photos,
-              full_name: profile.full_name,
-              username: profile.username
-            });
-            
-            // Fetch user's stories using profile._id directly
-            const userId = profile._id;
-            console.log("[HomePage] Fetching stories with userId:", userId);
-            
-            try {
-              // Use getMyStory - it may return single story or array
-              const result = await getMyStory(userId);
-              
-              // Handle both single story and array of stories
-              let userStoriesArray = [];
-              if (Array.isArray(result)) {
-                userStoriesArray = result;
-              } else if (result) {
-                userStoriesArray = [result];
-              }
-              
-              console.log("[HomePage] User stories loaded:", userStoriesArray);
-              setUserStories(userStoriesArray);
-            } catch (storyErr) {
-              console.log("[HomePage] Error fetching stories:", storyErr.message);
-              setUserStories([]);
-            }
-          }
-        } catch (profileErr) {
-          console.log("[HomePage] Profile fetch error:", profileErr.message);
-        }
-      } catch (err) {
-        console.log("[HomePage] Error fetching user data:", err.message);
-        setUserStories([]);
-      }
-    };
-    fetchUserData();
-  }, []);
-
   // Handle viewing own story
   const handleViewOwnStory = () => {
     if (userStories.length > 0) {
       setCurrentStoryIndex(0);
       setIsViewingStory(true);
     } else {
-      // If no story, open upload modal
       openUploadModal();
     }
   };
@@ -321,7 +296,6 @@ export default function HomePage() {
     if (currentStoryIndex < userStories.length - 1) {
       setCurrentStoryIndex(currentStoryIndex + 1);
     } else {
-      // If at last story, close viewer
       closeStoryViewer();
     }
   };
@@ -359,9 +333,9 @@ export default function HomePage() {
                   }`}
                   onClick={() => {
                     if (userStories.length > 0) {
-                      handleViewOwnStory(); // view story
+                      handleViewOwnStory();
                     } else {
-                      openUploadModal(); // upload story
+                      openUploadModal();
                     }
                   }}
                 >
@@ -441,84 +415,14 @@ export default function HomePage() {
           )}
 
           {/* Own Story Viewer Modal */}
-          {isViewingStory && currentStory && (
-            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={closeStoryViewer}>
-              <div 
-                className="relative rounded-2xl overflow-hidden max-w-[500px] w-full mx-4" 
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Story Image/Video - Handle both API formats */}
-                {(currentStory.media?.type || currentStory.media_type) === "video" ? (
-                  <video 
-                    src={currentStory.media?.url || currentStory.media_url} 
-                    controls 
-                    className="w-full h-[550px]s object-contain bg-black py-8  "
-                  />
-                ) : (
-                  <img 
-                    src={currentStory.media?.url || currentStory.media_url} 
-                    alt="Your Story" 
-                    className="w-full h-[550px] object-contain bg-black py-8 px-14 "
-                  />
-                )}
-                
-                {/* Close button */}
-                <button 
-                  onClick={closeStoryViewer}
-                  className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors z-10"
-                >
-                  <X size={20} />
-                </button>
-                
-                {/* Left Arrow - Previous Story */}
-                {currentStoryIndex > 0 && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); goToPrevStory(); }}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-                  >
-                    <ChevronLeft size={24} />
-                  </button>
-                )}
-                
-                {/* Right Arrow - Next Story */}
-                {currentStoryIndex < userStories.length - 1 && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); goToNextStory(); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-                  >
-                    <ChevronRight size={24} />
-                  </button>
-                )}
-                
-                {/* Story Progress Indicator */}
-                {userStories.length > 1 && (
-                  <div className="absolute top-4 left-4 right-4 flex gap-1">
-                    {userStories.map((_, idx) => (
-                      <div 
-                        key={idx} 
-                        className={`h-1 flex-1 rounded-full transition-colors ${
-                          idx < currentStoryIndex 
-                            ? "bg-white" 
-                            : idx === currentStoryIndex 
-                              ? "bg-white" 
-                              : "bg-white/30"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                )}
-                
-                {/* Story info */}
-                {currentStory.caption && (
-                  <div className="absolute bottom-16 left-0 right-0 text-center px-4">
-                    <p className="text-white text-sm bg-black/50 rounded-md py-2 px-4 inline-block">
-                      {currentStory.caption}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          <OwnStoryViewerModal
+            isOpen={isViewingStory}
+            stories={userStories}
+            currentIndex={currentStoryIndex}
+            onClose={closeStoryViewer}
+            onNext={goToNextStory}
+            onPrev={goToPrevStory}
+          />
 
           {/* Profile Completion Card - from Feed API */}
           {profileCard?.enabled && (
