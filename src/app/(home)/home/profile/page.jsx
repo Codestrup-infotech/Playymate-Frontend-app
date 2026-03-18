@@ -268,6 +268,24 @@ export default function ProfilePage() {
     }
   };
 
+  // Handle reel click - fetch full reel details
+  const handleReelClick = async (reel) => {
+    console.log('Reel clicked:', reel);
+    setSelectedPost(reel);
+    setShowPostModal(true);
+    setSelectedPostLoading(true);
+    try {
+      const response = await postService.getReel(reel.reel_id);
+      console.log('Reel details response:', response);
+      setSelectedPost(response.data?.data || reel);
+    } catch (error) {
+      console.error("Error fetching reel details:", error);
+      // Keep showing the basic reel data if API fails
+    } finally {
+      setSelectedPostLoading(false);
+    }
+  };
+
   // ── states ────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -625,10 +643,12 @@ export default function ProfilePage() {
                     <div 
                       key={reel.reel_id} 
                       className="aspect-[9/16] relative bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-80 transition"
+                      onClick={() => handleReelClick(reel)}
                     >
-                      {reel.thumbnail_url ? (
+                      {/* Check for thumbnail in both locations: reel.thumbnail_url or reel.video.thumbnail_url */}
+                      {(reel.thumbnail_url || reel.video?.thumbnail_url) ? (
                         <img 
-                          src={reel.thumbnail_url} 
+                          src={reel.thumbnail_url || reel.video?.thumbnail_url} 
                           alt="Reel" 
                           className="w-full h-full object-cover"
                         />

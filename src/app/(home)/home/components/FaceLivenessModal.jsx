@@ -15,6 +15,9 @@ import { kycService } from "@/services/kyc";
 import { FaceLivenessDetector } from '@aws-amplify/ui-react-liveness';
 import '@aws-amplify/ui-react-liveness/styles.css';
 
+// Import amplify configuration to ensure it's initialized
+import '@/lib/amplify-config';
+
 /**
  * FaceLivenessModal Component
  * 
@@ -62,8 +65,13 @@ export default function FaceLivenessModal({
 
       console.log("Creating liveness session for profile modal...");
 
+      // Get userId from localStorage
+      const userId = typeof window !== 'undefined' 
+        ? localStorage.getItem("user_id") 
+        : null;
+
       // Create liveness session with AWS Rekognition
-      const response = await kycService.createLivenessSession();
+      const response = await kycService.createLivenessSession(userId);
       
       console.log("Session created:", response.data);
 
@@ -87,8 +95,13 @@ export default function FaceLivenessModal({
     try {
       setStep("verifying");
       
+      // Get userId from session data or localStorage
+      const userId = sessionData?.userId || (typeof window !== 'undefined' 
+        ? localStorage.getItem("user_id") 
+        : null);
+      
       // Verify the liveness session
-      const response = await kycService.verifyLivenessSession(sessionData.sessionId);
+      const response = await kycService.verifyLivenessSession(sessionData.sessionId, userId);
 
       console.log("Verification response:", response.data);
 

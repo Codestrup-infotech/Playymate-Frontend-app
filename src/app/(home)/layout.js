@@ -4,10 +4,15 @@ import Sidebar from "./components/Sidebar";
 import { useState } from "react";
 import { ThemeProvider, useTheme } from "@/lib/ThemeContext";
 import MessagesFloatingButton from "@/app/(home)/home/components/MessagesFloatingButton";
+import { usePathname } from "next/navigation";
 
 function AppLayoutInner({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { theme } = useTheme();
+  const pathname = usePathname();
+
+  // Only show messages button on the home page
+  const showMessagesButton = pathname === "/home";
 
   return (
     <div
@@ -33,8 +38,8 @@ function AppLayoutInner({ children }) {
         </main>
       </div>
 
-      {/* Floating Messages Button — rendered at root level so it is truly viewport-fixed */}
-      <MessagesFloatingButton count="9+" />
+      {/* Floating Messages Button — only shown on Home page */}
+      {showMessagesButton && <MessagesFloatingButton count="9+" />}
     </div>
   );
 }
