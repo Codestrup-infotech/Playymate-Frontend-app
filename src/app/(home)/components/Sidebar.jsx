@@ -106,12 +106,7 @@ export default function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center h-16 px-3">
-        <img
-          src="/playymate-icon.png"
-          alt="icon"
-          className={`w-10 h-10 object-contain transition-all duration-300
-          ${isHover ? "hidden" : "mx-auto"}`}
-        />
+        
 
         <img
           src="/playymate-logo.png"
