@@ -255,7 +255,7 @@ export default function Sidebar() {
     );
   }
 
-  // NORMAL LINK
+
   return (
     <Link
       key={item.name}
