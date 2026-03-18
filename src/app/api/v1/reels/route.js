@@ -37,52 +37,7 @@ export async function GET(request) {
   } catch (error) {
     console.error("Error getting reels:", error.response?.data || error.message);
 
-    // If backend is not available, return mock response for demo
-    if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
-      // Generate mock reels for demo
-      const mockReels = Array.from({ length: 5 }, (_, i) => ({
-        _id: `reel_${i + 1}`,
-        reel_id: `reel_${i + 1}`,
-        video: {
-          url: "https://s3.wasabisys.com/playymate/social/demo/reel/sample.mp4",
-          thumbnail_url: "https://s3.wasabisys.com/playymate/social/demo/reel/thumbnail/sample.jpg",
-          duration: 30,
-          aspect_ratio: "9:16",
-        },
-        caption: `This is demo reel #${i + 1} #playymate #sports`,
-        hashtags: ["playymate", "sports", "demo"],
-        likes_count: Math.floor(Math.random() * 1000),
-        comments_count: Math.floor(Math.random() * 50),
-        views_count: Math.floor(Math.random() * 5000),
-        saves_count: Math.floor(Math.random() * 100),
-        author: {
-          user_id: `user_${i + 1}`,
-          username: `user_${i + 1}`,
-          full_name: `User ${i + 1}`,
-          profile_image_url: "https://via.placeholder.com/50",
-        },
-        created_at: new Date(Date.now() - i * 3600000).toISOString(),
-        is_liked: false,
-        is_saved: false,
-      }));
-
-      return NextResponse.json(
-        {
-          status: "success",
-          data: {
-            items: mockReels,
-            pagination: {
-              next_cursor: null,
-              has_more: false,
-            },
-          },
-          error_code: null,
-          _demo: true,
-        },
-        { status: 200 }
-      );
-    }
-
+    // Return actual error (no mock fallback)
     return NextResponse.json(
       {
         status: "error",

@@ -32,9 +32,11 @@ function getAuthHeaders() {
  * @param {string} data.purpose - "reel" | "thumbnail" (default: "reel")
  */
 export const getPresignedUrl = async (data) => {
+  console.log('[REELS SERVICE] 📤 getPresignedUrl called:', data);
   const res = await axios.post(`${API_BASE}/reels/presign`, data, {
     headers: getAuthHeaders(),
   });
+  console.log('[REELS SERVICE] ✅ Presign response received');
   return res.data;
 };
 
@@ -123,9 +125,11 @@ export const uploadReelFile = async (file, purpose = "reel") => {
  * @param {boolean} data.allow_stitches - Allow stitches
  */
 export const createReel = async (data) => {
+  console.log('[REELS SERVICE] 🎬 createReel called:', data);
   const res = await axios.post(`${API_BASE}/reels/create`, data, {
     headers: getAuthHeaders(),
   });
+  console.log('[REELS SERVICE] ✅ Reel created:', res.data);
   return res.data;
 };
 
@@ -141,9 +145,11 @@ export const createReel = async (data) => {
  * @param {string} reelId - Reel ID
  */
 export const getReelById = async (reelId) => {
+  console.log('[REELS SERVICE] 🔍 getReelById called for:', reelId);
   const res = await axios.get(`${API_BASE}/reels/${reelId}`, {
     headers: getAuthHeaders(),
   });
+  console.log('[REELS SERVICE] ✅ Reel fetched:', res.data);
   return res.data;
 };
 
@@ -164,9 +170,11 @@ export const getReelById = async (reelId) => {
  * @param {boolean} data.allow_comments - Updated allow_comments
  */
 export const updateReel = async (reelId, data) => {
+  console.log('[REELS SERVICE] ✏️ updateReel called for:', reelId, 'with data:', data);
   const res = await axios.put(`${API_BASE}/reels/${reelId}`, data, {
     headers: getAuthHeaders(),
   });
+  console.log('[REELS SERVICE] ✅ Reel updated:', res.data);
   return res.data;
 };
 
@@ -182,9 +190,11 @@ export const updateReel = async (reelId, data) => {
  * @param {string} reelId - Reel ID
  */
 export const deleteReel = async (reelId) => {
+  console.log('[REELS SERVICE] 🗑️ deleteReel called for:', reelId);
   const res = await axios.delete(`${API_BASE}/reels/${reelId}`, {
     headers: getAuthHeaders(),
   });
+  console.log('[REELS SERVICE] ✅ Reel deleted');
   return res.data;
 };
 
@@ -201,11 +211,13 @@ export const deleteReel = async (reelId) => {
  * @param {number} watchDurationMs - Watch duration in milliseconds
  */
 export const trackReelView = async (reelId, watchDurationMs) => {
+  console.log('[REELS SERVICE] 👁️ trackReelView called for:', reelId, 'duration:', watchDurationMs, 'ms');
   const res = await axios.post(
     `${API_BASE}/reels/${reelId}/view`,
     { watch_duration_ms: watchDurationMs },
     { headers: getAuthHeaders() }
   );
+  console.log('[REELS SERVICE] ✅ View tracked');
   return res.data;
 };
 
@@ -221,11 +233,13 @@ export const trackReelView = async (reelId, watchDurationMs) => {
  * @param {string} reelId - Reel ID
  */
 export const likeReel = async (reelId) => {
+  console.log('[REELS SERVICE] ❤️ likeReel called for:', reelId);
   const res = await axios.post(
     `${API_BASE}/reels/${reelId}/like`,
     {},
     { headers: getAuthHeaders() }
   );
+  console.log('[REELS SERVICE] ✅ Reel liked');
   return res.data;
 };
 
@@ -235,11 +249,13 @@ export const likeReel = async (reelId) => {
  * @param {string} reelId - Reel ID
  */
 export const unlikeReel = async (reelId) => {
+  console.log('[REELS SERVICE] 💔 unlikeReel called for:', reelId);
   const res = await axios.post(
     `${API_BASE}/reels/${reelId}/unlike`,
     {},
     { headers: getAuthHeaders() }
   );
+  console.log('[REELS SERVICE] ✅ Reel unliked');
   return res.data;
 };
 
@@ -249,11 +265,13 @@ export const unlikeReel = async (reelId) => {
  * @param {string} reelId - Reel ID
  */
 export const saveReel = async (reelId) => {
+  console.log('[REELS SERVICE] 🔖 saveReel called for:', reelId);
   const res = await axios.post(
     `${API_BASE}/reels/${reelId}/save`,
     {},
     { headers: getAuthHeaders() }
   );
+  console.log('[REELS SERVICE] ✅ Reel saved');
   return res.data;
 };
 
@@ -263,11 +281,13 @@ export const saveReel = async (reelId) => {
  * @param {string} reelId - Reel ID
  */
 export const unsaveReel = async (reelId) => {
+  console.log('[REELS SERVICE] 🔖 unsaveReel called for:', reelId);
   const res = await axios.post(
     `${API_BASE}/reels/${reelId}/unsave`,
     {},
     { headers: getAuthHeaders() }
   );
+  console.log('[REELS SERVICE] ✅ Reel unsaved');
   return res.data;
 };
 
@@ -285,6 +305,7 @@ export const unsaveReel = async (reelId) => {
  * @param {number} limit - Number of comments
  */
 export const getReelComments = async (reelId, cursor = null, limit = 20) => {
+  console.log('[REELS SERVICE] 💬 getReelComments called for:', reelId, { cursor, limit });
   const params = new URLSearchParams();
   if (cursor) params.append("cursor", cursor);
   params.append("limit", limit);
@@ -292,6 +313,7 @@ export const getReelComments = async (reelId, cursor = null, limit = 20) => {
   const res = await axios.get(`${API_BASE}/reels/${reelId}/comments?${params.toString()}`, {
     headers: getAuthHeaders(),
   });
+  console.log('[REELS SERVICE] ✅ Comments fetched');
   return res.data;
 };
 
@@ -303,11 +325,13 @@ export const getReelComments = async (reelId, cursor = null, limit = 20) => {
  * @param {string[]} mentions - Mentioned usernames
  */
 export const addReelComment = async (reelId, text, mentions = []) => {
+  console.log('[REELS SERVICE] 💬 addReelComment called for:', reelId, { text, mentions });
   const res = await axios.post(
     `${API_BASE}/reels/${reelId}/comments`,
     { text, mentions },
     { headers: getAuthHeaders() }
   );
+  console.log('[REELS SERVICE] ✅ Comment added');
   return res.data;
 };
 
@@ -318,9 +342,11 @@ export const addReelComment = async (reelId, text, mentions = []) => {
  * @param {string} commentId - Comment ID
  */
 export const deleteReelComment = async (reelId, commentId) => {
+  console.log('[REELS SERVICE] 🗑️ deleteReelComment called for reel:', reelId, 'comment:', commentId);
   const res = await axios.delete(`${API_BASE}/reels/${reelId}/comments/${commentId}`, {
     headers: getAuthHeaders(),
   });
+  console.log('[REELS SERVICE] ✅ Comment deleted');
   return res.data;
 };
 

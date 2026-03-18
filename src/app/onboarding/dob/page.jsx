@@ -597,51 +597,77 @@ function DrumPicker({ items, selectedIndex, onIndexChange, formatLabel }) {
           borderBottom: '1px solid rgba(255,255,255,0.08)',
         }}
       />
+{/* Items */}
+<div
+  style={{
+    transform: `translateY(${(3 - selectedIndex) * ITEM_HEIGHT}px)`,
+    transition: isDragging.current
+      ? "none"
+      : "transform 0.25s cubic-bezier(0.22,0.61,0.36,1)",
+    transformStyle: "preserve-3d",
+  }}
+>
+  {items.map((item, idx) => {
+    const distance = idx - selectedIndex;
+    const absDistance = Math.abs(distance);
+    const isSelected = idx === selectedIndex;
 
-      {/* Items */}
+    const rotateX = distance * -20;   // tilt effect
+    const translateZ = isSelected ? 40 : 0;
+    const opacity =
+      absDistance === 0
+        ? 1
+        : absDistance === 1
+        ? 0.6
+        : absDistance === 2
+        ? 0.35
+        : 0.15;
+
+    const scale =
+      absDistance === 0
+        ? 1.1
+        : absDistance === 1
+        ? 0.9
+        : 0.75;
+
+    return (
       <div
+        key={idx}
+        onClick={() => onIndexChange(idx)}
         style={{
-          transform: `translateY(${(3 - selectedIndex) * ITEM_HEIGHT}px)`,
-          transition: isDragging.current ? 'none' : 'transform 0.2s cubic-bezier(0.25,0.46,0.45,0.94)',
+          height: ITEM_HEIGHT,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          opacity,
+          transform: `
+            rotateX(${rotateX}deg)
+            translateZ(${translateZ}px)
+            scale(${scale})
+          `,
+          transformStyle: "preserve-3d",
+          transition: "all 0.25s ease",
+          cursor: "pointer",
+          fontSize: isSelected ? "1.6rem" : "1rem",
+          fontWeight: isSelected ? "700" : "400",
+          letterSpacing: "0.02em",
+
+          /* Playmate active color */
+          color: isSelected ? "transparent" : "#9CA3AF",
+
+          background: isSelected
+            ? "linear-gradient(90deg, #EF3AFF, #FF8319)"
+            : "transparent",
+
+          WebkitBackgroundClip: isSelected ? "text" : "unset",
+          WebkitTextFillColor: isSelected ? "transparent" : "#9CA3AF",
         }}
       >
-        {items.map((item, idx) => {
-          const distance = Math.abs(idx - selectedIndex);
-          const isSelected = idx === selectedIndex;
-          const opacity = distance === 0 ? 1 : distance === 1 ? 0.6 : distance === 2 ? 0.35 : 0.15;
-          const scale = distance === 0 ? 1 : distance === 1 ? 0.88 : 0.76;
-
-          return (
-            <div
-              key={idx}
-              onClick={() => onIndexChange(idx)}
-              style={{
-                height: ITEM_HEIGHT,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity,
-                transform: `scale(${scale})`,
-                transition: 'opacity 0.15s, transform 0.15s',
-                cursor: 'pointer',
-                fontSize: isSelected ? '1.5rem' : '1rem',
-                fontWeight: isSelected ? '700' : '400',
-                color: isSelected
-                  ? 'transparent'
-                  : '#fff',
-                background: isSelected
-                  ? 'linear-gradient(90deg, #e8506a, #e8923a)'
-                  : 'transparent',
-                WebkitBackgroundClip: isSelected ? 'text' : 'unset',
-                WebkitTextFillColor: isSelected ? 'transparent' : '#fff',
-                letterSpacing: isSelected ? '0.01em' : '0',
-              }}
-            >
-              {formatLabel ? formatLabel(item) : item}
-            </div>
-          );
-        })}
+        {formatLabel ? formatLabel(item) : item}
       </div>
+    );
+  })}
+</div>
     </div>
   );
 }
@@ -906,48 +932,74 @@ export default function OnboardingDOBPage() {
         )}
 
         {/* Drum Pickers */}
-        <div className="flex-1 flex items-center font-Poppins ">
-          <div
-            className="w-full rounded-2xl overflow-hidden"
-            style={{
-              background: 'linear-gradient(160deg, #1c1c1f, #151518)',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}
-          >
-            <div className="grid grid-cols-3">
-              {/* Day */}
-              <DrumPicker
-                items={days}
-                selectedIndex={dayIndex}
-                onIndexChange={setDayIndex}
-                formatLabel={(d) => String(d).padStart(2, '0')}
-              />
-              {/* Month */}
-              <DrumPicker
-                items={months}
-                selectedIndex={monthIndex}
-                onIndexChange={setMonthIndex}
-              />
-              {/* Year */}
-              <DrumPicker
-                items={years}
-                selectedIndex={yearIndex}
-                onIndexChange={setYearIndex}
-              />
-            </div>
-          </div>
-        </div>
+        <div className="flex-1 flex items-center font-Poppins">
+  <div
+    className="w-full rounded-xl overflow-hidden p-[1px]"
+    style={{
+      background: "linear-gradient(160deg, #1c1c1f, #151518)",
+      border: "1px solid rgba(255,255,255,0.05)",
+      boxShadow: `
+        0 10px 30px rgba(0,0,0,0.6),
+        0 0 25px rgba(239,58,255,0.15),
+        0 0 35px rgba(255,131,25,0.12)
+      `
+    }}
+  >
+    <div
+      className="rounded-2xl"
+      style={{
+        background: "linear-gradient(160deg, #1c1c1f, #151518)",
+        border: "1px solid rgba(255,255,255,0.05)",
+        boxShadow: "0 0 20px rgba(236,72,153,0.15)",
+      }}
+    >
+      <div className="grid grid-cols-3">
+        {/* Day */}
+        <DrumPicker
+          items={days}
+          selectedIndex={dayIndex}
+          onIndexChange={setDayIndex}
+          formatLabel={(d) => String(d).padStart(2, "0")}
+        />
+
+        {/* Month */}
+        <DrumPicker
+          items={months}
+          selectedIndex={monthIndex}
+          onIndexChange={setMonthIndex}
+        />
+
+        {/* Year */}
+        <DrumPicker
+          items={years}
+          selectedIndex={yearIndex}
+          onIndexChange={setYearIndex}
+        />
+      </div>
+    </div>
+  </div>
+</div>
 
         {/* Confirm Sheet */}
         {showConfirm ? (
           <div
             className="mt-6 rounded-2xl p-5 text-center font-Poppins"
             style={{
-              background: 'linear-gradient(160deg, #1e1e22, #18181c)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: "linear-gradient(160deg, #1c1c1f, #151518)",
+              border: "2px solid rgba(255,255,255,0.05)",
+              boxShadow: `
+                0 10px 30px rgba(0,0,0,0.6),
+                0 0 25px rgba(239,58,255,0.15),
+                0 0 35px rgba(255,131,25,0.12)
+              `
             }}
           >
-            <p className="text-white font-bold text-lg mb-1">You're {age}</p>
+           <p className="text-white font-bold text-lg mb-1">
+  You're{" "}
+  <span className="bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent">
+    {age}
+  </span>
+</p>
             <p className="text-gray-400 text-sm mb-4">
               Is {confirmLabel} your birthday? This can only be changed once.
             </p>
@@ -972,7 +1024,7 @@ export default function OnboardingDOBPage() {
               onClick={handleContinuePress}
               disabled={loading}
               className="w-full font-Poppins py-4 rounded-full font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50"
-              style={{ background: 'linear-gradient(90deg, #e8506a, #e8923a)' }}
+              style={{ background: 'linear-gradient(90deg, #EF3AFF, #FF8319)' }}
             >
               {screenConfig?.button_text?.primary || "Continue"}
             </button>

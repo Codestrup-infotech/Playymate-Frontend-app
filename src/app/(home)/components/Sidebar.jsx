@@ -8,6 +8,7 @@ import {
   HelpCircle, Compass, Flame, Zap, Menu, BookOpen,
   Search, LogOut, Sun, Moon, PlusSquare, Image, Video, Circle
 } from "lucide-react";
+
 import { useTheme } from "@/lib/ThemeContext";
 
 export default function Sidebar() {
@@ -67,22 +68,23 @@ export default function Sidebar() {
     setOpenCreateMenu(!openCreateMenu);
   };
 
-  const menu = [
-    { name: "Home", icon: <Home size={22} />, path: "/home" },
-    { name: "Listings", icon: <Menu size={22} />, path: "/home/listings" },
-    { name: "Explore", icon: <Compass size={22} />, path: "/home/explore" },
-    { name: "Streak", icon: <Flame size={22} />, path: "/home/streak" },
-    { name: "Map", icon: <Map size={22} />, path: "/map" },
-    { name: "Passport", icon: <BookOpen size={22} />, path: "/passport" },
-    { name: "Shopping", icon: <ShoppingCart size={22} />, path: "/shopping" },
-    { name: "Events", icon: <Calendar size={22} />, path: "/events" },
-    { name: "Teams", icon: <Users size={22} />, path: "/teams" },
-    { name: "Leaderboard", icon: <Trophy size={22} />, path: "/leaderboard" },
-    { name: "Community", icon: <Users size={22} />, path: "/community" },
-    { name: "Bookings", icon: <Calendar size={22} />, path: "/bookings" },
-    { name: "Help & Support", icon: <HelpCircle size={22} />, path: "/help" },
-    { name: "Wallet", icon: <Wallet size={22} />, path: "/wallet" },
-    { name: "Profile", icon: <User size={22} />, path: "/home/profile" },
+    const menu = [
+      { name: "Home", icon: <Home size={22} />, path: "/home" },
+      { name: "Listings", icon: <Menu size={22} />, path: "/home/listings" },
+      { name: "Explore", icon: <Compass size={22} />, path: "/home/explore" },
+      { name: "Streak", icon: <Flame size={22} />, path: "/home/streak" },
+      { name: "Map", icon: <Map size={22} />, path: "/map" },
+      { name: "Passport", icon: <BookOpen size={22} />, path: "/passport" },
+      { name: "Shopping", icon: <ShoppingCart size={22} />, path: "/shopping" },
+      { name: "Events", icon: <Calendar size={22} />, path: "/events" },
+      { name: "Teams", icon: <Users size={22} />, path: "/teams" },
+      { name: "Leaderboard", icon: <Trophy size={22} />, path: "/leaderboard" },
+      { name: "Community", icon: <Users size={22} />, path: "/community" },
+      { name: "Bookings", icon: <Calendar size={22} />, path: "/bookings" },
+      { name: "Help & Support", icon: <HelpCircle size={22} />, path: "/help" },
+      { name: "Wallet", icon: <Wallet size={22} />, path: "/wallet" },
+      { name: "Profile", icon: <User size={22} />, path: "/home/profile" },
+    { name: "Subscription", icon: <Zap size={22} />, path: "/home/subscription" },
 
     // NEW OPTIONS
     { name: "Search", icon: <Search size={22} />, path: "/home/search" },
@@ -108,65 +110,62 @@ export default function Sidebar() {
       <div className="flex items-center h-16 px-3">
         <img
           src="/playymate-icon.png"
-          alt="icon"
-          className={`w-10 h-10 object-contain transition-all duration-300
-          ${isHover ? "mr-2" : "mx-auto"}`}
+          alt="Playymate Icon"
+          className={`w-10 h-10 object-contain transition-all duration-300 ${
+            isHover ? "mr-2" : "mx-auto"
+          }`}
         />
 
         <img
           src="/playymate-logo.png"
-          alt="logo"
-          className={`h-8 object-contain transition-all duration-300
-          ${isHover ? "opacity-100 w-auto" : "opacity-0 w-0"}
-          `}
+          alt="Playymate Logo"
+          className={`h-8 object-contain transition-all duration-300 ${
+            isHover ? "opacity-100 w-auto" : "opacity-0 w-0"
+          }`}
         />
       </div>
 
       {/* Menu */}
-      <div className={`flex flex-col mt-2 px-2 space-y-1 overflow-y-auto h-[calc(100vh-64px)]
-        scrollbar-hide
-        [&::-webkit-scrollbar]:hidden
-        [-ms-overflow-style:none]
-        [scrollbar-width:none]
-      `}>
+      <div className="flex flex-col mt-2 px-2 space-y-1 overflow-y-auto h-[calc(100vh-180px)]">
+        {menu.map((item) => {
+          // logout
+          if (item.action === "logout") {
+            return (
+              <button
+                key={item.name}
+                onClick={handleLogout}
+                className="flex items-center gap-4 px-3 py-3 rounded-lg text-red-400 hover:text-red-500"
+              >
+                <div className="min-w-[22px] flex justify-center">
+                  {item.icon}
+                </div>
 
-      {menu.map((item) => {
+                <span
+                  className={`whitespace-nowrap font-medium transition-all duration-300 ${
+                    isHover ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                  }`}
+                >
+                  {item.name}
+                </span>
+              </button>
+            );
+          }
 
-  // LOGOUT BUTTON
-  if (item.action === "logout") {
-    return (
-      <button
-        key={item.name}
-        onClick={handleLogout}
-        className={`flex items-center gap-4 px-3 py-3 rounded-lg transition-all duration-300
-        text-red-400 hover:text-red-500`}
-      >
-        <div className="min-w-[22px] flex justify-center">
-          {item.icon}
-        </div>
-
-        <span
-          className={`whitespace-nowrap font-medium transition-all duration-300
-          ${isHover ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}
-        >
-          {item.name}
-        </span>
-      </button>
-    );
-  }
-
-  // THEME SWITCH
-  if (item.action === "theme") {
-    return (
-      <button
-        key={item.name}
-        onClick={toggleTheme}
-        className={`flex items-center gap-4 px-3 py-3 rounded-lg transition-all duration-300
-        ${isDark ? "text-gray-300 hover:bg-gray-800" : "text-gray-700 hover:bg-gray-200"}`}
-      >
-        <div className="min-w-[22px] flex justify-center">
-          {item.icon}
-        </div>
+          // theme toggle
+          if (item.action === "theme") {
+            return (
+              <button
+                key={item.name}
+                onClick={toggleTheme}
+                className={`flex items-center gap-4 px-3 py-3 rounded-lg transition-all duration-300 ${
+                  isDark
+                    ? "text-gray-300 hover:bg-gray-800"
+                    : "text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                <div className="min-w-[22px] flex justify-center">
+                  {item.icon}
+                </div>
 
         <span
           className={`whitespace-nowrap font-medium transition-all duration-300

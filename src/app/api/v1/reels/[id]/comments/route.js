@@ -45,52 +45,7 @@ export async function GET(request, { params }) {
   } catch (error) {
     console.error("Error getting comments:", error.response?.data || error.message);
 
-    // If backend is not available, return mock response for demo
-    if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
-      const mockComments = {
-        items: [
-          {
-            _id: "comment_1",
-            text: "Great reel! 🔥",
-            author: {
-              user_id: "user_1",
-              username: "sports_fan",
-              full_name: "Sports Fan",
-              profile_image_url: "https://via.placeholder.com/50",
-            },
-            likes_count: 5,
-            created_at: new Date().toISOString(),
-          },
-          {
-            _id: "comment_2",
-            text: "Love this content!",
-            author: {
-              user_id: "user_2",
-              username: "active_user",
-              full_name: "Active User",
-              profile_image_url: "https://via.placeholder.com/50",
-            },
-            likes_count: 2,
-            created_at: new Date().toISOString(),
-          },
-        ],
-        pagination: {
-          next_cursor: null,
-          has_more: false,
-        },
-      };
-
-      return NextResponse.json(
-        {
-          status: "success",
-          data: mockComments,
-          error_code: null,
-          _demo: true,
-        },
-        { status: 200 }
-      );
-    }
-
+    // Return actual error (no mock fallback)
     return NextResponse.json(
       {
         status: "error",
@@ -151,32 +106,7 @@ export async function POST(request, { params }) {
   } catch (error) {
     console.error("Error adding comment:", error.response?.data || error.message);
 
-    // If backend is not available, return mock response for demo
-    if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
-      const body = await request.json();
-      
-      return NextResponse.json(
-        {
-          status: "success",
-          data: {
-            _id: `comment_${Date.now()}`,
-            text: body.text,
-            author: {
-              user_id: "current_user",
-              username: "current_user",
-              full_name: "Current User",
-              profile_image_url: "https://via.placeholder.com/50",
-            },
-            likes_count: 0,
-            created_at: new Date().toISOString(),
-          },
-          error_code: null,
-          _demo: true,
-        },
-        { status: 201 }
-      );
-    }
-
+    // Return actual error (no mock fallback)
     return NextResponse.json(
       {
         status: "error",

@@ -62,6 +62,13 @@ export default function CreateReelPage() {
     const selected = e.target.files[0];
     if (!selected) return;
     
+    console.log('[CREATE-REEL] 📁 File selected:', {
+      name: selected.name,
+      type: selected.type,
+      size: selected.size,
+      sizeMB: (selected.size / (1024 * 1024)).toFixed(2) + ' MB'
+    });
+    
     if (!selected.type.startsWith("video/")) {
       alert("Please select a video file");
       return;
@@ -77,6 +84,7 @@ export default function CreateReelPage() {
     const url = URL.createObjectURL(selected);
     setFile(selected);
     setVideoUrl(url);
+    console.log('[CREATE-REEL] 🔗 Video URL created:', url);
     
     // Get video duration
     const video = document.createElement("video");
@@ -84,6 +92,7 @@ export default function CreateReelPage() {
     video.onloadedmetadata = () => {
       window.URL.revokeObjectURL(video.src);
       const videoDuration = Math.floor(video.duration);
+      console.log('[CREATE-REEL] ⏱️ Video duration:', videoDuration, 'seconds');
       if (videoDuration > 60) {
         alert("Video duration cannot exceed 60 seconds");
         setFile(null);
@@ -91,22 +100,31 @@ export default function CreateReelPage() {
         return;
       }
       setDuration(videoDuration);
+      console.log('[CREATE-REEL] 🖼️ Generating cover frames...');
       generateCoverFrames(url);
     };
     video.src = url;
     
     setStep("crop");
+    console.log('[CREATE-REEL] 📝 Step changed to: crop');
   };
 
   const generateCoverFrames = (url) => {
+    console.log('[CREATE-REEL] 🎨 generateCoverFrames called with URL:', url);
     // Generate cover frames from video
     const video = document.createElement("video");
     video.src = url;
     video.crossOrigin = "anonymous";
     
     video.onloadedmetadata = () => {
+      console.log('[CREATE-REEL] 📐 Video metadata loaded:', {
+        duration: video.duration,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight
+      });
       const frames = [];
       const interval = Math.max(1, Math.floor(video.duration / 5)); // 5 frames
+      console.log('[CREATE-REEL] 📊 Frame interval:', interval, 'seconds');
       
       const captureFrame = (time) => {
         const canvas = document.createElement("canvas");
@@ -119,13 +137,16 @@ export default function CreateReelPage() {
         video.onseeked = () => {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           frames.push(canvas.toDataURL("image/jpeg", 0.8));
+          console.log(`[CREATE-REEL] 📸 Captured frame at ${time}s`);
           
           if (time + interval < video.duration) {
             captureFrame(time + interval);
           } else {
+            console.log('[CREATE-REEL] ✅ All frames captured:', frames.length, 'frames');
             setCoverFrames(frames);
             if (frames.length > 0) {
               setThumbnailUrl(frames[0]);
+              console.log('[CREATE-REEL] 🖼️ Thumbnail URL set to first frame');
             }
           }
         };
@@ -174,58 +195,67 @@ export default function CreateReelPage() {
   const handleShare = async () => {
     if (isUploading || !file) return;
     
+    console.log('[CREATE-REEL] 🚀 handleShare started');
+    console.log('[CREATE-REEL] 📋 Share configuration:', {
+      caption,
+      visibility,
+      allowComments,
+      allowDuets,
+      allowStitches,
+      cropAspect,
+      duration,
+      hasThumbnail: !!thumbnailUrl,
+      coverFramesCount: coverFrames.length
+    });
+    
     setIsUploading(true);
     setUploadProgress(5);
+    console.log('[CREATE-REEL] ⬆️ Upload started, progress:', 5);
     
     try {
       setUploadProgress(15);
+      console.log('[CREATE-REEL] ⬆️ Progress:', 15, '- Uploading video file to backend...');
       
-      // Step 1: Upload video to presigned URL
-      const presignResponse = await postService.presignReelUpload({
-        fileName: file.name,
-        mimeType: file.type,
-        sizeBytes: file.size,
-        purpose: "reel"
-      });
-      
-      const { upload_url, file_url, wasabi_direct_url, key } = presignResponse.data.data;
-      console.log("Presign response:", presignResponse.data);
-      
-      setUploadProgress(30);
-      
-      // Upload video file
-      await postService.uploadToPresignedUrl(upload_url, file, file.type);
+      // Step 1: Upload video to backend (which handles S3 upload server-side)
+      // This avoids DNS/CORS issues from direct browser-to-S3 upload
+      const videoUploadResponse = await postService.uploadReelFile(file, 'video');
+      const { wasabi_direct_url: uploadedVideoUrl } = videoUploadResponse.data.data;
+      console.log('[CREATE-REEL] ✅ Video uploaded successfully!', { uploadedVideoUrl });
       
       setUploadProgress(60);
+      console.log('[CREATE-REEL] ⬆️ Progress:', 60);
       
       // Step 2: Upload thumbnail if selected
       let thumbnailUrlFinal = "";
       if (thumbnailUrl && coverFrames.length > 0) {
+        console.log('[CREATE-REEL] 🖼️ Uploading thumbnail...');
         try {
           // Convert data URL to blob
           const thumbResponse = await fetch(thumbnailUrl);
           const thumbBlob = await thumbResponse.blob();
           const thumbFile = new File([thumbBlob], "thumbnail.jpg", { type: "image/jpeg" });
-          
-          const thumbPresign = await postService.presignReelUpload({
-            fileName: "thumbnail.jpg",
-            mimeType: "image/jpeg",
-            sizeBytes: thumbFile.size,
-            purpose: "thumbnail"
+          console.log('[CREATE-REEL] 📁 Thumbnail file:', {
+            name: thumbFile.name,
+            size: thumbBlob.size,
+            type: thumbFile.type
           });
           
-          const { upload_url: thumbUploadUrl, wasabi_direct_url: thumbUrl } = thumbPresign.data.data;
-          
-          await postService.uploadToPresignedUrl(thumbUploadUrl, thumbFile, "image/jpeg");
+          // Upload thumbnail to backend (which handles S3 upload server-side)
+          const thumbUploadResponse = await postService.uploadReelFile(thumbFile, 'thumbnail');
+          const { wasabi_direct_url: thumbUrl } = thumbUploadResponse.data.data;
+          console.log('[CREATE-REEL] ✅ Thumbnail uploaded successfully!', { thumbUrl });
           
           thumbnailUrlFinal = thumbUrl;
           setUploadProgress(75);
         } catch (thumbError) {
-          console.error("Error uploading thumbnail:", thumbError);
+          console.error('[CREATE-REEL] ❌ Error uploading thumbnail:', thumbError);
         }
+      } else {
+        console.log('[CREATE-REEL] ℹ️ No thumbnail to upload');
       }
       
       // Step 3: Create reel
+      console.log('[CREATE-REEL] 🎬 Creating reel...');
       // Extract hashtags from caption
       const hashtagRegex = /#(\w+)/g;
       const hashtags = [];
@@ -233,6 +263,7 @@ export default function CreateReelPage() {
       while ((match = hashtagRegex.exec(caption)) !== null) {
         hashtags.push(match[1]);
       }
+      console.log('[CREATE-REEL] #️⃣ Extracted hashtags:', hashtags);
       
       // Extract mentions
       const mentionRegex = /@(\w+)/g;
@@ -240,10 +271,11 @@ export default function CreateReelPage() {
       while ((match = mentionRegex.exec(caption)) !== null) {
         mentions.push(match[1]);
       }
+      console.log('[CREATE-REEL] @️⃣ Extracted mentions:', mentions);
       
       const reelData = {
-        videoUrl: wasabi_direct_url || file_url,
-        duration: duration,
+        videoUrl: uploadedVideoUrl,
+        duration: Math.floor(duration * 1000), // Convert to milliseconds
         thumbnailUrl: thumbnailUrlFinal,
         aspectRatio: cropAspect,
         title: caption.substring(0, 100),
@@ -256,12 +288,13 @@ export default function CreateReelPage() {
         allowStitches: allowStitches
       };
       
-      console.log("Creating reel with data:", reelData);
+      console.log('[CREATE-REEL] 📤 Reel data prepared:', reelData);
       
       const createResponse = await postService.createReel(reelData);
-      console.log("Reel created:", createResponse.data);
+      console.log('[CREATE-REEL] ✅ Reel created successfully!', createResponse.data);
       
       setUploadProgress(100);
+      console.log('[CREATE-REEL] ⬆️ Progress:', 100, '- Upload complete!');
       
       // Navigate to home
       setTimeout(() => {
@@ -269,7 +302,7 @@ export default function CreateReelPage() {
       }, 500);
       
     } catch (error) {
-      console.error("Error creating reel:", error);
+      console.error('[CREATE-REEL] ❌ Error creating reel:', error);
       alert(error.message || "Failed to create reel. Please try again.");
     } finally {
       setIsUploading(false);
@@ -278,9 +311,11 @@ export default function CreateReelPage() {
 
   // Cover frame selection
   const handleCoverSelect = (index) => {
+    console.log('[CREATE-REEL] 🖼️ Cover selected at index:', index);
     setSelectedCoverIdx(index);
     if (coverFrames[index]) {
       setThumbnailUrl(coverFrames[index]);
+      console.log('[CREATE-REEL] 🖼️ Thumbnail URL updated');
     }
   };
 
@@ -659,3 +694,5 @@ export default function CreateReelPage() {
     </div>
   );
 }
+
+

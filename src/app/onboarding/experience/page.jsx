@@ -11,13 +11,15 @@ export default function CompleteExperience() {
 
   // Flow states: 'loading' -> 'questions' -> 'celebration' -> 'home'
   const [flowState, setFlowState] = useState('loading');
-  const [introScreen, setIntroScreen] = useState(null);
+  
   const [celebrationData, setCelebrationData] = useState(null);
   const [screens, setScreens] = useState([]);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [introScreen, setIntroScreen] = useState(null);
+const [showIntro, setShowIntro] = useState(true);
 
   const currentScreen = screens[step];
 
@@ -103,7 +105,7 @@ export default function CompleteExperience() {
 };
 
     checkOnboardingStatus();
-
+  
   }, [router]);
 
   // Handle celebration screen auto-redirect (4 seconds)

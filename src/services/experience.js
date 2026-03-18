@@ -2,6 +2,10 @@ import api from "./api";
 
 export const experienceService = {
 
+  // GET extended intro screen
+  getExtendedIntro: () =>
+    api.get("/onboarding/screens/extended-intro"),
+
   // GET questions
   getScreens: () =>
     api.get("/questionnaire/extended-profile/screens"),

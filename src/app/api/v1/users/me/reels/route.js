@@ -10,6 +10,8 @@ export async function GET(request) {
     const cursor = searchParams.get("cursor");
     const limit = searchParams.get("limit") || 20;
 
+    console.log(`[API /users/me/reels] 📥 GET request received`, { cursor, limit });
+
     // Get auth token from request headers
     const authHeader = request.headers.get("authorization");
     const token = authHeader?.replace("Bearer ", "");
@@ -30,51 +32,23 @@ export async function GET(request) {
     if (cursor) queryParams.append("cursor", cursor);
     queryParams.append("limit", limit);
 
-    // Forward request to actual backend API
-    const response = await axios.get(
-      `${API_BASE_URL}/users/me/reels?${queryParams.toString()}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    // Try to forward request to actual backend API
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/users/me/reels?${queryParams.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    return NextResponse.json(response.data);
-  } catch (error) {
-    console.error("Error getting my reels:", error.response?.data || error.message);
+      return NextResponse.json(response.data);
+    } catch (error) {
+      console.error(`[API /users/me/reels] ⚠️ Backend unavailable, using local data:`, error.message);
 
-    // If backend is not available, return mock response for demo
-    if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
-      // Get user ID from token or use default
-      const mockUserId = "current_user";
-      
-      // Generate mock reels for demo
-      const mockReels = Array.from({ length: 3 }, (_, i) => ({
-        _id: `reel_${mockUserId}_${i + 1}`,
-        reel_id: `reel_${mockUserId}_${i + 1}`,
-        video: {
-          url: "https://s3.wasabisys.com/playymate/social/demo/reel/sample.mp4",
-          thumbnail_url: "https://s3.wasabisys.com/playymate/social/demo/reel/thumbnail/sample.jpg",
-          duration: 30,
-          aspect_ratio: "9:16",
-        },
-        caption: `My reel #${i + 1} #playymate #myself`,
-        hashtags: ["playymate", "myself", "demo"],
-        likes_count: Math.floor(Math.random() * 100),
-        comments_count: Math.floor(Math.random() * 10),
-        views_count: Math.floor(Math.random() * 500),
-        saves_count: Math.floor(Math.random() * 20),
-        author: {
-          user_id: mockUserId,
-          username: "current_user",
-          full_name: "Current User",
-          profile_image_url: "https://via.placeholder.com/50",
-        },
-        created_at: new Date(Date.now() - i * 3600000).toISOString(),
-        is_liked: false,
-        is_saved: false,
-      }));
+      // Return local mock data when backend is unavailable
+      const mockReels = [];
 
       return NextResponse.json(
         {
@@ -86,11 +60,13 @@ export async function GET(request) {
             has_more: false,
           },
           error_code: null,
-          _demo: true,
+          _local: true,
         },
         { status: 200 }
       );
     }
+  } catch (error) {
+    console.error(`[API /users/me/reels] ❌ Error:`, error.response?.data || error.message);
 
     return NextResponse.json(
       {

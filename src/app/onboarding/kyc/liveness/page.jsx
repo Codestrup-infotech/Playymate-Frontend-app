@@ -28,20 +28,25 @@ export default function LivenessPage() {
      LOAD SCREEN CONFIG (Dynamic UI)
   ========================================================== */
 
+  const [introConfig, setIntroConfig] = useState(null);
+  const [scanConfig, setScanConfig] = useState(null);
+  
   useEffect(() => {
-    const fetchScreenConfig = async () => {
+    const fetchScreenConfigs = async () => {
       try {
-        const res = await kycService.getScreenConfig(
-          "face_verification_intro"
-        );
-
-        setScreenConfig(res?.data?.data);
+        const [introRes, scanRes] = await Promise.all([
+          kycService.getScreenConfig("face_verification_intro"),
+          kycService.getScreenConfig("face_verification_scan"),
+        ]);
+  
+        setIntroConfig(introRes?.data?.data?.screen || null);
+        setScanConfig(scanRes?.data?.data?.screen || null);
       } catch (err) {
-        console.error("Screen config error:", err);
+        console.error("Screen config fetch error:", err);
       }
     };
-
-    fetchScreenConfig();
+  
+    fetchScreenConfigs();
   }, []);
 
   /* =========================================================
@@ -159,26 +164,35 @@ export default function LivenessPage() {
   ========================================================== */
 
   return (
+
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-gray-900/50 p-6 rounded-2xl">
+
+
+      <div className="max-w-md w-full text-center mb-3 bg-gray-900/50 p-6 rounded-2xl">
 
         {/* TITLE SECTION */}
         <div className="text-center mb-6">
           <h2 className="text-xl font-bold text-white">
             {screenConfig?.title || "Face Liveness Verification"}
           </h2>
+          {introConfig?.subtitle && (
+         <p className="text-gray-400 text-sm mt-2">
+          {introConfig.subtitle}
+         </p>
+         )}
 
-          {screenConfig?.subtitle && (
-            <p className="text-gray-400 text-sm mt-2">
-              {screenConfig.subtitle}
-            </p>
-          )}
+      {introConfig?.description && (
+        <p className="text-gray-500 text-xs mt-2 mb-6">
+       {introConfig.description}
+     </p>
+      )}
 
-          {screenConfig?.description && (
-            <p className="text-gray-500 text-xs mt-2">
-              {screenConfig.description}
-            </p>
-          )}
+        
+         
+
+         
+
+          
         </div>
 
         {/* INITIALIZING STATE */}
