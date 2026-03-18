@@ -65,3 +65,25 @@ export const refreshFeedCache = async () => {
     );
     return res.data;
 };
+
+/**
+ * GET /api/v1/users/me/venues
+ * Get current user's own venues/stores
+ */
+export const getMyVenues = async () => {
+    const res = await axios.get(`${API_BASE}/users/me/venues`, {
+        headers: getAuthHeaders(),
+    });
+    return res.data.data?.items ?? [];
+};
+
+/**
+ * GET /api/v1/users/:userId/venues
+ * Get a specific user's venues/stores
+ */
+export const getUserVenues = async (userId) => {
+    const res = await axios.get(`${API_BASE}/users/${userId}/venues`, {
+        headers: getAuthHeaders(),
+    });
+    return res.data.data?.items ?? [];
+};
