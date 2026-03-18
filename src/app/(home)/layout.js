@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ThemeProvider, useTheme } from "@/lib/ThemeContext";
 import MessagesFloatingButton from "@/app/(home)/home/components/MessagesFloatingButton";
 import { usePathname } from "next/navigation";
+import MessagesPage from "./home/messages/page";
 
 function AppLayoutInner({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
