@@ -157,7 +157,13 @@ export default function ProfilePage() {
         try {
           const response = await postService.getUserPosts(profile._id, 20, null);
           console.log('Posts API response:', response);
-          const newPosts = response.data?.data?.posts || response.data?.data?.items || [];
+          const newPosts = (response.data?.data?.posts || response.data?.data?.items || [])
+            .filter(post => {
+              // Filter out videos and GIFs - only show static images in Posts tab
+              if (!post.media || post.media.length === 0) return true;
+              const mediaType = post.media[0].type?.toLowerCase();
+              return mediaType !== 'video' && mediaType !== 'gif';
+            });
           setPosts(newPosts);
           setPostsCursor(response.data?.data?.next_cursor);
           setHasMorePosts(response.data?.data?.has_more || false);
@@ -167,7 +173,12 @@ export default function ProfilePage() {
           try {
             const altResponse = await postService.getMyPosts(20, null);
             console.log('Alternate Posts API response:', altResponse);
-            const newPosts = altResponse.data?.data?.posts || altResponse.data?.data?.items || [];
+            const newPosts = (altResponse.data?.data?.posts || altResponse.data?.data?.items || [])
+              .filter(post => {
+                if (!post.media || post.media.length === 0) return true;
+                const mediaType = post.media[0].type?.toLowerCase();
+                return mediaType !== 'video' && mediaType !== 'gif';
+              });
             setPosts(newPosts);
             setPostsCursor(altResponse.data?.data?.next_cursor);
             setHasMorePosts(altResponse.data?.data?.has_more || false);
@@ -189,9 +200,16 @@ export default function ProfilePage() {
       if (activeTab === "Reels" && profile?._id && !reelsLoading) {
         setReelsLoading(true);
         try {
-          const response = await postService.getUserReels(profile._id, 20, null);
-          console.log('Reels API response:', response);
-          const newReels = response.data?.data?.reels || response.data?.data?.items || [];
+          // Use posts API and filter for videos/GIFs (reels API may not work)
+          const response = await postService.getUserPosts(profile._id, 50, null);
+          console.log('Reels from posts API response:', response);
+          const allPosts = response.data?.data?.posts || response.data?.data?.items || [];
+          const newReels = allPosts.filter(post => {
+            if (!post.media || post.media.length === 0) return false;
+            const mediaType = post.media[0].type?.toLowerCase();
+            return mediaType === 'video' || mediaType === 'gif';
+          });
+          console.log('Filtered videos/GIFs for reels:', newReels);
           setReels(newReels);
           setReelsCursor(response.data?.data?.next_cursor);
           setHasMoreReels(response.data?.data?.has_more || false);
@@ -199,9 +217,14 @@ export default function ProfilePage() {
           console.error("Error fetching reels:", error);
           // Try alternate endpoint
           try {
-            const altResponse = await postService.getMyReels(20, null);
-            console.log('Alternate Reels API response:', altResponse);
-            const newReels = altResponse.data?.data?.reels || altResponse.data?.data?.items || [];
+            const altResponse = await postService.getMyPosts(50, null);
+            console.log('Alternate Reels from posts API response:', altResponse);
+            const allPosts = altResponse.data?.data?.posts || altResponse.data?.data?.items || [];
+            const newReels = allPosts.filter(post => {
+              if (!post.media || post.media.length === 0) return false;
+              const mediaType = post.media[0].type?.toLowerCase();
+              return mediaType === 'video' || mediaType === 'gif';
+            });
             setReels(newReels);
             setReelsCursor(altResponse.data?.data?.next_cursor);
             setHasMoreReels(altResponse.data?.data?.has_more || false);
@@ -222,7 +245,12 @@ export default function ProfilePage() {
       setPostsLoading(true);
       try {
         const response = await postService.getUserPosts(profile._id, 20, postsCursor);
-        const newPosts = response.data?.data?.posts || response.data?.data?.items || [];
+        const newPosts = (response.data?.data?.posts || response.data?.data?.items || [])
+          .filter(post => {
+            if (!post.media || post.media.length === 0) return true;
+            const mediaType = post.media[0].type?.toLowerCase();
+            return mediaType !== 'video' && mediaType !== 'gif';
+          });
         setPosts(prev => [...prev, ...newPosts]);
         setPostsCursor(response.data?.data?.next_cursor);
         setHasMorePosts(response.data?.data?.has_more || false);
@@ -238,8 +266,14 @@ export default function ProfilePage() {
     if (reelsCursor && hasMoreReels && !reelsLoading && profile?._id) {
       setReelsLoading(true);
       try {
-        const response = await postService.getUserReels(profile._id, 20, reelsCursor);
-        const newReels = response.data?.data?.reels || response.data?.data?.items || [];
+        // Use posts API and filter for videos/GIFs
+        const response = await postService.getUserPosts(profile._id, 50, reelsCursor);
+        const allPosts = response.data?.data?.posts || response.data?.data?.items || [];
+        const newReels = allPosts.filter(post => {
+          if (!post.media || post.media.length === 0) return false;
+          const mediaType = post.media[0].type?.toLowerCase();
+          return mediaType === 'video' || mediaType === 'gif';
+        });
         setReels(prev => [...prev, ...newReels]);
         setReelsCursor(response.data?.data?.next_cursor);
         setHasMoreReels(response.data?.data?.has_more || false);
@@ -638,39 +672,73 @@ export default function ProfilePage() {
               </div>
             ) : reels.length > 0 ? (
               <>
-                <div className="grid grid-cols-3 gap-1 mb-4">
+
+
+                {/* <div className="grid grid-cols-3 gap-1 mb-4">
                   {reels.map((reel) => (
                     <div 
-                      key={reel.reel_id} 
-                      className="aspect-[9/16] relative bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-80 transition"
+                      key={reel.reel_id || reel.post_id} 
+                      className="aspect-[9/16] relative rounded overflow-hidden cursor-pointer"
                       onClick={() => handleReelClick(reel)}
                     >
-                      {/* Check for thumbnail in both locations: reel.thumbnail_url or reel.video.thumbnail_url */}
-                      {(reel.thumbnail_url || reel.video?.thumbnail_url) ? (
-                        <img 
-                          src={reel.thumbnail_url || reel.video?.thumbnail_url} 
-                          alt="Reel" 
-                          className="w-full h-full object-cover"
-                        />
+
+                      
+                      {reel.thumbnail_url ? (
+                        <>
+                          <img 
+                            src={reel.thumbnail_url} 
+                            alt="Reel" 
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Play size={36} className="text-white drop-shadow-md" />
+                          </div>
+                        </>
+                      )
+                      
+                      
+                      : reel.media && reel.media[0]?.url ? (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                          <Play size={36} className="text-gray-800" />
+                        </div>
                       ) : (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gray-700">
-                          <Play size={20} className="text-gray-400" />
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                          <Play size={36} className="text-gray-800" />
                         </div>
                       )}
-                      {/* Play icon overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Play size={32} className="text-white drop-shadow-lg" />
-                      </div>
-                      {/* Overlay with stats */}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                        <div className="flex items-center gap-2 text-white text-xs">
-                          <Heart size={12} /> {reel.likes_count || 0}
-                          <MessageSquare size={12} /> {reel.comments_count || 0}
-                        </div>
-                      </div>
                     </div>
                   ))}
-                </div>
+                </div> */}
+
+
+<div className="grid grid-cols-3 gap-1 mb-4">
+  {reels.map((reel) => (
+    <div
+      key={reel.reel_id || reel.post_id}
+      className="aspect-[9/16] relative rounded overflow-hidden cursor-pointer"
+      onClick={() => handleReelClick(reel)}
+    >
+      {reel.media && reel.media[0]?.url ? (
+        <>
+          <video
+            src={reel.media[0].url}
+            className="w-full h-full object-cover"
+            muted
+            preload="metadata"
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Play size={40} className="text-white drop-shadow-md" />
+          </div>
+        </>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+          <Play size={36} className="text-gray-600" />
+        </div>
+      )}
+    </div>
+  ))}
+</div>
+
                 {hasMoreReels && (
                   <div className="flex justify-center py-4">
                     <button 
@@ -727,117 +795,177 @@ export default function ProfilePage() {
         />
       )}
 
-      {/* Post Detail Modal */}
+      {/* Post Detail Modal - Instagram Style Split View */}
       {showPostModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className={`relative max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl ${isDark ? 'bg-[#1a1a2e]' : 'bg-white'} ${!isDark && 'shadow-2xl'}`}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-0 md:p-4">
+          <div className={`relative w-full h-full md:w-[90vw] md:max-w-6xl md:h-[90vh] md:rounded-xl overflow-hidden flex flex-col md:flex-row ${isDark ? 'bg-[#1a1a2e]' : 'bg-white'}`}>
             {/* Close button */}
             <button
               onClick={() => setShowPostModal(false)}
-              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
+              className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
             >
               <XCircle size={24} />
             </button>
 
             {selectedPostLoading ? (
-              <div className="flex items-center justify-center py-20">
+              <div className="flex items-center justify-center w-full h-full">
                 <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : selectedPost ? (
-              <div className="flex flex-col">
-                {/* Author Info */}
-                <div className="flex items-center gap-3 p-4 border-b border-white/10">
-                  <img
-                    src={selectedPost.author?.profile_image_url || selectedPost.author?.profile_image_url || "/loginAvatars/profile.png"}
-                    alt={selectedPost.author?.full_name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div>
-                    <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {selectedPost.author?.full_name || 'User'}
-                    </p>
-                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      @{selectedPost.author?.username || 'username'}
-                    </p>
-                  </div>
-                  {selectedPost.author?.is_verified && (
-                    <CheckCircle size={16} className="text-blue-400" />
+              <>
+                {/* LEFT SIDE - Media Preview */}
+                <div className="w-full md:w-1/2 h-1/2 md:h-full bg-black flex items-center justify-center relative">
+                  {selectedPost.media && selectedPost.media.length > 0 ? (
+                    <>
+                      {selectedPost.media[0].type === 'video' ? (
+                        <video
+                          src={selectedPost.media[0].url}
+                          controls
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      ) : (
+                        <img
+                          src={selectedPost.media[0].url}
+                          alt="Post media"
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      )}
+                      {/* Media count indicator if multiple media */}
+                      {selectedPost.media.length > 1 && (
+                        <div className="absolute bottom-4 right-4 bg-black/60 px-3 py-1 rounded-full text-white text-sm flex items-center gap-1">
+                          <ImageIcon size={16} />
+                          <span>{selectedPost.media.length}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-white/50">No media</div>
                   )}
                 </div>
 
-                {/* Media */}
-                {selectedPost.media && selectedPost.media.length > 0 && (
-                  <div className="relative bg-black">
-                    {selectedPost.media[0].type === 'video' ? (
-                      <video
-                        src={selectedPost.media[0].url}
-                        controls
-                        className="w-full max-h-[50vh] object-contain"
-                      />
-                    ) : (
+                {/* RIGHT SIDE - Content */}
+                <div className="w-full md:w-1/2 h-1/2 md:h-full flex flex-col">
+                  {/* Header - Author Info */}
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-white/10">
+                    <div className="flex items-center gap-3">
                       <img
-                        src={selectedPost.media[0].url}
-                        alt="Post media"
-                        className="w-full max-h-[50vh] object-contain"
+                        src={selectedPost.author?.profile_image_url || selectedPost.author?.profile_image_url || "/loginAvatars/profile.png"}
+                        alt={selectedPost.author?.full_name}
+                        className="w-10 h-10 rounded-full object-cover"
                       />
+                      <div>
+                        <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {selectedPost.author?.full_name || 'User'}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            @{selectedPost.author?.username || 'username'}
+                          </p>
+                          {selectedPost.author?.is_verified && (
+                            <CheckCircle size={14} className="text-blue-400" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {selectedPost.content?.location && (
+                      <div className={`flex items-center gap-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <MapPin size={14} />
+                        <span className="hidden sm:inline">{selectedPost.content.location}</span>
+                      </div>
                     )}
                   </div>
-                )}
 
-                {/* Content */}
-                <div className="p-4">
-                  {/* Stats */}
-                  <div className="flex items-center gap-4 mb-3">
-                    <span className={`flex items-center gap-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      <Heart size={20} className={selectedPost.is_liked ? "text-red-500 fill-red-500" : ""} />
-                      {selectedPost.likes_count || 0}
-                    </span>
-                    <span className={`flex items-center gap-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      <MessageSquare size={20} />
-                      {selectedPost.comments_count || 0}
-                    </span>
-                    <span className={`flex items-center gap-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      <Share2 size={20} />
-                      {selectedPost.shares_count || 0}
-                    </span>
+                  {/* Scrollable Content - Caption + Comments */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {/* Caption */}
+                    {selectedPost.content?.text && (
+                      <div className="flex gap-3">
+                        <img
+                          src={selectedPost.author?.profile_image_url || "/loginAvatars/profile.png"}
+                          alt={selectedPost.author?.full_name}
+                          className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1"
+                        />
+                        <div>
+                          <p className={`${isDark ? 'text-white' : 'text-gray-900'} whitespace-pre-wrap`}>
+                            <span className="font-semibold">{selectedPost.author?.username || 'user'}</span>{' '}
+                            {selectedPost.content.text}
+                          </p>
+                          {/* Hashtags */}
+                          {selectedPost.content?.hashtags && selectedPost.content.hashtags.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {selectedPost.content.hashtags.map((tag, idx) => (
+                                <span key={idx} className="text-purple-400 text-sm">#{tag}</span>
+                              ))}
+                            </div>
+                          )}
+                          <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {selectedPost.created_at && new Date(selectedPost.created_at).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Comments Section */}
+                    <div className="border-t border-gray-200 dark:border-white/10 pt-4">
+                      <p className={`text-sm font-medium mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Comments ({selectedPost.comments_count || 0})
+                      </p>
+                      {/* Placeholder for comments - would come from existing state */}
+                      <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        No comments yet. Be the first to comment!
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Caption */}
-                  {selectedPost.content?.text && (
-                    <p className={`${isDark ? 'text-white' : 'text-gray-900'} whitespace-pre-wrap`}>
-                      {selectedPost.content.text}
+                  {/* Actions */}
+                  <div className="p-4 border-t border-gray-200 dark:border-white/10">
+                    <div className="flex items-center gap-4">
+                      <button className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+                        <Heart 
+                          size={24} 
+                          className={selectedPost.is_liked ? "text-red-500 fill-red-500" : isDark ? "text-white" : "text-gray-900"} 
+                        />
+                      </button>
+                      <button className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+                        <MessageSquare size={24} className={isDark ? "text-white" : "text-gray-900"} />
+                      </button>
+                      <button className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+                        <Share2 size={24} className={isDark ? "text-white" : "text-gray-900"} />
+                      </button>
+                    </div>
+
+                    <p className={`font-semibold mt-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {selectedPost.likes_count || 0} likes
                     </p>
-                  )}
+                    <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {selectedPost.shares_count || 0} shares
+                    </p>
+                  </div>
 
-                  {/* Hashtags */}
-                  {selectedPost.content?.hashtags && selectedPost.content.hashtags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {selectedPost.content.hashtags.map((tag, idx) => (
-                        <span key={idx} className="text-purple-400 text-sm">#{tag}</span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Location */}
-                  {selectedPost.content?.location && (
-                    <div className={`flex items-center gap-1 mt-3 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      <MapPin size={14} />
-                      {selectedPost.content.location}
-                    </div>
-                  )}
-
-                  {/* Created at */}
-                  <p className={`text-sm mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {selectedPost.created_at && new Date(selectedPost.created_at).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
+                  {/* Comment Input */}
+                  <div className="border-t border-gray-200 dark:border-white/10 p-3 flex items-center gap-2">
+                    <img
+                      src={selectedPost.author?.profile_image_url || "/loginAvatars/profile.png"}
+                      alt="Your avatar"
+                      className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                    />
+                    <input
+                      type="text"
+                      className={`flex-1 bg-transparent outline-none ${isDark ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'}`}
+                      placeholder="Add a comment..."
+                    />
+                    <button className="text-purple-500 font-semibold text-sm hover:opacity-80 transition-opacity">
+                      Post
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </>
             ) : (
-              <div className="flex items-center justify-center py-20">
+              <div className="flex items-center justify-center w-full h-full">
                 <p className="text-gray-400">Post not found</p>
               </div>
             )}

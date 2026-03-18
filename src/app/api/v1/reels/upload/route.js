@@ -36,6 +36,14 @@ function generateThumbnailKey(fileName, userId) {
 // POST /api/v1/reels/upload - Upload video/thumbnail directly to S3
 export async function POST(request) {
   try {
+    // Log configuration being used
+    console.log(`[API /reels/upload] 🔧 S3 Config:`, {
+      region: REGION,
+      endpoint: `https://s3.${REGION}.wasabisys.com`,
+      bucket: BUCKET_NAME,
+      hasCredentials: !!(process.env.WASABI_ACCESS_KEY_ID && process.env.WASABI_SECRET_ACCESS_KEY)
+    });
+    
     const formData = await request.formData();
     const file = formData.get("file");
     const type = formData.get("type") || "video"; // 'video' or 'thumbnail'
@@ -108,11 +116,23 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error(`[API /reels/upload] ❌ Error:`, error);
+    console.error(`[API /reels/upload] ❌ Error name:`, error.name);
+    console.error(`[API /reels/upload] ❌ Error stack:`, error.stack);
+    
+    // Log S3-specific error details
+    if (error.$metadata) {
+      console.error(`[API /reels/upload] ❌ S3 metadata:`, error.$metadata);
+    }
+    if (error.Code) {
+      console.error(`[API /reels/upload] ❌ S3 Error Code:`, error.Code);
+    }
+    
     return NextResponse.json(
       {
         status: "error",
         error_code: "UPLOAD_ERROR",
         message: error.message || "Failed to upload file",
+        details: error.name || undefined,
       },
       { status: 500 }
     );

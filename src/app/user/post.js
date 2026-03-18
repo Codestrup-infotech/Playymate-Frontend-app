@@ -223,6 +223,35 @@ export const postService = {
     return api.post('/posts/media/confirm', payload);
   },
 
+  /**
+   * Upload post media file directly to backend (avoids CORS/DNS issues)
+   * POST /api/v1/posts/media/upload
+   * Backend handles S3 upload internally
+   */
+  uploadPostMediaFile: (file, type = 'image') => {
+    console.log('[POSTS] 📤 uploadPostMediaFile called:', {
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      type
+    });
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+    
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
+    return axios.post('/api/v1/posts/media/upload', formData, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    }).then(response => {
+      console.log('[POSTS] ✅ Post media upload response:', response.data);
+      return response;
+    }).catch(error => {
+      console.error('[POSTS] ❌ Post media upload error:', error);
+      throw error;
+    });
+  },
+
   // ============ REELS MODULE ============
 
   /**
@@ -294,8 +323,10 @@ export const postService = {
   createReel: (data) => {
     console.log('[REELS] 🎬 createReel called with:', {
       videoUrl: data.videoUrl,
+      videoFileKey: data.videoFileKey,
       duration: data.duration,
       thumbnailUrl: data.thumbnailUrl,
+      thumbnailFileKey: data.thumbnailFileKey,
       aspectRatio: data.aspectRatio,
       title: data.title,
       caption: data.caption,
@@ -308,8 +339,10 @@ export const postService = {
     });
     const payload = {
       video_url: data.videoUrl,
-      duration: data.duration,
+      video_file_key: data.videoFileKey || null,
+      duration: data.duration || null,
       thumbnail_url: data.thumbnailUrl || null,
+      thumbnail_file_key: data.thumbnailFileKey || null,
       aspect_ratio: data.aspectRatio || '9:16',
       title: data.title || '',
       caption: data.caption || '',

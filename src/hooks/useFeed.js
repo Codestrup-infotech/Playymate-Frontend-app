@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getFeed, getSuggestedFollows, getNearbyVenues, refreshFeedCache } from "@/services/feed.service";
+import { getFeed, getSuggestedFollows, getNearbyVenues, refreshFeedCache, getMyVenues, getUserVenues } from "@/services/feed.service";
 import { getUserProfile } from "@/services/profile.service";
 
 /**
@@ -88,6 +88,30 @@ export default function useFeed() {
         }
     }, []);
 
+    // Fetch user's own venues/stores
+    const fetchMyVenues = useCallback(async () => {
+        try {
+            const items = await getMyVenues();
+            console.log("[useFeed] My venues loaded:", { count: items.length, venues: items.map(v => v.name) });
+            return items;
+        } catch (err) {
+            console.warn("[useFeed] getMyVenues error:", err.message);
+            return [];
+        }
+    }, []);
+
+    // Fetch specific user's venues/stores
+    const fetchUserVenues = useCallback(async (userId) => {
+        try {
+            const items = await getUserVenues(userId);
+            console.log("[useFeed] User venues loaded:", { userId, count: items.length });
+            return items;
+        } catch (err) {
+            console.warn("[useFeed] getUserVenues error:", err.message);
+            return [];
+        }
+    }, []);
+
     // Fetch user profile data for displaying actual values in the profile completion card
     const fetchUserProfile = useCallback(async () => {
         try {
@@ -166,5 +190,7 @@ export default function useFeed() {
         loadMore,
         refresh,
         fetchUserProfile,
+        fetchMyVenues,
+        fetchUserVenues,
     };
 }
