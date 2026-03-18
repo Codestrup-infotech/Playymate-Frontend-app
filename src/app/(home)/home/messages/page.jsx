@@ -512,12 +512,44 @@ export default function MessagesPage() {
     try {
       if (existing?.emoji === emoji) {
         await removeReaction(messageId, emoji);
+        // Remove reaction locally
+        setMessages((prev) =>
+          prev.map((m) =>
+            m._id === messageId
+              ? {
+                  ...m,
+                  reactions: (m.reactions || []).filter(
+                    (r) => !(r.user_id === myId || r.user_id?._id === myId)
+                  ),
+                }
+              : m
+          )
+        );
       } else {
         if (existing) await removeReaction(messageId, existing.emoji);
         await addReaction(messageId, emoji);
+        // Add reaction locally
+        setMessages((prev) =>
+          prev.map((m) =>
+            m._id === messageId
+              ? {
+                  ...m,
+                  reactions: [
+                    // Remove any existing reaction from me first
+                    ...(m.reactions || []).filter(
+                      (r) => !(r.user_id === myId || r.user_id?._id === myId)
+                    ),
+                    // Add new reaction
+                    { user_id: myId, emoji, created_at: new Date().toISOString() },
+                  ],
+                }
+              : m
+          )
+        );
       }
-      await refreshMessages(selectedConv._id);
-    } catch (e) { console.error("handleReact:", e.message); }
+    } catch (e) {
+      console.error("handleReact:", e.message);
+    }
   };
 
   // ── Delete — update locally (no refetch) ─────────────────────────────────────
