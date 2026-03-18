@@ -171,27 +171,12 @@ export const postService = {
    * POST /api/v1/posts/media/presign
    */
   presignMediaUpload: (data) => {
-    console.log('[POSTS] 📤 presignMediaUpload called:', {
-      filename: data.filename,
-      mimeType: data.mimeType,
-      type: data.type
-    });
     const payload = {
       filename: data.filename,
       mime_type: data.mimeType,
       type: data.type // 'image' or 'video'
     };
-    // Call the Next.js API route
-    const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
-    return axios.post('/api/v1/posts/media/presign', payload, {
-      headers: token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
-    }).then(response => {
-      console.log('[POSTS] ✅ Media presign response:', response.data);
-      return response;
-    }).catch(error => {
-      console.error('[POSTS] ❌ Media presign error:', error);
-      throw error;
-    });
+    return api.post('/posts/media/presign', payload);
   },
 
   /**
@@ -223,126 +208,35 @@ export const postService = {
     return api.post('/posts/media/confirm', payload);
   },
 
-  /**
-   * Upload post media file directly to backend (avoids CORS/DNS issues)
-   * POST /api/v1/posts/media/upload
-   * Backend handles S3 upload internally
-   */
-  uploadPostMediaFile: (file, type = 'image') => {
-    console.log('[POSTS] 📤 uploadPostMediaFile called:', {
-      fileName: file.name,
-      fileType: file.type,
-      fileSize: file.size,
-      type
-    });
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', type);
-    
-    const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
-    return axios.post('/api/v1/posts/media/upload', formData, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    }).then(response => {
-      console.log('[POSTS] ✅ Post media upload response:', response.data);
-      return response;
-    }).catch(error => {
-      console.error('[POSTS] ❌ Post media upload error:', error);
-      throw error;
-    });
-  },
-
   // ============ REELS MODULE ============
 
   /**
    * Presign reel upload
    * POST /api/v1/reels/presign
-   * Uses Next.js API route which generates presigned URL using AWS SDK
-   * @deprecated Use uploadReelFile instead for direct upload to backend
    */
   presignReelUpload: (data) => {
-    console.log('[REELS] 📤 presignReelUpload called with:', {
-      fileName: data.fileName,
-      mimeType: data.mimeType,
-      sizeBytes: data.sizeBytes,
-      purpose: data.purpose || 'reel'
-    });
     const payload = {
       file_name: data.fileName,
       mime_type: data.mimeType,
       size_bytes: data.sizeBytes,
-      purpose: data.purpose || 'reel'
+      purpose: data.purpose || 'reel' // 'reel' or 'thumbnail'
     };
-    // Call the Next.js API route which handles presigned URL generation locally
+    // Call the Next.js API route
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
     return axios.post('/api/v1/reels/presign', payload, {
       headers: token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
-    }).then(response => {
-      console.log('[REELS] ✅ Presign upload response:', response.data);
-      return response;
-    }).catch(error => {
-      console.error('[REELS] ❌ Presign upload error:', error);
-      throw error;
-    });
-  },
-
-  /**
-   * Upload reel file directly to backend (avoids CORS issues)
-   * POST /api/v1/reels/upload
-   * Backend handles S3 upload internally
-   */
-  uploadReelFile: (file, type = 'video') => {
-    console.log('[REELS] 📤 uploadReelFile called:', {
-      fileName: file.name,
-      fileType: file.type,
-      fileSize: file.size,
-      type
-    });
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', type);
-    
-    const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
-    return axios.post('/api/v1/reels/upload', formData, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    }).then(response => {
-      console.log('[REELS] ✅ File upload response:', response.data);
-      return response;
-    }).catch(error => {
-      console.error('[REELS] ❌ File upload error:', error);
-      throw error;
     });
   },
 
   /**
    * Create reel
    * POST /api/v1/reels/create
-   * Uses Next.js API route which handles reel creation locally
    */
   createReel: (data) => {
-    console.log('[REELS] 🎬 createReel called with:', {
-      videoUrl: data.videoUrl,
-      videoFileKey: data.videoFileKey,
-      duration: data.duration,
-      thumbnailUrl: data.thumbnailUrl,
-      thumbnailFileKey: data.thumbnailFileKey,
-      aspectRatio: data.aspectRatio,
-      title: data.title,
-      caption: data.caption,
-      hashtags: data.hashtags,
-      mentions: data.mentions,
-      visibility: data.visibility,
-      allowComments: data.allowComments,
-      allowDuets: data.allowDuets,
-      allowStitches: data.allowStitches
-    });
     const payload = {
       video_url: data.videoUrl,
-      video_file_key: data.videoFileKey || null,
-      duration: data.duration || null,
+      duration: data.duration,
       thumbnail_url: data.thumbnailUrl || null,
-      thumbnail_file_key: data.thumbnailFileKey || null,
       aspect_ratio: data.aspectRatio || '9:16',
       title: data.title || '',
       caption: data.caption || '',
@@ -353,35 +247,21 @@ export const postService = {
       allow_duets: data.allowDuets !== false,
       allow_stitches: data.allowStitches !== false
     };
-    // Call the Next.js API route which handles reel creation locally
+    // Call the Next.js API route
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
     return axios.post('/api/v1/reels/create', payload, {
       headers: token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
-    }).then(response => {
-      console.log('[REELS] ✅ Reel created successfully:', response.data);
-      return response;
-    }).catch(error => {
-      console.error('[REELS] ❌ Create reel error:', error);
-      throw error;
     });
   },
 
   /**
    * Get reel by ID
    * GET /api/v1/reels/:id
-   * Uses Next.js API route
    */
   getReel: (reelId) => {
-    console.log('[REELS] 🔍 getReel called for ID:', reelId);
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
     return axios.get(`/api/v1/reels/${reelId}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
-    }).then(response => {
-      console.log('[REELS] ✅ Get reel response:', response.data);
-      return response;
-    }).catch(error => {
-      console.error('[REELS] ❌ Get reel error:', error);
-      throw error;
     });
   },
 
@@ -451,46 +331,30 @@ export const postService = {
   /**
    * Get user's reels
    * GET /api/v1/users/:id/reels
-   * Uses Next.js API route
    */
   getUserReels: (userId, limit = 20, cursor = null) => {
-    console.log('[REELS] 👤 getUserReels called for userId:', userId, { limit, cursor });
     const params = { limit };
     if (cursor) params.cursor = cursor;
-    // Call the Next.js API route
+    // Call the Next.js API route with auth headers
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
     return axios.get(`/api/v1/users/${userId}/reels`, { 
       params,
       headers: token ? { Authorization: `Bearer ${token}` } : {}
-    }).then(response => {
-      console.log('[REELS] ✅ Get user reels response:', response.data);
-      return response;
-    }).catch(error => {
-      console.error('[REELS] ❌ Get user reels error:', error);
-      throw error;
     });
   },
 
   /**
    * Get current user's reels
    * GET /api/v1/users/me/reels
-   * Uses Next.js API route
    */
   getMyReels: (limit = 20, cursor = null) => {
-    console.log('[REELS] 👤 getMyReels called', { limit, cursor });
     const params = { limit };
     if (cursor) params.cursor = cursor;
-    // Call the Next.js API route
+    // Call the Next.js API route with auth headers
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') : null;
     return axios.get(`/api/v1/users/me/reels`, { 
       params,
       headers: token ? { Authorization: `Bearer ${token}` } : {}
-    }).then(response => {
-      console.log('[REELS] ✅ Get my reels response:', response.data);
-      return response;
-    }).catch(error => {
-      console.error('[REELS] ❌ Get my reels error:', error);
-      throw error;
     });
   },
 

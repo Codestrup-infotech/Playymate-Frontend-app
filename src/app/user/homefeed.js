@@ -441,7 +441,37 @@ export const getMyStory = async (userId = null) => {
     const currentUserId = userId || localStorage.getItem("user_id") || localStorage.getItem("_id");
     console.log("[getMyStory] Looking for story with userId:", currentUserId);
     
-    // Try the /stories/me endpoint first (most direct way)
+    // Use the correct endpoint: /users/{user_id}/stories
+    try {
+      const url = `${API_BASE}/users/${currentUserId}/stories?limit=20`;
+      console.log("[getMyStory] Calling URL:", url);
+      
+      const res = await axios.get(url, {
+        headers: getAuthHeaders(),
+      });
+      console.log("[getMyStory] Full response:", res.data);
+      
+      const data = res.data;
+      console.log("[getMyStory] data:", data);
+      
+      // Handle both response formats: { data: { active_stories: [] } } or { active_stories: [] }
+      const storiesData = data?.data || data;
+      console.log("[getMyStory] storiesData:", storiesData);
+      
+      // Return active_stories array
+      if (storiesData?.active_stories && Array.isArray(storiesData.active_stories)) {
+        console.log("[getMyStory] Found active_stories:", storiesData.active_stories.length);
+        return storiesData.active_stories;
+      }
+      
+      console.log("[getMyStory] No active_stories found");
+      return null;
+    } catch (userErr) {
+      console.log("[getMyStory] /users/{id}/stories error:", userErr.message);
+      console.log("[getMyStory] Error response:", userErr.response?.data);
+    }
+    
+    // Fallback: Try /stories/me
     try {
       const meRes = await axios.get(`${API_BASE}/stories/me`, {
         headers: getAuthHeaders(),
@@ -450,56 +480,10 @@ export const getMyStory = async (userId = null) => {
       console.log("[getMyStory] /stories/me response:", storyData);
       
       if (storyData) {
-        return storyData;
+        return [storyData]; // Return as array
       }
     } catch (meErr) {
       console.log("[getMyStory] /stories/me error:", meErr.message);
-    }
-    
-    // Try /api/v1/stories/user/{userId} if exists
-    try {
-      const userRes = await axios.get(`${API_BASE}/stories/user/${currentUserId}`, {
-        headers: getAuthHeaders(),
-      });
-      const userStories = userRes.data.data;
-      console.log("[getMyStory] /stories/user response:", userStories);
-      
-      // Return array or single story
-      if (Array.isArray(userStories) && userStories.length > 0) {
-        return userStories;
-      }
-      if (userStories) {
-        return userStories;
-      }
-    } catch (userErr) {
-      console.log("[getMyStory] /stories/user error:", userErr.message);
-    }
-    
-    // Fallback: Try the stories/feed endpoint
-    try {
-      const feedRes = await axios.get(`${API_BASE}/stories/feed?limit=20`, {
-        headers: getAuthHeaders(),
-      });
-      const data = feedRes.data.data;
-      console.log("[getMyStory] Story feed response:", data);
-      
-      // Look for current user's story in feed
-      if (data?.stories && Array.isArray(data.stories)) {
-        const myStory = data.stories.find(s => 
-          s.author?._id === currentUserId || 
-          s.user_id === currentUserId ||
-          s.user?._id === currentUserId ||
-          s.owner_id === currentUserId
-        );
-        if (myStory) return myStory;
-      }
-      
-      // Check top level
-      if (data?.author?._id === currentUserId || data?.user_id === currentUserId) {
-        return data;
-      }
-    } catch (feedErr) {
-      console.log("[getMyStory] Feed error:", feedErr.message);
     }
     
     return null;
