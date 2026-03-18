@@ -29,7 +29,9 @@ export default function MessagesFloatingButton() {
   useEffect(() => {
     fetchUnreadCount();
 
-    // Refresh every 30 seconds to keep count updated
+    // Refresh every 30 seconds to keep count updated ..
+
+
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, []);
