@@ -482,24 +482,6 @@ export default function ProfilePage() {
             <ShieldCheck size={18} className="text-purple-500  " />
           )}
 
-          {gender && (
-            <span className="text-[14px] px-2 py-0.5 rounded-full bg-[#6913A7] text-purple-300 border border-purple-700/30 capitalize">
-              {gender}
-            </span>
-          )}
-
-          {age && (
-            <span className="text-[14px] px-2 py-0.5 rounded-full bg-[#6913A7] text-purple-300 border border-gray-600/30">
-              {age} yrs
-            </span>
-          )}
-
-          {role_type && (
-            <span className="text-[14px] px-2 py-0.5 rounded-full bg-[#6913A7] text-purple-300 border border-orange-700/30 capitalize">
-              {capitalize(role_type)}
-            </span>
-          )}
-
         </div>
 
 
@@ -601,7 +583,7 @@ export default function ProfilePage() {
                   {posts.map((post) => (
                     <div 
                       key={post.post_id} 
-                      className="aspect-square relative bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-80 transition"
+                      className="aspect-[3/4] relative bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-80 transition"
                       onClick={() => handlePostClick(post)}
                     >
                       {post.media && post.media.length > 0 ? (
@@ -795,123 +777,179 @@ export default function ProfilePage() {
         />
       )}
 
-      {/* Post Detail Modal */}
+      {/* Post Detail Modal - Instagram Style Split View */}
       {showPostModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className={`relative max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl ${isDark ? 'bg-[#1a1a2e]' : 'bg-white'} ${!isDark && 'shadow-2xl'}`}>
+          <div className={`relative w-full max-w-6xl h-[90vh] rounded-2xl overflow-hidden flex flex-col md:flex-row ${isDark ? 'bg-[#1a1a2e]' : 'bg-white'} ${!isDark && 'shadow-2xl'}`}>
             {/* Close button */}
             <button
               onClick={() => setShowPostModal(false)}
-              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
+              className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
             >
               <XCircle size={24} />
             </button>
 
             {selectedPostLoading ? (
-              <div className="flex items-center justify-center py-20">
+              <div className="flex-1 flex items-center justify-center">
                 <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : selectedPost ? (
-              <div className="flex flex-col">
-                {/* Author Info */}
-                <div className="flex items-center gap-3 p-4 border-b border-white/10">
-                  <img
-                    src={selectedPost.author?.profile_image_url || selectedPost.author?.profile_image_url || "/loginAvatars/profile.png"}
-                    alt={selectedPost.author?.full_name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div>
-                    <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {selectedPost.author?.full_name || 'User'}
-                    </p>
-                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      @{selectedPost.author?.username || 'username'}
-                    </p>
-                  </div>
-                  {selectedPost.author?.is_verified && (
-                    <CheckCircle size={16} className="text-blue-400" />
+              <>
+                {/* LEFT SIDE: Media - Full width on mobile, 50% on desktop */}
+                <div className="w-full md:w-1/2 bg-black flex items-center justify-center relative h-1/2 md:h-full">
+                  {selectedPost.media && selectedPost.media.length > 0 ? (
+                    <>
+                      {/* Media Display */}
+                      {selectedPost.media[0].type === 'video' ? (
+                        <video
+                          src={selectedPost.media[0].url}
+                          controls
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      ) : (
+                        <img
+                          src={selectedPost.media[0].url}
+                          alt="Post media"
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      )}
+                      
+                      {/* Carousel Navigation */}
+                      {selectedPost.media.length > 1 && (
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                          {selectedPost.media.map((_, idx) => (
+                            <div
+                              key={idx}
+                              className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-white' : 'bg-white/40'}`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-gray-400">No media</p>
+                    </div>
                   )}
                 </div>
 
-                {/* Media */}
-                {selectedPost.media && selectedPost.media.length > 0 && (
-                  <div className="relative bg-black">
-                    {selectedPost.media[0].type === 'video' ? (
-                      <video
-                        src={selectedPost.media[0].url}
-                        controls
-                        className="w-full max-h-[50vh] object-contain"
-                      />
-                    ) : (
+                {/* RIGHT SIDE: Content - Full width on mobile, 50% on desktop */}
+                <div className="w-full md:w-1/2 flex flex-col h-1/2 md:h-full">
+                  {/* Header: Author Info */}
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-white/10">
+                    <div className="flex items-center gap-3">
                       <img
-                        src={selectedPost.media[0].url}
-                        alt="Post media"
-                        className="w-full max-h-[50vh] object-contain"
+                        src={selectedPost.author?.profile_image_url || selectedPost.author?.profile_image_url || "/loginAvatars/profile.png"}
+                        alt={selectedPost.author?.full_name}
+                        className="w-10 h-10 rounded-full object-cover"
                       />
+                      <div>
+                        <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {selectedPost.author?.full_name || 'User'}
+                        </p>
+                        {selectedPost.content?.location && (
+                          <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {selectedPost.content.location}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {selectedPost.author?.is_verified && (
+                      <CheckCircle size={16} className="text-blue-400" />
                     )}
                   </div>
-                )}
 
-                {/* Content */}
-                <div className="p-4">
-                  {/* Stats */}
-                  <div className="flex items-center gap-4 mb-3">
-                    <span className={`flex items-center gap-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      <Heart size={20} className={selectedPost.is_liked ? "text-red-500 fill-red-500" : ""} />
-                      {selectedPost.likes_count || 0}
-                    </span>
-                    <span className={`flex items-center gap-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      <MessageSquare size={20} />
-                      {selectedPost.comments_count || 0}
-                    </span>
-                    <span className={`flex items-center gap-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      <Share2 size={20} />
-                      {selectedPost.shares_count || 0}
-                    </span>
+                  {/* Scrollable Content: Caption + Comments */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {/* Caption */}
+                    {selectedPost.content?.text && (
+                      <p className={`${isDark ? 'text-white' : 'text-gray-900'} whitespace-pre-wrap`}>
+                        <span className="font-semibold mr-2">{selectedPost.author?.username || selectedPost.author?.full_name || 'user'}</span>
+                        {selectedPost.content.text}
+                      </p>
+                    )}
+
+                    {/* Hashtags */}
+                    {selectedPost.content?.hashtags && selectedPost.content.hashtags.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedPost.content.hashtags.map((tag, idx) => (
+                          <span key={idx} className="text-purple-400 text-sm">#{tag}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Comments Section */}
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
+                      {selectedPost.comments && selectedPost.comments.length > 0 ? (
+                        <div className="space-y-3">
+                          {selectedPost.comments.map((comment, idx) => (
+                            <p key={comment.id || idx} className={`${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              <span className="font-semibold mr-2">{comment.user?.username || comment.user?.full_name || 'user'}</span>
+                              {comment.text}
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No comments yet</p>
+                      )}
+                    </div>
+
+                    {/* Created at */}
+                    <p className={`text-xs mt-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {selectedPost.created_at && new Date(selectedPost.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
                   </div>
 
-                  {/* Caption */}
-                  {selectedPost.content?.text && (
-                    <p className={`${isDark ? 'text-white' : 'text-gray-900'} whitespace-pre-wrap`}>
-                      {selectedPost.content.text}
+                  {/* Actions: Like, Comment, Share */}
+                  <div className="p-4 border-t border-gray-200 dark:border-white/10">
+                    <div className="flex items-center gap-6 mb-3">
+                      <button className={`flex items-center gap-1 ${isDark ? 'text-white' : 'text-gray-900'} hover:text-red-500 transition-colors`}>
+                        <Heart size={24} className={selectedPost.is_liked ? "text-red-500 fill-red-500" : ""} />
+                      </button>
+                      <button className={`flex items-center gap-1 ${isDark ? 'text-white' : 'text-gray-900'} hover:text-purple-500 transition-colors`}>
+                        <MessageSquare size={24} />
+                      </button>
+                      <button className={`flex items-center gap-1 ${isDark ? 'text-white' : 'text-gray-900'} hover:text-green-500 transition-colors`}>
+                        <Share2 size={24} />
+                      </button>
+                    </div>
+
+                    {/* Likes Count */}
+                    <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {selectedPost.likes_count || 0} likes
                     </p>
-                  )}
+                  </div>
 
-                  {/* Hashtags */}
-                  {selectedPost.content?.hashtags && selectedPost.content.hashtags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {selectedPost.content.hashtags.map((tag, idx) => (
-                        <span key={idx} className="text-purple-400 text-sm">#{tag}</span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Location */}
-                  {selectedPost.content?.location && (
-                    <div className={`flex items-center gap-1 mt-3 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      <MapPin size={14} />
-                      {selectedPost.content.location}
-                    </div>
-                  )}
-
-                  {/* Created at */}
-                  <p className={`text-sm mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {selectedPost.created_at && new Date(selectedPost.created_at).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
+                  {/* Comment Input */}
+                  <div className="border-t border-gray-200 dark:border-white/10 p-3 flex items-center gap-2">
+                    <input
+                      type="text"
+                      className={`flex-1 bg-transparent outline-none ${isDark ? 'text-white placeholder-gray-400' : 'text-gray-900 placeholder-gray-500'}`}
+                      placeholder="Add a comment..."
+                    />
+                    <button
+                      className={`font-semibold ${isDark ? 'text-purple-400' : 'text-purple-600'} hover:opacity-80 transition-opacity`}
+                    >
+                      Post
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </>
             ) : (
-              <div className="flex items-center justify-center py-20">
+              <div className="flex-1 flex items-center justify-center">
                 <p className="text-gray-400">Post not found</p>
               </div>
             )}
           </div>
         </div>
       )}
+
+
     </div>
   );
 }
+

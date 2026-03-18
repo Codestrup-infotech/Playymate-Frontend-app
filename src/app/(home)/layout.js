@@ -26,7 +26,7 @@ function AppLayoutInner({ children }) {
 
       {/* Main Content Area */}
       <div
-        style={{ marginLeft: sidebarOpen ? "160px" : "72px" }}
+        style={{ marginLeft: sidebarOpen ? "250px" : "72px" }}
         className="flex flex-col flex-1 mt-[25px] transition-all duration-300 ease-in-out"
       >
         {/* Fixed Topbar */}
