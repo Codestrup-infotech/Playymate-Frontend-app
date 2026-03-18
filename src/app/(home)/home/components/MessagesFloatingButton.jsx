@@ -1,51 +1,85 @@
 "use client";
 
 import { MessageCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getConversations } from "@/services/messages";
 
-export default function MessagesFloatingButton({ count = 8 }) {
+// Decode JWT to get logged-in user's ID (same as page.jsx)
+function getMyId() {
+  if (typeof window === "undefined") return "";
+  const token =
+    sessionStorage.getItem("access_token") ||
+    sessionStorage.getItem("accessToken") ||
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("accessToken") ||
+    "";
+  if (!token) return "";
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.sub || payload.id || payload._id || payload.userId || "";
+  } catch {
+    return "";
+  }
+}
+
+export default function MessagesFloatingButton() {
+  const router = useRouter();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    fetchUnreadCount();
+
+    // Refresh every 30 seconds to keep count updated
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const myId = getMyId();
+      if (!myId) return;
+
+      const data = await getConversations({ limit: 50 });
+      const convs = data?.conversations || [];
+
+      // Sum unread counts across all conversations for this user
+      const total = convs.reduce((sum, conv) => {
+        return sum + (conv.unread_counts?.[myId] || 0);
+      }, 0);
+
+      setUnreadCount(total);
+    } catch (e) {
+      // Silently fail — don't break the button if API is down
+    }
+  };
+
+  const displayCount = unreadCount > 99 ? "99+" : unreadCount > 0 ? String(unreadCount) : null;
+
   return (
     <div className="fixed bottom-6 right-6 z-50">
       <button
-        className="flex items-center gap-4 px-5 py-4 rounded-full bg-white dark:bg-[#1a1a2e] shadow-xl border border-gray-200 dark:border-gray-700 hover:scale-105 active:scale-95 transition-all duration-200"
+        onClick={() => router.push("/home/messages")}
+        className="bg-white dark:bg-[#1a1a2e] rounded-full shadow-xl px-5 py-3 flex items-center gap-3 hover:scale-105 active:scale-95 transition-all duration-200 border border-gray-100 dark:border-gray-700 group"
         aria-label="Messages"
       >
-        {/* ICON WITH BADGE */}
-        <div className="relative">
-          <MessageCircle className="w-5 h-5 text-gray-900 dark:text-white" />
+        {/* Icon */}
+        <MessageCircle
+          size={20}
+          className="text-gray-900 dark:text-white group-hover:text-purple-500 transition-colors"
+        />
 
-          {/* Notification Badge */}
-          {count > 0 && (
-            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-[1px] rounded-full min-w-[18px] text-center leading-tight">
-              {count}
-            </span>
-          )}
-        </div>
-
-        {/* TEXT */}
-        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+        {/* Label */}
+        <span className="font-semibold text-sm text-gray-900 dark:text-white whitespace-nowrap">
           Messages
         </span>
 
-        {/* AVATAR GROUP */}
-        <div className="flex items-center -space-x-2">
-          <img
-            src="https://i.pravatar.cc/30?img=1"
-            className="w-6 h-6 rounded-full border-2 border-white"
-          />
-          <img
-            src="https://i.pravatar.cc/30?img=2"
-            className="w-6 h-6 rounded-full border-2 border-white"
-          />
-          <img
-            src="https://i.pravatar.cc/30?img=3"
-            className="w-6 h-6 rounded-full border-2 border-white"
-          />
-
-          {/* More indicator */}
-          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold border-2 border-white">
-            ...
-          </div>
-        </div>
+        {/* Real unread badge — only shown when count > 0 */}
+        {displayCount && (
+          <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center leading-tight">
+            {displayCount}
+          </span>
+        )}
       </button>
     </div>
   );

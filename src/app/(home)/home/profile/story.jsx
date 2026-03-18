@@ -13,7 +13,7 @@ import {
   Eye
 } from "lucide-react";
 
-import { getMyStory } from "@/app/user/homefeed";
+import { getMyStory, sortStoriesByCreatedAtASC } from "@/app/user/homefeed";
 import { useRouter } from "next/navigation";
 
 /**
@@ -40,8 +40,13 @@ export function useOwnStory(profile) {
         userStoriesArray = [result];
       }
 
-      setStories(userStoriesArray);
-      setHasStories(userStoriesArray.length > 0);
+      // Apply defensive sorting - oldest first (ASC) for Instagram-style viewing
+      // This ensures first uploaded story is shown first
+      const sortedStories = sortStoriesByCreatedAtASC(userStoriesArray);
+      console.log("[useOwnStory] Sorted stories (ASC):", sortedStories.map(s => s.createdAt));
+      
+      setStories(sortedStories);
+      setHasStories(sortedStories.length > 0);
     } catch (err) {
       console.log("[useOwnStory] Error:", err.message);
       setStories([]);
@@ -108,7 +113,13 @@ export default function OwnStoryViewerModal( {
             userStoriesArray = [result];
           }
 
-          setInternalStories(userStoriesArray);
+          // Apply defensive sorting - oldest first (ASC) for Instagram-style viewing
+          const sortedStories = sortStoriesByCreatedAtASC(userStoriesArray);
+          console.log("[OwnStoryViewerModal] Sorted stories (ASC):", sortedStories.map(s => s.createdAt));
+          
+          setInternalStories(sortedStories);
+          // Always start from index 0 (first/oldest story)
+          setInternalIndex(0);
         } catch (err) {
           console.log("[OwnStoryViewerModal] Error:", err.message);
           setInternalStories([]);

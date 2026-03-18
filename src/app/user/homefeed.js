@@ -393,6 +393,35 @@ export const deleteReel = async (reelId) => {
 // =====================================================
 
 /**
+ * Sort stories inside a single user by createdAt ASC (oldest first)
+ * Instagram-style: first story uploaded is shown first
+ */
+export const sortStoriesByCreatedAtASC = (stories) => {
+  if (!Array.isArray(stories)) return [];
+  return [...stories].sort((a, b) => {
+    const dateA = new Date(a.createdAt || a.created_at || 0);
+    const dateB = new Date(b.createdAt || b.created_at || 0);
+    return dateA.getTime() - dateB.getTime();
+  });
+};
+
+/**
+ * Sort story groups (users) by their latest story's createdAt DESC (most recent first)
+ * Instagram-style: users with most recent activity appear first
+ */
+export const sortStoryGroupsByLatestFirst = (storyGroups) => {
+  if (!Array.isArray(storyGroups)) return [];
+  return [...storyGroups].sort((a, b) => {
+    // Get the latest story from each user group
+    const aLatest = a.stories?.[a.stories.length - 1] || {};
+    const bLatest = b.stories?.[b.stories.length - 1] || {};
+    const dateA = new Date(aLatest.createdAt || aLatest.created_at || 0);
+    const dateB = new Date(bLatest.createdAt || bLatest.created_at || 0);
+    return dateB.getTime() - dateA.getTime();
+  });
+};
+
+/**
  * POST /api/v1/stories/presign
  * Generate presigned upload URL for story image/video or thumbnail
  */
@@ -419,6 +448,7 @@ export const createStory = async (storyData) => {
 /**
  * GET /api/v1/stories/feed
  * Get story feed from followed users
+ * Returns sorted by latest story DESC (most recent first)
  */
 export const getStoryFeed = async (limit = 20, cursor = null) => {
   const params = new URLSearchParams();
@@ -428,7 +458,25 @@ export const getStoryFeed = async (limit = 20, cursor = null) => {
   const res = await axios.get(`${API_BASE}/stories/feed?${params.toString()}`, {
     headers: getAuthHeaders(),
   });
-  return res.data.data;
+  const data = res.data.data;
+  
+  // Apply defensive sorting for story groups
+  // Users sorted by their latest story DESC (most recent first)
+  if (data?.items && Array.isArray(data.items)) {
+    const sortedItems = data.items.map(group => ({
+      ...group,
+      // Sort stories within each user by createdAt ASC (oldest first)
+      stories: sortStoriesByCreatedAtASC(group.stories || [])
+    }));
+    
+    // Sort users by their latest story DESC
+    return {
+      ...data,
+      items: sortStoryGroupsByLatestFirst(sortedItems)
+    };
+  }
+  
+  return data;
 };
 
 /**
@@ -458,10 +506,14 @@ export const getMyStory = async (userId = null) => {
       const storiesData = data?.data || data;
       console.log("[getMyStory] storiesData:", storiesData);
       
-      // Return active_stories array
+      // Return active_stories array with defensive sorting
+      // Sort by createdAt ASC (oldest first) for Instagram-style viewing
       if (storiesData?.active_stories && Array.isArray(storiesData.active_stories)) {
         console.log("[getMyStory] Found active_stories:", storiesData.active_stories.length);
-        return storiesData.active_stories;
+        // Apply defensive sorting - oldest first (ASC)
+        const sortedStories = sortStoriesByCreatedAtASC(storiesData.active_stories);
+        console.log("[getMyStory] Sorted stories (ASC):", sortedStories.map(s => s.createdAt));
+        return sortedStories;
       }
       
       console.log("[getMyStory] No active_stories found");

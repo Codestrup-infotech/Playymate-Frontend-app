@@ -1,11 +1,11 @@
-"use client";
+ "use client";
 import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   MessageCircle, Heart, Send, ShoppingCart, MapPin,
   Users, Image, X, RefreshCw, Loader2, Plus, ChevronLeft, ChevronRight
 } from "lucide-react";
-import { getMyStory, getStoryFeed } from "@/app/user/homefeed";
+import { getMyStory, getStoryFeed, sortStoriesByCreatedAtASC } from "@/app/user/homefeed";
 import userService from "@/services/user";
 import ProfileCompletionCard from "@/app/components/profileCompletion/ProfileCompletionCard";
 import { useTheme } from "@/lib/ThemeContext";
@@ -201,7 +201,10 @@ export default function HomePage() {
             } else if (result) {
               userStoriesArray = [result];
             }
-            setUserStories(userStoriesArray);
+            // Apply defensive sorting - oldest first (ASC) for Instagram-style viewing
+            const sortedStories = sortStoriesByCreatedAtASC(userStoriesArray);
+            console.log("[HomePage] Sorted stories (ASC):", sortedStories.map(s => s.createdAt));
+            setUserStories(sortedStories);
           }
         } catch (err) {
           console.log("[HomePage] Error refreshing story:", err.message);
@@ -237,8 +240,10 @@ export default function HomePage() {
             } else if (result) {
               userStoriesArray = [result];
             }
-            console.log("[HomePage] User stories loaded:", userStoriesArray);
-            setUserStories(userStoriesArray);
+            // Apply defensive sorting - oldest first (ASC) for Instagram-style viewing
+            const sortedStories = sortStoriesByCreatedAtASC(userStoriesArray);
+            console.log("[HomePage] User stories loaded (sorted ASC):", sortedStories.map(s => s.createdAt));
+            setUserStories(sortedStories);
           } catch (storyErr) {
             console.log("[HomePage] Error fetching stories:", storyErr.message);
           }
@@ -278,6 +283,7 @@ export default function HomePage() {
   // Handle viewing own story
   const handleViewOwnStory = () => {
     if (userStories.length > 0) {
+      // Always start from index 0 (first/oldest story) - Instagram-style
       setCurrentStoryIndex(0);
       setIsViewingStory(true);
     } else {
@@ -296,6 +302,7 @@ export default function HomePage() {
     if (currentStoryIndex < userStories.length - 1) {
       setCurrentStoryIndex(currentStoryIndex + 1);
     } else {
+      // Already at the last story, close the viewer
       closeStoryViewer();
     }
   };
@@ -305,6 +312,7 @@ export default function HomePage() {
     if (currentStoryIndex > 0) {
       setCurrentStoryIndex(currentStoryIndex - 1);
     }
+    // If already at index 0, do nothing (stay on first story)
   };
 
   const handleSelectFromComputer = () => fileInputRef?.current?.click();
