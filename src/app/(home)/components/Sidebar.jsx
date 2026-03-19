@@ -110,7 +110,7 @@ export default function Sidebar() {
       <div className="flex items-center h-16 px-3">
         {/* Show icon only when sidebar is closed (not hovered) */}
         <img
-          src="playymate-icon.png"
+          src="/playymate-icon.png"
           alt="Playymate Icon"
           className={`w-10 h-10 object-contain transition-all duration-300 ${
             isHover ? "opacity-0 w-0" : "opacity-100 w-10 mx-auto"

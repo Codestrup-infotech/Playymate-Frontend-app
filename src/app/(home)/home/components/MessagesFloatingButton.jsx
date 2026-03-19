@@ -1,7 +1,7 @@
 "use client";
 import { MessageCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getConversations } from "@/services/messages";
 
 // Decode JWT to get logged-in user's ID (same as page.jsx)
@@ -26,17 +26,8 @@ export default function MessagesFloatingButton() {
   const router = useRouter();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    fetchUnreadCount();
-
-    // Refresh every 30 seconds to keep count updated ..
-
-
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchUnreadCount = async () => {
+  // Define fetchUnreadCount before useEffect to avoid "accessed before declaration" error
+  const fetchUnreadCount = useCallback(async () => {
     try {
       const myId = getMyId();
       if (!myId) return;
@@ -53,7 +44,19 @@ export default function MessagesFloatingButton() {
     } catch (e) {
       // Silently fail — don't break the button if API is down
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Use async IIFE to avoid calling setState synchronously in effect
+    const loadUnreadCount = async () => {
+      await fetchUnreadCount();
+    };
+    loadUnreadCount();
+
+    // Refresh every 30 seconds to keep count updated
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]);
 
   const displayCount = unreadCount > 99 ? "99+" : unreadCount > 0 ? String(unreadCount) : null;
 

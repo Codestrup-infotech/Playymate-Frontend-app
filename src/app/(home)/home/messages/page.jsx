@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { io } from "socket.io-client";
 import {
   getConversations,
   getMessages,
@@ -40,6 +41,17 @@ function getMyId() {
   }
 }
 
+function getAuthToken() {
+  if (typeof window === "undefined") return "";
+  return (
+    sessionStorage.getItem("access_token") ||
+    sessionStorage.getItem("accessToken") ||
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("accessToken") ||
+    ""
+  );
+}
+
 // ─── UI helpers ────────────────────────────────────────────────────────────────
 
 function initials(name = "") {
@@ -55,6 +67,7 @@ const COLORS = [
   "bg-rose-100 text-rose-700",
   "bg-amber-100 text-amber-700",
 ];
+
 function colorFor(str = "") {
   let h = 0;
   for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xffff;
@@ -309,9 +322,11 @@ function ConvItem({ conv, myId, active, onClick }) {
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export default function MessagesPage() {
-  const myId      = getMyId();
-  const bottomRef = useRef(null);
-  const fileRef   = useRef(null);
+  const myId           = getMyId();
+  const bottomRef      = useRef(null);
+  const fileRef        = useRef(null);
+  const socketRef      = useRef(null);
+  const selectedConvRef = useRef(null);
 
   const [profileMap,    setProfileMap]    = useState({});
   const [conversations, setConversations] = useState([]);
@@ -329,6 +344,8 @@ export default function MessagesPage() {
   const [newConvInput,  setNewConvInput]  = useState("");
   const [showRename,    setShowRename]    = useState(false);
   const [renameInput,   setRenameInput]   = useState("");
+  const [typingUsers,   setTypingUsers]   = useState({});
+  const [connected,     setConnected]     = useState(false);
 
   // ── Merge profiles ───────────────────────────────────────────────────────────
 
@@ -343,6 +360,180 @@ export default function MessagesPage() {
       return next;
     });
   }, []);
+
+  // ── appendMessage ─────────────────────────────────────────────────────────────
+
+  const appendMessage = useCallback((msg) => {
+    if (!msg) return;
+    if (msg.sender_id && typeof msg.sender_id === "object" && msg.sender_id.full_name) {
+      mergeProfiles([msg.sender_id]);
+    }
+    setMessages((prev) => {
+      if (prev.find((m) => m._id === msg._id)) {
+        console.log("[Socket] appendMessage: duplicate skipped", msg._id);
+        return prev;
+      }
+      console.log("[Socket] appendMessage: added message", msg._id);
+      return [...prev, msg];
+    });
+  }, [mergeProfiles]);
+
+  // ── Socket.io setup ───────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!myId) {
+      console.warn("[Socket] No myId found — socket will not connect");
+      return;
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      console.warn("[Socket] No auth token found — socket will not connect");
+      return;
+    }
+
+    const SOCKET_URL =
+      process.env.NEXT_PUBLIC_SOCKET_URL ||
+      (process.env.NEXT_PUBLIC_API_URL || "").replace("/api/v1", "") ||
+      "http://localhost:5000";
+
+    console.log("[Socket] Connecting to:", SOCKET_URL, "as user:", myId);
+
+    const socket = io(SOCKET_URL, {
+      auth: { token },
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+    });
+
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("[Socket] Connected. socket.id:", socket.id);
+      setConnected(true);
+
+      // Rejoin current conversation room after reconnect
+      if (selectedConvRef.current?._id) {
+        console.log("[Socket] Rejoining room after reconnect:", selectedConvRef.current._id);
+        socket.emit("conversation:join", { conversationId: selectedConvRef.current._id });
+      }
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("[Socket] Connection error:", err.message);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.warn("[Socket] Disconnected. Reason:", reason);
+      setConnected(false);
+    });
+
+    // ── New message ──────────────────────────────────────────────────────────
+    socket.on("message:new", (message) => {
+      const convId = message.conversation_id;
+      console.log("[Socket] message:new received. convId:", convId, "currentConv:", selectedConvRef.current?._id, "msg:", message._id);
+
+      if (selectedConvRef.current?._id === convId) {
+        appendMessage(message);
+
+        if (message._id) {
+          markMessageRead(message._id).catch((e) => {
+            console.warn("[Socket] markMessageRead failed:", e.message);
+          });
+        }
+      } else {
+        console.log("[Socket] message:new — NOT for current conv, updating sidebar only");
+      }
+
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c._id !== convId) return c;
+          const isOpen = selectedConvRef.current?._id === convId;
+          return {
+            ...c,
+            last_message: message,
+            last_message_at: message.created_at,
+            unread_counts: {
+              ...c.unread_counts,
+              [myId]: isOpen ? 0 : (c.unread_counts?.[myId] || 0) + 1,
+            },
+          };
+        })
+      );
+    });
+
+    // ── Message edited ────────────────────────────────────────────────────────
+    socket.on("message:updated", (message) => {
+      console.log("[Socket] message:updated received:", message._id);
+      if (selectedConvRef.current?._id === message.conversation_id) {
+        setMessages((prev) =>
+          prev.map((m) => m._id === message._id ? { ...m, ...message } : m)
+        );
+      }
+    });
+
+    // ── Message deleted ───────────────────────────────────────────────────────
+    socket.on("message:deleted", ({ messageId, conversationId }) => {
+      console.log("[Socket] message:deleted received:", messageId);
+      if (selectedConvRef.current?._id === conversationId) {
+        setMessages((prev) =>
+          prev.map((m) => m._id === messageId ? { ...m, is_deleted: true, content: "" } : m)
+        );
+      }
+    });
+
+    // ── Read receipt ──────────────────────────────────────────────────────────
+    socket.on("message:read_ack", ({ messageId, userId, conversationId }) => {
+      console.log("[Socket] message:read_ack received. messageId:", messageId, "userId:", userId, "convId:", conversationId);
+      if (selectedConvRef.current?._id === conversationId) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m._id === messageId
+              ? { ...m, read_by: [...new Set([...(m.read_by || []), userId])] }
+              : m
+          )
+        );
+      }
+      setConversations((prev) =>
+        prev.map((c) =>
+          c._id === conversationId
+            ? { ...c, unread_counts: { ...c.unread_counts, [userId]: 0 } }
+            : c
+        )
+      );
+    });
+
+    // ── Typing indicator ──────────────────────────────────────────────────────
+    socket.on("typing:indicator", ({ conversationId, userId, isTyping }) => {
+      console.log("[Socket] typing:indicator. convId:", conversationId, "userId:", userId, "isTyping:", isTyping);
+      if (userId === myId) return;
+      setTypingUsers((prev) => {
+        const current = prev[conversationId] || [];
+        if (isTyping) {
+          return { ...prev, [conversationId]: [...new Set([...current, userId])] };
+        } else {
+          return { ...prev, [conversationId]: current.filter((id) => id !== userId) };
+        }
+      });
+    });
+
+    // ── Reaction ──────────────────────────────────────────────────────────────
+    socket.on("message:reaction", ({ messageId, conversationId, reactions }) => {
+      console.log("[Socket] message:reaction received. messageId:", messageId);
+      if (selectedConvRef.current?._id === conversationId) {
+        setMessages((prev) =>
+          prev.map((m) => m._id === messageId ? { ...m, reactions } : m)
+        );
+      }
+    });
+
+    return () => {
+      console.log("[Socket] Cleaning up socket connection");
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [myId]); // ← IMPORTANT: removed appendMessage from deps to prevent socket reconnect loop
 
   // ── Load conversations ───────────────────────────────────────────────────────
 
@@ -368,7 +559,7 @@ export default function MessagesPage() {
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
-  // ── fetchMessages — shows skeleton, used ONLY when opening a conversation ───
+  // ── fetchMessages ────────────────────────────────────────────────────────────
 
   const fetchMessages = useCallback(async (convId) => {
     setMsgLoading(true);
@@ -389,37 +580,6 @@ export default function MessagesPage() {
     }
   }, [mergeProfiles]);
 
-  // ── refreshMessages — NO skeleton, used after reactions/edit/delete ──────────
-
-  const refreshMessages = useCallback(async (convId) => {
-    try {
-      const data = await getMessages(convId, { limit: 50 });
-      const msgs = data?.messages || [];
-      setMessages(msgs);
-      const users = msgs
-        .map((m) => m.sender_id)
-        .filter((s) => s && typeof s === "object" && s.full_name);
-      mergeProfiles(users);
-      return msgs;
-    } catch (e) {
-      console.error("refreshMessages:", e.message);
-      return [];
-    }
-  }, [mergeProfiles]);
-
-  // ── appendMessage — adds single new message locally, NO refetch ─────────────
-
-  const appendMessage = useCallback((msg) => {
-    if (!msg) return;
-    if (msg.sender_id && typeof msg.sender_id === "object" && msg.sender_id.full_name) {
-      mergeProfiles([msg.sender_id]);
-    }
-    setMessages((prev) => {
-      if (prev.find((m) => m._id === msg._id)) return prev;
-      return [...prev, msg];
-    });
-  }, [mergeProfiles]);
-
   // ── Auto scroll ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -429,22 +589,36 @@ export default function MessagesPage() {
   // ── Select conversation ──────────────────────────────────────────────────────
 
   const handleSelectConv = async (conv) => {
+    // Leave previous room
+    if (selectedConvRef.current?._id && socketRef.current) {
+      console.log("[Socket] Leaving room:", selectedConvRef.current._id);
+      socketRef.current.emit("conversation:leave", {
+        conversationId: selectedConvRef.current._id,
+      });
+    }
+
     setSelectedConv(conv);
+    selectedConvRef.current = conv;
     setReplyTo(null);
     setEditingMsg(null);
     setText("");
-    setMessages([]); // clear previous conversation messages immediately
+    setMessages([]);
 
-    // Extract profiles from participants immediately
+    // Join new room
+    if (socketRef.current) {
+      console.log("[Socket] Joining room:", conv._id, "| socket connected:", socketRef.current.connected, "| socket.id:", socketRef.current.id);
+      socketRef.current.emit("conversation:join", { conversationId: conv._id });
+    } else {
+      console.warn("[Socket] socketRef.current is null — cannot join room!");
+    }
+
     const users = (conv.participants || [])
       .map((p) => p.user_id)
       .filter((u) => u && typeof u === "object");
     mergeProfiles(users);
 
-    // Fetch messages with loading skeleton
     const msgs = await fetchMessages(conv._id);
 
-    // Mark last message as read → clears unread badge
     const lastMsg = msgs?.[msgs.length - 1];
     if (lastMsg?._id) {
       try {
@@ -466,10 +640,14 @@ export default function MessagesPage() {
 
   const handleSend = async () => {
     if (!text.trim() || !selectedConv) return;
+
+    if (socketRef.current) {
+      socketRef.current.emit("typing:stop", { conversationId: selectedConv._id });
+    }
+
     setSending(true);
     try {
       if (editingMsg) {
-        // Edit — update locally, no refetch
         await editMessage(editingMsg._id, text.trim());
         setMessages((prev) =>
           prev.map((m) =>
@@ -478,14 +656,15 @@ export default function MessagesPage() {
         );
         setEditingMsg(null);
       } else {
-        // Send — append returned message locally, no refetch
         const payload = { message_type: "text", content: text.trim() };
         if (replyTo) payload.reply_to = replyTo._id;
+
+        console.log("[Send] Sending message via HTTP to conv:", selectedConv._id);
         const newMsg = await sendMessage(selectedConv._id, payload);
+        console.log("[Send] Message sent. _id:", newMsg?._id);
+
         appendMessage(newMsg);
         setReplyTo(null);
-
-        // Update sidebar preview locally
         setConversations((prev) =>
           prev.map((c) =>
             c._id === selectedConv._id
@@ -503,43 +682,35 @@ export default function MessagesPage() {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); return; }
+    if (socketRef.current && selectedConv) {
+      socketRef.current.emit("typing:start", { conversationId: selectedConv._id });
+    }
   };
 
-  // ── Reactions — silent refresh (no skeleton) ─────────────────────────────────
+  // ── Reactions ────────────────────────────────────────────────────────────────
 
   const handleReact = async (messageId, emoji, existing) => {
     try {
       if (existing?.emoji === emoji) {
         await removeReaction(messageId, emoji);
-        // Remove reaction locally
         setMessages((prev) =>
           prev.map((m) =>
             m._id === messageId
-              ? {
-                  ...m,
-                  reactions: (m.reactions || []).filter(
-                    (r) => !(r.user_id === myId || r.user_id?._id === myId)
-                  ),
-                }
+              ? { ...m, reactions: (m.reactions || []).filter((r) => !(r.user_id === myId || r.user_id?._id === myId)) }
               : m
           )
         );
       } else {
         if (existing) await removeReaction(messageId, existing.emoji);
         await addReaction(messageId, emoji);
-        // Add reaction locally
         setMessages((prev) =>
           prev.map((m) =>
             m._id === messageId
               ? {
                   ...m,
                   reactions: [
-                    // Remove any existing reaction from me first
-                    ...(m.reactions || []).filter(
-                      (r) => !(r.user_id === myId || r.user_id?._id === myId)
-                    ),
-                    // Add new reaction
+                    ...(m.reactions || []).filter((r) => !(r.user_id === myId || r.user_id?._id === myId)),
                     { user_id: myId, emoji, created_at: new Date().toISOString() },
                   ],
                 }
@@ -547,21 +718,17 @@ export default function MessagesPage() {
           )
         );
       }
-    } catch (e) {
-      console.error("handleReact:", e.message);
-    }
+    } catch (e) { console.error("handleReact:", e.message); }
   };
 
-  // ── Delete — update locally (no refetch) ─────────────────────────────────────
+  // ── Delete ───────────────────────────────────────────────────────────────────
 
   const handleDelete = async (id) => {
     if (!confirm("Delete this message?")) return;
     try {
       await deleteMessage(id);
       setMessages((prev) =>
-        prev.map((m) =>
-          m._id === id ? { ...m, is_deleted: true, content: "" } : m
-        )
+        prev.map((m) => m._id === id ? { ...m, is_deleted: true, content: "" } : m)
       );
     } catch (e) { console.error("handleDelete:", e.message); }
   };
@@ -638,8 +805,12 @@ export default function MessagesPage() {
   const handleLeave = async () => {
     if (!selectedConv || !confirm("Leave this conversation?")) return;
     try {
+      if (socketRef.current) {
+        socketRef.current.emit("conversation:leave", { conversationId: selectedConv._id });
+      }
       await leaveConversation(selectedConv._id);
       setSelectedConv(null);
+      selectedConvRef.current = null;
       setMessages([]);
       await fetchConversations();
     } catch (e) { console.error(e.message); }
@@ -675,11 +846,14 @@ export default function MessagesPage() {
 
   // ── Derived ──────────────────────────────────────────────────────────────────
 
-  const filtered   = conversations.filter((c) =>
+  const filtered    = conversations.filter((c) =>
     getConvName(c, myId).toLowerCase().includes(search.toLowerCase())
   );
-  const isPinned   = selectedConv && (selectedConv.pinned_by   || []).includes(myId);
-  const isArchived = selectedConv && (selectedConv.archived_by || []).includes(myId);
+  const isPinned    = selectedConv && (selectedConv.pinned_by   || []).includes(myId);
+  const isArchived  = selectedConv && (selectedConv.archived_by || []).includes(myId);
+  const isTyping    = selectedConv
+    ? (typingUsers[selectedConv._id] || []).filter((id) => id !== myId).length > 0
+    : false;
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -689,7 +863,13 @@ export default function MessagesPage() {
       {/* ── Sidebar ──────────────────────────────────────────────────────── */}
       <div className="w-80 flex-shrink-0 flex flex-col bg-white border-r border-gray-100">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
+            <div
+              className={`w-2 h-2 rounded-full ${connected ? "bg-green-400" : "bg-gray-300"}`}
+              title={connected ? "Connected" : "Connecting..."}
+            />
+          </div>
           <button
             onClick={() => setShowNewConv(true)}
             className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -759,9 +939,13 @@ export default function MessagesPage() {
               <div>
                 <p className="text-sm font-semibold text-gray-900">{getConvName(selectedConv, myId)}</p>
                 <p className="text-xs text-gray-400">
-                  {selectedConv.is_group
-                    ? `${selectedConv.participantCount || selectedConv.participants?.length || 0} members`
-                    : "Direct message"}
+                  {isTyping ? (
+                    <span className="text-pink-400 font-medium">typing...</span>
+                  ) : selectedConv.is_group ? (
+                    `${selectedConv.participantCount || selectedConv.participants?.length || 0} members`
+                  ) : (
+                    "Direct message"
+                  )}
                 </p>
               </div>
             </div>
@@ -811,6 +995,20 @@ export default function MessagesPage() {
                 />
               ))
             )}
+
+            {isTyping && (
+              <div className="flex items-end gap-2">
+                <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse flex-shrink-0" />
+                <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+                  <div className="flex gap-1 items-center h-4">
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div ref={bottomRef} />
           </div>
 
