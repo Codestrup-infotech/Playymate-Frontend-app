@@ -13,7 +13,7 @@ import {
   Eye
 } from "lucide-react";
 
-import { getMyStory } from "@/app/user/homefeed";
+import { getMyStory, deleteStory } from "@/app/user/homefeed";
 import { useRouter } from "next/navigation";
 
 /**
@@ -79,11 +79,51 @@ export default function OwnStoryViewerModal( {
 
     const router = useRouter();          // 👈 add here
   const [showMenu, setShowMenu] = useState(false);  // 👈 add here
+  const [isDeleting, setIsDeleting] = useState(false);
   const [animate, setAnimate] = useState(false);
 
   const [isMuted, setIsMuted] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showViewers, setShowViewers] = useState(false);
+
+  // Delete story handler
+  const handleDelete = async () => {
+    if (!currentStory?._id) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteStory(currentStory._id);
+      
+      // Remove the deleted story from the local state
+      const updatedStories = stories.filter((_, idx) => idx !== currentIndex);
+      
+      if (isControlled && controlledStories) {
+        // Update controlled stories
+        if (onClose) {
+          if (updatedStories.length === 0) {
+            onClose();
+          } else {
+            onNext(); // Move to next story after delete
+          }
+        }
+      } else {
+        setInternalStories(updatedStories);
+        
+        if (updatedStories.length === 0) {
+          closeStoryViewer();
+        } else if (currentIndex >= updatedStories.length) {
+          setInternalIndex(updatedStories.length - 1);
+        }
+      }
+      
+      setShowMenu(false);
+    } catch (err) {
+      console.log("[handleDelete] Error:", err.message);
+      alert("Failed to delete story. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const isControlled = controlledIsOpen !== undefined;
   const isOpen = isControlled ? controlledIsOpen : internalIsOpen;
@@ -386,8 +426,10 @@ export default function OwnStoryViewerModal( {
 
       <button
         className="w-full py-4 text-center text-red-500 font-semibold border-b"
+        onClick={handleDelete}
+        disabled={isDeleting}
       >
-        Delete
+        {isDeleting ? "Deleting..." : "Delete"}
       </button>
 
       <button
