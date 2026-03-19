@@ -126,7 +126,7 @@ export default function Sidebar() {
           }`}
         />
       </div>
-
+``
       {/* Menu */}
       <div className="flex flex-col mt-2 px-2 space-y-1 overflow-y-auto h-[calc(100vh-64px)] scrollbar-hide">
         {menu.map((item) => {

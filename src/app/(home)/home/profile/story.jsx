@@ -13,7 +13,7 @@ import {
   Eye
 } from "lucide-react";
 
-import { getMyStory, sortStoriesByCreatedAtASC } from "@/app/user/homefeed";
+import { getMyStory, deleteStory } from "@/app/user/homefeed";
 import { useRouter } from "next/navigation";
 
 /**
@@ -84,11 +84,51 @@ export default function OwnStoryViewerModal( {
 
     const router = useRouter();          // 👈 add here
   const [showMenu, setShowMenu] = useState(false);  // 👈 add here
+  const [isDeleting, setIsDeleting] = useState(false);
   const [animate, setAnimate] = useState(false);
 
   const [isMuted, setIsMuted] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showViewers, setShowViewers] = useState(false);
+
+  // Delete story handler
+  const handleDelete = async () => {
+    if (!currentStory?._id) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteStory(currentStory._id);
+      
+      // Remove the deleted story from the local state
+      const updatedStories = stories.filter((_, idx) => idx !== currentIndex);
+      
+      if (isControlled && controlledStories) {
+        // Update controlled stories
+        if (onClose) {
+          if (updatedStories.length === 0) {
+            onClose();
+          } else {
+            onNext(); // Move to next story after delete
+          }
+        }
+      } else {
+        setInternalStories(updatedStories);
+        
+        if (updatedStories.length === 0) {
+          closeStoryViewer();
+        } else if (currentIndex >= updatedStories.length) {
+          setInternalIndex(updatedStories.length - 1);
+        }
+      }
+      
+      setShowMenu(false);
+    } catch (err) {
+      console.log("[handleDelete] Error:", err.message);
+      alert("Failed to delete story. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const isControlled = controlledIsOpen !== undefined;
   const isOpen = isControlled ? controlledIsOpen : internalIsOpen;
@@ -191,22 +231,22 @@ export default function OwnStoryViewerModal( {
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+        className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
         onClick={closeStoryViewer}
       >
         <div
-          className="relative rounded-2xl overflow-hidden max-w-96 h-[500px] w-full mx-4 bg-black " 
+          className="relative rounded-2xl overflow-hidden bg-black aspect-[9/16] h-[90vh] max-h-[90vh] w-auto max-w-[380px]" 
           onClick={(e) => e.stopPropagation()}
         >
          <div
   key={currentIndex}
-  className="transition-all duration-300 ease-in-out"
+  className="w-full h-full"
 >
 
 {(currentStory.media?.type || currentStory.media_type) === "video" ? (
   <video
     src={currentStory.media?.url || currentStory.media_url}
-    className="max-w-96 h-[500px] object-contain bg-black py-8"
+    className="w-full h-full object-cover bg-black"
     muted={isMuted}
     autoPlay={!isPaused}
     controls={false}
@@ -215,7 +255,7 @@ export default function OwnStoryViewerModal( {
   <img
     src={currentStory.media?.url || currentStory.media_url}
     alt="story"
-    className="max-w-96 h-[500px] object-contain bg-black py-8 px-14"
+    className="w-full h-full object-cover bg-black"
   />
 )}
 
@@ -397,8 +437,10 @@ export default function OwnStoryViewerModal( {
 
       <button
         className="w-full py-4 text-center text-red-500 font-semibold border-b"
+        onClick={handleDelete}
+        disabled={isDeleting}
       >
-        Delete
+        {isDeleting ? "Deleting..." : "Delete"}
       </button>
 
       <button
