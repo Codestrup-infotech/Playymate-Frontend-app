@@ -31,6 +31,7 @@ import { useTheme } from "@/lib/ThemeContext";
 import postService from "@/app/user/post";
 import Activity from "../components/Activity.jsx";
 import BioPopup from "@/app/components/profileCompletion/BioPopup.jsx";
+import PostDetailModal from "../components/PostDetailModal.jsx";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -281,15 +282,40 @@ export default function ProfilePage() {
     setShowPostModal(true);
     setSelectedPostLoading(true);
     try {
+      // Fetch post details
       const response = await postService.getPost(post.post_id);
-      console.log("Post details response:", response);
-      // ✅  Support both response shapes: { data: { post } } and { data: { data: { post } } }
-      const detail =
-        response.data?.data?.post ||
-        response.data?.post ||
-        response.data?.data ||
-        post;
-      setSelectedPost(detail);
+      console.log('Post details response:', response);
+      
+      // Get the post data - handle different response structures
+      let postData = response.data?.data?.post || response.data?.data || response.data || post;
+      
+      // Preserve the is_liked from original post if not in API response
+      if (postData && post.is_liked !== undefined) {
+        postData.is_liked = post.is_liked;
+      }
+      
+      // If comments aren't in the post, fetch them separately
+      if (!postData.comments || postData.comments.length === 0) {
+        try {
+          const commentsResponse = await postService.getPostComments(post.post_id, 50, null, 'recent');
+          console.log('Comments response:', commentsResponse);
+          // Handle different response structures
+          const commentsData = commentsResponse.data?.data?.comments 
+            || commentsResponse.data?.comments 
+            || commentsResponse.data?.data 
+            || [];
+          postData.comments = Array.isArray(commentsData) ? commentsData : [];
+          postData.comments_count = commentsResponse.data?.data?.count 
+            || commentsResponse.data?.count 
+            || postData.comments.length
+            || 0;
+        } catch (commentError) {
+          console.error("Error fetching comments:", commentError);
+          postData.comments = [];
+        }
+      }
+      
+      setSelectedPost(postData);
     } catch (error) {
       console.error("Error fetching post details:", error?.response?.data || error.message);
       // Keep showing the basic post data already set above
@@ -328,30 +354,65 @@ export default function ProfilePage() {
     setSelectedPostLoading(true);
 
     try {
-      // ✅  Reels are stored as posts; use getPost (getReel was the bug)
-      const response = await postService.getPost(reelId);
-      console.log("Reel detail response:", response);
-
-      const detail =
-        response.data?.data?.post ||
-        response.data?.post ||
-        response.data?.data ||
-        reel;                        // fallback: keep the grid data we already have
-
-      setSelectedPost(detail);
+      // These "reels" are actually posts (videos/GIFs), so use post_id instead of reel_id
+      const postId = reel.reel_id || reel.post_id;
+      if (!postId) {
+        console.error('No valid post ID found for reel:', reel);
+        setSelectedPostLoading(false);
+        return;
+      }
+      
+      // Use getPost for posts (video/GIF) or getReel for actual reels
+      let response;
+      if (reel.reel_id) {
+        response = await postService.getReel(reel.reel_id);
+        // Handle different response structures
+        let postData = response.data?.data || response.data || reel;
+        // Preserve is_liked from original reel if not in API response
+        if (postData && reel.is_liked !== undefined) {
+          postData.is_liked = reel.is_liked;
+        }
+        setSelectedPost(postData.media ? postData : reel);
+      } else {
+        response = await postService.getPost(reel.post_id);
+        // Handle different response structures - getPost returns full axios response
+        let postData = response.data?.data || response.data || reel;
+        // Preserve is_liked from original reel if not in API response
+        if (postData && reel.is_liked !== undefined) {
+          postData.is_liked = reel.is_liked;
+        }
+        // Only update if we get valid media data, otherwise keep original
+        setSelectedPost(postData.media ? postData : reel);
+      }
+      console.log('Reel/Post details response:', response);
     } catch (error) {
-      // ✅  Safely log — error.response exists now that the interceptor is fixed
-      console.error(
-        "Error fetching reel details:",
-        error?.response?.data || error?.message || error
-      );
-      // Modal stays open showing the basic reel data already set above
+      console.error("Error fetching reel details:", error);
+      // Keep showing the basic reel data if API fails - already set above
     } finally {
       setSelectedPostLoading(false);
     }
   };
 
-  // ── loading / error states ────────────────────────────────────────────────
+  // Handle modal close - update posts grid with new data
+  const handlePostUpdate = (updatedPost) => {
+    if (updatedPost) {
+      setPosts(prevPosts => 
+        prevPosts.map(post => 
+          post.post_id === updatedPost.post_id 
+            ? { 
+                ...post, 
+                likes_count: updatedPost.likes_count ?? post.likes_count,
+                comments_count: updatedPost.comments_count ?? post.comments_count,
+                is_liked: updatedPost.is_liked ?? post.is_liked
+              }
+            : post
+        )
+      );
+    }
+    setShowPostModal(false);
+  };
+
+  // ── states ────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -432,9 +493,11 @@ export default function ProfilePage() {
         }`}
       >
 
-        {/* ───── COVER PHOTO ───── */}
-        <div className="relative h-52 w-full bg-gradient-to-tl from-[#FF8319] via-[#FF8319] to-[#EF3AFF] ">
-          <div className="absolute inset-0 bg-black/20" />
+  {/* ───── COVER PHOTO ───── */}
+  <div className="relative h-52 w-full bg-gradient-to-l from-[#FF8319] to-[#EF3AFF]  ">
+
+    {/* overlay */}
+    <div className="absolute inset-0 bg-black/20" />
 
           <div className="absolute top-4 left-6 right-6 flex justify-between items-start">
             <h1 className="text-white text-2xl font-bold">
@@ -498,24 +561,11 @@ export default function ProfilePage() {
                   <ShieldCheck size={18} className="text-purple-500" />
                 )}
 
-                {gender && (
-                  <span className="text-[14px] px-2 py-0.5 rounded-full bg-[#6913A7] text-purple-300 border border-purple-700/30 capitalize">
-                    {gender}
-                  </span>
-                )}
+        </div>
 
-                {age && (
-                  <span className="text-[14px] px-2 py-0.5 rounded-full bg-[#6913A7] text-purple-300 border border-gray-600/30">
-                    {age} yrs
-                  </span>
-                )}
 
-                {role_type && (
-                  <span className="text-[14px] px-2 py-0.5 rounded-full bg-[#6913A7] text-purple-300 border border-orange-700/30 capitalize">
-                    {capitalize(role_type)}
-                  </span>
-                )}
-              </div>
+      
+
 
               {/* stats */}
               <div
@@ -606,9 +656,9 @@ export default function ProfilePage() {
               <>
                 <div className="grid grid-cols-3 gap-1 mb-4">
                   {posts.map((post) => (
-                    <div
-                      key={post.post_id}
-                      className="aspect-square relative bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-80 transition"
+                    <div 
+                      key={post.post_id} 
+                      className="aspect-[3/4] relative bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-80 transition"
                       onClick={() => handlePostClick(post)}
                     >
                       {post.media && post.media.length > 0 ? (
@@ -761,142 +811,19 @@ export default function ProfilePage() {
         />
       )}
 
-      {/* ── Post / Reel Detail Modal ── */}
-      {showPostModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div
-            className={`relative max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl ${
-              isDark ? "bg-[#1a1a2e]" : "bg-white shadow-2xl"
-            }`}
-          >
-            {/* Close button */}
-            <button
-              onClick={() => setShowPostModal(false)}
-              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
-            >
-              <XCircle size={24} />
-            </button>
+      {/* Post Detail Modal - Instagram Style Split View */}
+      <PostDetailModal
+        isDark={isDark}
+        selectedPost={selectedPost}
+        selectedPostLoading={selectedPostLoading}
+        showPostModal={showPostModal}
+        onClose={() => setShowPostModal(false)}
+        onPostUpdate={handlePostUpdate}
+        currentUser={profile}
+      />
 
-            {selectedPostLoading && !selectedPost ? (
-              // Full spinner only when we have NO data at all yet
-              <div className="flex items-center justify-center py-20">
-                <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : selectedPost ? (
-              <div className="flex flex-col">
-                {/* Loading bar — detail fetch still in progress */}
-                {selectedPostLoading && (
-                  <div className="h-1 w-full bg-purple-500 animate-pulse rounded-t-2xl" />
-                )}
 
-                {/* Author Info */}
-                <div className="flex items-center gap-3 p-4 border-b border-white/10">
-                  <img
-                    src={
-                      selectedPost.author?.profile_image_url ||
-                      "/loginAvatars/profile.png"
-                    }
-                    alt={selectedPost.author?.full_name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div>
-                    <p className={`font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
-                      {selectedPost.author?.full_name || "User"}
-                    </p>
-                    <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                      @{selectedPost.author?.username || "username"}
-                    </p>
-                  </div>
-                  {selectedPost.author?.is_verified && (
-                    <CheckCircle size={16} className="text-blue-400" />
-                  )}
-                </div>
-
-                {/* Media */}
-                {selectedPost.media && selectedPost.media.length > 0 && (
-                  <div className="relative bg-black">
-                    {selectedPost.media[0].type === "video" ? (
-                      <video
-                        src={selectedPost.media[0].url}
-                        controls
-                        className="w-full max-h-[50vh] object-contain"
-                      />
-                    ) : (
-                      <img
-                        src={selectedPost.media[0].url}
-                        alt="Post media"
-                        className="w-full max-h-[50vh] object-contain"
-                      />
-                    )}
-                  </div>
-                )}
-
-                {/* Content */}
-                <div className="p-4">
-                  <div className="flex items-center gap-4 mb-3">
-                    <span className={`flex items-center gap-1 ${isDark ? "text-white" : "text-gray-900"}`}>
-                      <Heart
-                        size={20}
-                        className={selectedPost.is_liked ? "text-red-500 fill-red-500" : ""}
-                      />
-                      {selectedPost.likes_count || 0}
-                    </span>
-                    <span className={`flex items-center gap-1 ${isDark ? "text-white" : "text-gray-900"}`}>
-                      <MessageSquare size={20} />
-                      {selectedPost.comments_count || 0}
-                    </span>
-                    <span className={`flex items-center gap-1 ${isDark ? "text-white" : "text-gray-900"}`}>
-                      <Share2 size={20} />
-                      {selectedPost.shares_count || 0}
-                    </span>
-                  </div>
-
-                  {selectedPost.content?.text && (
-                    <p className={`${isDark ? "text-white" : "text-gray-900"} whitespace-pre-wrap`}>
-                      {selectedPost.content.text}
-                    </p>
-                  )}
-
-                  {selectedPost.content?.hashtags && selectedPost.content.hashtags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {selectedPost.content.hashtags.map((tag, idx) => (
-                        <span key={idx} className="text-purple-400 text-sm">
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {selectedPost.content?.location && (
-                    <div className={`flex items-center gap-1 mt-3 text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                      <MapPin size={14} />
-                      {typeof selectedPost.content.location === "string"
-                        ? selectedPost.content.location
-                        : selectedPost.content.location?.display_text ||
-                          selectedPost.content.location?.city ||
-                          selectedPost.content.location?.state ||
-                          ""}
-                    </div>
-                  )}
-
-                  <p className={`text-sm mt-3 ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-                    {selectedPost.created_at &&
-                      new Date(selectedPost.created_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center py-20">
-                <p className="text-gray-400">Post not found</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
+
