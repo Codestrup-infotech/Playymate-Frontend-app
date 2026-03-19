@@ -31,6 +31,7 @@ import { useTheme } from "@/lib/ThemeContext";
 import postService from "@/app/user/post";
 import Activity from "../components/Activity.jsx";
 import BioPopup from "@/app/components/profileCompletion/BioPopup.jsx";
+import PostDetailModal from "../components/PostDetailModal.jsx";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -291,9 +292,40 @@ export default function ProfilePage() {
     setShowPostModal(true);
     setSelectedPostLoading(true);
     try {
+      // Fetch post details
       const response = await postService.getPost(post.post_id);
       console.log('Post details response:', response);
-      setSelectedPost(response.data?.data?.post || post);
+      
+      // Get the post data - handle different response structures
+      let postData = response.data?.data?.post || response.data?.data || response.data || post;
+      
+      // Preserve the is_liked from original post if not in API response
+      if (postData && post.is_liked !== undefined) {
+        postData.is_liked = post.is_liked;
+      }
+      
+      // If comments aren't in the post, fetch them separately
+      if (!postData.comments || postData.comments.length === 0) {
+        try {
+          const commentsResponse = await postService.getPostComments(post.post_id, 50, null, 'recent');
+          console.log('Comments response:', commentsResponse);
+          // Handle different response structures
+          const commentsData = commentsResponse.data?.data?.comments 
+            || commentsResponse.data?.comments 
+            || commentsResponse.data?.data 
+            || [];
+          postData.comments = Array.isArray(commentsData) ? commentsData : [];
+          postData.comments_count = commentsResponse.data?.data?.count 
+            || commentsResponse.data?.count 
+            || postData.comments.length
+            || 0;
+        } catch (commentError) {
+          console.error("Error fetching comments:", commentError);
+          postData.comments = [];
+        }
+      }
+      
+      setSelectedPost(postData);
     } catch (error) {
       console.error("Error fetching post details:", error);
       // Keep showing the basic post data if API fails
@@ -309,15 +341,62 @@ export default function ProfilePage() {
     setShowPostModal(true);
     setSelectedPostLoading(true);
     try {
-      const response = await postService.getReel(reel.reel_id);
-      console.log('Reel details response:', response);
-      setSelectedPost(response.data?.data || reel);
+      // These "reels" are actually posts (videos/GIFs), so use post_id instead of reel_id
+      const postId = reel.reel_id || reel.post_id;
+      if (!postId) {
+        console.error('No valid post ID found for reel:', reel);
+        setSelectedPostLoading(false);
+        return;
+      }
+      
+      // Use getPost for posts (video/GIF) or getReel for actual reels
+      let response;
+      if (reel.reel_id) {
+        response = await postService.getReel(reel.reel_id);
+        // Handle different response structures
+        let postData = response.data?.data || response.data || reel;
+        // Preserve is_liked from original reel if not in API response
+        if (postData && reel.is_liked !== undefined) {
+          postData.is_liked = reel.is_liked;
+        }
+        setSelectedPost(postData.media ? postData : reel);
+      } else {
+        response = await postService.getPost(reel.post_id);
+        // Handle different response structures - getPost returns full axios response
+        let postData = response.data?.data || response.data || reel;
+        // Preserve is_liked from original reel if not in API response
+        if (postData && reel.is_liked !== undefined) {
+          postData.is_liked = reel.is_liked;
+        }
+        // Only update if we get valid media data, otherwise keep original
+        setSelectedPost(postData.media ? postData : reel);
+      }
+      console.log('Reel/Post details response:', response);
     } catch (error) {
       console.error("Error fetching reel details:", error);
-      // Keep showing the basic reel data if API fails
+      // Keep showing the basic reel data if API fails - already set above
     } finally {
       setSelectedPostLoading(false);
     }
+  };
+
+  // Handle modal close - update posts grid with new data
+  const handlePostUpdate = (updatedPost) => {
+    if (updatedPost) {
+      setPosts(prevPosts => 
+        prevPosts.map(post => 
+          post.post_id === updatedPost.post_id 
+            ? { 
+                ...post, 
+                likes_count: updatedPost.likes_count ?? post.likes_count,
+                comments_count: updatedPost.comments_count ?? post.comments_count,
+                is_liked: updatedPost.is_liked ?? post.is_liked
+              }
+            : post
+        )
+      );
+    }
+    setShowPostModal(false);
   };
 
   // ── states ────────────────────────────────────────────────────────────────
@@ -402,7 +481,7 @@ export default function ProfilePage() {
 >
 
   {/* ───── COVER PHOTO ───── */}
-  <div className="relative h-52 w-full bg-gradient-to-tl from-[#FF8319] via-[#FF8319] to-[#EF3AFF] ">
+  <div className="relative h-52 w-full bg-gradient-to-l from-[#FF8319] to-[#EF3AFF]  ">
 
     {/* overlay */}
     <div className="absolute inset-0 bg-black/20" />
@@ -480,24 +559,6 @@ export default function ProfilePage() {
 
           {verification_badge === "verified" && (
             <ShieldCheck size={18} className="text-purple-500  " />
-          )}
-
-          {gender && (
-            <span className="text-[14px] px-2 py-0.5 rounded-full bg-[#6913A7] text-purple-300 border border-purple-700/30 capitalize">
-              {gender}
-            </span>
-          )}
-
-          {age && (
-            <span className="text-[14px] px-2 py-0.5 rounded-full bg-[#6913A7] text-purple-300 border border-gray-600/30">
-              {age} yrs
-            </span>
-          )}
-
-          {role_type && (
-            <span className="text-[14px] px-2 py-0.5 rounded-full bg-[#6913A7] text-purple-300 border border-orange-700/30 capitalize">
-              {capitalize(role_type)}
-            </span>
           )}
 
         </div>
@@ -601,7 +662,7 @@ export default function ProfilePage() {
                   {posts.map((post) => (
                     <div 
                       key={post.post_id} 
-                      className="aspect-square relative bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-80 transition"
+                      className="aspect-[3/4] relative bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-80 transition"
                       onClick={() => handlePostClick(post)}
                     >
                       {post.media && post.media.length > 0 ? (
@@ -796,182 +857,17 @@ export default function ProfilePage() {
       )}
 
       {/* Post Detail Modal - Instagram Style Split View */}
-      {showPostModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-0 md:p-4">
-          <div className={`relative w-full h-full md:w-[90vw] md:max-w-6xl md:h-[90vh] md:rounded-xl overflow-hidden flex flex-col md:flex-row ${isDark ? 'bg-[#1a1a2e]' : 'bg-white'}`}>
-            {/* Close button */}
-            <button
-              onClick={() => setShowPostModal(false)}
-              className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
-            >
-              <XCircle size={24} />
-            </button>
+      <PostDetailModal
+        isDark={isDark}
+        selectedPost={selectedPost}
+        selectedPostLoading={selectedPostLoading}
+        showPostModal={showPostModal}
+        onClose={() => setShowPostModal(false)}
+        onPostUpdate={handlePostUpdate}
+        currentUser={profile}
+      />
 
-            {selectedPostLoading ? (
-              <div className="flex items-center justify-center w-full h-full">
-                <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : selectedPost ? (
-              <>
-                {/* LEFT SIDE - Media Preview */}
-                <div className="w-full md:w-1/2 h-1/2 md:h-full bg-black flex items-center justify-center relative">
-                  {selectedPost.media && selectedPost.media.length > 0 ? (
-                    <>
-                      {selectedPost.media[0].type === 'video' ? (
-                        <video
-                          src={selectedPost.media[0].url}
-                          controls
-                          className="max-h-full max-w-full object-contain"
-                        />
-                      ) : (
-                        <img
-                          src={selectedPost.media[0].url}
-                          alt="Post media"
-                          className="max-h-full max-w-full object-contain"
-                        />
-                      )}
-                      {/* Media count indicator if multiple media */}
-                      {selectedPost.media.length > 1 && (
-                        <div className="absolute bottom-4 right-4 bg-black/60 px-3 py-1 rounded-full text-white text-sm flex items-center gap-1">
-                          <ImageIcon size={16} />
-                          <span>{selectedPost.media.length}</span>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-white/50">No media</div>
-                  )}
-                </div>
 
-                {/* RIGHT SIDE - Content */}
-                <div className="w-full md:w-1/2 h-1/2 md:h-full flex flex-col">
-                  {/* Header - Author Info */}
-                  <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-white/10">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={selectedPost.author?.profile_image_url || selectedPost.author?.profile_image_url || "/loginAvatars/profile.png"}
-                        alt={selectedPost.author?.full_name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <div>
-                        <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                          {selectedPost.author?.full_name || 'User'}
-                        </p>
-                        <div className="flex items-center gap-1">
-                          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                            @{selectedPost.author?.username || 'username'}
-                          </p>
-                          {selectedPost.author?.is_verified && (
-                            <CheckCircle size={14} className="text-blue-400" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    {selectedPost.content?.location && (
-                      <div className={`flex items-center gap-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        <MapPin size={14} />
-                        <span className="hidden sm:inline">{selectedPost.content.location}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Scrollable Content - Caption + Comments */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {/* Caption */}
-                    {selectedPost.content?.text && (
-                      <div className="flex gap-3">
-                        <img
-                          src={selectedPost.author?.profile_image_url || "/loginAvatars/profile.png"}
-                          alt={selectedPost.author?.full_name}
-                          className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1"
-                        />
-                        <div>
-                          <p className={`${isDark ? 'text-white' : 'text-gray-900'} whitespace-pre-wrap`}>
-                            <span className="font-semibold">{selectedPost.author?.username || 'user'}</span>{' '}
-                            {selectedPost.content.text}
-                          </p>
-                          {/* Hashtags */}
-                          {selectedPost.content?.hashtags && selectedPost.content.hashtags.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {selectedPost.content.hashtags.map((tag, idx) => (
-                                <span key={idx} className="text-purple-400 text-sm">#{tag}</span>
-                              ))}
-                            </div>
-                          )}
-                          <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                            {selectedPost.created_at && new Date(selectedPost.created_at).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Comments Section */}
-                    <div className="border-t border-gray-200 dark:border-white/10 pt-4">
-                      <p className={`text-sm font-medium mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Comments ({selectedPost.comments_count || 0})
-                      </p>
-                      {/* Placeholder for comments - would come from existing state */}
-                      <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                        No comments yet. Be the first to comment!
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="p-4 border-t border-gray-200 dark:border-white/10">
-                    <div className="flex items-center gap-4">
-                      <button className="flex items-center gap-1 hover:opacity-80 transition-opacity">
-                        <Heart 
-                          size={24} 
-                          className={selectedPost.is_liked ? "text-red-500 fill-red-500" : isDark ? "text-white" : "text-gray-900"} 
-                        />
-                      </button>
-                      <button className="flex items-center gap-1 hover:opacity-80 transition-opacity">
-                        <MessageSquare size={24} className={isDark ? "text-white" : "text-gray-900"} />
-                      </button>
-                      <button className="flex items-center gap-1 hover:opacity-80 transition-opacity">
-                        <Share2 size={24} className={isDark ? "text-white" : "text-gray-900"} />
-                      </button>
-                    </div>
-
-                    <p className={`font-semibold mt-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {selectedPost.likes_count || 0} likes
-                    </p>
-                    <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                      {selectedPost.shares_count || 0} shares
-                    </p>
-                  </div>
-
-                  {/* Comment Input */}
-                  <div className="border-t border-gray-200 dark:border-white/10 p-3 flex items-center gap-2">
-                    <img
-                      src={selectedPost.author?.profile_image_url || "/loginAvatars/profile.png"}
-                      alt="Your avatar"
-                      className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                    />
-                    <input
-                      type="text"
-                      className={`flex-1 bg-transparent outline-none ${isDark ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'}`}
-                      placeholder="Add a comment..."
-                    />
-                    <button className="text-purple-500 font-semibold text-sm hover:opacity-80 transition-opacity">
-                      Post
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-center w-full h-full">
-                <p className="text-gray-400">Post not found</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

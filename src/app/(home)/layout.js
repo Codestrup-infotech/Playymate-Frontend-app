@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ThemeProvider, useTheme } from "@/lib/ThemeContext";
 import MessagesFloatingButton from "@/app/(home)/home/components/MessagesFloatingButton";
 import { usePathname } from "next/navigation";
+import MessagesPage from "./home/messages/page";
 
 function AppLayoutInner({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -26,7 +27,7 @@ function AppLayoutInner({ children }) {
 
       {/* Main Content Area */}
       <div
-        style={{ marginLeft: sidebarOpen ? "160px" : "72px" }}
+        style={{ marginLeft: sidebarOpen ? "250px" : "72px" }}
         className="flex flex-col flex-1 mt-[25px] transition-all duration-300 ease-in-out"
       >
         {/* Fixed Topbar */}

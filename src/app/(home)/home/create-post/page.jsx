@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { X, ArrowLeft, MapPin, Users, ChevronDown, ChevronUp, Smile, Plus, Minus, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import postService from "@/app/user/post";
 import { userService } from "@/services/user";
 
@@ -23,11 +23,18 @@ const ADJUSTMENTS = ["Brightness", "Contrast", "Fade", "Saturation", "Temperatur
 
 export default function CreatePostPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [step, setStep] = useState("upload");
   const [file, setFile] = useState(null);
   const [fileType, setFileType] = useState(null); // "image" | "video"
   const [videoUrl, setVideoUrl] = useState(null);
+
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [existingPost, setExistingPost] = useState(null);
+  const [isLoadingPost, setIsLoadingPost] = useState(false);
 
   // Crop state
   const [cropAspect, setCropAspect] = useState("1:1");
@@ -54,6 +61,9 @@ export default function CreatePostPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [location, setLocation] = useState(null);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [locationInput, setLocationInput] = useState("");
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationError, setLocationError] = useState("");
   
   // User info
   const [userInfo, setUserInfo] = useState(null);
@@ -76,6 +86,173 @@ export default function CreatePostPage() {
     };
     fetchUserInfo();
   }, []);
+
+  // Handle edit mode - load existing post for editing
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (editId) {
+      setIsLoadingPost(true);
+      setEditingPostId(editId);
+      setIsEditing(true);
+      
+      const fetchPost = async () => {
+        try {
+          const response = await postService.getPost(editId);
+          const postData = response?.data?.data || response?.data;
+          
+          if (postData) {
+            setExistingPost(postData);
+            // Pre-fill caption
+            setCaption(postData.content?.text || '');
+            setHideLikes(!postData.allow_shares);
+            setNoComments(!postData.allow_comments);
+            setLocation(postData.content?.location || null);
+            
+            // Load media if available
+            if (postData.media && postData.media.length > 0) {
+              const media = postData.media[0];
+              if (media.type === 'video') {
+                setFileType('video');
+                setVideoUrl(media.url);
+                setFile(media.url);
+              } else {
+                setFileType('image');
+                setFile(media.url);
+              }
+              // Set step to share since we already have the media
+              setStep('share');
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching post for edit:', error);
+          alert('Failed to load post for editing');
+          router.push('/home');
+        } finally {
+          setIsLoadingPost(false);
+        }
+      };
+      
+      fetchPost();
+    }
+  }, [searchParams]);
+
+  // Handle getting current location via geolocation API
+  const handleGetCurrentLocation = () => {
+    setLocationError("");
+    setIsGettingLocation(true);
+    
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser");
+      setIsGettingLocation(false);
+      return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        // Reverse geocoding to get human-readable address
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+            {
+              headers: {
+                'User-Agent': 'PlayymateApp/1.0'
+              }
+            }
+          );
+          
+          if (!response.ok) {
+            throw new Error('Reverse geocoding failed');
+          }
+          
+          const data = await response.json();
+          
+          // Build human-readable address
+          let displayText = "";
+          const address = data.address;
+          
+          if (address) {
+            // Try to get the most relevant location name
+            const parts = [];
+            
+            if (address.neighbourhood && address.neighbourhood !== address.city) {
+              parts.push(address.neighbourhood);
+            }
+            if (address.suburb && address.suburb !== address.city) {
+              parts.push(address.suburb);
+            }
+            if (address.city || address.town || address.village) {
+              parts.push(address.city || address.town || address.village);
+            }
+            if (address.state) {
+              parts.push(address.state);
+            }
+            
+            displayText = parts.join(", ");
+          }
+          
+          // Fallback to coordinates if no address found
+          if (!displayText) {
+            displayText = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          }
+          
+          setLocation({
+            display_text: displayText,
+            latitude: latitude,
+            longitude: longitude
+          });
+          setLocationInput(displayText);
+        } catch (error) {
+          console.error("Reverse geocoding error:", error);
+          // Fallback to coordinates if reverse geocoding fails
+          const displayText = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          setLocation({
+            display_text: displayText,
+            latitude: latitude,
+            longitude: longitude
+          });
+          setLocationInput(displayText);
+        }
+        
+        setIsGettingLocation(false);
+        setShowLocationPicker(false);
+      },
+      (error) => {
+        let errorMessage = "Unable to get location";
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Location permission denied";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Location information unavailable";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out";
+            break;
+        }
+        setLocationError(errorMessage);
+        setIsGettingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+  
+  // Handle manual location entry
+  const handleLocationSubmit = () => {
+    if (!locationInput.trim()) {
+      setLocationError("Please enter a location");
+      return;
+    }
+    
+    setLocation({
+      display_text: locationInput.trim(),
+      latitude: 0, // Default placeholder - in production would use geocoding API
+      longitude: 0
+    });
+    setShowLocationPicker(false);
+    setLocationError("");
+  };
 
   const fileInput = useRef();
 
@@ -130,71 +307,70 @@ export default function CreatePostPage() {
     try {
       let mediaData = [];
       
-      // If there's a file, upload it first
-      if (file || videoUrl) {
+      // If editing, check if we need to upload new media
+      const isExistingMedia = isEditing && existingPost?.media && existingPost.media.length > 0 && file === existingPost.media[0].url;
+      
+      // If there's a file and it's not existing media, upload it first
+      if ((file || videoUrl) && !isExistingMedia) {
         setUploadProgress(20);
         
-        // Convert object URL to File object
-        const sourceUrl = file || videoUrl;
-        const mimeType = fileType === 'image' ? 'image/jpeg' : 'video/mp4';
-        const fileName = `${fileType}_${Date.now()}.${fileType === 'image' ? 'jpg' : 'mp4'}`;
+        // For now, we'll use the local URL as a placeholder
+        // In production, you would upload to presigned URL
+        const fileToUpload = file || videoUrl;
+        const fileName = file ? `image_${Date.now()}.jpg` : `video_${Date.now()}.mp4`;
+        const mimeType = file ? "image/jpeg" : "video/mp4";
         
-        // Convert URL to blob then to File object
-        const blob = await fetch(sourceUrl).then(r => r.blob());
-        const fileObj = new File([blob], fileName, { type: mimeType });
-        
-        console.log('[CREATE-POST] 📁 File object prepared:', {
-          name: fileObj.name,
-          size: fileObj.size,
-          type: fileObj.type
+        // Get presigned URL
+        const presignResponse = await postService.presignMediaUpload({
+          filename: fileName,
+          mimeType: mimeType,
+          type: fileType
         });
+        
+        const { upload_url, file_url, key } = presignResponse.data.data;
         
         setUploadProgress(40);
         
-        // Upload via backend (no direct S3 from browser - avoids DNS/CORS issues)
-        const uploadResponse = await postService.uploadPostMediaFile(fileObj, fileType);
-        const { wasabi_direct_url: fileUrl } = uploadResponse.data.data;
+        // Upload the file
+        const fileBlob = await fetch(fileToUpload).then(r => r.blob());
+        await postService.uploadToPresignedUrl(upload_url, fileBlob, mimeType);
         
-        console.log('[CREATE-POST] ✅ File uploaded via backend!', { fileUrl });
+        setUploadProgress(70);
         
-        setUploadProgress(75);
-        
-        // Get image/video dimensions
+        // Get image dimensions
         let width = 1920;
         let height = 1080;
-        let duration = null;
         
         if (fileType === "image") {
           const img = new Image();
           await new Promise((resolve) => {
             img.onload = resolve;
-            img.src = sourceUrl;
+            img.src = file;
           });
-          width = img.naturalWidth || img.width;
-          height = img.naturalHeight || img.height;
-        } else if (fileType === "video") {
-          // Get video dimensions
-          const video = document.createElement('video');
-          video.src = videoUrl;
-          await new Promise((resolve) => {
-            video.onloadedmetadata = resolve;
-          });
-          width = video.videoWidth;
-          height = video.videoHeight;
-          duration = Math.floor(video.duration * 1000); // Convert to milliseconds
+          width = img.width;
+          height = img.height;
         }
         
-        setUploadProgress(85);
-        
-        // Use the file_url directly for the post
         mediaData = [{
           type: fileType,
-          url: fileUrl,
+          url: file_url,
           thumbnail_url: null,
-          duration: duration,
+          duration: null,
           width,
           height
         }];
+        
+        setUploadProgress(85);
+      } else if (isExistingMedia) {
+        // Keep existing media data
+        mediaData = existingPost.media.map(m => ({
+          type: m.type,
+          url: m.url,
+          thumbnail_url: m.thumbnail_url,
+          duration: m.duration,
+          width: m.width,
+          height: m.height
+        }));
       }
       
       // Extract hashtags from caption
@@ -205,7 +381,7 @@ export default function CreatePostPage() {
         hashtags.push(match[1]);
       }
       
-      // Create the post
+      // Prepare post data
       const postData = {
         text: caption,
         media: mediaData,
@@ -217,7 +393,14 @@ export default function CreatePostPage() {
       
       setUploadProgress(90);
       
-      const response = await postService.createPost(postData);
+      let response;
+      if (isEditing && editingPostId) {
+        // Update existing post
+        response = await postService.updatePost(editingPostId, postData);
+      } else {
+        // Create new post
+        response = await postService.createPost(postData);
+      }
       
       setUploadProgress(100);
       
@@ -226,8 +409,8 @@ export default function CreatePostPage() {
         router.push("/home");
       }
     } catch (error) {
-      console.error("Error creating post:", error);
-      alert("Failed to create post. Please try again.");
+      console.error(isEditing ? "Error updating post:" : "Error creating post:", error);
+      alert(isEditing ? "Failed to update post. Please try again." : "Failed to create post. Please try again.");
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -270,10 +453,10 @@ export default function CreatePostPage() {
               </button>
             )}
             <h2 className="font-semibold text-[15px]">
-              {step === "upload" && "Create new post"}
+              {step === "upload" && (isEditing ? "Edit post" : "Create new post")}
               {step === "crop" && "Crop"}
               {step === "edit" && "Edit"}
-              {step === "share" && (fileType === "video" ? "New reel" : "Create new post")}
+              {step === "share" && (fileType === "video" ? (isEditing ? "Edit reel" : "New reel") : (isEditing ? "Edit post" : "Create new post"))}
             </h2>
           </div>
 
@@ -297,10 +480,10 @@ export default function CreatePostPage() {
                 {isUploading ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    Sharing... {uploadProgress}%
+                    {isEditing ? 'Saving...' : 'Sharing...'} {uploadProgress}%
                   </>
                 ) : (
-                  "Share"
+                  isEditing ? "Save" : "Share"
                 )}
               </button>
             )}
@@ -608,9 +791,30 @@ export default function CreatePostPage() {
                 </div>
 
                 {/* Add location */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50">
-                  <span className="text-sm text-[#262626]">Add location</span>
-                  <MapPin size={18} className="text-gray-500" />
+                <div 
+                  onClick={() => setShowLocationPicker(true)}
+                  className="flex items-center justify-between px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+                >
+                  {location ? (
+                    <div className="flex items-center gap-2">
+                      <MapPin size={18} className="text-[#0095f6]" />
+                      <span className="text-sm text-[#262626]">{location.display_text}</span>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLocation(null);
+                        }}
+                        className="ml-1 text-gray-400 hover:text-gray-600"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="text-sm text-[#262626]">Add location</span>
+                      <MapPin size={18} className="text-gray-500" />
+                    </>
+                  )}
                 </div>
 
                 {/* Add collaborators */}
@@ -678,6 +882,81 @@ export default function CreatePostPage() {
 
         </div>
       </div>
+      
+      {/* Location Picker Modal */}
+      {showLocationPicker && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-2xl w-[400px] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <h3 className="font-semibold text-[15px]">Add location</h3>
+              <button 
+                onClick={() => {
+                  setShowLocationPicker(false);
+                  setLocationError("");
+                }}
+                className="hover:opacity-60 transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="p-4 space-y-4">
+              {/* Search input */}
+              <div>
+                <label className="text-sm text-gray-500 mb-1 block">Search location</label>
+                <div className="relative">
+                  <MapPin size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={locationInput}
+                    onChange={(e) => setLocationInput(e.target.value)}
+                    placeholder="Enter location name..."
+                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#0095f6]"
+                    onKeyDown={(e) => e.key === 'Enter' && handleLocationSubmit()}
+                  />
+                </div>
+              </div>
+              
+              {/* Error message */}
+              {locationError && (
+                <p className="text-red-500 text-sm">{locationError}</p>
+              )}
+              
+              {/* Current location button */}
+              <button
+                onClick={handleGetCurrentLocation}
+                disabled={isGettingLocation}
+                className="w-full py-2.5 px-4 border border-gray-200 rounded-lg text-sm font-medium text-[#262626] hover:bg-gray-50 transition flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isGettingLocation ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Getting location...
+                  </>
+                ) : (
+                  <>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+                    </svg>
+                    Use current location
+                  </>
+                )}
+              </button>
+              
+              {/* Submit button */}
+              <button
+                onClick={handleLocationSubmit}
+                className="w-full py-2.5 bg-[#0095f6] hover:bg-[#1877f2] text-white rounded-lg text-sm font-semibold transition"
+              >
+                Add Location
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

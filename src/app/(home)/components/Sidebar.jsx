@@ -108,25 +108,27 @@ export default function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center h-16 px-3">
+        {/* Show icon only when sidebar is closed (not hovered) */}
         <img
           src="/playymate-icon.png"
           alt="Playymate Icon"
           className={`w-10 h-10 object-contain transition-all duration-300 ${
-            isHover ? "mr-2" : "mx-auto"
+            isHover ? "opacity-0 w-0" : "opacity-100 w-10 mx-auto"
           }`}
         />
 
+        {/* Show logo only when sidebar is open (hovered) */}
         <img
           src="/playymate-logo.png"
           alt="Playymate Logo"
           className={`h-8 object-contain transition-all duration-300 ${
-            isHover ? "opacity-100 w-auto" : "opacity-0 w-0"
+            isHover ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
           }`}
         />
       </div>
-
+``
       {/* Menu */}
-      <div className="flex flex-col mt-2 px-2 space-y-1 overflow-y-auto h-[calc(100vh-180px)]">
+      <div className="flex flex-col mt-2 px-2 space-y-1 overflow-y-auto h-[calc(100vh-64px)] scrollbar-hide">
         {menu.map((item) => {
           // logout
           if (item.action === "logout") {
@@ -204,7 +206,7 @@ export default function Sidebar() {
           
         </button>
 
-        {/* Dropdown Menu */}
+     
         {openCreateMenu && (
           <div 
             className={`ml-4 mt-1 rounded-lg overflow-hidden transition-all duration-200 
@@ -254,22 +256,22 @@ export default function Sidebar() {
     );
   }
 
-          // normal link
-          return (
-            <Link
-              key={item.name}
-              href={item.path}
-              className={`flex items-center gap-4 px-3 py-3 rounded-lg transition-all duration-300 ${
-                pathname === item.path
-                  ? "bg-gradient-to-r from-purple-600 to-orange-500 text-white"
-                  : isDark
-                  ? "text-gray-300 hover:bg-gray-800"
-                  : "text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              <div className="min-w-[22px] flex justify-center">
-                {item.icon}
-              </div>
+
+  return (
+    <Link
+      key={item.name}
+      href={item.path}
+      className={`flex items-center gap-4 px-3 py-3 rounded-lg transition-all duration-300
+      ${pathname === item.path
+        ? "bg-gradient-to-r from-purple-600 to-orange-500 text-white"
+        : isDark
+        ? "text-gray-300 hover:bg-gray-800"
+        : "text-gray-700 hover:bg-gray-200"
+      }`}
+    >
+      <div className="min-w-[22px] flex justify-center">
+        {item.icon}
+      </div>
 
       <span
         className={`whitespace-nowrap font-medium transition-all duration-300

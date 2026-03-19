@@ -393,6 +393,35 @@ export const deleteReel = async (reelId) => {
 // =====================================================
 
 /**
+ * Sort stories inside a single user by createdAt ASC (oldest first)
+ * Instagram-style: first story uploaded is shown first
+ */
+export const sortStoriesByCreatedAtASC = (stories) => {
+  if (!Array.isArray(stories)) return [];
+  return [...stories].sort((a, b) => {
+    const dateA = new Date(a.createdAt || a.created_at || 0);
+    const dateB = new Date(b.createdAt || b.created_at || 0);
+    return dateA.getTime() - dateB.getTime();
+  });
+};
+
+/**
+ * Sort story groups (users) by their latest story's createdAt DESC (most recent first)
+ * Instagram-style: users with most recent activity appear first
+ */
+export const sortStoryGroupsByLatestFirst = (storyGroups) => {
+  if (!Array.isArray(storyGroups)) return [];
+  return [...storyGroups].sort((a, b) => {
+    // Get the latest story from each user group
+    const aLatest = a.stories?.[a.stories.length - 1] || {};
+    const bLatest = b.stories?.[b.stories.length - 1] || {};
+    const dateA = new Date(aLatest.createdAt || aLatest.created_at || 0);
+    const dateB = new Date(bLatest.createdAt || bLatest.created_at || 0);
+    return dateB.getTime() - dateA.getTime();
+  });
+};
+
+/**
  * POST /api/v1/stories/presign
  * Generate presigned upload URL for story image/video or thumbnail
  */
@@ -419,6 +448,7 @@ export const createStory = async (storyData) => {
 /**
  * GET /api/v1/stories/feed
  * Get story feed from followed users
+ * Returns sorted by latest story DESC (most recent first)
  */
 export const getStoryFeed = async (limit = 20, cursor = null) => {
   const params = new URLSearchParams();
@@ -428,7 +458,25 @@ export const getStoryFeed = async (limit = 20, cursor = null) => {
   const res = await axios.get(`${API_BASE}/stories/feed?${params.toString()}`, {
     headers: getAuthHeaders(),
   });
-  return res.data.data;
+  const data = res.data.data;
+  
+  // Apply defensive sorting for story groups
+  // Users sorted by their latest story DESC (most recent first)
+  if (data?.items && Array.isArray(data.items)) {
+    const sortedItems = data.items.map(group => ({
+      ...group,
+      // Sort stories within each user by createdAt ASC (oldest first)
+      stories: sortStoriesByCreatedAtASC(group.stories || [])
+    }));
+    
+    // Sort users by their latest story DESC
+    return {
+      ...data,
+      items: sortStoryGroupsByLatestFirst(sortedItems)
+    };
+  }
+  
+  return data;
 };
 
 /**
@@ -441,7 +489,41 @@ export const getMyStory = async (userId = null) => {
     const currentUserId = userId || localStorage.getItem("user_id") || localStorage.getItem("_id");
     console.log("[getMyStory] Looking for story with userId:", currentUserId);
     
-    // Try the /stories/me endpoint first (most direct way)
+    // Use the correct endpoint: /users/{user_id}/stories
+    try {
+      const url = `${API_BASE}/users/${currentUserId}/stories?limit=20`;
+      console.log("[getMyStory] Calling URL:", url);
+      
+      const res = await axios.get(url, {
+        headers: getAuthHeaders(),
+      });
+      console.log("[getMyStory] Full response:", res.data);
+      
+      const data = res.data;
+      console.log("[getMyStory] data:", data);
+      
+      // Handle both response formats: { data: { active_stories: [] } } or { active_stories: [] }
+      const storiesData = data?.data || data;
+      console.log("[getMyStory] storiesData:", storiesData);
+      
+      // Return active_stories array with defensive sorting
+      // Sort by createdAt ASC (oldest first) for Instagram-style viewing
+      if (storiesData?.active_stories && Array.isArray(storiesData.active_stories)) {
+        console.log("[getMyStory] Found active_stories:", storiesData.active_stories.length);
+        // Apply defensive sorting - oldest first (ASC)
+        const sortedStories = sortStoriesByCreatedAtASC(storiesData.active_stories);
+        console.log("[getMyStory] Sorted stories (ASC):", sortedStories.map(s => s.createdAt));
+        return sortedStories;
+      }
+      
+      console.log("[getMyStory] No active_stories found");
+      return null;
+    } catch (userErr) {
+      console.log("[getMyStory] /users/{id}/stories error:", userErr.message);
+      console.log("[getMyStory] Error response:", userErr.response?.data);
+    }
+    
+    // Fallback: Try /stories/me
     try {
       const meRes = await axios.get(`${API_BASE}/stories/me`, {
         headers: getAuthHeaders(),
@@ -450,56 +532,10 @@ export const getMyStory = async (userId = null) => {
       console.log("[getMyStory] /stories/me response:", storyData);
       
       if (storyData) {
-        return storyData;
+        return [storyData]; // Return as array
       }
     } catch (meErr) {
       console.log("[getMyStory] /stories/me error:", meErr.message);
-    }
-    
-    // Try /api/v1/stories/user/{userId} if exists
-    try {
-      const userRes = await axios.get(`${API_BASE}/stories/user/${currentUserId}`, {
-        headers: getAuthHeaders(),
-      });
-      const userStories = userRes.data.data;
-      console.log("[getMyStory] /stories/user response:", userStories);
-      
-      // Return array or single story
-      if (Array.isArray(userStories) && userStories.length > 0) {
-        return userStories;
-      }
-      if (userStories) {
-        return userStories;
-      }
-    } catch (userErr) {
-      console.log("[getMyStory] /stories/user error:", userErr.message);
-    }
-    
-    // Fallback: Try the stories/feed endpoint
-    try {
-      const feedRes = await axios.get(`${API_BASE}/stories/feed?limit=20`, {
-        headers: getAuthHeaders(),
-      });
-      const data = feedRes.data.data;
-      console.log("[getMyStory] Story feed response:", data);
-      
-      // Look for current user's story in feed
-      if (data?.stories && Array.isArray(data.stories)) {
-        const myStory = data.stories.find(s => 
-          s.author?._id === currentUserId || 
-          s.user_id === currentUserId ||
-          s.user?._id === currentUserId ||
-          s.owner_id === currentUserId
-        );
-        if (myStory) return myStory;
-      }
-      
-      // Check top level
-      if (data?.author?._id === currentUserId || data?.user_id === currentUserId) {
-        return data;
-      }
-    } catch (feedErr) {
-      console.log("[getMyStory] Feed error:", feedErr.message);
     }
     
     return null;
