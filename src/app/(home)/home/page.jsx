@@ -348,15 +348,10 @@ export default function HomePage() {
                   }}
                 >
                   <div className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-200"}`}>
-                    {userStories.length > 0 && userStories[0]?.media?.url || userStories[0]?.media_url ? (
+                    {/* Show user profile photo by default - not story */}
+                    {userProfile?.profile_photos?.[0]?.url || userProfile?.profile_image_url ? (
                       <img 
-                        src={userStories[0].media?.url || userStories[0].media_url} 
-                        alt="Your Story" 
-                        className="w-full h-full object-cover" 
-                      />
-                    ) : userProfile?.profile_photos?.[0]?.url || userProfile?.profile_image_url ? (
-                      <img 
-                        src={userProfile.profile_photos?.[0]?.url || userProfile.profile_image_url} 
+                        src={userProfile.profile_photos?.[0]?.url || userProfile.profile_image_url || "/loginAvatars/profile.png"} 
                         alt={userProfile.full_name || "Profile"} 
                         className="w-full h-full object-cover" 
                       />

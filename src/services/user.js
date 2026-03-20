@@ -1,116 +1,3 @@
-// import api from './api';
-// import axios from 'axios';
-
-// export const userService = {
-//   // ============ PROFILE ============
-//   updateName: (name) => api.post('/users/profile/name', { full_name: name }),
-//   updateGender: (gender) => {
-//     console.log('Updating gender:', { gender, type: typeof gender });
-//     const payload = { gender };
-//     console.log('Gender payload JSON:', JSON.stringify(payload));
-//     return api.post('/users/profile/gender', payload);
-//   },
-//   updateDOB: (dob) => api.post('/users/profile/dob', { dob }),
-  
-//   updateLocation: (locationData) => {
-//     // Supports: place_id OR lat/lng OR location object with coordinates
-//     return api.post('/users/profile/location', locationData);
-//   },
-  
-//   updateProfile: (data) => 
-//     api.post('/users/profile', data),
-
-
-//     // ============ AUTH ============
-// emailPasswordSignup: (email, password, confirmPassword) =>
-// api.post("/api/v1/auth/signup/email-password", {
-//   email,
-//   password,
-//   confirm_password: confirmPassword,
-// }),
-
-
-//   // ============ ONBOARDING ============
-//   getOnboardingStatus: () => api.get('/users/onboarding/status'),
-//   completeOnboarding: () => api.post('/questionnaire/onboarding/complete'),
-  
-//   updateLanguage: (language) => 
-//     api.post('/users/language', { language }),
-  
-//   saveInterests: (interests) => 
-//     api.post('/users/onboarding/interests', { interests }),
-
-//   // ============ ACTIVITY INTENT ============
-//   setActivityIntent: (activityType, details = '') => 
-//     api.post('/users/activity-intent', { 
-//       activity_type: activityType, 
-//       details: details  // details is a string, not an object
-//     }),
-
-//   // Get roles for activity intent
-//   getActivityIntentRoles: () => 
-//     api.get('/users/activity-intent/roles'),
-
-//   // Get profile role config (form fields) by role - NEW ENDPOINT
-//   getProfileRoleConfig: (role) => 
-//     role ? api.get(`/users/profile-role-config/${role}`) : api.get('/users/profile-role-config'),
-
-//   // ============ PROFILE DETAILS ============
-//   setProfileDetails: (roleType, details) => 
-//     api.post('/users/profile-details', { 
-//       role_type: roleType, 
-//       details 
-//     }),
-
-//   // ============ PROFILE SETUP (Complete Profile) ============
-//   // Save profile setup data and navigate to KYC
-//   completeProfileSetup: (profileType, profileData) => 
-//     api.post('/users/profile-setup/complete', {
-//       profile_type: profileType,
-//       profile_data: profileData,
-//       next_step: 'kyc'
-//     }),
-
-//   // ============ PROFILE PHOTO ============
-//   updateProfilePhoto: (imageUrl) => 
-//     api.post('/users/profile-photo', { image_url: imageUrl }),
-
-//   // ============ PARENT CONSENT (MINORS) ============
-//   giveParentConsent: () => api.post('/users/parent/consent/give', { accepted: true }),
-//   getParentConsentStatus: () => api.get('/users/parent/consent/status'),
-//   revokeParentConsent: () => api.post('/users/parent/consent/revoke'),
-
-//   // ============ KYC ============
-
-//   // Face Verification
-//   verifyFace: (imageData) => 
-//     api.post('/kyc/face/verify', imageData),
-  
-//   checkLiveness: (imageData) => 
-//     api.post('/kyc/face/liveness', imageData),
-
-//   // ============ MEDIA UPLOAD ============
-//   getPresignedUrl: (fileName, file) =>
-//     api.post("/users/media/presign", {
-//       file_name: fileName,
-//       mime_type: file.type,
-//       size_bytes: file.size,
-//     }),
-
-//   // Upload file using presigned URL
-//   uploadToPresigned: async (presignedUrl, file, contentType) => {
-//     return axios.put(presignedUrl, file, {
-//       headers: { 'Content-Type': contentType },
-//     });
-//   },
-
-//   // ============ HELPERS ============
-//   // Get current user profile (if needed)
-//   getMe: () => api.get('/users/me'),
-// };
-
-// export default userService;
-
 import api from './api';
 import axios from 'axios';
 
@@ -232,6 +119,14 @@ api.post("/api/v1/auth/signup/email-password", {
   // ============ HELPERS ============
   // Get current user profile (if needed)
   getMe: () => api.get('/users/me'),
+
+  // ============ GET USER BY ID ============
+  // Get user profile by user ID (for viewing other user profiles)
+  getUserById: (userId) => api.get(`/users/${userId}`),
+
+  // ============ STORIES ============
+  // Get user stories (for viewing other user's stories)
+  getUserStories: (userId) => api.get(`/users/${userId}/stories?limit=20`),
 };
 
 export default userService;

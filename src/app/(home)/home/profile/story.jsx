@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   X,
   ChevronLeft,
@@ -9,8 +9,7 @@ import {
   VolumeX,
   Pause,
   Play,
-  MoreHorizontal,
-  Eye
+  MoreHorizontal
 } from "lucide-react";
 
 import { getMyStory, deleteStory } from "@/app/user/homefeed";
@@ -89,7 +88,13 @@ export default function OwnStoryViewerModal( {
 
   const [isMuted, setIsMuted] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [showViewers, setShowViewers] = useState(false);
+
+  const [progress, setProgress] = useState(0);
+  const videoRef = useRef(null);
+  const progressIntervalRef = useRef(null);
+
+  // Progress bar duration - 5 seconds for images, video duration for videos
+  const STORY_DURATION = 5000; // 5 seconds default
 
   // Delete story handler
   const handleDelete = async () => {
@@ -224,9 +229,91 @@ export default function OwnStoryViewerModal( {
 };
   const currentStory = stories[currentIndex] || null;
 
-  if (!isOpen || !currentStory) return null;
+  // Progress bar animation with auto-advance
+useEffect(() => {
+  if (!isOpen || !currentStory) return;
 
-  const viewers = currentStory.viewers || [];
+  let animationFrame;
+  let startTime;
+
+  const isVideo =
+    (currentStory.media?.type || currentStory.media_type) === "video";
+
+  const duration =
+    (currentStory.duration ||
+      currentStory.media?.duration ||
+      currentStory.media_duration ||
+      15) * 1000;
+
+  const goNext = () => {
+    cancelAnimationFrame(animationFrame);
+    setProgress(0);
+
+    if (isControlled && onNext) {
+      onNext();
+    } else if (internalIndex < stories.length - 1) {
+      setInternalIndex((prev) => prev + 1);
+    } else {
+      closeStoryViewer();
+    }
+  };
+
+  // ✅ VIDEO HANDLING (NO INTERVAL / NO RAF)
+  if (isVideo && videoRef.current) {
+    const video = videoRef.current;
+
+    const handleTimeUpdate = () => {
+      if (!video.duration) return;
+      setProgress((video.currentTime / video.duration) * 100);
+    };
+
+    const handleEnd = () => goNext();
+
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("ended", handleEnd);
+
+    return () => {
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("ended", handleEnd);
+    };
+  }
+
+  // ✅ IMAGE HANDLING (SMOOTH RAF — NO FLICKER)
+  const animate = (timestamp) => {
+    if (!startTime) startTime = timestamp;
+
+    if (isPaused) {
+      animationFrame = requestAnimationFrame(animate);
+      return;
+    }
+
+    const elapsed = timestamp - startTime;
+    const percent = Math.min((elapsed / duration) * 100, 100);
+
+    setProgress(percent);
+
+    if (percent < 100) {
+      animationFrame = requestAnimationFrame(animate);
+    } else {
+      goNext();
+    }
+  };
+
+  animationFrame = requestAnimationFrame(animate);
+
+  return () => cancelAnimationFrame(animationFrame);
+
+}, [currentIndex, isOpen, isPaused]);
+
+
+
+
+  // Reset progress when story changes manually
+  useEffect(() => {
+    setProgress(0);
+  }, [currentIndex]);
+
+  if (!isOpen || !currentStory) return null;
 
   return (
     <>
@@ -245,11 +332,13 @@ export default function OwnStoryViewerModal( {
 
 {(currentStory.media?.type || currentStory.media_type) === "video" ? (
   <video
+    ref={videoRef}
     src={currentStory.media?.url || currentStory.media_url}
     className="w-full h-full object-cover bg-black"
     muted={isMuted}
     autoPlay={!isPaused}
     controls={false}
+    playsInline
   />
 ) : (
   <img
@@ -310,20 +399,28 @@ export default function OwnStoryViewerModal( {
 
           </div>
 
-          {/* PROGRESS BAR */}
+          {/* PROGRESS BAR - Show for all stories */}
 
-          {stories.length > 1 && (
-            <div className="absolute top-0 left-0 right-0 flex gap-1 p-2">
-              {stories.map((_, idx) => (
-                <div
-                  key={idx}
-                  className={`h-1 flex-1 rounded-full ${
-                    idx <= currentIndex ? "bg-white" : "bg-white/30"
-                  }`}
-                />
-              ))}
-            </div>
-          )}
+          <div className="absolute top-0 left-0 right-0 flex gap-1 p-2">
+            {stories.map((_, idx) => (
+              <div
+                key={idx}
+                className="h-1 flex-1 rounded-full bg-white/30 overflow-hidden"
+              >
+                {idx === currentIndex && (
+                  <div
+                    className="h-full bg-white rounded-full will-change-width"
+                   style={{
+  width: `${progress}%`,
+}}
+                  />
+                )}
+                {idx < currentIndex && (
+                  <div className="h-full bg-white rounded-full w-full" />
+                )}
+              </div>
+            ))}
+          </div>
 
           {/* NAVIGATION */}
 
@@ -351,17 +448,7 @@ export default function OwnStoryViewerModal( {
             </button>
           )}
 
-          {/* SEEN BY */}
 
-          <div
-            className="absolute bottom-6 left-6 flex items-center gap-2 text-white cursor-pointer"
-            onClick={() => setShowViewers(true)}
-          >
-            <Eye size={18} />
-            <span className="text-sm">
-              Seen by {viewers.length}
-            </span>
-          </div>
 
           {/* CLOSE */}
 
@@ -374,55 +461,6 @@ export default function OwnStoryViewerModal( {
 
         </div>
       </div>
-
-      {/* VIEWERS POPUP */}
-
-      {showViewers && (
-        <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
-          onClick={() => setShowViewers(false)}
-        >
-          <div
-            className="bg-white w-[400px] rounded-2xl p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Viewers</h2>
-              <button onClick={() => setShowViewers(false)}>
-                <X />
-              </button>
-            </div>
-
-            {viewers.length === 0 && (
-              <p className="text-gray-500 text-sm">
-                No viewers yet
-              </p>
-            )}
-
-            {viewers.map((viewer, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3 py-2"
-              >
-                <img
-                  src={viewer.profile_picture || "/default-avatar.png"}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-
-                <div>
-                  <div className="font-medium text-sm">
-                    {viewer.username}
-                  </div>
-
-                  <div className="text-xs text-gray-500">
-                    {viewer.full_name}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
 
       {showMenu && (

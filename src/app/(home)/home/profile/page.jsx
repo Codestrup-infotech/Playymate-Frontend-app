@@ -735,42 +735,6 @@ export default function ProfilePage() {
               <>
 
 
-                {/* <div className="grid grid-cols-3 gap-1 mb-4">
-                  {reels.map((reel) => (
-                    <div 
-                      key={reel.reel_id || reel.post_id} 
-                      className="aspect-[9/16] relative rounded overflow-hidden cursor-pointer"
-                      onClick={() => handleReelClick(reel)}
-                    >
-
-                      
-                      {reel.thumbnail_url ? (
-                        <>
-                          <img 
-                            src={reel.thumbnail_url} 
-                            alt="Reel" 
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <Play size={36} className="text-white drop-shadow-md" />
-                          </div>
-                        </>
-                      )
-                      
-                      
-                      : reel.media && reel.media[0]?.url ? (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                          <Play size={36} className="text-gray-800" />
-                        </div>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                          <Play size={36} className="text-gray-800" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div> */}
-
 
 <div className="grid grid-cols-3 gap-1 mb-4">
   {reels.map((reel) => (

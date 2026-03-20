@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   MapPin,
   Search,
@@ -24,37 +25,71 @@ import {
   unfollowUser,
   searchUsersByInterest,
 } from "@/app/user/ProfileSearch";
+import {
+  getSearchHistory,
+  getTrendingSearches,
+  searchAccounts,
+  getRecommendations,
+} from "@/app/user/search";
 
 // Placeholder avatar
 const PLACEHOLDER_AVATAR =
   "data:image/png;base64,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";
 
 export default function SearchPage() {
+  const router = useRouter();
   const { isDark } = useTheme();
   const [view, setView] = useState("list");
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [suggestedUsers, setSuggestedUsers] = useState([]);
-  const [recentSearches, setRecentSearches] = useState([
-    "football",
-    "tennis",
-    "yoga",
-  ]);
-  const [trending, setTrending] = useState([
-    "badminton",
-    "cricket",
-    "swimming",
-    "cycling",
-    "marathon",
-  ]);
+  const [recentSearches, setRecentSearches] = useState([]);
+  const [trending, setTrending] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("people"); // people, interests, nearby
   const [error, setError] = useState(null);
+  const [followedUsers, setFollowedUsers] = useState(new Set()); // Track followed users locally
 
-  // Fetch suggested users on mount
+  // Fetch suggested users, search history, and trending on mount
   useEffect(() => {
     fetchSuggestedUsers();
+    fetchSearchHistory();
+    fetchTrending();
   }, []);
+
+  const fetchSearchHistory = async () => {
+    try {
+      const response = await getSearchHistory({ limit: 10 });
+      if (response.status === "success" && response.data) {
+        // Handle both array and object response formats
+        const historyItems = Array.isArray(response.data) 
+          ? response.data 
+          : response.data.items || [];
+        setRecentSearches(historyItems);
+      }
+    } catch (err) {
+      console.error("Failed to fetch search history:", err);
+      // Empty fallback - don't use hardcoded data
+      setRecentSearches([]);
+    }
+  };
+
+  const fetchTrending = async () => {
+    try {
+      const response = await getTrendingSearches(null, 10);
+      if (response.status === "success" && response.data) {
+        // Handle both array and object response formats
+        const trendingItems = Array.isArray(response.data)
+          ? response.data
+          : response.data.items || [];
+        setTrending(trendingItems);
+      }
+    } catch (err) {
+      console.error("Failed to fetch trending:", err);
+      // Empty fallback - don't use hardcoded data
+      setTrending([]);
+    }
+  };
 
   const fetchSuggestedUsers = async () => {
     try {
@@ -106,23 +141,21 @@ export default function SearchPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await searchUsers(searchQuery, { limit: 20 });
-      if (response.status === "success" && response.data) {
-        setSearchResults(response.data.items || []);
+      // Use searchAccounts from search.js (uses /api/v1/search/accounts endpoint)
+      const response = await searchAccounts(searchQuery, 20);
+      
+      // Handle both response formats: { status: "success", data: { items: [] } }
+      // and { success: true, data: { results: [] } }
+      if ((response.status === "success" || response.success) && response.data) {
+        const results = response.data.items || response.data.results || response.data || [];
+        setSearchResults(results);
+      } else {
+        setSearchResults([]);
       }
     } catch (err) {
       console.error("Search error:", err);
       setError("Failed to search. Please try again.");
-      // Mock data fallback
-      setSearchResults([
-        {
-          user_id: "mock1",
-          full_name: "Test User",
-          username: "testuser",
-          profile_image_url: null,
-          bio: "Sports enthusiast",
-        },
-      ]);
+      setSearchResults([]);
     } finally {
       setIsLoading(false);
     }
@@ -141,13 +174,28 @@ export default function SearchPage() {
     return () => clearTimeout(timer);
   }, [query, handleSearch]);
 
+  // Check if user is followed (from local state)
+  const isUserFollowed = (userId) => {
+    return followedUsers.has(userId);
+  };
+
   const handleFollow = async (userId, isFollowing) => {
     try {
-      if (isFollowing) {
+      // Optimistically update local state
+      const wasFollowing = followedUsers.has(userId) || isFollowing;
+      
+      if (wasFollowing) {
         await unfollowUser(userId);
+        setFollowedUsers(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(userId);
+          return newSet;
+        });
       } else {
         await followUser(userId);
+        setFollowedUsers(prev => new Set([...prev, userId]));
       }
+      
       // Refresh the list
       if (query.length >= 2) {
         handleSearch(query);
@@ -174,14 +222,21 @@ export default function SearchPage() {
     }
   };
 
-  const addToRecentSearches = (item) => {
+  const addToRecentSearches = async (item) => {
+    // The backend handles saving recent searches automatically
+    // Just update local state to reflect the new search
     if (!recentSearches.includes(item)) {
-      setRecentSearches([item, ...recentSearches.slice(0, 4)]);
+      const updated = [item, ...recentSearches.slice(0, 4)];
+      setRecentSearches(updated);
     }
   };
 
-  const removeFromRecentSearches = (item) => {
-    setRecentSearches(recentSearches.filter((s) => s !== item));
+  const removeFromRecentSearches = async (item) => {
+    // Remove from local state
+    const updated = recentSearches.filter((s) => s !== item && s.query !== item);
+    setRecentSearches(updated);
+    // Note: To fully remove from backend, we would need a separate API endpoint
+    // For now, we just update local state
   };
 
   const getProfileImage = (user) => {
@@ -347,10 +402,15 @@ export default function SearchPage() {
                 <div className="space-y-3">
                   {searchResults.map((user) => (
                     <div
-                      key={user.user_id}
-                      className={`flex items-center justify-between p-4 rounded-xl ${
-                        isDark ? "bg-[#252542]" : "bg-gray-100"
+                      key={user.user_id || user._id || user.id}
+                      className={`relative flex items-center p-4 rounded-xl cursor-pointer ${
+                        isDark ? "bg-[#252542]" : "bg-gray-100 "
                       }`}
+                      onClick={() => {
+                        // Use username if available, otherwise use userId
+                        const profileId = user.username || user.user_id || user._id || user.id;
+                        router.push(`/home/profile/${profileId}`);
+                      }}
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-purple-500 to-orange-400 p-[2px]">
@@ -361,7 +421,7 @@ export default function SearchPage() {
                           />
                         </div>
                         <div>
-                          <p className="font-semibold">{user.full_name}</p>
+                          <p className="font-semibold hover:underline">{user.full_name}</p>
                           <p className="text-gray-400 text-sm">
                             @{user.username}
                           </p>
@@ -374,18 +434,19 @@ export default function SearchPage() {
                       </div>
 
                       <button
-                        onClick={() =>
-                          handleFollow(user.user_id, user.is_following)
-                        }
-                        className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                          user.is_following
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFollow(user.user_id || user._id || user.id, isUserFollowed(user.user_id || user._id || user.id));
+                        }}
+                        className={`absolute right-4 px-4 py-2 rounded-lg text-sm font-medium ${
+                          isUserFollowed(user.user_id || user._id || user.id)
                             ? isDark
                               ? "bg-[#1a1a2e] text-gray-300"
                               : "bg-white text-gray-700"
                             : "bg-gradient-to-r from-purple-600 to-orange-500 text-white"
                         }`}
                       >
-                        {user.is_following ? "Following" : "Follow"}
+                        {isUserFollowed(user.user_id || user._id || user.id) ? "Following" : "Follow"}
                       </button>
                     </div>
                   ))}
@@ -406,10 +467,11 @@ export default function SearchPage() {
                   <div className="flex flex-wrap gap-2">
                     {recentSearches.map((item) => (
                       <span
-                        key={item}
+                        key={typeof item === 'string' ? item : item.query || item.id}
                         onClick={() => {
-                          setQuery(item);
-                          addToRecentSearches(item);
+                          const searchTerm = typeof item === 'string' ? item : item.query;
+                          setQuery(searchTerm);
+                          addToRecentSearches(searchTerm);
                         }}
                         className={`px-4 py-2 rounded-lg text-sm cursor-pointer flex items-center gap-2 ${
                           isDark
@@ -417,7 +479,7 @@ export default function SearchPage() {
                             : "bg-gray-100 hover:bg-gray-200"
                         }`}
                       >
-                        {item}
+                        {typeof item === 'string' ? item : item.query}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -443,11 +505,14 @@ export default function SearchPage() {
                 <div className="flex flex-wrap gap-2">
                   {trending.map((tag) => (
                     <span
-                      key={tag}
-                      onClick={() => handleInterestClick(tag)}
+                      key={typeof tag === 'string' ? tag : tag.query || tag.id}
+                      onClick={() => {
+                        const searchTerm = typeof tag === 'string' ? tag : tag.query;
+                        handleInterestClick(searchTerm);
+                      }}
                       className="px-4 py-2 rounded-lg border border-orange-500/50 text-orange-400 text-sm hover:bg-orange-500/10 cursor-pointer"
                     >
-                      🔥 {tag}
+                      🔥 {typeof tag === 'string' ? tag : tag.query}
                     </span>
                   ))}
                 </div>
@@ -463,13 +528,18 @@ export default function SearchPage() {
                 {suggestedUsers.length === 0 ? (
                   <p className="text-gray-400 text-sm">No suggestions available</p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-3  ">
                     {suggestedUsers.map((user) => (
                       <div
-                        key={user.user_id}
-                        className={`flex items-center justify-between p-4 rounded-xl ${
+                        key={user.user_id || user._id || user.id}
+                        className={`relative flex items-center p-4 rounded-xl cursor-pointer ${
                           isDark ? "bg-[#252542]" : "bg-gray-100"
                         }`}
+                        onClick={() => {
+                          // Use username if available, otherwise use userId
+                          const profileId = user.username || user.user_id || user._id || user.id;
+                          router.push(`/home/profile/${profileId}`);
+                        }}
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-purple-500 to-orange-400 p-[2px]">
@@ -480,7 +550,7 @@ export default function SearchPage() {
                             />
                           </div>
                           <div>
-                            <p className="font-semibold">{user.full_name}</p>
+                            <p className="font-semibold hover:underline">{user.full_name}</p>
                             <p className="text-gray-400 text-sm">
                               @{user.username}
                             </p>
@@ -493,10 +563,11 @@ export default function SearchPage() {
                         </div>
 
                         <button
-                          onClick={() =>
-                            handleFollow(user.user_id, user.is_following)
-                          }
-                          className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFollow(user.user_id || user._id || user.id, user.is_following);
+                          }}
+                          className={`absolute right-4 px-4 py-2 rounded-lg text-sm font-medium ${
                             user.is_following
                               ? isDark
                                 ? "bg-[#1a1a2e] text-gray-300"
