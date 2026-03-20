@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { XCircle, CheckCircle, Heart, MessageSquare, Share2, MoreHorizontal } from "lucide-react";
 import postService from "@/app/user/post";
 import { toggleLike } from "@/app/user/homefeed";
+import SharePopup from "@/app/(home)/home/components/sharepopup";
+
+// ✅ 1. Import the emoji picker
+import ComposeEmojiPicker from "./Composeemojipicker";
 
 // Helper function to format relative time
 function formatRelativeTime(dateString) {
@@ -56,6 +60,14 @@ export default function PostDetailModal({
   const [editingComment, setEditingComment] = useState(null);
   const [editText, setEditText] = useState("");
   const [showEditMenu, setShowEditMenu] = useState(false);
+
+  
+  
+
+  // ✅ 2. Add emoji picker state + comment input ref
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const commentInputRef = useRef(null);
+
   const menuRef = useRef(null);
   const isLikedRef = useRef(false);
   const router = useRouter();
@@ -74,6 +86,7 @@ export default function PostDetailModal({
       setOpenMenuId(null);
       setEditingComment(null);
       setShowEditMenu(false);
+      setShowEmojiPicker(false); // ✅ close picker when modal closes
     }
   }, [showPostModal]);
 
@@ -95,20 +108,39 @@ export default function PostDetailModal({
     };
   }, [openMenuId, showEditMenu]);
 
+  // ✅ 3. Emoji insert at cursor position
+  const handleEmojiPick = (emoji) => {
+    const input = commentInputRef.current;
+    if (!input) {
+      setCommentText((prev) => prev + emoji);
+      return;
+    }
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const newText = commentText.slice(0, start) + emoji + commentText.slice(end);
+    setCommentText(newText);
+
+    // Restore cursor right after the inserted emoji
+    requestAnimationFrame(() => {
+      const pos = start + emoji.length;
+      input.selectionStart = pos;
+      input.selectionEnd = pos;
+      input.focus();
+    });
+  };
+
   // ----------------------------
   // Delete Comment
   // ----------------------------
 
+  
   const handleDeleteComment = async (commentId) => {
-    // Debug: Log IDs for troubleshooting
     console.log('Delete attempt - currentUser:', currentUser);
     console.log('Delete attempt - post author:', postData?.author);
     
     try {
-      // Call API first - only remove if successful
       await postService.deleteComment(commentId);
       
-      // Only remove from UI after successful API call
       setPostData(prev => {
         const updatedComments = (prev.comments || []).filter(c => c.comment_id !== commentId && c.id !== commentId);
         return {
@@ -121,8 +153,6 @@ export default function PostDetailModal({
       setOpenMenuId(null);
     } catch (error) {
       console.error("Delete comment error:", error);
-      
-      // Show error message from API
       const errorMessage = error.response?.data?.message || "Failed to delete comment";
       alert(errorMessage);
     }
@@ -136,10 +166,8 @@ export default function PostDetailModal({
     if (!editText.trim()) return;
 
     try {
-      // Call API first - only update if successful
       await postService.updateComment(commentId, editText.trim());
       
-      // Only update UI after successful API call
       setPostData(prev => ({
         ...prev,
         comments: (prev.comments || []).map(c => 
@@ -177,10 +205,8 @@ export default function PostDetailModal({
     const currentlyLiked = isLikedRef.current;
     const newIsLiked = !currentlyLiked;
     
-    // Update ref immediately
     isLikedRef.current = newIsLiked;
 
-    // Optimistically update UI
     setPostData(prev => ({
       ...prev,
       is_liked: newIsLiked,
@@ -190,7 +216,6 @@ export default function PostDetailModal({
     }));
 
     try {
-      // Use toggleLike API - handles like/unlike automatically
       await toggleLike("post", postId);
 
       if (onPostUpdate) {
@@ -198,7 +223,6 @@ export default function PostDetailModal({
       }
     } catch (error) {
       console.error("Like error:", error);
-      // Rollback on error
       isLikedRef.current = currentlyLiked;
       setPostData(prev => ({
         ...prev,
@@ -219,6 +243,7 @@ export default function PostDetailModal({
   const handleReplyClick = (comment) => {
     setReplyToComment(comment);
     setCommentText(`@${comment.author?.username || comment.user?.username || 'user'} `);
+    commentInputRef.current?.focus(); // ✅ focus input on reply
   };
 
   // ----------------------------
@@ -230,15 +255,14 @@ export default function PostDetailModal({
     if (!postData || !commentText.trim() || isPostingComment) return;
 
     setIsPostingComment(true);
+    setShowEmojiPicker(false); // ✅ close picker when posting
 
     try {
 
       const postId = postData.post_id;
 
-      // If replying to a comment, use reply API
       if (replyToComment) {
         const commentId = replyToComment.comment_id || replyToComment.id;
-        const replyUsername = replyToComment.author?.username || replyToComment.user?.username || 'user';
         
         const newReply = {
           id: Date.now().toString(),
@@ -251,8 +275,6 @@ export default function PostDetailModal({
           created_at: new Date().toISOString()
         };
 
-        // Optimistic update - add reply to the comment's replies
-        // Optimistically update UI first
         setPostData(prev => ({
           ...prev,
           comments: prev.comments.map(c => {
@@ -271,13 +293,11 @@ export default function PostDetailModal({
           await postService.replyToComment(commentId, commentText.trim());
         } catch (replyError) {
           console.error('Reply failed:', replyError);
-          // Reply API might not exist, but UI already shows the reply optimistically
         }
         
         setCommentText("");
         setReplyToComment(null);
       } else {
-        // Regular comment on post
         const newComment = {
           id: Date.now().toString(),
           text: commentText.trim(),
@@ -312,26 +332,9 @@ export default function PostDetailModal({
   // ----------------------------
   // Share
   // ----------------------------
+  const [shareOpen, setShareOpen] = useState(false);
 
-  const handleShare = async () => {
-
-    if (!postData) return;
-
-    const shareData = {
-      title: "Check this post",
-      text: postData.content?.text || "",
-      url: `${window.location.origin}/home/profile/${postData.post_id}`
-    };
-
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch {}
-    } else {
-      await navigator.clipboard.writeText(shareData.url);
-      alert("Link copied");
-    }
-  };
+  const handleShare = () => setShareOpen(true);
 
   // ----------------------------
   // Edit Post Menu
@@ -342,7 +345,6 @@ export default function PostDetailModal({
     if (onClose) {
       onClose();
     }
-    // Navigate to EditPost page with post data
     const postId = postData?.post_id;
     if (postId) {
       router.push(`/home/create-post?edit=${postId}`);
@@ -361,7 +363,6 @@ export default function PostDetailModal({
       const response = await postService.deletePost(postData.post_id);
       console.log("Delete response:", response);
       
-      // Check if delete was successful
       if (response?.data?.status === 'success') {
         if (onClose) {
           onClose();
@@ -374,7 +375,6 @@ export default function PostDetailModal({
       }
     } catch (error) {
       console.error("Delete post error:", error);
-      // Show more detailed error message
       const errorMessage = error.response?.data?.message || error.message || "Failed to delete post";
       alert(errorMessage);
     }
@@ -389,7 +389,6 @@ export default function PostDetailModal({
       <div className={`relative w-full max-w-6xl h-[90vh] rounded-2xl overflow-hidden flex flex-col md:flex-row ${isDark ? "bg-[#1a1a2e]" : "bg-white"}`}>
 
         {/* CLOSE BUTTON */}
-
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-20 text-orange-600 bg-slate-100 p-1 rounded-full "
@@ -398,7 +397,6 @@ export default function PostDetailModal({
         </button>
 
         {/* THREE DOT BUTTON */}
-
         <div className="absolute top-4 right-16 z-20" ref={menuRef}>
           <button
             onClick={() => setShowEditMenu(!showEditMenu)}
@@ -406,8 +404,6 @@ export default function PostDetailModal({
           >
             <MoreHorizontal size={26}/>
           </button>
-
-          {/* EDIT MENU POPUP */}
 
           {showEditMenu && (
             <div className="absolute right-0 top-10 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-30">
@@ -449,335 +445,261 @@ export default function PostDetailModal({
         <>
 
         {/* MEDIA */}
-
         <div className="w-full md:w-1/2 bg-black flex items-center justify-center">
-
           {postData.media && postData.media.length > 0 ? (
-
             postData.media[0].type === "video" ?
-
-            <video
-              src={postData.media[0].url}
-              controls
-              className="max-h-full max-w-full object-contain"
-            />
-
+            <video src={postData.media[0].url} controls className="max-h-full max-w-full object-contain"/>
             :
-
-            <img
-              src={postData.media[0].url}
-              className="max-h-full max-w-full object-contain"
-            />
-
+            <img src={postData.media[0].url} className="max-h-full max-w-full object-contain"/>
           ) : (
-
             <p className="text-gray-400">No media</p>
-
           )}
-
         </div>
 
         {/* RIGHT PANEL */}
-
         <div className="w-full md:w-1/2 flex flex-col">
 
-        {/* AUTHOR */}
-
-        <div className="flex items-center gap-3 p-4 border-b">
-
-          <img
-            src={postData.author?.profile_image_url || "/loginAvatars/profile.png"}
-            className="w-10 h-10 rounded-full object-cover"
-          />
-
-          <div>
-
-            <p className={`font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
-              {postData.author?.username || postData.author?.full_name}
-            </p>
-
-            {postData.content?.location && (
-
-              <p className="text-xs text-gray-400">
-                {typeof postData.content.location === 'string' ? postData.content.location : postData.content.location?.display_text || postData.content.location?.city || ''}
+          {/* AUTHOR */}
+          <div className="flex items-center gap-3 p-4 border-b">
+            <img
+              src={postData.author?.profile_image_url || "/loginAvatars/profile.png"}
+              className="w-10 h-10 rounded-full object-cover"
+            />
+            <div>
+              <p className={`font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
+                {postData.author?.username || postData.author?.full_name}
               </p>
+              {postData.content?.location && (
+                <p className="text-xs text-gray-400">
+                  {typeof postData.content.location === 'string'
+                    ? postData.content.location
+                    : postData.content.location?.display_text || postData.content.location?.city || ''}
+                </p>
+              )}
+            </div>
+            {postData.author?.is_verified && <CheckCircle size={16} className="text-blue-400"/>}
+          </div>
 
+          {/* COMMENTS */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+            {/* CAPTION */}
+            {postData.content?.text && (
+              <div className="flex gap-2">
+                <span className="font-semibold">
+                  {postData.author?.username || postData.author?.full_name || 'user'}
+                </span>
+                <span>{postData.content.text}</span>
+              </div>
             )}
 
-          </div>
+            {/* COMMENTS LIST */}
+            {postData.comments && postData.comments.map((comment, i) => {
 
-          {postData.author?.is_verified &&
-            <CheckCircle size={16} className="text-blue-400"/>
-          }
+              const username =
+                comment.author?.username ||
+                comment.user?.username ||
+                comment.author?.full_name ||
+                comment.user?.full_name ||
+                "user";
 
-        </div>
+              const userPhoto = comment.author?.profile_image_url || comment.user?.profile_image_url || "/loginAvatars/profile.png";
+              const time = formatRelativeTime(comment.created_at);
+              const commentId = comment.comment_id || comment.id;
+              const isMenuOpen = openMenuId === commentId;
+              const isEditing = editingComment === commentId;
+              
+              const commentAuthorId = String(comment.author?.user_id || comment.user?.user_id || '');
+              const postAuthorId    = String(postData.author?.user_id || postData.author?._id || postData.author?.id || '');
+              const currentUserId   = String(currentUser?._id || currentUser?.user_id || currentUser?.id || '');
+              
+              const isOwnComment = currentUser && (
+                commentAuthorId === currentUserId ||
+                postAuthorId === currentUserId ||
+                comment.author?.username === currentUser?.username ||
+                comment.user?.username === currentUser?.username
+              );
 
-        {/* COMMENTS */}
+              return (
+                <div key={comment.comment_id || comment.id || i} className="flex gap-3 group">
+                  <img src={userPhoto} alt={username} className="w-8 h-8 rounded-full object-cover flex-shrink-0"/>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  <div className="flex-1">
+                    {isEditing ? (
+                      <div className="flex gap-2">
+                        <input
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          className={`flex-1 outline-none border rounded px-2 py-1 ${isDark ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-100 border-gray-300'}`}
+                        />
+                        <button onClick={() => handleUpdateComment(commentId)} className="text-purple-500 font-semibold text-sm">Save</button>
+                        <button onClick={() => setEditingComment(null)} className="text-gray-400 text-sm">Cancel</button>
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="font-semibold mr-2">{username}</span>
+                        <span>{comment.text}</span>
+                      </div>
+                    )}
 
-        {/* CAPTION */}
+                    <div className="text-xs text-gray-400 flex gap-3 mt-1 items-center">
+                      <span>{time}</span>
+                      <button onClick={() => handleReplyClick(comment)} className="font-semibold hover:text-purple-400">Reply</button>
 
-        {postData.content?.text && (
+                      {isOwnComment && (
+                        <div className="relative" ref={menuRef}>
+                          <button
+                            onClick={() => setOpenMenuId(isMenuOpen ? null : commentId)}
+                            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <MoreHorizontal size={16}/>
+                          </button>
 
-          <div className="flex gap-2">
-
-            <span className="font-semibold">
-              {postData.author?.username || postData.author?.full_name || 'user'}
-            </span>
-
-            <span>{postData.content.text}</span>
-
-          </div>
-
-        )}
-
-        {/* COMMENTS LIST */}
-
-        {postData.comments && postData.comments.map((comment, i) => {
-
-          const username =
-            comment.author?.username ||
-            comment.user?.username ||
-            comment.author?.full_name ||
-            comment.user?.full_name ||
-            "user";
-
-          const userPhoto = comment.author?.profile_image_url || comment.user?.profile_image_url || "/loginAvatars/profile.png";
-
-          const time = formatRelativeTime(comment.created_at);
-
-          const commentId = comment.comment_id || comment.id;
-          const isMenuOpen = openMenuId === commentId;
-          const isEditing = editingComment === commentId;
-          
-          // Get IDs as strings for comparison
-          const commentAuthorId = String(comment.author?.user_id || comment.user?.user_id || '');
-          const postAuthorId = String(postData.author?.user_id || postData.author?._id || postData.author?.id || '');
-          const currentUserId = String(currentUser?._id || currentUser?.user_id || currentUser?.id || '');
-          
-          // Check if user can modify this comment:
-          // 1. User owns the comment (comment author matches current user)
-          // 2. User owns the post (can delete any comment on their post)
-          const isOwnComment = currentUser && (
-            commentAuthorId === currentUserId ||
-            postAuthorId === currentUserId ||
-            comment.author?.username === currentUser?.username ||
-            comment.user?.username === currentUser?.username
-          );
-
-          return (
-
-            <div key={comment.comment_id || comment.id || i} className="flex gap-3 group">
-
-              <img
-                src={userPhoto}
-                alt={username}
-                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-              />
-
-              <div className="flex-1">
-
-                {isEditing ? (
-                  <div className="flex gap-2">
-                    <input
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      className={`flex-1 outline-none border rounded px-2 py-1 ${isDark ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-100 border-gray-300'}`}
-                    />
-                    <button
-                      onClick={() => handleUpdateComment(commentId)}
-                      className="text-purple-500 font-semibold text-sm"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => setEditingComment(null)}
-                      className="text-gray-400 text-sm"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-
-                    <span className="font-semibold mr-2">
-                      {username}
-                    </span>
-
-                    <span>{comment.text}</span>
-
-                  </div>
-                )}
-
-                <div className="text-xs text-gray-400 flex gap-3 mt-1 items-center">
-
-                  <span>{time}</span>
-
-                  <button
-                    onClick={() => handleReplyClick(comment)}
-                    className="font-semibold hover:text-purple-400"
-                  >
-                    Reply
-                  </button>
-
-                  {isOwnComment && (
-                    <div className="relative" ref={menuRef}>
-                      <button
-                        onClick={() => setOpenMenuId(isMenuOpen ? null : commentId)}
-                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <MoreHorizontal size={16} />
-                      </button>
-
-                      {isMenuOpen && (
-                        <div className={`absolute right-0 top-6 z-10 rounded-lg shadow-lg border ${isDark ? 'bg-[#1a1a2e] border-gray-600' : 'bg-white border-gray-200'} min-w-[120px]`}>
-                          <table className="w-full">
-                            <tbody>
-                              <tr>
-                                <td>
-                                  <button
-                                    onClick={() => startEditing(comment)}
-                                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${isDark ? 'text-white' : 'text-gray-900'}`}
-                                  >
-                                    Update
-                                  </button>
-                                </td>
-                              </tr>
-                              <tr>
-                                <td>
-                                  <button
-                                    onClick={() => handleDeleteComment(commentId)}
-                                    className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                  >
-                                    Delete
-                                  </button>
-                                </td>
-                              </tr>
-                              <tr>
-                                <td>
-                                  <button
-                                    onClick={() => setOpenMenuId(null)}
-                                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100  dark:hover:bg-gray-700 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
-                                  >
-                                    Cancel
-                                  </button>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
+                          {isMenuOpen && (
+                            <div className={`absolute right-0 top-6 z-10 rounded-lg shadow-lg border ${isDark ? 'bg-[#1a1a2e] border-gray-600' : 'bg-white border-gray-200'} min-w-[120px]`}>
+                              <table className="w-full">
+                                <tbody>
+                                  <tr><td>
+                                    <button onClick={() => startEditing(comment)} className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${isDark ? 'text-white' : 'text-gray-900'}`}>Update</button>
+                                  </td></tr>
+                                  <tr><td>
+                                    <button onClick={() => handleDeleteComment(commentId)} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700">Delete</button>
+                                  </td></tr>
+                                  <tr><td>
+                                    <button onClick={() => setOpenMenuId(null)} className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Cancel</button>
+                                  </td></tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  )}
 
-                </div>
-
-                {/* Replies Display */}
-                {comment.replies && comment.replies.length > 0 && (
-                  <div className="ml-4 mt-2 space-y-2 border-l-2 border-gray-200 dark:border-gray-600 pl-3">
-                    {comment.replies.map((reply, idx) => (
-                      <div key={reply.comment_id || reply.id || idx} className="flex gap-2">
-                        <img
-                          src={reply.author?.profile_image_url || reply.user?.profile_image_url || "/loginAvatars/profile.png"}
-                          alt={reply.author?.username || reply.user?.username || 'user'}
-                          className="w-6 h-6 rounded-full object-cover flex-shrink-0"
-                        />
-                        <div>
-                          <span className="font-semibold text-sm mr-2">
-                            {reply.author?.username || reply.user?.username || reply.author?.full_name || reply.user?.full_name || 'user'}
-                          </span>
-                          <span className="text-sm">{reply.text}</span>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {formatRelativeTime(reply.created_at)}
-                          </p>
-                        </div>
+                    {/* Replies */}
+                    {comment.replies && comment.replies.length > 0 && (
+                      <div className="ml-4 mt-2 space-y-2 border-l-2 border-gray-200 dark:border-gray-600 pl-3">
+                        {comment.replies.map((reply, idx) => (
+                          <div key={reply.comment_id || reply.id || idx} className="flex gap-2">
+                            <img
+                              src={reply.author?.profile_image_url || reply.user?.profile_image_url || "/loginAvatars/profile.png"}
+                              alt={reply.author?.username || 'user'}
+                              className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                            />
+                            <div>
+                              <span className="font-semibold text-sm mr-2">
+                                {reply.author?.username || reply.user?.username || reply.author?.full_name || 'user'}
+                              </span>
+                              <span className="text-sm">{reply.text}</span>
+                              <p className="text-xs text-gray-400 mt-0.5">{formatRelativeTime(reply.created_at)}</p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
-
-              </div>
-
-            </div>
-
-          );
-
-        })}
-
-        </div>
-
-        {/* ACTIONS */}
-
-        <div className="p-4 border-t">
-
-          <div className="flex gap-6 mb-2">
-
-            <button onClick={handleLikeToggle}>
-              <Heart
-                size={24}
-                className={postData.is_liked ? "text-red-500 fill-red-500" : ""}
-              />
-            </button>
-
-            <MessageSquare size={24}/>
-
-            <button onClick={handleShare}>
-              <Share2 size={24}/>
-            </button>
-
+                </div>
+              );
+            })}
           </div>
 
-          <p className="font-semibold">
-            {postData.likes_count || 0} likes
-          </p>
+          {/* ACTIONS */}
+          <div className="p-4 border-t">
+  <div className="flex gap-6 mb-2">
+    <button onClick={handleLikeToggle}>
+      <Heart size={24} className={postData.is_liked ? "text-red-500 fill-red-500" : ""} />
+    </button>
+    <MessageSquare size={24} />
+    <button onClick={handleShare}>
+      <Share2 size={24} />
+    </button>
+  </div>
+  <p className="font-semibold">{postData.likes_count || 0} likes</p>
+  {(postData.comments_count > 0 || postData.comments?.length > 0) && (
+    <p className="text-sm text-gray-400 mt-1">
+      {postData.comments_count || postData.comments?.length || 0} comments
+    </p>
+  )}
 
-          {(postData.comments_count > 0 || (postData.comments && postData.comments.length > 0)) && (
-            <p className="text-sm text-gray-400 mt-1">
-              {postData.comments_count || postData.comments?.length || 0} comments
-            </p>
-          )}
+  {/* Share Popup */}
+  <SharePopup
+    isOpen={shareOpen}
+    onClose={() => setShareOpen(false)}
+    contentType="post"
+    contentId={postData.post_id || postData._id}
+    thumbnail={postData.media?.[0]?.url || postData.thumbnail || null}
+    title={postData.caption || postData.title || null}
+  />
+</div>
 
-        </div>
+          {/* ✅ 4. COMMENT INPUT with emoji picker */}
+          <div className="border-t p-3">
 
-        {/* COMMENT INPUT */}
+            {/* Reply banner */}
+            {replyToComment && (
+              <div className="flex items-center justify-between bg-pink-50 border border-pink-200 rounded-lg px-3 py-1.5 mb-2">
+                <p className="text-xs text-pink-600 truncate">
+                  ↩ Replying to <span className="font-semibold">@{replyToComment.author?.username || replyToComment.user?.username || 'user'}</span>
+                </p>
+                <button onClick={() => { setReplyToComment(null); setCommentText(""); }} className="ml-2 text-pink-400 hover:text-pink-600 flex-shrink-0 text-lg leading-none">×</button>
+              </div>
+            )}
 
-        <div className="border-t p-3 flex gap-2">
+            <div className="flex items-center gap-2 relative">
 
-          <input
-            value={commentText}
-            onChange={(e)=>setCommentText(e.target.value)}
-            onKeyDown={(e)=> e.key==="Enter" && handlePostComment()}
-            placeholder="Add a comment..."
-            className="flex-1 outline-none bg-transparent"
-          />
+              {/* Emoji button + picker */}
+              <div className="relative flex-shrink-0">
+                <button
+                  onClick={() => setShowEmojiPicker((v) => !v)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-full text-lg transition-colors ${
+                    showEmojiPicker ? "bg-pink-100" : "hover:bg-gray-100"
+                  }`}
+                  title="Emoji"
+                >
+                  😊
+                </button>
 
-          <button
-            onClick={handlePostComment}
-            disabled={!commentText.trim()}
-            className="text-purple-500 font-semibold"
-          >
-            Post
-          </button>
+                {/* Picker opens upward so it doesn't get clipped */}
+                {showEmojiPicker && (
+                  <div className="absolute bottom-10 left-0">
+                    <ComposeEmojiPicker
+                      onPick={handleEmojiPick}
+                      onClose={() => setShowEmojiPicker(false)}
+                    />
+                  </div>
+                )}
+              </div>
 
-        </div>
+              {/* Text input */}
+              <input
+                ref={commentInputRef}
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handlePostComment()}
+                placeholder={replyToComment ? "Write a reply..." : "Add a comment..."}
+                className="flex-1 outline-none bg-transparent text-sm"
+              />
+
+              {/* Post button */}
+              <button
+                onClick={handlePostComment}
+                disabled={!commentText.trim() || isPostingComment}
+                className="text-purple-500 font-semibold text-sm disabled:opacity-40 flex-shrink-0"
+              >
+                {isPostingComment ? "..." : "Post"}
+              </button>
+            </div>
+          </div>
 
         </div>
 
         </>
 
         ) : (
-
-        <div className="flex-1 flex items-center justify-center">
-          Post not found
-        </div>
-
+          <div className="flex-1 flex items-center justify-center">Post not found</div>
         )}
 
       </div>
-
     </div>
-
   );
-
 }

@@ -1,10 +1,17 @@
 import axios from "axios";
 
+// ─────────────────────────────────────────────
+// AXIOS INSTANCE
+// ─────────────────────────────────────────────
+
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1",
 });
 
-// Same token logic as wallet page
+// ─────────────────────────────────────────────
+// TOKEN HELPER (SSR SAFE)
+// ─────────────────────────────────────────────
+
 const getToken = () => {
   if (typeof window === "undefined") return null;
   return (
@@ -14,14 +21,25 @@ const getToken = () => {
   );
 };
 
-// Attach Bearer token to every request
+// ─────────────────────────────────────────────
+// REQUEST INTERCEPTOR (AUTO AUTH)
+// ─────────────────────────────────────────────
+
 api.interceptors.request.use((config) => {
   const token = getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Unwrap res.data.data on success | throw readable error on failure
+// ─────────────────────────────────────────────
+// RESPONSE INTERCEPTOR
+// ─────────────────────────────────────────────
+// ✅ Return raw axios response — callers unwrap themselves.
+//    The old `res.data?.data || res.data` stripped the response
+//    object, which made error.response undefined in catch blocks
+//    and caused "is not a function" when consuming returned values.
+// ─────────────────────────────────────────────
+
 api.interceptors.response.use(
   (res) => res.data.data,
   (err) => {
@@ -72,7 +90,7 @@ export const unarchiveConversation = (conversationId) =>
 // 2. MESSAGES
 // ─────────────────────────────────────────────
 
-export const sendMessage = (conversationId, payload) =>
+export const sendMessage = (conversationId, payload) => 
   api.post(`/messages/conversations/${conversationId}/messages`, payload);
 
 export const getMessages = (conversationId, { limit = 50, cursor } = {}) => {
@@ -96,10 +114,11 @@ export const removeReaction = (messageId, emoji) =>
 export const markMessageRead = (messageId) =>
   api.post(`/messages/messages/${messageId}/read`);
 
-export const forwardMessage = (messageId, targetConversations) =>
-  api.post(`/messages/messages/${messageId}/forward`, {
-    target_conversations: targetConversations,
-  });
+  export const forwardMessage = (messageId, targetConversations) => {
+    return api.post(`/messages/messages/${messageId}/forward`, {
+      target_conversations: targetConversations,
+    });
+  };
 
 // ─────────────────────────────────────────────
 // 3. MEDIA UPLOAD

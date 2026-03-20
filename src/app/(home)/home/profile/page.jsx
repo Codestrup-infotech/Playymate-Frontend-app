@@ -70,15 +70,11 @@ function VerificationBadge({ status }) {
   return <XCircle size={14} className="text-gray-500 inline ml-1" />;
 }
 
-function StatBox({ value, label ,isDark}) {
+function StatBox({ value, label, isDark }) {
   return (
     <div className="text-center">
-      <p  className={`text-2xl font-medium font-Poppins ${isDark ? "text-white " : "text-black "}`}>{value ?? 0}</p>
+      <p className={`text-2xl font-medium font-Poppins ${isDark ? "text-white " : "text-black "}`}>{value ?? 0}</p>
       <p className={`text-sm font-Poppins mt-1 ${isDark ? "text-white " : "text-slate-800 "}`}>{label}</p>
-
-
-
-
     </div>
   );
 }
@@ -103,7 +99,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showBioPopup, setShowBioPopup] = useState(false);
-  
+
   // Posts and Reels data
   const [posts, setPosts] = useState([]);
   const [reels, setReels] = useState([]);
@@ -113,7 +109,7 @@ export default function ProfilePage() {
   const [reelsCursor, setReelsCursor] = useState(null);
   const [hasMorePosts, setHasMorePosts] = useState(true);
   const [hasMoreReels, setHasMoreReels] = useState(true);
-  
+
   // Selected post for modal
   const [selectedPost, setSelectedPost] = useState(null);
   const [selectedPostLoading, setSelectedPostLoading] = useState(false);
@@ -125,14 +121,13 @@ export default function ProfilePage() {
         const res = await userService.getMe();
         const data = res?.data?.data || res?.data;
         if (!data) throw new Error("No profile data received from API");
-        
-        // Log the image response data
+
         console.log("=== PROFILE IMAGE RESPONSE ===");
         console.log("profile_image_url:", data.profile_image_url);
         console.log("profile_photos:", data.profile_photos);
         console.log("full response:", JSON.stringify(data, null, 2));
         console.log("=============================");
-        
+
         setProfile(data);
       } catch (err) {
         console.error("Profile fetch error:", err);
@@ -157,34 +152,33 @@ export default function ProfilePage() {
         setPostsLoading(true);
         try {
           const response = await postService.getUserPosts(profile._id, 20, null);
-          console.log('Posts API response:', response);
+          console.log("Posts API response:", response);
           const newPosts = (response.data?.data?.posts || response.data?.data?.items || [])
-            .filter(post => {
-              // Filter out videos and GIFs - only show static images in Posts tab
+            .filter((post) => {
               if (!post.media || post.media.length === 0) return true;
               const mediaType = post.media[0].type?.toLowerCase();
-              return mediaType !== 'video' && mediaType !== 'gif';
+              return mediaType !== "video" && mediaType !== "gif";
             });
           setPosts(newPosts);
           setPostsCursor(response.data?.data?.next_cursor);
           setHasMorePosts(response.data?.data?.has_more || false);
         } catch (error) {
-          console.error("Error fetching posts:", error);
+          console.error("Error fetching posts:", error?.response?.data || error.message);
           // Try alternate endpoint
           try {
             const altResponse = await postService.getMyPosts(20, null);
-            console.log('Alternate Posts API response:', altResponse);
+            console.log("Alternate Posts API response:", altResponse);
             const newPosts = (altResponse.data?.data?.posts || altResponse.data?.data?.items || [])
-              .filter(post => {
+              .filter((post) => {
                 if (!post.media || post.media.length === 0) return true;
                 const mediaType = post.media[0].type?.toLowerCase();
-                return mediaType !== 'video' && mediaType !== 'gif';
+                return mediaType !== "video" && mediaType !== "gif";
               });
             setPosts(newPosts);
             setPostsCursor(altResponse.data?.data?.next_cursor);
             setHasMorePosts(altResponse.data?.data?.has_more || false);
           } catch (altError) {
-            console.error("Error fetching posts (alternate):", altError);
+            console.error("Error fetching posts (alternate):", altError?.response?.data || altError.message);
             setPosts([]);
           }
         } finally {
@@ -201,36 +195,33 @@ export default function ProfilePage() {
       if (activeTab === "Reels" && profile?._id && !reelsLoading) {
         setReelsLoading(true);
         try {
-          // Use posts API and filter for videos/GIFs (reels API may not work)
           const response = await postService.getUserPosts(profile._id, 50, null);
-          console.log('Reels from posts API response:', response);
+          console.log("Reels from posts API response:", response);
           const allPosts = response.data?.data?.posts || response.data?.data?.items || [];
-          const newReels = allPosts.filter(post => {
+          const newReels = allPosts.filter((post) => {
             if (!post.media || post.media.length === 0) return false;
             const mediaType = post.media[0].type?.toLowerCase();
-            return mediaType === 'video' || mediaType === 'gif';
+            return mediaType === "video" || mediaType === "gif";
           });
-          console.log('Filtered videos/GIFs for reels:', newReels);
+          console.log("Filtered videos/GIFs for reels:", newReels);
           setReels(newReels);
           setReelsCursor(response.data?.data?.next_cursor);
           setHasMoreReels(response.data?.data?.has_more || false);
         } catch (error) {
-          console.error("Error fetching reels:", error);
-          // Try alternate endpoint
+          console.error("Error fetching reels:", error?.response?.data || error.message);
           try {
             const altResponse = await postService.getMyPosts(50, null);
-            console.log('Alternate Reels from posts API response:', altResponse);
             const allPosts = altResponse.data?.data?.posts || altResponse.data?.data?.items || [];
-            const newReels = allPosts.filter(post => {
+            const newReels = allPosts.filter((post) => {
               if (!post.media || post.media.length === 0) return false;
               const mediaType = post.media[0].type?.toLowerCase();
-              return mediaType === 'video' || mediaType === 'gif';
+              return mediaType === "video" || mediaType === "gif";
             });
             setReels(newReels);
             setReelsCursor(altResponse.data?.data?.next_cursor);
             setHasMoreReels(altResponse.data?.data?.has_more || false);
           } catch (altError) {
-            console.error("Error fetching reels (alternate):", altError);
+            console.error("Error fetching reels (alternate):", altError?.response?.data || altError.message);
             setReels([]);
           }
         } finally {
@@ -247,16 +238,16 @@ export default function ProfilePage() {
       try {
         const response = await postService.getUserPosts(profile._id, 20, postsCursor);
         const newPosts = (response.data?.data?.posts || response.data?.data?.items || [])
-          .filter(post => {
+          .filter((post) => {
             if (!post.media || post.media.length === 0) return true;
             const mediaType = post.media[0].type?.toLowerCase();
-            return mediaType !== 'video' && mediaType !== 'gif';
+            return mediaType !== "video" && mediaType !== "gif";
           });
-        setPosts(prev => [...prev, ...newPosts]);
+        setPosts((prev) => [...prev, ...newPosts]);
         setPostsCursor(response.data?.data?.next_cursor);
         setHasMorePosts(response.data?.data?.has_more || false);
       } catch (error) {
-        console.error("Error loading more posts:", error);
+        console.error("Error loading more posts:", error?.response?.data || error.message);
       } finally {
         setPostsLoading(false);
       }
@@ -267,28 +258,27 @@ export default function ProfilePage() {
     if (reelsCursor && hasMoreReels && !reelsLoading && profile?._id) {
       setReelsLoading(true);
       try {
-        // Use posts API and filter for videos/GIFs
         const response = await postService.getUserPosts(profile._id, 50, reelsCursor);
         const allPosts = response.data?.data?.posts || response.data?.data?.items || [];
-        const newReels = allPosts.filter(post => {
+        const newReels = allPosts.filter((post) => {
           if (!post.media || post.media.length === 0) return false;
           const mediaType = post.media[0].type?.toLowerCase();
-          return mediaType === 'video' || mediaType === 'gif';
+          return mediaType === "video" || mediaType === "gif";
         });
-        setReels(prev => [...prev, ...newReels]);
+        setReels((prev) => [...prev, ...newReels]);
         setReelsCursor(response.data?.data?.next_cursor);
         setHasMoreReels(response.data?.data?.has_more || false);
       } catch (error) {
-        console.error("Error loading more reels:", error);
+        console.error("Error loading more reels:", error?.response?.data || error.message);
       } finally {
         setReelsLoading(false);
       }
     }
   };
 
-  // Handle post click - fetch full post details
+  // ── Handle post click — fetch full post details ────────────────────────────
   const handlePostClick = async (post) => {
-    setSelectedPost(post);
+    setSelectedPost(post);   // show modal instantly with existing data
     setShowPostModal(true);
     setSelectedPostLoading(true);
     try {
@@ -327,19 +317,42 @@ export default function ProfilePage() {
       
       setSelectedPost(postData);
     } catch (error) {
-      console.error("Error fetching post details:", error);
-      // Keep showing the basic post data if API fails
+      console.error("Error fetching post details:", error?.response?.data || error.message);
+      // Keep showing the basic post data already set above
     } finally {
       setSelectedPostLoading(false);
     }
   };
 
-  // Handle reel click - fetch full reel details
+  // ── Handle reel click ─────────────────────────────────────────────────────
+  //
+  //  Root cause of the original bug:
+  //    1. postService.getReel() didn't exist  →  runtime error, .response is undefined
+  //    2. The old axios interceptor stripped res.data, hiding the real error body
+  //    3. Both issues produced console.error("REEL ERROR:", {})
+  //
+  //  Fix:
+  //    • Reels ARE posts (video media). Use postService.getPost() instead.
+  //    • Show modal immediately with the existing reel object so the user
+  //      sees content right away, even if the detail fetch fails.
+  //    • Use optional chaining on error so we always log something useful.
+  // ─────────────────────────────────────────────────────────────────────────
   const handleReelClick = async (reel) => {
-    console.log('Reel clicked:', reel);
+    console.log("Reel clicked:", reel);
+
+    // Normalise ID — API may return any of these field names
+    const reelId = reel?.post_id || reel?.reel_id || reel?._id;
+
+    if (!reelId) {
+      console.error("Invalid reel — no ID found:", reel);
+      return;
+    }
+
+    // ✅  Open modal immediately so the user isn't staring at nothing
     setSelectedPost(reel);
     setShowPostModal(true);
     setSelectedPostLoading(true);
+
     try {
       // These "reels" are actually posts (videos/GIFs), so use post_id instead of reel_id
       const postId = reel.reel_id || reel.post_id;
@@ -451,16 +464,18 @@ export default function ProfilePage() {
 
   const allInterests = flattenInterests(interests);
   const age = formatAge(dob);
-  const location =
-    profile_location?.display_text ||
-    profile_location?.city ||
-    profile_location?.state ||
-    null;
+
+  // ✅ Safely extract a string — profile_location may be a nested object
+  const location = typeof profile_location === "string"
+    ? profile_location
+    : profile_location?.display_text ||
+      profile_location?.city ||
+      profile_location?.state ||
+      null;
 
   const roleSpecific = profile_details?.role_specific || {};
   const commonFields = profile_details?.common_fields || {};
 
-  // categorised interests for display
   const interestCategories = [
     { label: "Sports", items: interests?.sports || [] },
     { label: "Hobbies", items: interests?.hobbies || [] },
@@ -472,13 +487,11 @@ export default function ProfilePage() {
     <div className="space-y-4 max-w-5xl mx-auto px-4 pb-10">
 
       {/* ── HEADER CARD ─────────────────────────────────────────────────── */}
-     {/* ── COVER HEADER ───────────────────────────────────────── */}
-
-<div
-  className={`rounded-2xl overflow-hidden ${
-    isDark ? "bg-[#12122a] border border-white/5" : "bg-white shadow"
-  }`}
->
+      <div
+        className={`rounded-2xl overflow-hidden ${
+          isDark ? "bg-[#12122a] border border-white/5" : "bg-white shadow"
+        }`}
+      >
 
   {/* ───── COVER PHOTO ───── */}
   <div className="relative h-52 w-full bg-gradient-to-l from-[#FF8319] to-[#EF3AFF]  ">
@@ -486,149 +499,129 @@ export default function ProfilePage() {
     {/* overlay */}
     <div className="absolute inset-0 bg-black/20" />
 
-    {/* top bar */}
-    <div className="absolute top-4 left-6 right-6 flex justify-between items-start">
+          <div className="absolute top-4 left-6 right-6 flex justify-between items-start">
+            <h1 className="text-white text-2xl font-bold">
+              {full_name || "User"}
+            </h1>
 
-      {/* username */}
-      <h1 className="text-white text-2xl font-bold">
-        {full_name || "User"}
-      </h1>
+            {is_own_profile && (
+              <div className="flex gap-2">
+                <button className="px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg text-sm flex items-center gap-2">
+                  <ImageIcon size={16} />
+                  Edit Cover Photo
+                </button>
 
-      {/* buttons */}
-      {is_own_profile && (
-        <div className="flex gap-2">
+                <button
+                  onClick={() => router.push("/home/profile/edit")}
+                  className="px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg text-sm flex items-center gap-2"
+                >
+                  <Pencil size={16} />
+                  Edit Profile
+                </button>
 
-          <button className="px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg text-sm flex items-center gap-2">
-      <ImageIcon size={16} />
-            Edit Cover Photo
-          </button>
+                <button className="px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg text-sm flex items-center gap-2">
+                  <Share2 size={16} />
+                  Share
+                </button>
 
-          <button
-            onClick={() => router.push("/home/profile/edit")}
-            className="px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg text-sm flex items-center gap-2"
-          >
-            <Pencil size={16} />
-            Edit Profile
-          </button>
-
-          <button className="px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg text-sm flex items-center gap-2">
-            <Share2 size={16} />
-            Share
-          </button>
-
-          <button className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg">
-            <Settings size={18} />
-          </button>
-
-        </div>
-      )}
-    </div>
-  </div>
-
-
-  {/* ───── USER DETAILS ───── */}
-  <div className="p-6 -mt-16 relative z-10">
-
-    <div className="flex gap-6 items-start flex-wrap md:flex-nowrap">
-
-      {/* avatar */}
-      <div className="flex-shrink-0">
-        <div className="w-28 h-28 md:w-36 md:h-36 rounded-[30px] p-[3px] bg-gradient-to-tr from-purple-500 to-orange-500">
-          <img
-            src={profile_photos?.[0]?.url || profile_image_url || "/loginAvatars/profile.png"}
-            alt={full_name}
-            className={`w-full h-full rounded-3xl object-cover border-4 ${
-              isDark ? "border-[#12122a]" : "border-white"
-            }`}
-          />
-        </div>
-
-       
-      </div>
-
-
-      {/* DETAILS */}
-      <div className="flex-1 min-w-0 mt-12">
-
-        {/* name */}
-        <div className="flex flex-wrap items-center gap-2 mb-1 space-x-4  ">
-
-          <h2 className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-            {full_name}
-          </h2>
-
-          {verification_badge === "verified" && (
-            <ShieldCheck size={18} className="text-purple-500  " />
-          )}
-
-        </div>
-
-
-      
-
-
-        {/* stats */}
-        <div
-          className={`flex gap-6 py-2.5 mt-4 px-5 rounded-xl mb-4 w-fit border  border-slate-100 shadow-md  text-blue-900 ${
-            isDark ? "bg-[#1a1a38]" : " bg-gray-200 "
-          }`}
-        >
-         <StatBox value={stats?.posts_count} label="Posts" isDark={isDark} />
-<StatBox value={stats?.followers_count} label="Followers" isDark={isDark} />
-<StatBox value={stats?.following_count} label="Following" isDark={isDark} />
-
-        </div>
-
-
-        {/* bio */}
-        {bio ? (
-          <div 
-            onClick={() => is_own_profile && setShowBioPopup(true)}
-            className={`text-sm leading-relaxed cursor-pointer hover:opacity-80 ${isDark ? "text-gray-300" : "text-gray-600"} ${is_own_profile ? 'border-dashed w-80 border border-gray-500/30 p-2 rounded-xl  ' : ''}`}
-          >
-            {bio}
+                <button className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg">
+                  <Settings size={18} />
+                </button>
+              </div>
+            )}
           </div>
-        ) : is_own_profile ? (
-          <button
-            onClick={() => setShowBioPopup(true)}
-            className={`text-sm text-gray-500 italic bg-transparent border-none outline-none w-full text-left px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition ${isDark ? "placeholder-gray-500" : "placeholder-gray-400"}`}
-          >
-            No bio yet · Click to add one
-          </button>
-        ) : (
-          <p className={`text-sm text-gray-500 italic ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-            No bio yet
-          </p>
-        )}
+        </div>
+
+        {/* ───── USER DETAILS ───── */}
+        <div className="p-6 -mt-16 relative z-10">
+          <div className="flex gap-6 items-start flex-wrap md:flex-nowrap">
+
+            {/* avatar */}
+            <div className="flex-shrink-0">
+              <div className="w-28 h-28 md:w-36 md:h-36 rounded-[30px] p-[3px] bg-gradient-to-tr from-purple-500 to-orange-500">
+                <img
+                  src={profile_photos?.[0]?.url || profile_image_url || "/loginAvatars/profile.png"}
+                  alt={full_name}
+                  className={`w-full h-full rounded-3xl object-cover border-4 ${
+                    isDark ? "border-[#12122a]" : "border-white"
+                  }`}
+                />
+              </div>
+            </div>
+
+            {/* DETAILS */}
+            <div className="flex-1 min-w-0 mt-12">
+
+              <div className="flex flex-wrap items-center gap-2 mb-1 space-x-4">
+                <h2 className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
+                  {full_name}
+                </h2>
+
+                {verification_badge === "verified" && (
+                  <ShieldCheck size={18} className="text-purple-500" />
+                )}
+
+        </div>
 
 
- <p className="text-sm text-gray-500 italic  mt-2 flex  items-center text-center  rounded-md shadow-2xl ">
-        
-         <MapPin size={14} className="text-slate-500 flex-shrink-0 " />  
-         
-         <span  className="ml-2"> 
-            {profile_location?.display_text || profile_location?.city || profile_location?.state || "No location added"}</span>
-          </p>
-          
-          
-          <div className="border border-orange-300 w-96 mt-3 py-3 flex justify-center items-center text-center rounded-md "> My Teams</div>
       
-      </div>
-    </div>
-  </div>
-</div>
-      {/* ── INFO CARDS ROW ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-Poppins ">
 
+
+              {/* stats */}
+              <div
+                className={`flex gap-6 py-2.5 mt-4 px-5 rounded-xl mb-4 w-fit border border-slate-100 shadow-md text-blue-900 ${
+                  isDark ? "bg-[#1a1a38]" : "bg-gray-200"
+                }`}
+              >
+                <StatBox value={stats?.posts_count} label="Posts" isDark={isDark} />
+                <StatBox value={stats?.followers_count} label="Followers" isDark={isDark} />
+                <StatBox value={stats?.following_count} label="Following" isDark={isDark} />
+              </div>
+
+              {/* bio */}
+              {bio ? (
+                <div
+                  onClick={() => is_own_profile && setShowBioPopup(true)}
+                  className={`text-sm leading-relaxed cursor-pointer hover:opacity-80 ${isDark ? "text-gray-300" : "text-gray-600"} ${is_own_profile ? "border-dashed w-80 border border-gray-500/30 p-2 rounded-xl" : ""}`}
+                >
+                  {bio}
+                </div>
+              ) : is_own_profile ? (
+                <button
+                  onClick={() => setShowBioPopup(true)}
+                  className={`text-sm text-gray-500 italic bg-transparent border-none outline-none w-full text-left px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition`}
+                >
+                  No bio yet · Click to add one
+                </button>
+              ) : (
+                <p className="text-sm text-gray-500 italic">No bio yet</p>
+              )}
+
+              <p className="text-sm text-gray-500 italic mt-2 flex items-center text-center rounded-md shadow-2xl">
+                <MapPin size={14} className="text-slate-500 flex-shrink-0" />
+                <span className="ml-2">
+                  {location || "No location added"}
+                </span>
+              </p>
+
+              <div className="border border-orange-300 w-96 mt-3 py-3 flex justify-center items-center text-center rounded-md">
+                My Teams
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── INFO CARDS ROW ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-Poppins">
         {/* Placeholder - Activity moved to Activity tab */}
       </div>
 
-    
-
       {/* ── POSTS / TABS CARD ────────────────────────────────────────────── */}
       <div
-        className={`rounded-2xl p-5 ${isDark ? "bg-[#12122a] border border-white/5" : "bg-white shadow"
-          }`}
+        className={`rounded-2xl p-5 ${
+          isDark ? "bg-[#12122a] border border-white/5" : "bg-white shadow"
+        }`}
       >
         {/* tabs */}
         <div className="flex gap-6 border-b border-white/90 pb-4 mb-6 overflow-x-auto">
@@ -636,10 +629,13 @@ export default function ProfilePage() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`text-sm font-medium pb-2 -mb-4 whitespace-nowrap transition-colors ${activeTab === tab
-                  ? isDark ? "text-white border-b-2 border-white" : "text-pink-500 border-b-2 border-pink-500"
+              className={`text-sm font-medium pb-2 -mb-4 whitespace-nowrap transition-colors ${
+                activeTab === tab
+                  ? isDark
+                    ? "text-white border-b-2 border-white"
+                    : "text-pink-500 border-b-2 border-pink-500"
                   : "text-gray-500 hover:text-gray-300"
-                }`}
+              }`}
             >
               {tab === "Posts" && <Grid size={16} className="inline mr-1" />}
               {tab === "Reels" && <Film size={16} className="inline mr-1" />}
@@ -649,7 +645,7 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        {/* Posts Grid */}
+        {/* ── Posts Grid ── */}
         {activeTab === "Posts" && (
           <div>
             {postsLoading && posts.length === 0 ? (
@@ -671,9 +667,9 @@ export default function ProfilePage() {
                             <Play size={24} className="text-white" />
                           </div>
                         ) : (
-                          <img 
-                            src={post.media[0].url} 
-                            alt="Post" 
+                          <img
+                            src={post.media[0].url}
+                            alt="Post"
                             className="w-full h-full object-cover"
                           />
                         )
@@ -682,7 +678,6 @@ export default function ProfilePage() {
                           <MessageSquare size={20} className="text-gray-400" />
                         </div>
                       )}
-                      {/* Overlay with stats */}
                       <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition flex items-center justify-center gap-4">
                         <span className="flex items-center gap-1 text-white text-sm font-medium">
                           <Heart size={16} /> {post.likes_count || 0}
@@ -696,7 +691,7 @@ export default function ProfilePage() {
                 </div>
                 {hasMorePosts && (
                   <div className="flex justify-center py-4">
-                    <button 
+                    <button
                       onClick={loadMorePosts}
                       disabled={postsLoading}
                       className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm text-white disabled:opacity-50"
@@ -724,7 +719,7 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Reels Grid */}
+        {/* ── Reels Grid ── */}
         {activeTab === "Reels" && (
           <div>
             {reelsLoading && reels.length === 0 ? (
@@ -766,7 +761,7 @@ export default function ProfilePage() {
 
                 {hasMoreReels && (
                   <div className="flex justify-center py-4">
-                    <button 
+                    <button
                       onClick={loadMoreReels}
                       disabled={reelsLoading}
                       className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm text-white disabled:opacity-50"
@@ -794,18 +789,18 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Events and  tabs - empty state */}
-        {(activeTab === "Events") && (
+        {/* ── Events tab — empty state ── */}
+        {activeTab === "Events" && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-full bg-purple-900/30 flex items-center justify-center mb-4">
               <MessageCircle size={28} className="text-purple-400" />
             </div>
-            <p className="text-gray-400 text-sm font-medium">No {activeTab.toLowerCase()} yet</p>
-            <p className="text-gray-600 text-xs mt-1">Start exploring to see {activeTab.toLowerCase()} here</p>
+            <p className="text-gray-400 text-sm font-medium">No events yet</p>
+            <p className="text-gray-600 text-xs mt-1">Start exploring to see events here</p>
           </div>
         )}
 
-        {/* Activity Tab */}
+        {/* ── Activity Tab ── */}
         {activeTab === "Activity" && (
           <Activity profile={profile} isDark={isDark} />
         )}

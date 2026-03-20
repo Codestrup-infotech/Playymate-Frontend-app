@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import ComposeEmojiPicker from "../components/Composeemojipicker";
+
 import { io } from "socket.io-client";
 import {
   getConversations,
@@ -346,6 +348,27 @@ export default function MessagesPage() {
   const [renameInput,   setRenameInput]   = useState("");
   const [typingUsers,   setTypingUsers]   = useState({});
   const [connected,     setConnected]     = useState(false);
+
+
+  // emoji
+
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+const textareaRef = useRef(null);  // attach this to your <textarea>
+
+const handleEmojiPick = (emoji) => {
+  const textarea = textareaRef.current;
+  if (!textarea) { setText((prev) => prev + emoji); return; }
+  const start = textarea.selectionStart;
+  const end   = textarea.selectionEnd;
+  const newText = text.slice(0, start) + emoji + text.slice(end);
+  setText(newText);
+  requestAnimationFrame(() => {
+    const pos = start + emoji.length;
+    textarea.selectionStart = pos;
+    textarea.selectionEnd   = pos;
+    textarea.focus();
+  });
+};
 
   // ── Merge profiles ───────────────────────────────────────────────────────────
 
@@ -1042,6 +1065,19 @@ export default function MessagesPage() {
                   : <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                 }
               </button>
+
+              <div className="relative flex-shrink-0">
+  <button onClick={() => setShowEmojiPicker((v) => !v)} className="w-9 h-9 rounded-full border border-gray-200 hover:bg-gray-50 flex items-center justify-center text-lg">
+    😊
+  </button>
+  {showEmojiPicker && (
+    <ComposeEmojiPicker
+      onPick={handleEmojiPick}
+      onClose={() => setShowEmojiPicker(false)}
+    />
+  )}
+</div>
+
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
