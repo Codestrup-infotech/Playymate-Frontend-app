@@ -611,6 +611,8 @@ const handleEmojiPick = (emoji) => {
 
   // ── Select conversation ──────────────────────────────────────────────────────
 
+
+  
   const handleSelectConv = async (conv) => {
     // Leave previous room
     if (selectedConvRef.current?._id && socketRef.current) {
