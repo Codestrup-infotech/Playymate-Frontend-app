@@ -32,6 +32,7 @@ import postService from "@/app/user/post";
 import Activity from "../components/Activity.jsx";
 import BioPopup from "@/app/components/profileCompletion/BioPopup.jsx";
 import PostDetailModal from "../components/PostDetailModal.jsx";
+import FollowModal from "../components/FollowersFollowing.jsx";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -70,9 +71,12 @@ function VerificationBadge({ status }) {
   return <XCircle size={14} className="text-gray-500 inline ml-1" />;
 }
 
-function StatBox({ value, label, isDark }) {
+function StatBox({ value, label, isDark, onClick }) {
   return (
-    <div className="text-center">
+    <div 
+      className={`text-center ${onClick ? "cursor-pointer hover:opacity-80" : ""}`}
+      onClick={onClick}
+    >
       <p className={`text-2xl font-medium font-Poppins ${isDark ? "text-white " : "text-black "}`}>{value ?? 0}</p>
       <p className={`text-sm font-Poppins mt-1 ${isDark ? "text-white " : "text-slate-800 "}`}>{label}</p>
     </div>
@@ -99,6 +103,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showBioPopup, setShowBioPopup] = useState(false);
+  const [showFollowModal, setShowFollowModal] = useState(false);
+  const [followModalType, setFollowModalType] = useState("followers");
 
   // Posts and Reels data
   const [posts, setPosts] = useState([]);
@@ -290,9 +296,10 @@ export default function ProfilePage() {
       let postData = response.data?.data?.post || response.data?.data || response.data || post;
       
       // Preserve the is_liked from original post if not in API response
-      if (postData && post.is_liked !== undefined) {
-        postData.is_liked = post.is_liked;
-      }
+     postData.is_liked =
+  post.is_liked === true ||
+  post.is_liked === "true" ||
+  post.user_action?.liked_by_you === true;
       
       // If comments aren't in the post, fetch them separately
       if (!postData.comments || postData.comments.length === 0) {
@@ -369,18 +376,20 @@ export default function ProfilePage() {
         // Handle different response structures
         let postData = response.data?.data || response.data || reel;
         // Preserve is_liked from original reel if not in API response
-        if (postData && reel.is_liked !== undefined) {
-          postData.is_liked = reel.is_liked;
-        }
+       postData.is_liked =
+  reel.is_liked === true ||
+  reel.is_liked === "true" ||
+  reel.user_action?.liked_by_you === true;
         setSelectedPost(postData.media ? postData : reel);
       } else {
         response = await postService.getPost(reel.post_id);
         // Handle different response structures - getPost returns full axios response
         let postData = response.data?.data || response.data || reel;
         // Preserve is_liked from original reel if not in API response
-        if (postData && reel.is_liked !== undefined) {
-          postData.is_liked = reel.is_liked;
-        }
+       postData.is_liked =
+  post.is_liked === true ||
+  post.is_liked === "true" ||
+  post.user_action?.liked_by_you === true;
         // Only update if we get valid media data, otherwise keep original
         setSelectedPost(postData.media ? postData : reel);
       }
@@ -574,8 +583,24 @@ export default function ProfilePage() {
                 }`}
               >
                 <StatBox value={stats?.posts_count} label="Posts" isDark={isDark} />
-                <StatBox value={stats?.followers_count} label="Followers" isDark={isDark} />
-                <StatBox value={stats?.following_count} label="Following" isDark={isDark} />
+                <StatBox 
+                  value={stats?.followers_count} 
+                  label="Followers" 
+                  isDark={isDark} 
+                  onClick={() => {
+                    setFollowModalType("followers");
+                    setShowFollowModal(true);
+                  }}
+                />
+                <StatBox 
+                  value={stats?.following_count} 
+                  label="Following" 
+                  isDark={isDark} 
+                  onClick={() => {
+                    setFollowModalType("following");
+                    setShowFollowModal(true);
+                  }}
+                />
               </div>
 
               {/* bio */}
@@ -680,7 +705,24 @@ export default function ProfilePage() {
                       )}
                       <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition flex items-center justify-center gap-4">
                         <span className="flex items-center gap-1 text-white text-sm font-medium">
-                          <Heart size={16} /> {post.likes_count || 0}
+                       <Heart
+  size={16}
+  fill={
+    post.is_liked === true ||
+    post.is_liked === "true" ||
+    post.user_action?.liked_by_you === true
+      ? "red"
+      : "none"
+  }
+  className={
+    post.is_liked === true ||
+    post.is_liked === "true" ||
+    post.user_action?.liked_by_you === true
+      ? "text-red-500"
+      : ""
+  }
+/>
+{post.likes_count || 0}
                         </span>
                         <span className="flex items-center gap-1 text-white text-sm font-medium">
                           <MessageSquare size={16} /> {post.comments_count || 0}
@@ -826,6 +868,16 @@ export default function ProfilePage() {
         currentUser={profile}
       />
 
+      {/* Followers/Following Modal */}
+      <FollowModal
+        type={followModalType}
+        isOpen={showFollowModal}
+        onClose={() => setShowFollowModal(false)}
+        userId={profile?._id || profile?.user_id}
+        currentUserId={profile?._id || profile?.user_id}
+        followersData={profile?.followers}
+        followingData={profile?.following}
+      />
 
     </div>
   );

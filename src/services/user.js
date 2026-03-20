@@ -127,6 +127,27 @@ api.post("/api/v1/auth/signup/email-password", {
   // ============ STORIES ============
   // Get user stories (for viewing other user's stories)
   getUserStories: (userId) => api.get(`/users/${userId}/stories?limit=20`),
+
+  // ============ FOLLOWERS & FOLLOWING ============
+  // Get followers list for a user
+  getFollowers: (userId, limit = 20, cursor = null) => 
+    api.get(`/users/${userId}/followers`, { params: { limit, cursor } }),
+
+  // Get following list for a user
+  getFollowing: (userId, limit = 20, cursor = null) => 
+    api.get(`/users/${userId}/following`, { params: { limit, cursor } }),
+
+  // Follow a user
+  followUser: (userId) => api.post(`/users/${userId}/follow`),
+
+  // Unfollow a user
+  unfollowUser: (userId) => api.delete(`/users/${userId}/follow`),
+
+  // Remove a follower (for your own profile)
+  removeFollower: (followerId) => api.post(`/users/${followerId}/remove-follower`),
+
+  // Check follow status
+  getFollowStatus: (userId) => api.get(`/users/${userId}/follow-status`),
 };
 
 export default userService;

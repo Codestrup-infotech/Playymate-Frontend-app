@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { XCircle, CheckCircle, Heart, MessageSquare, Share2, MoreHorizontal } from "lucide-react";
 import postService from "@/app/user/post";
 import { toggleLike } from "@/app/user/homefeed";
+import { getPostShareCount } from "@/app/user/share";
 import SharePopup from "@/app/(home)/home/components/sharepopup";
 
 // ✅ 1. Import the emoji picker
@@ -72,12 +73,60 @@ export default function PostDetailModal({
   const isLikedRef = useRef(false);
   const router = useRouter();
 
-  useEffect(() => {
-    if (selectedPost) {
-      setPostData(selectedPost);
-      isLikedRef.current = selectedPost.is_liked === true;
+  // Fetch like status from API when opening a post
+  const fetchLikeStatus = async (contentId, contentType = "post") => {
+    try {
+      const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
+      const response = await fetch(`/api/v1/${contentType}s/${contentId}/like-check`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      return data.data?.liked ?? data.liked ?? null; // Return null if not found (don't default to false)
+    } catch (error) {
+      console.log("Like check failed:", error);
+      return null; // Return null to indicate API failed
     }
-  }, [selectedPost]);
+  };
+
+useEffect(() => {
+  if (selectedPost) {
+    const postId = selectedPost.post_id || selectedPost._id;
+    const contentType = selectedPost.content_type || "post";
+
+    // First, set the data with existing is_liked value (from profile page)
+    // This is the initial truth - don't overwrite until API confirms
+    const existingIsLiked = 
+      selectedPost.is_liked === true || 
+      selectedPost.is_liked === "true" ||
+      selectedPost.user_action?.liked_by_you === true;
+
+    const normalizedPost = {
+      ...selectedPost,
+      is_liked: existingIsLiked
+    };
+
+    setPostData(normalizedPost);
+    isLikedRef.current = existingIsLiked;
+
+    // Then check API - only update if API returns a definitive value
+    if (postId) {
+      fetchLikeStatus(postId, contentType).then(apiLiked => {
+        // Only update if API returns a clear true/false (not null)
+        if (apiLiked !== null) {
+          setPostData(prev =>
+            prev ? { ...prev, is_liked: !!apiLiked } : prev
+          );
+          isLikedRef.current = !!apiLiked;
+        }
+        // If API returns null (failed), keep the existing is_liked value
+      });
+    }
+  }
+}, [selectedPost]);
+
 
   useEffect(() => {
     if (!showPostModal) {
@@ -203,17 +252,17 @@ export default function PostDetailModal({
 
     const postId = postData.post_id;
     const currentlyLiked = isLikedRef.current;
-    const newIsLiked = !currentlyLiked;
-    
-    isLikedRef.current = newIsLiked;
+   const newIsLiked = !Boolean(isLikedRef.current);
 
-    setPostData(prev => ({
-      ...prev,
-      is_liked: newIsLiked,
-      likes_count: currentlyLiked
-        ? Math.max(0, (prev.likes_count || 1) - 1)
-        : (prev.likes_count || 0) + 1
-    }));
+isLikedRef.current = newIsLiked;
+
+setPostData(prev => ({
+  ...prev,
+  is_liked: newIsLiked,
+  likes_count: newIsLiked
+    ? (prev.likes_count || 0) + 1
+    : Math.max(0, (prev.likes_count || 1) - 1)
+}));
 
     try {
       await toggleLike("post", postId);
@@ -335,6 +384,25 @@ export default function PostDetailModal({
   const [shareOpen, setShareOpen] = useState(false);
 
   const handleShare = () => setShareOpen(true);
+
+  // Update share count after successful share
+  const handleShareSuccess = async () => {
+    if (!postData?.post_id) return;
+    try {
+      const result = await getPostShareCount(postData.post_id);
+      setPostData(prev => ({
+        ...prev,
+        shares_count: result.count
+      }));
+    } catch (error) {
+      console.error("Failed to update share count:", error);
+      // Increment locally as fallback
+      setPostData(prev => ({
+        ...prev,
+        shares_count: (prev.shares_count || 0) + 1
+      }));
+    }
+  };
 
   // ----------------------------
   // Edit Post Menu
@@ -604,22 +672,47 @@ export default function PostDetailModal({
           </div>
 
           {/* ACTIONS */}
-          <div className="p-4 border-t">
-  <div className="flex gap-6 mb-2">
-    <button onClick={handleLikeToggle}>
-      <Heart size={24} className={postData.is_liked ? "text-red-500 fill-red-500" : ""} />
-    </button>
-    <MessageSquare size={24} />
-    <button onClick={handleShare}>
-      <Share2 size={24} />
-    </button>
+       <div className="p-4 border-t">
+  {/* ICONS + COUNTS */}
+  <div className="flex space-x-20 text-center">
+
+    {/* LIKE */}
+    <div className="flex flex-col items-center">
+      <button onClick={handleLikeToggle}>
+        <Heart
+          size={24}
+          fill={(postData?.likes_count > 0) ? "red" : "none"}
+          className={(postData?.likes_count > 0) ? "text-red-500" : "text-black"}
+          strokeWidth={2}
+        />
+      </button>
+      <span className="text-black text-sm font-medium">
+        {postData.likes_count || 0} likes
+      </span>
+    </div>
+
+    {/* COMMENT */}
+   {/* COMMENT */}
+<div className="flex flex-col items-center">
+  <button onClick={() => commentInputRef.current?.focus()}>
+    <MessageSquare size={24} className="text-black" />
+  </button>
+  <span className="text-black text-sm font-medium mt-1">
+    {postData.comments_count || postData.comments?.length || 0} comments
+  </span>
+</div>
+
+    {/* SHARE */}
+    <div className="flex flex-col items-center">
+      <button onClick={handleShare}>
+        <Share2 size={24} className="text-black" />
+      </button>
+      <span className="text-black text-sm font-medium">
+        {postData.shares_count || postData.engagement?.shares_count || 0} shares
+      </span>
+    </div>
+
   </div>
-  <p className="font-semibold">{postData.likes_count || 0} likes</p>
-  {(postData.comments_count > 0 || postData.comments?.length > 0) && (
-    <p className="text-sm text-gray-400 mt-1">
-      {postData.comments_count || postData.comments?.length || 0} comments
-    </p>
-  )}
 
   {/* Share Popup */}
   <SharePopup
@@ -629,6 +722,7 @@ export default function PostDetailModal({
     contentId={postData.post_id || postData._id}
     thumbnail={postData.media?.[0]?.url || postData.thumbnail || null}
     title={postData.caption || postData.title || null}
+    onShareSuccess={handleShareSuccess}
   />
 </div>
 
@@ -671,14 +765,14 @@ export default function PostDetailModal({
               </div>
 
               {/* Text input */}
-              <input
-                ref={commentInputRef}
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handlePostComment()}
-                placeholder={replyToComment ? "Write a reply..." : "Add a comment..."}
-                className="flex-1 outline-none bg-transparent text-sm"
-              />
+             <input
+  ref={commentInputRef}
+  value={commentText}
+  onChange={(e) => setCommentText(e.target.value)}
+  onKeyDown={(e) => e.key === "Enter" && handlePostComment()}
+  placeholder={replyToComment ? "Write a reply..." : "Add a comment..."}
+  className="flex-1 outline-none bg-transparent text-sm caret-black focus:outline-none"
+/>
 
               {/* Post button */}
               <button

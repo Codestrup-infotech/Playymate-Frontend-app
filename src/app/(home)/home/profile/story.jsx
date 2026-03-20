@@ -9,10 +9,11 @@ import {
   VolumeX,
   Pause,
   Play,
-  MoreHorizontal
+  MoreHorizontal,
+  Eye
 } from "lucide-react";
 
-import { getMyStory, deleteStory } from "@/app/user/homefeed";
+import { getMyStory, deleteStory, getStoryViewers } from "@/app/user/homefeed";
 import { useRouter } from "next/navigation";
 
 /**
@@ -89,12 +90,89 @@ export default function OwnStoryViewerModal( {
   const [isMuted, setIsMuted] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
+  // Seen By feature
+  const [showSeenBy, setShowSeenBy] = useState(false);
+  const [seenByUsers, setSeenByUsers] = useState([]);
+  const [isLoadingSeenBy, setIsLoadingSeenBy] = useState(false);
+
   const [progress, setProgress] = useState(0);
   const videoRef = useRef(null);
   const progressIntervalRef = useRef(null);
 
   // Progress bar duration - 5 seconds for images, video duration for videos
   const STORY_DURATION = 5000; // 5 seconds default
+
+  // Helper function to format time ago
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 60) return `${diffSec}s`;
+    if (diffMin < 60) return `${diffMin}m`;
+    if (diffHour < 24) return `${diffHour}h`;
+    if (diffDay < 7) return `${diffDay}d`;
+    return date.toLocaleDateString();
+  };
+
+  // Fetch story viewers
+  const fetchStoryViewers = async () => {
+    const storyId = currentStory?.story_id || currentStory?._id;
+    console.log("[fetchStoryViewers] Story ID:", storyId);
+    if (!storyId) return;
+    
+    setIsLoadingSeenBy(true);
+    try {
+      const viewers = await getStoryViewers(storyId, 50);
+      console.log("[fetchStoryViewers] Raw API response:", viewers);
+      console.log("[fetchStoryViewers] Type:", typeof viewers, "IsArray:", Array.isArray(viewers));
+      
+      // Handle different response structures the API might return
+      let viewersList = [];
+      
+      if (!viewers) {
+        viewersList = [];
+      } else if (Array.isArray(viewers)) {
+        // Direct array response: [{ user_id, username, profile_picture, viewed_at }]
+        viewersList = viewers;
+      } else if (typeof viewers === 'object') {
+        // Check various possible response formats
+        if (viewers.data && Array.isArray(viewers.data)) {
+          viewersList = viewers.data;
+        } else if (viewers.viewers && Array.isArray(viewers.viewers)) {
+          viewersList = viewers.viewers;
+        } else if (viewers.users && Array.isArray(viewers.users)) {
+          viewersList = viewers.users;
+        } else if (viewers.results && Array.isArray(viewers.results)) {
+          viewersList = viewers.results;
+        } else {
+          // Single viewer object
+          viewersList = [viewers];
+        }
+      }
+      
+      console.log("[fetchStoryViewers] Processed viewers:", viewersList);
+      setSeenByUsers(viewersList || []);
+    } catch (err) {
+      console.log("[fetchStoryViewers] Error:", err.message);
+      setSeenByUsers([]);
+    } finally {
+      setIsLoadingSeenBy(false);
+    }
+  };
+
+  // Handle seen by click
+  const handleSeenByClick = () => {
+    setShowSeenBy(true);
+    if (seenByUsers.length === 0) {
+      fetchStoryViewers();
+    }
+  };
 
   // Delete story handler
   const handleDelete = async () => {
@@ -236,6 +314,14 @@ export default function OwnStoryViewerModal( {
 
 };
   const currentStory = stories[currentIndex] || null;
+  
+  // Debug: Log current story data when it changes
+  console.log("[Current Story Data]", {
+    story_id: currentStory?.story_id,
+    _id: currentStory?._id,
+    viewer_count: currentStory?.viewer_count,
+    has_viewed: currentStory?.has_viewed
+  });
 
   // Progress bar animation with auto-advance
 useEffect(() => {
@@ -458,6 +544,20 @@ useEffect(() => {
 
 
 
+          {/* SEEN BY - Bottom Left */}
+          <div className="absolute bottom-6 left-4">
+            <button
+              onClick={handleSeenByClick}
+              className="flex items-center gap-2 bg-black/40 px-3 py-2 rounded-full"
+            >
+              <Eye size={18} className="text-white" />
+              <span className="text-white text-sm font-medium">
+                Seen By {currentStory?.viewer_count ? `(${currentStory.viewer_count})` : ''}
+              </span>
+            </button>
+          </div>
+
+
           {/* CLOSE */}
 
           {/* <button
@@ -469,6 +569,75 @@ useEffect(() => {
 
         </div>
       </div>
+
+
+      {/* SEEN BY POPUP */}
+      {showSeenBy && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60]"
+          onClick={() => setShowSeenBy(false)}
+        >
+          <div
+            className="bg-white w-full max-w-[350px] max-h-[70vh] rounded-3xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Seen By</h3>
+              <button
+                onClick={() => setShowSeenBy(false)}
+                className="p-1 hover:bg-gray-100 rounded-full"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Viewers List */}
+            <div className="overflow-y-auto max-h-[50vh]">
+              {isLoadingSeenBy ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                </div>
+              ) : seenByUsers.length > 0 ? (
+                <ul className="divide-y">
+                  {seenByUsers.map((viewer, index) => (
+                    <li
+                      key={viewer._id || viewer.user_id || viewer.id || index}
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50"
+                    >
+                      <div className="relative">
+                        <img
+                          src={viewer.profile_picture || viewer.profile_image_url || viewer.avatar || "/default-avatar.png"}
+                          alt={viewer.username || viewer.full_name || viewer.name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div className="absolute -bottom-1 -right-1 bg-purple-500 rounded-full p-1">
+                          <Eye size={10} className="text-white" />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">
+                          {viewer.username || viewer.full_name || viewer.name || "User"}
+                        </p>
+                        {(viewer.viewed_at || viewer.viewedAt || viewer.created_at) && (
+                          <p className="text-xs text-gray-500">
+                            {formatTimeAgo(viewer.viewed_at || viewer.viewedAt || viewer.created_at)}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 text-gray-500">
+                  <Eye size={40} className="mb-2 opacity-50" />
+                  <p>No one has seen this story yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
 
       {showMenu && (

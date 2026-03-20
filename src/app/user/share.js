@@ -4,7 +4,18 @@
  * All endpoints require Authorization: Bearer {token}
  */
 
-const BASE_URL = "/api/v1";
+// Determine base URL - handle both cases: with or without /api/v1
+const getBaseUrl = () => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl) {
+    // Remove trailing slash and check if it already includes /api/v1
+    const cleanUrl = envUrl.replace(/\/$/, '');
+    return cleanUrl.includes('/api/v1') ? cleanUrl : `${cleanUrl}/api/v1`;
+  }
+  return "http://localhost:5000/api/v1";
+};
+
+const BASE_URL = getBaseUrl();
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

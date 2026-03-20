@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { shareExternal, shareViaDM } from "@/app/user/share";
+import { searchAccounts } from "@/app/user/search";
+import { userService } from "@/services/user";
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
-// Adjust BASE_URL / field names to match your actual followers/following endpoints
 
 const BASE_URL = "/api/v1";
 
@@ -20,45 +21,86 @@ function getAuthHeaders() {
 }
 
 /**
- * Fetch merged list of followers + following for the current user.
- * Adjust endpoints + response field names to match your API.
- * Returns array of: { _id, username, full_name, avatar, relation }
+ * Normalize user object to have consistent fields
+ * Handles different API response formats
  */
-async function fetchConnections() {
-  const [followersRes, followingRes] = await Promise.allSettled([
-    fetch(`${BASE_URL}/users/me/followers?limit=50`, { headers: getAuthHeaders() }),
-    fetch(`${BASE_URL}/users/me/following?limit=50`, { headers: getAuthHeaders() }),
-  ]);
-
-  const parse = async (settled) => {
-    if (settled.status !== "fulfilled" || !settled.value.ok) return [];
-    const json = await settled.value.json();
-    return json?.data?.users || json?.data?.followers || json?.data?.following || [];
+function normalizeUser(user, relation = null) {
+  const id = user.user_id || user.id || user._id || user._id?.$oid || "";
+  return {
+    _id: id,
+    user_id: id,
+    id: id,
+    username: user.username || user.handle || "",
+    full_name: user.full_name || user.name || user.display_name || "",
+    avatar: user.avatar || user.profile_image_url || user.profileImageUrl || null,
+    profile_image_url: user.profile_image_url || user.avatar || user.profileImageUrl || null,
+    relation: relation,
   };
-
-  const followers = (await parse(followersRes)).map((u) => ({ ...u, relation: "follower" }));
-  const following = (await parse(followingRes)).map((u) => ({ ...u, relation: "following" }));
-
-  // merge + de-dupe by _id, mark mutual
-  const map = new Map();
-  for (const u of [...followers, ...following]) {
-    if (map.has(u._id)) map.get(u._id).relation = "mutual";
-    else map.set(u._id, { ...u });
-  }
-  return Array.from(map.values());
 }
 
 /**
- * Search users by query string. Adjust endpoint as needed.
+ * Fetch merged list of followers + following for the current user.
+ * Uses /users/me endpoint which returns followers, following, and mutual arrays
+ * Returns array of normalized user objects
+ */
+async function fetchConnections() {
+  try {
+    // Get current user profile which includes followers, following, and mutual
+    const response = await userService.getMe();
+    // Handle the API response structure: res?.data?.data || res?.data
+    const userData = response?.data?.data || response?.data || response;
+    
+    // Extract followers, following, and mutual from the response
+    const followers = userData?.followers || [];
+    const following = userData?.following || [];
+    const mutual = userData?.mutual || [];
+    const mutualIds = new Set(mutual.map(u => u._id));
+
+    // Normalize and tag followers
+    const normalizedFollowers = followers.map((u) => ({
+      ...normalizeUser(u),
+      relation: mutualIds.has(u._id) ? "mutual" : "follower"
+    }));
+
+    // Normalize and tag following
+    const normalizedFollowing = following.map((u) => ({
+      ...normalizeUser(u),
+      relation: mutualIds.has(u._id) ? "mutual" : "following"
+    }));
+
+    // merge + de-dupe by id, mark mutual
+    const map = new Map();
+    for (const u of [...normalizedFollowers, ...normalizedFollowing]) {
+      const uid = u._id || u.id;
+      if (map.has(uid)) {
+        // If already exists, mark as mutual
+        map.get(uid).relation = "mutual";
+      } else {
+        map.set(uid, { ...u });
+      }
+    }
+    return Array.from(map.values());
+  } catch (error) {
+    console.error("Error fetching connections:", error);
+    return [];
+  }
+}
+
+/**
+ * Search users by query string.
+ * Uses searchAccounts from @/app/user/search
+ * Endpoint: GET /api/v1/search/accounts?q={query}&limit=20
  */
 async function searchUsers(query) {
-  const res = await fetch(
-    `${BASE_URL}/users/search?q=${encodeURIComponent(query)}&limit=20`,
-    { headers: getAuthHeaders() }
-  );
-  if (!res.ok) return [];
-  const json = await res.json();
-  return json?.data?.users || [];
+  try {
+    const result = await searchAccounts(query, 20);
+    // The API returns { data: { users: [...] } } or { data: [...] }
+    const users = result?.data?.users || result?.data || result?.accounts || [];
+    return Array.isArray(users) ? users.map((u) => normalizeUser(u)) : [];
+  } catch (error) {
+    console.error("Error searching users:", error);
+    return [];
+  }
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -121,14 +163,18 @@ const IconArrowLeft = () => (
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
 function Avatar({ user, size = 40 }) {
-  const initials = (user?.full_name || user?.username || "?")
-    .split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const displayName = user?.full_name || user?.username || user?.name || "?";
+  const initials = displayName.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const palette = ["#7c3aed", "#2563eb", "#059669", "#d97706", "#dc2626", "#0891b2"];
-  const bg = palette[(user?._id?.charCodeAt(0) || 0) % palette.length];
+  const userId = user?._id || user?.id || user?.user_id || "";
+  const bg = palette[(userId.charCodeAt(0) || 0) % palette.length];
 
-  if (user?.avatar) {
+  // Support multiple avatar field names
+  const avatarUrl = user?.avatar || user?.profile_image_url || user?.profileImageUrl;
+
+  if (avatarUrl) {
     return (
-      <img src={user.avatar} alt={user.username}
+      <img src={avatarUrl} alt={user?.username || "User"}
         style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
       />
     );
@@ -160,7 +206,7 @@ function RelationBadge({ relation }) {
 
 // ─── DM tab: user picker + compose ───────────────────────────────────────────
 
-function DMUserPicker({ contentType, contentId }) {
+function DMUserPicker({ contentType, contentId, onShareSuccess }) {
   const [search, setSearch] = useState("");
   const [connections, setConnections] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
@@ -204,18 +250,27 @@ function DMUserPicker({ contentType, contentId }) {
     [search, searchResults, connections]
   );
 
+  // Get user ID from normalized user object
+  const getUserId = (user) => user?._id || user?.id || user?.user_id || "";
+
   // Send DM
   const handleSend = async () => {
     if (!selectedUser) return;
+    const userId = getUserId(selectedUser);
+    if (!userId) return;
     setSending(true); setSendError("");
-    setSendStatus((p) => ({ ...p, [selectedUser._id]: "sending" }));
+    setSendStatus((p) => ({ ...p, [userId]: "sending" }));
     try {
-      await shareViaDM(contentType, contentId, selectedUser._id, message.trim());
-      setSendStatus((p) => ({ ...p, [selectedUser._id]: "success" }));
-      setSentTo((p) => [...p, selectedUser._id]);
+      await shareViaDM(contentType, contentId, userId, message.trim());
+      setSendStatus((p) => ({ ...p, [userId]: "success" }));
+      setSentTo((p) => [...p, userId]);
+      // Call onShareSuccess callback if provided
+      if (onShareSuccess) {
+        onShareSuccess();
+      }
       setTimeout(() => { setSelectedUser(null); setMessage(""); }, 1400);
     } catch (err) {
-      setSendStatus((p) => ({ ...p, [selectedUser._id]: "error" }));
+      setSendStatus((p) => ({ ...p, [userId]: "error" }));
       setSendError(
         err.code === "SHARING_DISABLED"
           ? "Sharing is disabled for this content."
@@ -226,7 +281,10 @@ function DMUserPicker({ contentType, contentId }) {
 
   // ── Step 2: compose view ───────────────────────────────────────────────────
   if (selectedUser) {
-    const sent = sendStatus[selectedUser._id] === "success";
+    const userId = getUserId(selectedUser);
+    const sent = sendStatus[userId] === "success";
+    const displayName = selectedUser?.full_name || selectedUser?.username || "";
+    const handle = selectedUser?.username || selectedUser?.handle || "";
     return (
       <div className="sp-dm-tab">
         <div className="sp-compose-header">
@@ -236,14 +294,14 @@ function DMUserPicker({ contentType, contentId }) {
           </button>
           <Avatar user={selectedUser} size={38} />
           <div className="sp-compose-meta">
-            <span className="sp-compose-name">{selectedUser.full_name || selectedUser.username}</span>
-            <span className="sp-compose-handle">@{selectedUser.username}</span>
+            <span className="sp-compose-name">{displayName}</span>
+            <span className="sp-compose-handle">@{handle}</span>
           </div>
         </div>
 
         {sent ? (
           <div className="sp-status success">
-            <IconCheck /> Sent to {selectedUser.full_name || "@" + selectedUser.username}!
+            <IconCheck /> Sent to {displayName || "@" + handle}!
           </div>
         ) : (
           <>
@@ -321,18 +379,21 @@ function DMUserPicker({ contentType, contentId }) {
               </div>
             )
             : displayList.map((user) => {
-                const isSent = sentTo.includes(user._id);
+                const userId = getUserId(user);
+                const isSent = sentTo.includes(userId);
+                const displayName = user?.full_name || user?.username || "";
+                const handle = user?.username || user?.handle || "";
                 return (
                   <button
-                    key={user._id}
+                    key={userId}
                     className={`sp-user-row ${isSent ? "sent" : ""}`}
                     onClick={() => !isSent && setSelectedUser(user)}
                     disabled={isSent}
                   >
                     <Avatar user={user} size={42} />
                     <div className="sp-user-info">
-                      <span className="sp-user-name">{user.full_name || user.username}</span>
-                      <span className="sp-user-handle">@{user.username}</span>
+                      <span className="sp-user-name">{displayName}</span>
+                      <span className="sp-user-handle">@{handle}</span>
                     </div>
                     <div className="sp-user-right">
                       {user.relation && !search.trim() && <RelationBadge relation={user.relation} />}
@@ -367,8 +428,9 @@ export default function SharePopup({
   contentId,
   thumbnail = null,
   title = null,
+  onShareSuccess = null, // Callback when share is successful
 }) {
-  const [tab, setTab] = useState("share");
+  const [tab, setTab] = useState("dm");
   const [copied, setCopied] = useState(false);
   const [externalLoading, setExternalLoading] = useState(false);
   const overlayRef = useRef(null);
@@ -378,9 +440,14 @@ export default function SharePopup({
       ? `${window.location.origin}/${contentType}/${contentId}`
       : `/${contentType}/${contentId}`;
 
-  useEffect(() => {
-    if (!isOpen) setTimeout(() => { setTab("share"); setCopied(false); }, 300);
-  }, [isOpen]);
+ useEffect(() => {
+  if (!isOpen) {
+    setTimeout(() => {
+      setTab("dm");   // ✅ FIX HERE
+      setCopied(false);
+    }, 300);
+  }
+}, [isOpen]);
 
   const handleOverlayClick = useCallback(
     (e) => { if (e.target === overlayRef.current) onClose(); }, [onClose]
@@ -683,11 +750,11 @@ export default function SharePopup({
 
           {/* Tabs */}
           <div className="sp-tabs">
-            <button className={`sp-tab ${tab === "share" ? "active" : ""}`} onClick={() => setTab("share")}>
-              Share to…
-            </button>
             <button className={`sp-tab ${tab === "dm" ? "active" : ""}`} onClick={() => setTab("dm")}>
               Send via DM
+            </button>
+            <button className={`sp-tab ${tab === "share" ? "active" : ""}`} onClick={() => setTab("share")}>
+              Share to…
             </button>
           </div>
 
@@ -731,7 +798,7 @@ export default function SharePopup({
 
           {/* ── DM tab ── */}
           {tab === "dm" && (
-            <DMUserPicker contentType={contentType} contentId={contentId} />
+            <DMUserPicker contentType={contentType} contentId={contentId} onShareSuccess={onShareSuccess} />
           )}
         </div>
       </div>

@@ -35,6 +35,7 @@ import postService from "@/app/user/post";
 import Activity from "../../components/Activity.jsx";
 import BioPopup from "@/app/components/profileCompletion/BioPopup.jsx";
 import PostDetailModal from "../../components/PostDetailModal.jsx";
+import FollowModal from "../../components/FollowersFollowing.jsx";
 import UserStory from "../user-story.jsx";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -74,10 +75,13 @@ function VerificationBadge({ status }) {
   return <XCircle size={14} className="text-gray-500 inline ml-1" />;
 }
 
-function StatBox({ value, label ,isDark}) {
+function StatBox({ value, label, isDark, onClick }) {
   return (
-    <div className="text-center">
-      <p  className={`text-2xl font-medium font-Poppins ${isDark ? "text-white " : "text-black "}`}>{value ?? 0}</p>
+    <div 
+      className={`text-center ${onClick ? "cursor-pointer hover:opacity-80" : ""}`}
+      onClick={onClick}
+    >
+      <p className={`text-2xl font-medium font-Poppins ${isDark ? "text-white " : "text-black "}`}>{value ?? 0}</p>
       <p className={`text-sm font-Poppins mt-1 ${isDark ? "text-white " : "text-slate-800 "}`}>{label}</p>
     </div>
   );
@@ -106,6 +110,9 @@ export default function UserProfilePage() {
   const [error, setError] = useState(null);
   const [showBioPopup, setShowBioPopup] = useState(false);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [showFollowModal, setShowFollowModal] = useState(false);
+  const [followModalType, setFollowModalType] = useState("followers");
+  const [currentUserId, setCurrentUserId] = useState(null);
   
   // Posts and Reels data
   const [posts, setPosts] = useState([]);
@@ -126,6 +133,12 @@ export default function UserProfilePage() {
   const isObjectId = (str) => {
     return /^[0-9a-fA-F]{24}$/.test(str);
   };
+
+  // Get current user ID
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    setCurrentUserId(user?.user_id || user?._id);
+  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -339,9 +352,25 @@ export default function UserProfilePage() {
 
               {/* Stats */}
               <div className="flex gap-6 mb-4">
-                <StatBox value={stats.posts_count} label="Posts" isDark={isDark} />
-                <StatBox value={stats.followers_count} label="Followers" isDark={isDark} />
-                <StatBox value={stats.following_count} label="Following" isDark={isDark} />
+                <StatBox value={stats?.posts_count} label="Posts" isDark={isDark} />
+                <StatBox 
+                  value={stats?.followers_count} 
+                  label="Followers" 
+                  isDark={isDark} 
+                  onClick={() => {
+                    setFollowModalType("followers");
+                    setShowFollowModal(true);
+                  }}
+                />
+                <StatBox 
+                  value={stats?.following_count} 
+                  label="Following" 
+                  isDark={isDark} 
+                  onClick={() => {
+                    setFollowModalType("following");
+                    setShowFollowModal(true);
+                  }}
+                />
               </div>
 
               {/* Action Buttons */}
@@ -540,6 +569,17 @@ export default function UserProfilePage() {
           }}
         />
       )}
+
+      {/* Followers/Following Modal */}
+      <FollowModal
+        type={followModalType}
+        isOpen={showFollowModal}
+        onClose={() => setShowFollowModal(false)}
+        userId={userId}
+        currentUserId={currentUserId}
+        followersData={profileData?.followers}
+        followingData={profileData?.following}
+      />
     </div>
   );
 }
