@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getFeed, getSuggestedFollows, getNearbyVenues, refreshFeedCache, getMyVenues, getUserVenues } from "@/services/feed.service";
+import { getFeed, getSuggestedFollows, getNearbyVenues, refreshFeedCache, getMyVenues, getUserVenues, getFollowingFeed } from "@/services/feed.service";
 import { getUserProfile } from "@/services/profile.service";
 
 /**
@@ -7,6 +7,7 @@ import { getUserProfile } from "@/services/profile.service";
  *
  * Returns:
  *   feedItems         – array of feed items (type: "post" | "venue" | "event" | "friend_activity")
+ *   followingFeedItems – array of posts/reels from followed users (new API format)
  *   suggestedFollows  – array of suggested users
  *   nearbyVenues      – array of nearby venues
  *   profileCard       – profile_completion_card object from API
@@ -19,6 +20,7 @@ import { getUserProfile } from "@/services/profile.service";
  */
 export default function useFeed() {
     const [feedItems, setFeedItems] = useState([]);
+    const [followingFeedItems, setFollowingFeedItems] = useState([]);
     const [suggestedFollows, setSuggestedFollows] = useState([]);
     const [nearbyVenues, setNearbyVenues] = useState([]);
     const [profileCard, setProfileCard] = useState(null);
@@ -32,6 +34,7 @@ export default function useFeed() {
     const [hasMore, setHasMore] = useState(false);
     const [error, setError] = useState(null);
     const cursorRef = useRef(null);
+    const followingCursorRef = useRef(null);
 
     const loadFeed = useCallback(async (reset = false) => {
         try {
@@ -65,6 +68,49 @@ export default function useFeed() {
         } finally {
             setLoading(false);
             setLoadingMore(false);
+        }
+    }, []);
+
+    // Load following feed (posts and reels from followed users)
+    const loadFollowingFeed = useCallback(async (reset = false) => {
+        try {
+            const cursor = reset ? null : followingCursorRef.current;
+            
+            const response = await getFollowingFeed(cursor);
+            
+            // The new API returns { success: true, data: [...], pagination: {...} }
+            const items = response?.data ?? [];
+            const pagination = response?.pagination ?? {};
+            
+            // Transform items to a consistent format with type: "post"
+            const transformedItems = items.map(item => ({
+                type: "post",
+                data: {
+                    post_id: item.content_id,
+                    content_id: item.content_id,
+                    author: item.author,
+                    content: item.content,
+                    media: item.media,
+                    engagement: item.engagement,
+                    user_action: item.user_action,
+                    created_at: item.created_at,
+                    personalization_score: item.personalization_score,
+                    content_type: item.content_type,
+                }
+            }));
+            
+            setFollowingFeedItems(prev => reset ? transformedItems : [...prev, ...transformedItems]);
+            setHasMore(pagination?.has_next ?? false);
+            followingCursorRef.current = pagination?.cursor ?? null;
+
+            console.log("[useFeed] Following feed loaded successfully:", {
+                itemCount: items.length,
+                hasMore: pagination?.has_next,
+                cursor: pagination?.cursor
+            });
+        } catch (err) {
+            console.error("[useFeed] getFollowingFeed error:", err);
+            // Don't set error for following feed - it's optional
         }
     }, []);
 
@@ -141,12 +187,13 @@ export default function useFeed() {
         console.log("[useFeed] Starting initial feed load...");
         Promise.all([
             loadFeed(true),
+            loadFollowingFeed(true),
             loadSuggestedFollows(),
             loadNearbyVenues(),
         ]).then(() => {
             console.log("[useFeed] Initial feed load completed");
         });
-    }, [loadFeed, loadSuggestedFollows, loadNearbyVenues]);
+    }, [loadFeed, loadFollowingFeed, loadSuggestedFollows, loadNearbyVenues]);
 
     // Fetch user profile data when profile card shows pending tasks
     useEffect(() => {
@@ -167,18 +214,21 @@ export default function useFeed() {
             // cache refresh is best-effort
         }
         cursorRef.current = null;
+        followingCursorRef.current = null;
         setError(null);
         console.log("[useFeed] Refreshing all feed data...");
         await Promise.all([
             loadFeed(true),
+            loadFollowingFeed(true),
             loadSuggestedFollows(),
             loadNearbyVenues(),
         ]);
         console.log("[useFeed] Feed refresh completed");
-    }, [loadFeed, loadSuggestedFollows, loadNearbyVenues]);
+    }, [loadFeed, loadFollowingFeed, loadSuggestedFollows, loadNearbyVenues]);
 
     return {
         feedItems,
+        followingFeedItems,
         suggestedFollows,
         nearbyVenues,
         profileCard,
