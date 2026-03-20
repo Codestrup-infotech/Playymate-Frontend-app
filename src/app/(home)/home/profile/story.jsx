@@ -93,11 +93,19 @@ export default function OwnStoryViewerModal( {
 
   // Delete story handler
   const handleDelete = async () => {
-    if (!currentStory?._id) return;
+    // Use story_id (with 'story_' prefix) instead of _id
+    const storyIdToDelete = currentStory?.story_id || currentStory?._id;
+    if (!storyIdToDelete) return;
+    
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+    const deleteApiUrl = `${API_BASE}/stories/${storyIdToDelete}`;
+    console.log("[DELETE STORY API] URL:", deleteApiUrl);
+    console.log("[DELETE STORY API] Method: DELETE");
+    console.log("[DELETE STORY API] Story ID:", storyIdToDelete);
     
     setIsDeleting(true);
     try {
-      await deleteStory(currentStory._id);
+      await deleteStory(storyIdToDelete);
       
       // Remove the deleted story from the local state
       const updatedStories = stories.filter((_, idx) => idx !== currentIndex);

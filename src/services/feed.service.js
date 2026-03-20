@@ -54,6 +54,22 @@ export const getNearbyVenues = async () => {
 };
 
 /**
+ * GET /api/v1/feed/following
+ * Get posts and reels from followed users
+ * Returns posts with media (images/videos), engagement stats, author info
+ */
+export const getFollowingFeed = async (cursor = null, limit = 20) => {
+    const params = new URLSearchParams();
+    if (cursor) params.append("cursor", cursor);
+    params.append("limit", limit);
+
+    const res = await axios.get(`${API_BASE}/feed/following?${params.toString()}`, {
+        headers: getAuthHeaders(),
+    });
+    return res.data;
+};
+
+/**
  * POST /api/v1/feed/refresh
  * Invalidate feed cache so next GET returns fresh data
  */

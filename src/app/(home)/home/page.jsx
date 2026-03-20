@@ -17,11 +17,29 @@ import useFeed from "@/hooks/useFeed";
 
 function PostCard({ post, isDark, cardBg, mutedText, iconBtn }) {
   const [liked, setLiked] = useState(false);
-  const author = post.author ?? {};
+  const videoRef = useRef(null);
+
+  // Handle video end - pause and reset to start (Instagram-style)
+  const handleVideoEnded = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  };
+  // Support both old format (post.data) and new format (transformed feed item with type: "post")
+  // The transformed followingFeedItems have: { type: "post", data: { author, content, media, engagement, ... } }
+  const author = post.data?.author ?? post.author ?? {};
   const content = post.data?.content ?? post.content ?? {};
   const media = post.data?.media ?? post.media ?? [];
-  const likesCount = post.data?.likes_count ?? post.likes_count ?? 0;
-  const commentsCount = post.data?.comments_count ?? post.comments_count ?? 0;
+  const engagement = post.data?.engagement ?? post.engagement ?? {};
+  const userAction = post.data?.user_action ?? post.user_action ?? {};
+  const likesCount = engagement?.likes_count ?? post.data?.likes_count ?? post.likes_count ?? 0;
+  const commentsCount = engagement?.comments_count ?? post.data?.comments_count ?? post.comments_count ?? 0;
+  const sharesCount = engagement?.shares_count ?? 0;
+  const savesCount = engagement?.saves_count ?? 0;
+  const isLikedByYou = userAction?.liked_by_you ?? liked;
+  const isSavedByYou = userAction?.saved_by_you ?? false;
+  const contentType = post.data?.content_type ?? post.content_type ?? 'post';
 
   return (
     <div className={`${cardBg} rounded-xl overflow-hidden shadow-sm transition-colors duration-300`}>
@@ -36,15 +54,27 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn }) {
           <h4 className="font-semibold text-sm">{author.full_name || "Unknown"}</h4>
           {author.username && <p className={`text-xs ${mutedText}`}>@{author.username}</p>}
         </div>
+        {contentType === 'reel' && (
+          <span className="ml-auto text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">Reel</span>
+        )}
       </div>
 
-      {/* Media */}
+      {/* Media - Instagram-style: maintain original aspect ratio, no stretching */}
       {media.length > 0 && (
-        <div className="relative aspect-video">
+        <div className="w-full bg-black flex items-center justify-center">
           {media[0].type === "video" ? (
-            <video src={media[0].url} controls className="w-full h-full object-cover" />
+            <video 
+              src={media[0].url} 
+              controls 
+              className="w-full h-auto max-h-[80vh] object-contain"
+              playsInline
+            />
           ) : (
-            <img src={media[0].url} alt="post media" className="w-full h-full object-cover" />
+            <img 
+              src={media[0].url} 
+              alt="post media" 
+              className="w-full h-auto object-contain"
+            />
           )}
         </div>
       )}
@@ -53,6 +83,13 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn }) {
       {content.text && (
         <p className={`px-4 py-3 text-sm ${isDark ? "text-gray-200" : "text-gray-800"}`}>
           {content.text}
+        </p>
+      )}
+
+      {/* Hashtags */}
+      {content.hashtags && content.hashtags.length > 0 && (
+        <p className={`px-4 pb-2 text-sm ${isDark ? "text-blue-400" : "text-blue-600"}`}>
+          {content.hashtags.map(tag => `#${tag}`).join(' ')}
         </p>
       )}
 
@@ -68,19 +105,24 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn }) {
         <div className="flex items-center gap-5">
           <button
             onClick={() => setLiked(l => !l)}
-            className={`flex items-center gap-1.5 transition-colors ${liked ? "text-pink-500" : iconBtn}`}
+            className={`flex items-center gap-1.5 transition-colors ${isLikedByYou ? "text-pink-500" : iconBtn}`}
           >
-            <Heart size={18} className={liked ? "fill-pink-500" : ""} />
-            <span>{liked ? likesCount + 1 : likesCount}</span>
+            <Heart size={18} className={isLikedByYou ? "fill-pink-500" : ""} />
+            <span>{isLikedByYou ? likesCount + 1 : likesCount}</span>
           </button>
           <button className={`flex items-center gap-1.5 transition-colors ${iconBtn}`}>
             <MessageCircle size={18} />
             <span>{commentsCount}</span>
           </button>
         </div>
-        <button className={`flex items-center gap-1.5 transition-colors ${iconBtn}`}>
-          <Send size={18} />
-        </button>
+        <div className="flex items-center gap-3">
+          {savesCount > 0 && (
+            <span className={`text-xs ${mutedText}`}>Save: {savesCount}</span>
+          )}
+          <button className={`flex items-center gap-1.5 transition-colors ${iconBtn}`}>
+            <Send size={18} />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -257,6 +299,7 @@ export default function HomePage() {
 
   const {
     feedItems,
+    followingFeedItems,
     suggestedFollows,
     nearbyVenues,
     profileCard,
@@ -482,9 +525,25 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Real feed items */}
+          {/* Real feed items - Following Feed (new API) */}
+          {!loading && followingFeedItems.length > 0 && (
+            <div className="max-w-[470px] mx-auto space-y-6">
+              {followingFeedItems.map((item, idx) => (
+                <PostCard
+                  key={item?.data?.content_id || item?.data?.post_id || idx}
+                  post={item}
+                  isDark={isDark}
+                  cardBg={cardBg}
+                  mutedText={mutedText}
+                  iconBtn={iconBtn}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Real feed items - Original feed */}
           {!loading && feedItems.length > 0 && (
-            <div className="space-y-6">
+            <div className="max-w-[470px] mx-auto space-y-6">
               {feedItems.map((item, idx) => (
                 <FeedItemRenderer
                   key={item?.data?.post_id || item?.data?.venue_id || idx}
@@ -499,7 +558,7 @@ export default function HomePage() {
           )}
 
           {/* Empty state */}
-          {!loading && feedItems.length === 0 && !error && (
+          {!loading && feedItems.length === 0 && followingFeedItems.length === 0 && !error && (
             <div className={`rounded-xl p-10 text-center ${cardBg}`}>
               <div className="text-5xl mb-4">🏃</div>
               <h3 className={`font-semibold text-lg mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>

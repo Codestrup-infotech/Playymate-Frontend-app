@@ -448,7 +448,7 @@ export default function PostDetailModal({
 
         <>
 
-        {/* MEDIA */}
+        {/* MEDIA - Instagram-style: maintain original aspect ratio, no stretching */}
 
         <div className="w-full md:w-1/2 bg-black flex items-center justify-center">
 
@@ -459,14 +459,16 @@ export default function PostDetailModal({
             <video
               src={postData.media[0].url}
               controls
-              className="max-h-full max-w-full object-contain"
+              className="w-full h-auto max-h-[80vh] object-contain"
+              playsInline
             />
 
             :
 
             <img
               src={postData.media[0].url}
-              className="max-h-full max-w-full object-contain"
+              alt="post media"
+              className="w-full h-auto object-contain"
             />
 
           ) : (
