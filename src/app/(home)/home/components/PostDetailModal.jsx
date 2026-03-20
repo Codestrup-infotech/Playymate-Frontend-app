@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { XCircle, CheckCircle, Heart, MessageSquare, Share2, MoreHorizontal } from "lucide-react";
 import postService from "@/app/user/post";
 import { toggleLike } from "@/app/user/homefeed";
+import SharePopup from "@/app/(home)/home/components/sharepopup";
 
 // ✅ 1. Import the emoji picker
 import ComposeEmojiPicker from "./Composeemojipicker";
@@ -59,6 +60,9 @@ export default function PostDetailModal({
   const [editingComment, setEditingComment] = useState(null);
   const [editText, setEditText] = useState("");
   const [showEditMenu, setShowEditMenu] = useState(false);
+
+  
+  
 
   // ✅ 2. Add emoji picker state + comment input ref
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -129,6 +133,7 @@ export default function PostDetailModal({
   // Delete Comment
   // ----------------------------
 
+  
   const handleDeleteComment = async (commentId) => {
     console.log('Delete attempt - currentUser:', currentUser);
     console.log('Delete attempt - post author:', postData?.author);
@@ -327,26 +332,9 @@ export default function PostDetailModal({
   // ----------------------------
   // Share
   // ----------------------------
+  const [shareOpen, setShareOpen] = useState(false);
 
-  const handleShare = async () => {
-
-    if (!postData) return;
-
-    const shareData = {
-      title: "Check this post",
-      text: postData.content?.text || "",
-      url: `${window.location.origin}/home/profile/${postData.post_id}`
-    };
-
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch {}
-    } else {
-      await navigator.clipboard.writeText(shareData.url);
-      alert("Link copied");
-    }
-  };
+  const handleShare = () => setShareOpen(true);
 
   // ----------------------------
   // Edit Post Menu
@@ -617,20 +605,32 @@ export default function PostDetailModal({
 
           {/* ACTIONS */}
           <div className="p-4 border-t">
-            <div className="flex gap-6 mb-2">
-              <button onClick={handleLikeToggle}>
-                <Heart size={24} className={postData.is_liked ? "text-red-500 fill-red-500" : ""}/>
-              </button>
-              <MessageSquare size={24}/>
-              <button onClick={handleShare}><Share2 size={24}/></button>
-            </div>
-            <p className="font-semibold">{postData.likes_count || 0} likes</p>
-            {(postData.comments_count > 0 || (postData.comments && postData.comments.length > 0)) && (
-              <p className="text-sm text-gray-400 mt-1">
-                {postData.comments_count || postData.comments?.length || 0} comments
-              </p>
-            )}
-          </div>
+  <div className="flex gap-6 mb-2">
+    <button onClick={handleLikeToggle}>
+      <Heart size={24} className={postData.is_liked ? "text-red-500 fill-red-500" : ""} />
+    </button>
+    <MessageSquare size={24} />
+    <button onClick={handleShare}>
+      <Share2 size={24} />
+    </button>
+  </div>
+  <p className="font-semibold">{postData.likes_count || 0} likes</p>
+  {(postData.comments_count > 0 || postData.comments?.length > 0) && (
+    <p className="text-sm text-gray-400 mt-1">
+      {postData.comments_count || postData.comments?.length || 0} comments
+    </p>
+  )}
+
+  {/* Share Popup */}
+  <SharePopup
+    isOpen={shareOpen}
+    onClose={() => setShareOpen(false)}
+    contentType="post"
+    contentId={postData.post_id || postData._id}
+    thumbnail={postData.media?.[0]?.url || postData.thumbnail || null}
+    title={postData.caption || postData.title || null}
+  />
+</div>
 
           {/* ✅ 4. COMMENT INPUT with emoji picker */}
           <div className="border-t p-3">
