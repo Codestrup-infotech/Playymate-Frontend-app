@@ -93,7 +93,9 @@ export const getUserProfile = async (userId) => {
   const res = await axios.get(`${API_BASE}/users/${userId}`, {
     headers: getAuthHeaders(),
   });
-  return res.data.data;
+  // Handle both nested and non-nested API response formats
+  // Return the profile data directly
+  return res.data?.data || res.data;
 };
 
 /**

@@ -9,12 +9,22 @@ import BioPopup from "./BioPopup";
 export default function ProfileCompletionCard({ profileCard, userData, onRefresh }) {
   const router = useRouter();
   
+  // Debug logging
+  console.log("[ProfileCompletionCard] Received props:", {
+    profileCard: JSON.stringify(profileCard),
+    userData: JSON.stringify(userData),
+    hasEnabled: profileCard?.enabled,
+    hasTasks: !!profileCard?.tasks
+  });
+  
   // Get tasks from profileCard prop (from Feed API) or use default
   const tasks = profileCard?.tasks || {
     username: true,
     profile_main_type: true,
     bio: true,
   };
+  
+  console.log("[ProfileCompletionCard] Tasks object:", tasks);
   
   const [showUsernamePopup, setShowUsernamePopup] = useState(false);
   const [showBioPopup, setShowBioPopup] = useState(false);
@@ -136,6 +146,7 @@ export default function ProfileCompletionCard({ profileCard, userData, onRefresh
           </button>
         </div>
       </div>
+
 
       {/* Popups */}
       {showUsernamePopup && (

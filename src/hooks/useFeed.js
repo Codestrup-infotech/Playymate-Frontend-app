@@ -60,7 +60,9 @@ export default function useFeed() {
 
             if (data?.profile_completion_card) {
                 setProfileCard(data.profile_completion_card);
-                console.log("[useFeed] Profile completion card:", data.profile_completion_card);
+                console.log("[useFeed] Profile completion card FULL DATA:", JSON.stringify(data.profile_completion_card, null, 2));
+            } else {
+                console.log("[useFeed] No profile_completion_card in feed response");
             }
         } catch (err) {
             console.error("[useFeed] getFeed error:", err);
@@ -165,15 +167,33 @@ export default function useFeed() {
             if (userId) {
                 console.log("[useFeed] Fetching user profile for ID:", userId);
                 const profile = await getUserProfile(userId);
+                
+                // Handle both nested and non-nested API response formats
+                const profileData = profile?.data || profile;
+                
+                // Get interests from profile
+                const interests = profileData?.interests || {};
+                const allInterests = [
+                    ...(interests.sports || []),
+                    ...(interests.hobbies || []),
+                    ...(interests.activities || []),
+                    ...(interests.nostalgia || []),
+                    ...(interests.additional || []),
+                    ...(interests.interests || [])
+                ];
+                
                 setUserData({
-                    username: profile.username || null,
-                    profile_main_type: profile.profile_main_type?.value || null,
-                    bio: profile.bio || null,
+                    username: profileData?.username || null,
+                    profile_main_type: profileData?.profile_main_type?.value || null,
+                    bio: profileData?.bio || null,
+                    interests: allInterests,
+                    interestsByCategory: interests
                 });
                 console.log("[useFeed] User profile loaded:", {
-                    username: profile.username,
-                    profile_main_type: profile.profile_main_type,
-                    bio: profile.bio
+                    username: profileData?.username,
+                    profile_main_type: profileData?.profile_main_type,
+                    bio: profileData?.bio,
+                    interests: allInterests
                 });
             }
         } catch (err) {

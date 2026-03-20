@@ -58,15 +58,19 @@ export default function SelectProfileTypePage() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const userData = await userService.getMe();
+        const res = await userService.getMe();
         
-        // Log the full API response
-        console.log("Select Profile Type - API Response:", JSON.stringify(userData, null, 2));
-        console.log("Select Profile Type - Full User Data:", userData?.data);
+        // Handle both nested and non-nested API response formats
+        // Some APIs return { data: { data: {...} } } and others return { data: {...} }
+        const profile = res?.data?.data || res?.data;
+        
+        // Log the full API response for debugging
+        console.log("Select Profile Type - API Response:", JSON.stringify(res, null, 2));
+        console.log("Select Profile Type - Profile data:", JSON.stringify(profile, null, 2));
         
         // Get interests from user data - keep them categorized
-        // API response structure: userData.data.interests
-        const interests = userData?.data?.interests || {};
+        // API response structure: profile.interests
+        const interests = profile?.interests || {};
         console.log("Select Profile Type - User Interests:", interests);
         
         setUserInterests({
@@ -79,12 +83,12 @@ export default function SelectProfileTypePage() {
         });
         
         // Set current main type if exists
-        // API response structure: userData.data.profile_main_type = { type: "sports", value: "badminton" }
-        if (userData?.data?.profile_main_type?.value) {
-          console.log("Select Profile Type - Current Main Type:", userData.data.profile_main_type);
-          setCurrentMainType(userData.data.profile_main_type.value);
-          setSelectedType(userData.data.profile_main_type.value);
-          setSelectedCategory(userData.data.profile_main_type.type);
+        // API response structure: profile.profile_main_type = { type: "sports", value: "badminton" }
+        if (profile?.profile_main_type?.value) {
+          console.log("Select Profile Type - Current Main Type:", profile.profile_main_type);
+          setCurrentMainType(profile.profile_main_type.value);
+          setSelectedType(profile.profile_main_type.value);
+          setSelectedCategory(profile.profile_main_type.type);
         }
       } catch (err) {
         console.error("Failed to fetch user data:", err);
