@@ -718,8 +718,26 @@ export const getArchivedStories = async (limit = 20) => {
  * Tries with user_id from localStorage first, then falls back to "me"
  */
 export const getMyAllStories = async (limit = 20) => {
-  // Try to get actual user ID from localStorage
-  const userId = localStorage.getItem("user_id") || "me";
+  // Try to get actual user ID - check multiple storage keys
+  let userId = sessionStorage.getItem("user_id") || localStorage.getItem("user_id") || localStorage.getItem("_id");
+  
+  // If no userId found, try to get it from /users/me endpoint
+  if (!userId || userId === "me") {
+    try {
+      console.log("[getMyAllStories] No userId in storage, fetching from /users/me...");
+      const meRes = await axios.get(`${API_BASE}/users/me`, {
+        headers: getAuthHeaders(),
+      });
+      const userData = meRes.data.data || meRes.data;
+      userId = userData?._id || userData?.id;
+      console.log("[getMyAllStories] Got userId from /users/me:", userId);
+    } catch (meErr) {
+      console.log("[getMyAllStories] Failed to get user from /users/me:", meErr.message);
+    }
+  }
+  
+  // Fallback to "me" if still no userId
+  userId = userId || "me";
   console.log("[getMyAllStories] Using userId:", userId);
   
   // First try: /users/{userId}/stories (with actual user ID)
@@ -738,7 +756,7 @@ export const getMyAllStories = async (limit = 20) => {
   } catch (err) {
     console.log("[getMyAllStories] /users/" + userId + "/stories failed:", err.response?.status, err.message);
     
-    // Second try: /users/me/stories
+    // Second try: /users/me/stories (only if we had a real userId that failed)
     if (userId !== "me") {
       try {
         console.log("[getMyAllStories] Trying /users/me/stories...");
