@@ -1,5 +1,5 @@
  "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   MessageCircle, Heart, Send, ShoppingCart, MapPin,
@@ -331,7 +331,7 @@ function FeedItemRenderer({ item, isDark, cardBg, mutedText, iconBtn, onCommentC
 
 /* ─── Main Page ─── */
 
-export default function HomePage() {
+function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -964,5 +964,18 @@ export default function HomePage() {
         onShareSuccess={handleShareSuccess}
       />
     </>
+  );
+}
+
+// Wrapper component with Suspense boundary for useSearchParams
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    }>
+      <HomePageContent />
+    </Suspense>
   );
 }
