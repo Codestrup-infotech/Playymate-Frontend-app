@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { shareExternal, shareViaDM } from "@/app/user/share";
 import { searchAccounts } from "@/app/user/search";
+import { followUser } from "@/app/user/ProfileSearch";
+import { getConversations } from "@/services/messages";
 import { userService } from "@/services/user";
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
@@ -39,50 +41,53 @@ function normalizeUser(user, relation = null) {
 }
 
 /**
- * Fetch merged list of followers + following for the current user.
- * Uses /users/me endpoint which returns followers, following, and mutual arrays
- * Returns array of normalized user objects
+ * Fetch recent message contacts for sharing
+ * Uses getConversations from @/services/messages
  */
-async function fetchConnections() {
+async function fetchRecentContacts() {
   try {
-    // Get current user profile which includes followers, following, and mutual
-    const response = await userService.getMe();
-    // Handle the API response structure: res?.data?.data || res?.data
-    const userData = response?.data?.data || response?.data || response;
-    
-    // Extract followers, following, and mutual from the response
-    const followers = userData?.followers || [];
-    const following = userData?.following || [];
-    const mutual = userData?.mutual || [];
-    const mutualIds = new Set(mutual.map(u => u._id));
-
-    // Normalize and tag followers
-    const normalizedFollowers = followers.map((u) => ({
-      ...normalizeUser(u),
-      relation: mutualIds.has(u._id) ? "mutual" : "follower"
-    }));
-
-    // Normalize and tag following
-    const normalizedFollowing = following.map((u) => ({
-      ...normalizeUser(u),
-      relation: mutualIds.has(u._id) ? "mutual" : "following"
-    }));
-
-    // merge + de-dupe by id, mark mutual
-    const map = new Map();
-    for (const u of [...normalizedFollowers, ...normalizedFollowing]) {
-      const uid = u._id || u.id;
-      if (map.has(uid)) {
-        // If already exists, mark as mutual
-        map.get(uid).relation = "mutual";
-      } else {
-        map.set(uid, { ...u });
-      }
+    const response = await getConversations({ limit: 20 });
+    console.log('[SharePopup] getConversations response:', response);
+    if (response.status === "success" && response.data) {
+      const conversations = response.data.conversations || response.data || [];
+      // Extract other participant from each conversation
+      const contacts = conversations.map(conv => {
+        // Get the other participant (not the current user)
+        const participants = conv.participants || [];
+        const otherUser = participants.find(p => p._id !== conv.last_message?.sender_id) || participants[0];
+        if (otherUser) {
+          return normalizeUser(otherUser, "recent");
+        }
+        return null;
+      }).filter(Boolean);
+      // Remove duplicates
+      const uniqueContacts = [];
+      const seen = new Set();
+      contacts.forEach(c => {
+        if (!seen.has(c._id)) {
+          seen.add(c._id);
+          uniqueContacts.push(c);
+        }
+      });
+      return uniqueContacts;
     }
-    return Array.from(map.values());
-  } catch (error) {
-    console.error("Error fetching connections:", error);
     return [];
+  } catch (error) {
+    console.error("Error fetching recent contacts:", error);
+    return [];
+  }
+}
+
+/**
+ * Follow a user
+ */
+async function followUserById(userId) {
+  try {
+    const response = await followUser(userId);
+    return response;
+  } catch (error) {
+    console.error("Error following user:", error);
+    throw error;
   }
 }
 
@@ -93,10 +98,15 @@ async function fetchConnections() {
  */
 async function searchUsers(query) {
   try {
-    const result = await searchAccounts(query, 20);
-    // The API returns { data: { users: [...] } } or { data: [...] }
-    const users = result?.data?.users || result?.data || result?.accounts || [];
-    return Array.isArray(users) ? users.map((u) => normalizeUser(u)) : [];
+    const response = await searchAccounts(query, 20);
+    // Handle both response formats: { status: "success", data: { items: [] } }
+    // and { success: true, data: { results: [] } }
+    console.log('[SharePopup] searchAccounts response:', response);
+    if ((response.status === "success" || response.success) && response.data) {
+      const results = response.data.items || response.data.results || response.data || [];
+      return Array.isArray(results) ? results.map((u) => normalizeUser(u)) : [];
+    }
+    return [];
   } catch (error) {
     console.error("Error searching users:", error);
     return [];
@@ -193,7 +203,7 @@ function Avatar({ user, size = 40 }) {
 // ─── Relation badge ───────────────────────────────────────────────────────────
 
 function RelationBadge({ relation }) {
-  const cfg = { mutual: ["Mutual", "#7c3aed"], following: ["Following", "#2563eb"], follower: ["Follower", "#059669"] }[relation];
+  const cfg = { mutual: ["Mutual", "#7c3aed"], following: ["Following", "#2563eb"], follower: ["Follower", "#059669"], suggested: ["Suggested", "#f59e0b"] }[relation];
   if (!cfg) return null;
   return (
     <span style={{
@@ -204,13 +214,25 @@ function RelationBadge({ relation }) {
   );
 }
 
+// ─── Private badge ───────────────────────────────────────────────────────────
+
+function PrivateBadge() {
+  return (
+    <span style={{
+      fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 99,
+      background: "#6b728025", color: "#6b7280",
+      letterSpacing: "0.02em", textTransform: "uppercase",
+    }}>🔒 Private</span>
+  );
+}
+
 // ─── DM tab: user picker + compose ───────────────────────────────────────────
 
 function DMUserPicker({ contentType, contentId, thumbnail, title, onShareSuccess }) {
   const [search, setSearch] = useState("");
-  const [connections, setConnections] = useState([]);
+  const [recentContacts, setRecentContacts] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
-  const [loadingConnections, setLoadingConnections] = useState(true);
+  const [loadingRecent, setLoadingRecent] = useState(true);
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [message, setMessage] = useState("");
@@ -218,37 +240,107 @@ function DMUserPicker({ contentType, contentId, thumbnail, title, onShareSuccess
   const [sentTo, setSentTo] = useState([]);
   const [sendStatus, setSendStatus] = useState({});
   const [sendError, setSendError] = useState("");
+  const [requestingUser, setRequestingUser] = useState(null);
+  const [userProfiles, setUserProfiles] = useState({});
   const searchRef = useRef(null);
   const debounceRef = useRef(null);
 
-  // Load connections once
+  // Load recent contacts on mount
   useEffect(() => {
-    fetchConnections()
-      .then(setConnections)
-      .catch(() => setConnections([]))
-      .finally(() => setLoadingConnections(false));
+    fetchRecentContacts()
+      .then(setRecentContacts)
+      .catch(() => setRecentContacts([]))
+      .finally(() => setLoadingRecent(false));
   }, []);
+
+  // Extract user info from search results directly (no additional API call needed)
+  const updateUserProfilesFromSearch = (users) => {
+    const profiles = {};
+    users.forEach(user => {
+      const userId = user._id || user.id;
+      if (userId && !userProfiles[userId]) {
+        profiles[userId] = {
+          is_private: user.is_private || user.private || false,
+          following: user.following || user.relation === "following" || user.relation === "mutual" || false,
+        };
+      }
+    });
+    if (Object.keys(profiles).length > 0) {
+      setUserProfiles(prev => ({ ...prev, ...profiles }));
+    }
+  };
+
+  // Extract user info from recent contacts
+  useEffect(() => {
+    if (recentContacts.length > 0) {
+      updateUserProfilesFromSearch(recentContacts);
+    }
+  }, [recentContacts]);
+
+  // Extract user info from search results
+  useEffect(() => {
+    if (searchResults.length > 0) {
+      updateUserProfilesFromSearch(searchResults);
+    }
+  }, [searchResults]);
 
   // Focus search input on mount
   useEffect(() => { setTimeout(() => searchRef.current?.focus(), 120); }, []);
 
-  // Debounced search
+  // Debounced search - search all users (minimum 2 characters)
   useEffect(() => {
     clearTimeout(debounceRef.current);
-    if (!search.trim()) { setSearchResults([]); setSearchLoading(false); return; }
+    if (!search.trim() || search.trim().length < 2) { 
+      setSearchResults([]); 
+      setSearchLoading(false); 
+      return; 
+    }
     setSearchLoading(true);
     debounceRef.current = setTimeout(async () => {
-      try { setSearchResults(await searchUsers(search.trim())); }
-      catch { setSearchResults([]); }
+      console.log('[SharePopup] Searching for:', search.trim());
+      try { 
+        const results = await searchUsers(search.trim());
+        console.log('[SharePopup] Search results:', results);
+        setSearchResults(results);
+        // Extract user info from search results
+        if (results.length > 0) {
+          updateUserProfilesFromSearch(results);
+        }
+      }
+      catch { 
+        console.error('[SharePopup] Search error');
+        setSearchResults([]); 
+      }
       finally { setSearchLoading(false); }
-    }, 380);
+    }, 500);
     return () => clearTimeout(debounceRef.current);
   }, [search]);
 
-  const displayList = useMemo(
-    () => search.trim() ? searchResults : connections,
-    [search, searchResults, connections]
-  );
+  // Combine sent users and recent contacts, with sent users first
+  const displayList = useMemo(() => {
+    if (search.trim()) return searchResults;
+    // First add sent users (from this session)
+    const sentUsers = sentTo.map(userId => {
+      const profile = userProfiles[userId];
+      return { _id: userId, relation: "recent", ...profile };
+    }).filter(Boolean);
+    
+    // Combine sent + recent, removing duplicates
+    const combined = [...sentUsers];
+    const seen = new Set(combined.map(u => u._id));
+    
+    recentContacts.forEach(u => {
+      if (!seen.has(u._id)) {
+        combined.push(u);
+        seen.add(u._id);
+      }
+    });
+    
+    return combined;
+  }, [search, searchResults, recentContacts, sentTo, userProfiles]);
+
+  // Check if showing recent contacts section
+  const showRecentSection = !search.trim() && (recentContacts.length > 0 || sentTo.length > 0);
 
   // Get user ID from normalized user object
   const getUserId = (user) => user?._id || user?.id || user?.user_id || "";
@@ -258,14 +350,92 @@ function DMUserPicker({ contentType, contentId, thumbnail, title, onShareSuccess
     if (!selectedUser) return;
     const userId = getUserId(selectedUser);
     if (!userId) return;
+    
+    // Check if user has private account and not following
+    const profile = userProfiles[userId];
+    if (profile?.is_private && !profile?.following) {
+      setSendError("Cannot send message to private accounts. Send a follow request first.");
+      return;
+    }
+    
     setSending(true); setSendError("");
     setSendStatus((p) => ({ ...p, [userId]: "sending" }));
     try {
       console.log('[DMUserPicker] handleSend - Sharing via DM:', { contentType, contentId, userId, message: message.trim(), thumbnail, title });
       const shareResult = await shareViaDM(contentType, contentId, userId, message.trim(), thumbnail, title);
       console.log('[DMUserPicker] shareViaDM result:', shareResult);
+      console.log('[DMUserPicker] shareResult keys:', shareResult ? Object.keys(shareResult) : 'null');
+      
+      // Store share data for message display
+      // Check different possible response structures
+      const shareData = shareResult?.data || shareResult;
+      console.log('[DMUserPicker] shareData to store:', shareData);
+      
+      // ALWAYS store the thumbnail - even if API doesn't return signed_urls
+      // This ensures we have at least the thumbnail to display
+      if (thumbnail) {
+        console.log('[DMUserPicker] Storing thumbnail as fallback:', thumbnail);
+        const shareData = {
+          content_id: contentId,
+          content_type: contentType,
+          signed_urls: { media: [{ type: 'image', url: thumbnail }] },
+          timestamp: Date.now()
+        };
+        sessionStorage.setItem('latest_share', JSON.stringify(shareData));
+        console.log('[DMUserPicker] Stored thumbnail in sessionStorage:', shareData);
+      }
+      
+      if (shareData) {
+        const content_id = shareData.content_id || shareData._id;
+        const signed_urls = shareData.signed_urls || shareData.media;
+        const content_type = shareData.content_type || 'post';
+        const share_id = shareData.share_id; // Store the share_id
+        
+        // Also use the thumbnail if no signed_urls
+        const displayUrls = signed_urls || { media: thumbnail ? [{ type: 'image', url: thumbnail }] : [] };
+        
+        console.log('[DMUserPicker] Storing share data for display:', { content_id, content_type, share_id, signed_urls: displayUrls });
+        // Store in sessionStorage for the messages page to retrieve
+        try {
+          const shareKey = `share_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          sessionStorage.setItem(shareKey, JSON.stringify({
+            content_id,
+            content_type,
+            share_id,
+            signed_urls: displayUrls,
+            timestamp: Date.now()
+          }));
+          // Also store latest share for quick access
+          sessionStorage.setItem('latest_share', JSON.stringify({
+            content_id,
+            content_type,
+            share_id,
+            signed_urls: displayUrls,
+            timestamp: Date.now()
+          }));
+          console.log('[DMUserPicker] Successfully stored share in sessionStorage with share_id:', share_id);
+        } catch (e) {
+          console.log('[DMUserPicker] Error storing share data:', e);
+        }
+      }
+      
       setSendStatus((p) => ({ ...p, [userId]: "success" }));
       setSentTo((p) => [...p, userId]);
+      
+      // Add the user to recent contacts (in memory only for this session)
+      const sentUser = selectedUser;
+      if (sentUser) {
+        setRecentContacts(prev => {
+          const filtered = prev.filter(u => u._id !== userId);
+          return [{ ...sentUser, relation: "recent" }, ...filtered];
+        });
+        // Also add to userProfiles with following status
+        setUserProfiles(prev => ({
+          ...prev,
+          [userId]: { ...prev[userId], following: true }
+        }));
+      }
+      
       // Call onShareSuccess callback if provided
       if (onShareSuccess) {
         onShareSuccess();
@@ -279,6 +449,25 @@ function DMUserPicker({ contentType, contentId, thumbnail, title, onShareSuccess
           : err.message || "Failed to send. Try again."
       );
     } finally { setSending(false); }
+  };
+
+  // Handle follow request
+  const handleFollowRequest = async (userId) => {
+    setRequestingUser(userId);
+    try {
+      await followUserById(userId);
+      // Update the user profile to show following status
+      setUserProfiles(prev => ({
+        ...prev,
+        [userId]: { ...prev[userId], following: true, request_sent: true }
+      }));
+      alert("Follow request sent!");
+    } catch (err) {
+      console.error("Error sending follow request:", err);
+      alert("Failed to send follow request. Please try again.");
+    } finally {
+      setRequestingUser(null);
+    }
   };
 
   // ── Step 2: compose view ───────────────────────────────────────────────────
@@ -356,14 +545,16 @@ function DMUserPicker({ contentType, contentId, thumbnail, title, onShareSuccess
           ? searchLoading
             ? "Searching…"
             : `${searchResults.length} result${searchResults.length !== 1 ? "s" : ""}`
-          : loadingConnections
+          : loadingRecent
             ? "Loading…"
-            : `Followers & Following · ${connections.length}`}
+            : showRecentSection
+              ? `Recent Messages`
+              : "No recent messages"}
       </p>
 
       {/* List */}
       <div className="sp-user-list">
-        {loadingConnections && !search.trim()
+        {loadingRecent && !search.trim()
           ? [1, 2, 3, 4].map((i) => (
               <div key={i} className="sp-skeleton-row">
                 <div className="sp-skeleton-avatar" />
@@ -377,7 +568,9 @@ function DMUserPicker({ contentType, contentId, thumbnail, title, onShareSuccess
             ? (
               <div className="sp-empty">
                 <span style={{ fontSize: 30 }}>👥</span>
-                <p>{search.trim() ? "No users found" : "No followers or following yet"}</p>
+                <p>{search.trim() 
+                  ? (searchLoading ? "Searching..." : "No users found") 
+                  : "No recent messages. Search for a user to share."}</p>
               </div>
             )
             : displayList.map((user) => {
@@ -385,11 +578,17 @@ function DMUserPicker({ contentType, contentId, thumbnail, title, onShareSuccess
                 const isSent = sentTo.includes(userId);
                 const displayName = user?.full_name || user?.username || "";
                 const handle = user?.username || user?.handle || "";
+                const profile = userProfiles[userId];
+                const isPrivate = profile?.is_private || user.is_private || false;
+                const isFollowing = profile?.following || user.following || false;
+                const isRequestSent = profile?.request_sent || false;
+                const isRecent = user.relation === "recent";
+                
                 return (
                   <button
                     key={userId}
                     className={`sp-user-row ${isSent ? "sent" : ""}`}
-                    onClick={() => !isSent && setSelectedUser(user)}
+                    onClick={() => !isSent && !isPrivate && setSelectedUser(user)}
                     disabled={isSent}
                   >
                     <Avatar user={user} size={42} />
@@ -398,10 +597,31 @@ function DMUserPicker({ contentType, contentId, thumbnail, title, onShareSuccess
                       <span className="sp-user-handle">@{handle}</span>
                     </div>
                     <div className="sp-user-right">
-                      {user.relation && !search.trim() && <RelationBadge relation={user.relation} />}
-                      {isSent
-                        ? <span className="sp-sent-label"><IconCheck /> Sent</span>
-                        : <span className="sp-arrow">→</span>}
+                      {isRecent && !search.trim() && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 99,
+                          background: "#10b98125", color: "#10b981",
+                          letterSpacing: "0.02em", textTransform: "uppercase",
+                        }}>Recent</span>
+                      )}
+                      {isPrivate && !isFollowing && (
+                        <button
+                          className="sp-request-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFollowRequest(userId);
+                          }}
+                          disabled={requestingUser === userId || isRequestSent}
+                        >
+                          {requestingUser === userId 
+                            ? "..." 
+                            : isRequestSent 
+                              ? "Requested" 
+                              : "+ Follow"}
+                        </button>
+                      )}
+                      {!isPrivate && !isSent && <span className="sp-arrow">→</span>}
+                      {isSent && <span className="sp-sent-label"><IconCheck /> Sent</span>}
                     </div>
                   </button>
                 );
@@ -668,6 +888,9 @@ export default function SharePopup({
         .sp-user-handle{font-size:12px;color:#4b5563;}
         .sp-user-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
         .sp-arrow{color:#2a2a2a;font-size:16px;transition:color 0.15s;}
+        .sp-request-btn{background:#ec4899;color:white;border:none;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:background 0.15s;}
+        .sp-request-btn:hover{background:#db2777;}
+        .sp-request-btn:disabled{background:#9ca3af;cursor:not-allowed;}
         .sp-user-row:hover .sp-arrow{color:#666;}
         .sp-sent-label{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#22c55e;}
 

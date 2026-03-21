@@ -22,6 +22,7 @@ import {
   updateConversation,
   leaveConversation,
   uploadMedia,
+  getMessageRequests,
 } from "@/services/messages";
 
 // ─── Token & ID helpers ────────────────────────────────────────────────────────
@@ -131,23 +132,159 @@ function EmojiPicker({ onPick }) {
 
 // ─── Message Bubble ────────────────────────────────────────────────────────────
 
-function Bubble({ msg, myId, profileMap, onReply, onEdit, onDelete, onReact, onForward }) {
+function Bubble({ msg, myId, profileMap, messageRequests = [], onReply, onEdit, onDelete, onReact, onForward }) {
   const [hover, setHover] = useState(false);
+
+  // Find shared content from message requests if this is a message request
+  const getSharedContent = () => {
+    console.log('[Bubble] getSharedContent called for message:', msg._id, 'content:', msg.content);
+    
+    // First check message requests
+    if (msg.conversation_id) {
+      const request = messageRequests.find(r => r._id === msg.conversation_id);
+      if (request?.shared_content) {
+        console.log('[Bubble] Found shared_content from message request:', request.shared_content);
+        return request.shared_content;
+      }
+    }
+    
+    // Check if message has its own shared_content
+    if (msg.shared_content) {
+      console.log('[Bubble] Found shared_content in message:', msg.shared_content);
+      return msg.shared_content;
+    }
+    
+    // Check if message has signed_urls directly
+    if (msg.signed_urls?.media) {
+      console.log('[Bubble] Found signed_urls in message:', msg.signed_urls);
+      return { signed_urls: msg.signed_urls };
+    }
+    
+    // Check if message has media_url
+    if (msg.media_url) {
+      console.log('[Bubble] Found media_url in message:', msg.media_url);
+      return { signed_urls: { media: [{ type: msg.media_type || 'image', url: msg.media_url }] } };
+    }
+    
+    // Check if message has share_id (from share API response)
+    if (msg.share_id) {
+      console.log('[Bubble] Found share_id in message:', msg.share_id);
+      // Try to find matching share in sessionStorage
+      try {
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && (key.startsWith('share_') || key === 'latest_share')) {
+            const value = sessionStorage.getItem(key);
+            if (value) {
+              const shareData = JSON.parse(value);
+              if (shareData.share_id === msg.share_id || shareData.content_id === msg.content_id) {
+                console.log('[Bubble] Found matching share by share_id:', shareData);
+                return shareData;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log('[Bubble] Error matching by share_id:', e);
+      }
+    }
+    
+    // Also check for content_id
+    if (msg.content_id) {
+      console.log('[Bubble] Found content_id in message:', msg.content_id);
+      // Try to find matching share in sessionStorage
+      try {
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && (key.startsWith('share_') || key === 'latest_share')) {
+            const value = sessionStorage.getItem(key);
+            if (value) {
+              const shareData = JSON.parse(value);
+              if (shareData.content_id === msg.content_id) {
+                console.log('[Bubble] Found matching share by content_id:', shareData);
+                return shareData;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log('[Bubble] Error matching by content_id:', e);
+      }
+    }
+    
+    // ALWAYS check sessionStorage for shared content - don't limit to just "Shared" text
+    console.log('[Bubble] Checking sessionStorage for ALL messages...');
+    
+    try {
+      // First try latest_share
+      let latestShare = sessionStorage.getItem('latest_share');
+      console.log('[Bubble] sessionStorage latest_share:', latestShare);
+      
+      // If no latest_share, try iterating through all sessionStorage keys
+      if (!latestShare) {
+        console.log('[Bubble] No latest_share, checking all sessionStorage keys...');
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith('share_')) {
+            const value = sessionStorage.getItem(key);
+            console.log('[Bubble] Found share key:', key, 'value:', value);
+            if (value) {
+              latestShare = value;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (latestShare) {
+        const shareData = JSON.parse(latestShare);
+        // Extended time limit - 10 minutes for debugging
+        const timeDiff = Date.now() - shareData.timestamp;
+        console.log('[Bubble] Share data age:', timeDiff, 'ms (', Math.floor(timeDiff/1000), 'seconds)');
+        
+        if (timeDiff < 600000) { // 10 minutes
+          console.log('[Bubble] Found valid share data from sessionStorage:', shareData);
+          console.log('[Bubble] Returning shareData with signed_urls:', shareData.signed_urls);
+          return shareData;
+        } else {
+          console.log('[Bubble] Share data too old (>10 min):', timeDiff);
+        }
+      } else {
+        console.log('[Bubble] No sessionStorage share data found at all');
+      }
+    } catch (e) {
+      console.log('[Bubble] Error reading sessionStorage:', e);
+    }
+    
+    console.log('[Bubble] No shared content found, returning null');
+    return null;
+  };
+  const sharedContent = getSharedContent();
+  console.log('[Bubble] Assigned sharedContent:', sharedContent);
 
   // Debug: Log message data for shared content
   useEffect(() => {
     console.log('[Bubble] Message data:', { 
       _id: msg._id, 
       content: msg.content, 
-      content_type: msg.content_type,
-      shared_content_id: msg.shared_content_id,
-      shared_content_type: msg.shared_content_type,
-      thumbnail: msg.thumbnail,
-      title: msg.title,
+      message_type: msg.message_type,
+      shared_content: msg.shared_content,
       media_url: msg.media_url,
-      allKeys: Object.keys(msg)
+      signed_urls: msg.signed_urls,
+      conversation_id: msg.conversation_id,
+      allKeys: Object.keys(msg),
+      sharedContentFound: !!sharedContent,
+      hasSignedUrls: !!(sharedContent?.signed_urls?.media),
+      hasPreviewUrl: !!sharedContent?.preview_url
     });
-  }, [msg]);
+  }, [msg, sharedContent]);
+
+  // Check if this is a shared content message
+ const isSharedContent =
+  msg.content_type === "post" ||
+  msg.content_type === "reel" ||
+  msg.signed_urls?.media?.length > 0 ||
+  sharedContent?.preview_url;
   const [picker, setPicker] = useState(false);
 
   const senderId =
@@ -242,9 +379,71 @@ function Bubble({ msg, myId, profileMap, onReply, onEdit, onDelete, onReact, onF
             }`}
             style={isMe && !msg.is_deleted ? { background: "linear-gradient(135deg, #ec4899, #f97316)" } : {}}
           >
-            {msg.is_deleted ? "Message deleted" : msg.content}
+            {msg.is_deleted
+  ? "Message deleted"
+  : msg.content || (msg.content_type ? "Shared a post" : "")
+}
 
-            {!msg.is_deleted && msg.media_url && (
+            {/* Display shared content from message requests (preview_url) or sessionStorage */}
+            {console.log('[Bubble] Rendering sharedContent:', sharedContent) || !msg.is_deleted && sharedContent && (sharedContent.preview_url || (sharedContent.signed_urls && sharedContent.signed_urls.media)) && (
+              <div className="mt-2">
+                {/* If we have preview_url from message request */}
+                {sharedContent.preview_url ? (
+                  <img 
+                    src={sharedContent.preview_url} 
+                    alt={sharedContent.caption || "Shared content"} 
+                    className="h-60 w-60 rounded-md object-cover"
+                  />
+                ) : sharedContent.signed_urls?.media ? (
+                  /* Otherwise check signed_urls from sessionStorage */
+                  sharedContent.signed_urls.media.map((media, idx) => (
+                    <div key={idx} className="rounded-md overflow-hidden mt-1">
+                      {media.type === 'image' ? (
+                        <img 
+                          src={media.url} 
+                          alt="Shared content" 
+                          className="h-60 w-60 rounded-md object-cover"
+                        />
+                      ) : media.type === 'video' ? (
+                        <video 
+                          src={media.url} 
+                          controls 
+                          className="h-60 w-60 rounded-md"
+                        />
+                      ) : null}
+                    </div>
+                  ))
+                ) : null}
+                {sharedContent.caption && (
+                  <p className="text-xs mt-1 opacity-70">{sharedContent.caption}</p>
+                )}
+              </div>
+            )}
+
+            {/* Display shared content from signed_urls (direct messages) - fallback */}
+          {!msg.is_deleted && msg.signed_urls?.media?.length > 0 && (
+              <div className="mt-2">
+                {msg.signed_urls.media.map((media, idx) => (
+                  <div key={idx} className="rounded-md overflow-hidden mt-1">
+                    {media.type === 'image' ? (
+                      <img 
+                        src={media.url} 
+                        alt="Shared content" 
+                        className="h-60 w-60 rounded-md object-cover"
+                      />
+                    ) : media.type === 'video' ? (
+                      <video 
+                        src={media.url} 
+                        controls 
+                        className="h-60 w-60 rounded-md object-cover"
+                      />
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!msg.is_deleted && msg.media_url && !msg.signed_urls && (
               <div className="mt-1 text-xs opacity-70 flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                 Attachment
@@ -348,6 +547,7 @@ export default function MessagesPage() {
   const [profileMap,    setProfileMap]    = useState({});
   const [conversations, setConversations] = useState([]);
   const [convLoading,   setConvLoading]   = useState(true);
+  const [messageRequests, setMessageRequests] = useState([]);
   const [selectedConv,  setSelectedConv]  = useState(null);
   const [messages,      setMessages]      = useState([]);
   const [msgLoading,    setMsgLoading]    = useState(false);
@@ -596,6 +796,22 @@ const handleEmojiPick = (emoji) => {
   }, [mergeProfiles]);
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
+
+  // Fetch message requests on mount
+  useEffect(() => {
+    const fetchMessageRequests = async () => {
+      try {
+        const response = await getMessageRequests({ limit: 20 });
+        console.log('[Messages] Message requests response:', response);
+        if (response.status === 'success' && response.data) {
+          setMessageRequests(response.data.requests || []);
+        }
+      } catch (err) {
+        console.error('Error fetching message requests:', err);
+      }
+    };
+    fetchMessageRequests();
+  }, []);
 
   // ── fetchMessages ────────────────────────────────────────────────────────────
 
@@ -935,6 +1151,11 @@ const handleEmojiPick = (emoji) => {
           </div>
         </div>
 
+<div className=" flex justify-end px-4 py-2"> 
+  <button>request</button>
+</div>
+
+
         <div className="flex-1 overflow-y-auto">
           {convLoading ? (
             <div className="p-4 space-y-3">
@@ -1027,6 +1248,7 @@ const handleEmojiPick = (emoji) => {
                   msg={msg}
                   myId={myId}
                   profileMap={profileMap}
+                  messageRequests={messageRequests}
                   onReply={(m) => { setReplyTo(m); setEditingMsg(null); }}
                   onEdit={(m) => { setEditingMsg(m); setReplyTo(null); setText(m.content); }}
                   onDelete={handleDelete}

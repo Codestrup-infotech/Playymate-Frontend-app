@@ -475,9 +475,9 @@ export default function UserProfilePage() {
                   </div>
                 ) : posts.length > 0 ? (
                   <div className="grid grid-cols-3 gap-2">
-                    {posts.map((post) => (
-                      <div
-                        key={post._id}
+                   {posts.map((post, index) => (
+  <div
+    key={post?._id || `post-${index}`}
                         onClick={() => handlePostClick(post)}
                         className="aspect-square cursor-pointer overflow-hidden rounded-lg"
                       >
@@ -512,9 +512,9 @@ export default function UserProfilePage() {
                   </div>
                 ) : reels.length > 0 ? (
                   <div className="grid grid-cols-3 gap-2">
-                    {reels.map((reel) => (
-                      <div
-                        key={reel._id}
+                   {reels.map((reel, index) => (
+  <div
+    key={reel?._id || `reel-${index}`}
                         className="aspect-square cursor-pointer overflow-hidden rounded-lg relative group"
                       >
                         {reel.thumbnail_url || (reel.media && reel.media[0]?.thumbnail) ? (
