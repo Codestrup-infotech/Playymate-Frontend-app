@@ -47,7 +47,8 @@ async function handleResponse(res) {
  * @param {string} contentId
  * @returns {Promise<Object>} share record
  */
-export async function shareExternal(contentType, contentId) {
+export async function shareExternal(contentType, contentId, thumbnail = null, title = null) {
+  console.log('[shareExternal] API Request:', { content_id: contentId, content_type: contentType, shared_to: "external", thumbnail, title });
   const res = await fetch(`${BASE_URL}/shares`, {
     method: "POST",
     headers: getAuthHeaders(),
@@ -55,9 +56,13 @@ export async function shareExternal(contentType, contentId) {
       content_id: contentId,
       content_type: contentType,
       shared_to: "external",
+      thumbnail,
+      title,
     }),
   });
-  return handleResponse(res);
+  const result = await handleResponse(res);
+  console.log('[shareExternal] API Response:', result);
+  return result;
 }
 
 /**
@@ -68,7 +73,8 @@ export async function shareExternal(contentType, contentId) {
  * @param {string} [message]    - optional message to attach
  * @returns {Promise<Object>} share record with conversation_id
  */
-export async function shareViaDM(contentType, contentId, recipientId, message = "") {
+export async function shareViaDM(contentType, contentId, recipientId, message = "", thumbnail = null, title = null) {
+  console.log('[shareViaDM] API Request:', { content_id: contentId, content_type: contentType, shared_to: "direct_message", recipient_id: recipientId, message, thumbnail, title });
   const res = await fetch(`${BASE_URL}/shares`, {
     method: "POST",
     headers: getAuthHeaders(),
@@ -78,9 +84,13 @@ export async function shareViaDM(contentType, contentId, recipientId, message = 
       shared_to: "direct_message",
       recipient_id: recipientId,
       message,
+      thumbnail,
+      title,
     }),
   });
-  return handleResponse(res);
+  const result = await handleResponse(res);
+  console.log('[shareViaDM] API Response:', result);
+  return result;
 }
 
 /**
@@ -102,10 +112,11 @@ export async function getShareHistory(limit = 20, cursor = null) {
 /**
  * Get total share count for a post
  * @param {string} postId
+ * @param {string} contentType - optional content type (post, reel, etc)
  * @returns {Promise<{ count: number }>}
  */
-export async function getPostShareCount(postId) {
-  const res = await fetch(`${BASE_URL}/posts/${postId}/shares/count`, {
+export async function getPostShareCount(postId, contentType = "post") {
+  const res = await fetch(`${BASE_URL}/posts/${postId}/shares/count?content_type=${contentType}`, {
     headers: getAuthHeaders(),
   });
   return handleResponse(res);

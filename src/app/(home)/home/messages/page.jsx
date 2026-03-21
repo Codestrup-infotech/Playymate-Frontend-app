@@ -133,6 +133,21 @@ function EmojiPicker({ onPick }) {
 
 function Bubble({ msg, myId, profileMap, onReply, onEdit, onDelete, onReact, onForward }) {
   const [hover, setHover] = useState(false);
+
+  // Debug: Log message data for shared content
+  useEffect(() => {
+    console.log('[Bubble] Message data:', { 
+      _id: msg._id, 
+      content: msg.content, 
+      content_type: msg.content_type,
+      shared_content_id: msg.shared_content_id,
+      shared_content_type: msg.shared_content_type,
+      thumbnail: msg.thumbnail,
+      title: msg.title,
+      media_url: msg.media_url,
+      allKeys: Object.keys(msg)
+    });
+  }, [msg]);
   const [picker, setPicker] = useState(false);
 
   const senderId =

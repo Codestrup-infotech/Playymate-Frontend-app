@@ -123,6 +123,14 @@ export const postService = {
   },
 
   /**
+   * Add comment (alias for createComment)
+   * POST /api/v1/posts/:postId/comments
+   */
+  addComment: (postId, text) => {
+    return api.post(`/posts/${postId}/comments`, { text });
+  },
+
+  /**
    * Get post comments
    * GET /api/v1/posts/:postId/comments
    */

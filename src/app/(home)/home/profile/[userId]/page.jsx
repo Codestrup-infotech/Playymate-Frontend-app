@@ -34,8 +34,8 @@ import { useTheme } from "@/lib/ThemeContext";
 import postService from "@/app/user/post";
 import Activity from "../../components/Activity.jsx";
 import BioPopup from "@/app/components/profileCompletion/BioPopup.jsx";
-import PostDetailModal from "../../components/PostDetailModal.jsx";
-import FollowModal from "../../components/FollowersFollowing.jsx";
+import UserPostDetailModal from "../../components/UserPostDetailModal.jsx";
+import UserFollowModal from "../../components/UserFollowersFollowing.jsx";
 import UserStory from "../user-story.jsx";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ function flattenInterests(interests) {
     ...(interests.hobbies || []),
     ...(interests.activities || []),
     ...(interests.nostalgia || []),
-    ...(interests.additional || []),
+    ...(interests.interests || []),
   ];
 }
 
@@ -128,16 +128,18 @@ export default function UserProfilePage() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [selectedPostLoading, setSelectedPostLoading] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Helper function to check if string is a valid MongoDB ObjectId
   const isObjectId = (str) => {
     return /^[0-9a-fA-F]{24}$/.test(str);
   };
 
-  // Get current user ID
+  // Get current user ID and profile
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     setCurrentUserId(user?.user_id || user?._id);
+    setCurrentUser(user);
   }, []);
 
   useEffect(() => {
@@ -243,16 +245,10 @@ export default function UserProfilePage() {
 
   const handlePostClick = async (post) => {
     setSelectedPostLoading(true);
-    try {
-      const response = await postService.getPostById(post._id);
-      setSelectedPost(response.data?.data || post);
-    } catch (error) {
-      console.error("Error fetching post details:", error);
-      setSelectedPost(post);
-    } finally {
-      setSelectedPostLoading(false);
-      setShowPostModal(true);
-    }
+    // Use post data directly from profile - the API might fail
+    setSelectedPost(post);
+    setSelectedPostLoading(false);
+    setShowPostModal(true);
   };
 
   // Loading skeleton
@@ -424,8 +420,8 @@ export default function UserProfilePage() {
               Interests
             </h2>
             <div className="flex flex-wrap gap-2">
-              {flattenedInterests.slice(0, 10).map((interest, idx) => (
-                <InterestPill key={idx} label={interest} />
+              {flattenedInterests.slice(0, 10).map((interest) => (
+                <InterestPill key={`interest-${interest}`} label={interest} />
               ))}
             </div>
           </div>
@@ -474,7 +470,7 @@ export default function UserProfilePage() {
             {activeTab === "Posts" && (
               <div>
                 {postsLoading ? (
-                  <div className="flex justify-center py-8">
+                  <div key="posts-loading" className="flex justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
                   </div>
                 ) : posts.length > 0 ? (
@@ -511,7 +507,7 @@ export default function UserProfilePage() {
             {activeTab === "Reels" && (
               <div>
                 {reelsLoading ? (
-                  <div className="flex justify-center py-8">
+                  <div key="reels-loading" className="flex justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
                   </div>
                 ) : reels.length > 0 ? (
@@ -560,18 +556,19 @@ export default function UserProfilePage() {
 
       {/* Post Detail Modal */}
       {showPostModal && selectedPost && (
-        <PostDetailModal
+        <UserPostDetailModal
           post={selectedPost}
           isLoading={selectedPostLoading}
           onClose={() => {
             setShowPostModal(false);
             setSelectedPost(null);
           }}
+          currentUser={currentUser}
         />
       )}
 
       {/* Followers/Following Modal */}
-      <FollowModal
+      <UserFollowModal
         type={followModalType}
         isOpen={showFollowModal}
         onClose={() => setShowFollowModal(false)}
@@ -579,6 +576,7 @@ export default function UserProfilePage() {
         currentUserId={currentUserId}
         followersData={profileData?.followers}
         followingData={profileData?.following}
+        mutualData={profileData?.mutual}
       />
     </div>
   );

@@ -206,7 +206,7 @@ function RelationBadge({ relation }) {
 
 // ─── DM tab: user picker + compose ───────────────────────────────────────────
 
-function DMUserPicker({ contentType, contentId, onShareSuccess }) {
+function DMUserPicker({ contentType, contentId, thumbnail, title, onShareSuccess }) {
   const [search, setSearch] = useState("");
   const [connections, setConnections] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
@@ -261,7 +261,9 @@ function DMUserPicker({ contentType, contentId, onShareSuccess }) {
     setSending(true); setSendError("");
     setSendStatus((p) => ({ ...p, [userId]: "sending" }));
     try {
-      await shareViaDM(contentType, contentId, userId, message.trim());
+      console.log('[DMUserPicker] handleSend - Sharing via DM:', { contentType, contentId, userId, message: message.trim(), thumbnail, title });
+      const shareResult = await shareViaDM(contentType, contentId, userId, message.trim(), thumbnail, title);
+      console.log('[DMUserPicker] shareViaDM result:', shareResult);
       setSendStatus((p) => ({ ...p, [userId]: "success" }));
       setSentTo((p) => [...p, userId]);
       // Call onShareSuccess callback if provided
@@ -430,6 +432,13 @@ export default function SharePopup({
   title = null,
   onShareSuccess = null, // Callback when share is successful
 }) {
+  // Debug: Log props when SharePopup opens
+  useEffect(() => {
+    if (isOpen) {
+      console.log('[SharePopup] Opened with props:', { contentType, contentId, thumbnail, title, onShareSuccess });
+    }
+  }, [isOpen, contentType, contentId, thumbnail, title, onShareSuccess]);
+
   const [tab, setTab] = useState("dm");
   const [copied, setCopied] = useState(false);
   const [externalLoading, setExternalLoading] = useState(false);
@@ -462,7 +471,8 @@ export default function SharePopup({
   const handleCopyLink = async () => {
     try {
       setExternalLoading(true);
-      await shareExternal(contentType, contentId);
+      console.log('[SharePopup] handleCopyLink - Sharing:', { contentType, contentId, thumbnail, title, shareUrl });
+      await shareExternal(contentType, contentId, thumbnail, title);
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true); setTimeout(() => setCopied(false), 2500);
     } catch (err) {
@@ -473,7 +483,8 @@ export default function SharePopup({
   };
 
   const handlePlatformShare = async (platform) => {
-    try { await shareExternal(contentType, contentId); } catch { /* ignore */ }
+    console.log('[SharePopup] handlePlatformShare - Sharing:', { contentType, contentId, thumbnail, title, shareUrl, platform });
+    try { await shareExternal(contentType, contentId, thumbnail, title); } catch { /* ignore */ }
     const u = encodeURIComponent(shareUrl), t = encodeURIComponent(title || "Check this out!");
     const urls = {
       whatsapp: `https://wa.me/?text=${t}%20${u}`,
@@ -485,7 +496,8 @@ export default function SharePopup({
 
   const handleNativeShare = async () => {
     if (!navigator.share) return;
-    try { await shareExternal(contentType, contentId); await navigator.share({ title: title || "Check this out!", url: shareUrl }); }
+    console.log('[SharePopup] handleNativeShare - Sharing:', { contentType, contentId, thumbnail, title, shareUrl });
+    try { await shareExternal(contentType, contentId, thumbnail, title); await navigator.share({ title: title || "Check this out!", url: shareUrl }); }
     catch { /* cancelled */ }
   };
 
@@ -798,7 +810,7 @@ export default function SharePopup({
 
           {/* ── DM tab ── */}
           {tab === "dm" && (
-            <DMUserPicker contentType={contentType} contentId={contentId} onShareSuccess={onShareSuccess} />
+            <DMUserPicker contentType={contentType} contentId={contentId} thumbnail={thumbnail} title={title} onShareSuccess={onShareSuccess} />
           )}
         </div>
       </div>

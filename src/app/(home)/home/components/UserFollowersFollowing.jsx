@@ -6,7 +6,7 @@ import { userService } from "@/services/user";
 import { useTheme } from "@/lib/ThemeContext";
 import { useRouter } from "next/navigation";
 
-export default function FollowModal({
+export default function UserFollowModal({
   type,
   isOpen,
   onClose,
@@ -14,6 +14,7 @@ export default function FollowModal({
   currentUserId,
   followersData,
   followingData,
+  mutualData,
 }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,12 @@ export default function FollowModal({
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const router = useRouter();
+
+  // Helper to check if user is in mutual list
+  const isMutual = (userId) => {
+    if (!mutualData || !Array.isArray(mutualData)) return false;
+    return mutualData.some((m) => (m._id || m.id || m.user_id) === userId);
+  };
 
   useEffect(() => {
     if (isOpen && type) {
@@ -72,19 +79,14 @@ export default function FollowModal({
     }
   };
 
-  // REMOVE / UNFOLLOW CONFIRM
-  const handleConfirmAction = async () => {
+  // FOLLOW CONFIRM
+  const handleFollowAction = async () => {
     try {
       if (!confirmUser) return;
 
-      if (type === "followers") {
-        await userService.removeFollower(confirmUser.id);
-      } else {
-        await userService.unfollowUser(confirmUser.id);
-      }
+      await userService.followUser(confirmUser.id);
 
       setConfirmUser(null);
-      // Close the modal after successful action
       onClose();
     } catch (err) {
       console.error(err);
@@ -140,6 +142,7 @@ export default function FollowModal({
             ) : (
               filteredData.map((user) => {
                 const id = user.user_id || user.id || user._id;
+                const userIsMutual = isMutual(id);
 
                 return (
                   <div
@@ -163,7 +166,7 @@ export default function FollowModal({
                       </div>
                     </div>
 
-                    {/* BUTTON - Remove for followers, Following for following */}
+                    {/* BUTTON - Show Mutual or Follow for other profiles */}
                     {id !== currentUserId && (
                       <button
                         onClick={(e) => {
@@ -172,11 +175,16 @@ export default function FollowModal({
                             id: id,
                             username: user.username,
                             image: user.profile_image_url,
+                            isMutual: userIsMutual,
                           });
                         }}
-                        className="text-sm px-3 py-1 rounded-md bg-gray-200 text-black"
+                        className={`text-sm px-3 py-1 rounded-md ${
+                          userIsMutual
+                            ? "bg-pink-600 text-white"
+                            : "bg-purple-600 text-white"
+                        }`}
                       >
-                        {type === "followers" ? "Remove" : "Following"}
+                        {userIsMutual ? "Mutual" : "Follow"}
                       </button>
                     )}
                   </div>
@@ -196,32 +204,26 @@ export default function FollowModal({
               className="w-16 h-16 rounded-full mx-auto mb-3"
             />
 
-            {type === "followers" ? (
+            {/* Show Mutual or Follow confirmation */}
+            {confirmUser.isMutual ? (
               <>
-                <h3 className="font-semibold text-lg">Remove follower?</h3>
+                <h3 className="font-semibold text-lg">Mutual Follow</h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Playymate won't tell @{confirmUser.username}
+                  You and @{confirmUser.username} follow each other.
                 </p>
-
-                <button
-                  onClick={handleConfirmAction}
-                  className="w-full text-red-500 py-2 mt-4 border-t"
-                >
-                  Remove
-                </button>
               </>
             ) : (
               <>
-                <p className="text-sm text-gray-600">
-                  If you change your mind, you'll have to request to follow
-                  @{confirmUser.username} again.
+                <h3 className="font-semibold text-lg">Follow @{confirmUser.username}?</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  You'll see their posts in your feed.
                 </p>
 
                 <button
-                  onClick={handleConfirmAction}
-                  className="w-full text-red-500 py-2 mt-4 border-t"
+                  onClick={handleFollowAction}
+                  className="w-full text-purple-600 py-2 mt-4 border-t font-medium"
                 >
-                  Unfollow
+                  Follow
                 </button>
               </>
             )}

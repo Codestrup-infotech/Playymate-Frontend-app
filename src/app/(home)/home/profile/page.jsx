@@ -54,7 +54,7 @@ function flattenInterests(interests) {
     ...(interests.hobbies || []),
     ...(interests.activities || []),
     ...(interests.nostalgia || []),
-    ...(interests.additional || []),
+    ...(interests.interests || []),
   ];
 }
 
