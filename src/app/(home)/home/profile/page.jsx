@@ -33,6 +33,7 @@ import Activity from "../components/Activity.jsx";
 import BioPopup from "@/app/components/profileCompletion/BioPopup.jsx";
 import PostDetailModal from "../components/PostDetailModal.jsx";
 import FollowModal from "../components/FollowersFollowing.jsx";
+import Highlights from '../components/highlights.jsx';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -642,6 +643,9 @@ export default function ProfilePage() {
         {/* Placeholder - Activity moved to Activity tab */}
       </div>
 
+        {/* highlight section imported   */}
+            <Highlights userId={profile?._id} isOwner={true} />
+
       {/* ── POSTS / TABS CARD ────────────────────────────────────────────── */}
       <div
         className={`rounded-2xl p-5 ${
@@ -669,6 +673,8 @@ export default function ProfilePage() {
             </button>
           ))}
         </div>
+
+      
 
         {/* ── Posts Grid ── */}
         {activeTab === "Posts" && (

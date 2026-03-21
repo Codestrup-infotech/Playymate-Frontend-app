@@ -624,25 +624,56 @@ export const removeStoryFromHighlight = async (storyId, highlightId) => {
 /**
  * POST /api/v1/highlights/create
  * Create a new highlight collection
+ * Request body: { name: string, storyIds: string[] }
  */
-export const createHighlight = async (name, stories = []) => {
+export const createHighlight = async (name, storyIds = []) => {
+  console.log("[createHighlight] Creating highlight:", { name, storyIds });
   const res = await axios.post(
     `${API_BASE}/highlights/create`,
-    { name, stories },
+    { name, storyIds },
     { headers: { ...getAuthHeaders(), "Content-Type": "application/json" } }
   );
+  console.log("[createHighlight] Response:", res.data);
   return res.data.data;
 };
 
 /**
- * GET /api/v1/users/me/highlights
+ * GET /api/v1/users/me/highlights?page=1&limit=20
  * Get current user's highlights
  */
-export const getMyHighlights = async () => {
-  const res = await axios.get(`${API_BASE}/users/me/highlights`, {
-    headers: getAuthHeaders(),
-  });
-  return res.data.data?.highlights ?? [];
+export const getMyHighlights = async (page = 1, limit = 20) => {
+  console.log("[getMyHighlights] Fetching highlights...");
+  try {
+    const res = await axios.get(`${API_BASE}/users/me/highlights?page=${page}&limit=${limit}`, {
+      headers: getAuthHeaders(),
+    });
+    console.log("[getMyHighlights] Response:", res.data);
+    return res.data.data?.highlights ?? [];
+  } catch (err) {
+    console.error("[getMyHighlights] Error:", err.response?.status, err.message);
+    // Return empty array on error
+    return [];
+  }
+};
+
+/**
+ * GET /api/v1/users/:userId/highlights?page=1&limit=20
+ * Get another user's highlights
+ * NOTE: This endpoint may not exist - returns empty array if 400/404
+ */
+export const getUserHighlights = async (userId, page = 1, limit = 20) => {
+  console.log("[getUserHighlights] Fetching highlights for userId:", userId);
+  try {
+    const res = await axios.get(`${API_BASE}/users/${userId}/highlights?page=${page}&limit=${limit}`, {
+      headers: getAuthHeaders(),
+    });
+    console.log("[getUserHighlights] Response:", res.data);
+    return res.data.data?.highlights ?? [];
+  } catch (err) {
+    console.log("[getUserHighlights] Error or endpoint not found:", err.response?.status, err.message);
+    // Endpoint may not exist - return empty array
+    return [];
+  }
 };
 
 /**
@@ -667,6 +698,160 @@ export const deleteHighlight = async (highlightId) => {
     headers: getAuthHeaders(),
   });
   return res.data.data;
+};
+
+/**
+ * GET /api/v1/stories/archive
+ * Get archived stories (expired stories)
+ */
+export const getArchivedStories = async (limit = 20) => {
+  const res = await axios.get(`${API_BASE}/stories/archive?limit=${limit}`, {
+    headers: getAuthHeaders(),
+  });
+  return res.data.data?.archived_stories ?? res.data.data?.stories ?? [];
+};
+
+/**
+ * GET /api/v1/users/{userId}/stories
+ * Get current user's active + archived stories
+ * Returns { active_stories: [], archived_stories: [] }
+ * Tries with user_id from localStorage first, then falls back to "me"
+ */
+export const getMyAllStories = async (limit = 20) => {
+  // Try to get actual user ID from localStorage
+  const userId = localStorage.getItem("user_id") || "me";
+  console.log("[getMyAllStories] Using userId:", userId);
+  
+  // First try: /users/{userId}/stories (with actual user ID)
+  try {
+    console.log("[getMyAllStories] Trying /users/" + userId + "/stories...");
+    const res = await axios.get(`${API_BASE}/users/${userId}/stories?limit=${limit}`, {
+      headers: getAuthHeaders(),
+    });
+    console.log("[getMyAllStories] Response:", res.data);
+    
+    const data = res.data.data || res.data;
+    return {
+      active_stories: data?.active_stories || data?.stories || [],
+      archived_stories: data?.archived_stories || []
+    };
+  } catch (err) {
+    console.log("[getMyAllStories] /users/" + userId + "/stories failed:", err.response?.status, err.message);
+    
+    // Second try: /users/me/stories
+    if (userId !== "me") {
+      try {
+        console.log("[getMyAllStories] Trying /users/me/stories...");
+        const res = await axios.get(`${API_BASE}/users/me/stories?limit=${limit}`, {
+          headers: getAuthHeaders(),
+        });
+        console.log("[getMyAllStories] Response:", res.data);
+        
+        const data = res.data.data || res.data;
+        return {
+          active_stories: data?.active_stories || data?.stories || [],
+          archived_stories: data?.archived_stories || []
+        };
+      } catch (err2) {
+        console.log("[getMyAllStories] /users/me/stories failed:", err2.response?.status, err2.message);
+      }
+    }
+    
+    // Third try: /stories/archive endpoint
+    try {
+      console.log("[getMyAllStories] Trying /stories/archive...");
+      const archiveRes = await axios.get(`${API_BASE}/stories/archive?limit=${limit}`, {
+        headers: getAuthHeaders(),
+      });
+      console.log("[getMyAllStories] Archive response:", archiveRes.data);
+      
+      const data = archiveRes.data.data || archiveRes.data;
+      return {
+        active_stories: [],
+        archived_stories: data?.archived_stories || data?.stories || []
+      };
+    } catch (archiveErr) {
+      console.log("[getMyAllStories] /stories/archive also failed:", archiveErr.response?.status);
+      return { active_stories: [], archived_stories: [] };
+    }
+  }
+};
+
+/**
+ * GET /api/v1/users/{userId}/stories
+ * Get a user's stories (active + archived)
+ * NOTE: May return empty if endpoint doesn't exist
+ */
+export const getUserStories = async (userId, limit = 20) => {
+  try {
+    console.log("[getUserStories] Fetching stories for userId:", userId);
+    const res = await axios.get(`${API_BASE}/users/${userId}/stories?limit=${limit}`, {
+      headers: getAuthHeaders(),
+    });
+    console.log("[getUserStories] Response:", res.data);
+    return res.data.data || {};
+  } catch (err) {
+    console.log("[getUserStories] Error or endpoint not found:", err.response?.status, err.message);
+    return { active_stories: [], archived_stories: [] };
+  }
+};
+
+/**
+ * GET /api/v1/highlights/:highlightId
+ * Get highlight details
+ */
+export const getHighlightDetails = async (highlightId) => {
+  const res = await axios.get(`${API_BASE}/highlights/${highlightId}`, {
+    headers: getAuthHeaders(),
+  });
+  return res.data.data;
+};
+
+/**
+ * PUT /api/v1/highlights/:highlightId
+ * Update highlight
+ */
+export const updateHighlight = async (highlightId, data) => {
+  const res = await axios.put(`${API_BASE}/highlights/${highlightId}`, data, {
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+  });
+  return res.data.data;
+};
+
+/**
+ * GET /api/v1/highlights/:highlightId/stories
+ * Get stories in a highlight
+ */
+export const getHighlightStories = async (highlightId) => {
+  const res = await axios.get(`${API_BASE}/highlights/${highlightId}/stories`, {
+    headers: getAuthHeaders(),
+  });
+  return res.data.data?.stories ?? [];
+};
+
+/**
+ * POST /api/v1/highlights/:highlightId/view
+ * Mark highlight as viewed
+ */
+export const markHighlightViewed = async (highlightId) => {
+  const res = await axios.post(
+    `${API_BASE}/highlights/${highlightId}/view`,
+    {},
+    { headers: getAuthHeaders() }
+  );
+  return res.data;
+};
+
+/**
+ * GET /api/v1/highlights/:highlightId/viewers
+ * Get highlight viewers (owner only)
+ */
+export const getHighlightViewers = async (highlightId, limit = 20) => {
+  const res = await axios.get(
+    `${API_BASE}/highlights/${highlightId}/viewers?limit=${limit}`,
+    { headers: getAuthHeaders() }
+  );
+  return res.data.data?.viewers ?? [];
 };
 
 // =====================================================

@@ -92,6 +92,11 @@
       "type": "string"
     },
     {
+      "key": "recipient_id",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "user_id",
       "value": "",
       "type": "string"
@@ -1508,7 +1513,96 @@
           }
         },
         {
-          "name": "4a. Get User Stories (Profile)",
+          "name": "4a. Get My Story Archive (expired stories)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/stories/archive?limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stories",
+                "archive"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get the authenticated user's story archive (expired stories that were automatically archived). Only visible to owner."
+          }
+        },
+        {
+          "name": "4b. Create Highlight with Archived Stories",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Archived Stories\",\n  \"storyIds\": [\n    \"{{archived_story_id}}\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/highlights/create",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "highlights",
+                "create"
+              ]
+            },
+            "description": "Create a highlight with archived stories. Use story_id from the archive response."
+          }
+        },
+        {
+          "name": "4c. Add Archived Story to Existing Highlight",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"story_id\": \"{{archived_story_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/highlights/{{highlight_id}}/stories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "highlights",
+                "{{highlight_id}}",
+                "stories"
+              ]
+            },
+            "description": "Add an archived story to an existing highlight. Use original_story_id from archive response."
+          }
+        },
+        {
+          "name": "4b. Get User Stories (Profile)",
           "request": {
             "method": "GET",
             "url": {
@@ -1927,6 +2021,289 @@
                   ]
                 },
                 "description": "Get list of users who viewed a highlight (owner only)"
+              }
+            }
+          ]
+        },
+        {
+          "name": "── Share Story ──",
+          "item": [
+            {
+              "name": "S1. Share Story to DM",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content_id\": \"{{story_id}}\",\n  \"content_type\": \"story\",\n  \"shared_to\": \"direct_message\",\n  \"recipient_id\": \"{{target_user_id}}\",\n  \"message\": \"Check this out! 🎉\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/shares",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "shares"
+                  ]
+                },
+                "description": "Share a story to a user's direct message.\n\nParameters:\n- content_id: The story_id to share\n- content_type: Must be 'story'\n- shared_to: 'direct_message' for DM\n- recipient_id: User ID of the recipient\n- message: Optional message to attach"
+              }
+            },
+            {
+              "name": "S2. Share Story Externally (Link)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content_id\": \"{{story_id}}\",\n  \"content_type\": \"story\",\n  \"shared_to\": \"external\",\n  \"message\": \"Check this story! 🔥\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/shares",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "shares"
+                  ]
+                },
+                "description": "Share a story externally (link copy, social media, etc.)\n\nParameters:\n- content_id: The story_id to share\n- content_type: Must be 'story'\n- shared_to: 'external' for external sharing\n- message: Optional message to attach"
+              }
+            },
+            {
+              "name": "S3. Get Share History",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/api/v1/shares?limit=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "shares"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Get your share history (what content you've shared)"
+              }
+            }
+          ]
+        },
+        {
+          "name": "🚨 Report Content ──",
+          "item": [
+            {
+              "name": "R1. Report Post",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"post\",\n  \"target_id\": \"{{post_id}}\",\n  \"reason\": \"spam\",\n  \"description\": \"This post contains misleading content\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/reports",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports"
+                  ]
+                },
+                "description": "Report a post for violating community guidelines.\n\ntarget_type: 'post' | 'comment' | 'reel' | 'story' | 'user'\nreason: 'spam' | 'harassment' | 'hate_speech' | 'violence' | 'nudity' | 'fake_profile' | 'misinformation' | 'other'"
+              }
+            },
+            {
+              "name": "R2. Report Story",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"story\",\n  \"target_id\": \"{{story_id}}\",\n  \"reason\": \"harassment\",\n  \"description\": \"This story is harassing me\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/reports",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports"
+                  ]
+                },
+                "description": "Report a story for violating community guidelines."
+              }
+            },
+            {
+              "name": "R3. Report Reel",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"reel\",\n  \"target_id\": \"{{reel_id}}\",\n  \"reason\": \"violence\",\n  \"description\": \"This content shows violence\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/reports",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports"
+                  ]
+                },
+                "description": "Report a reel for violating community guidelines."
+              }
+            },
+            {
+              "name": "R4. Report Comment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"comment\",\n  \"target_id\": \"{{comment_id}}\",\n  \"reason\": \"hate_speech\",\n  \"description\": \"This comment contains hate speech\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/reports",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports"
+                  ]
+                },
+                "description": "Report a comment for violating community guidelines."
+              }
+            },
+            {
+              "name": "R5. Report User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"user\",\n  \"target_id\": \"{{target_user_id}}\",\n  \"reason\": \"fake_profile\",\n  \"description\": \"This is a fake account impersonating someone\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/reports",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports"
+                  ]
+                },
+                "description": "Report a user for violating community guidelines (fake profile, etc.)"
+              }
+            },
+            {
+              "name": "R6. Get My Reports",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/api/v1/reports/my?limit=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports",
+                    "my"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "description": "Get list of reports you've submitted"
+              }
+            },
+            {
+              "name": "R7. Withdraw Report",
+              "request": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{base_url}}/api/v1/reports/{{report_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports",
+                    "{{report_id}}"
+                  ]
+                },
+                "description": "Withdraw a pending report (can only withdraw reports that are still pending)"
               }
             }
           ]
