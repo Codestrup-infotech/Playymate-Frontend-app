@@ -3,10 +3,6 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
 
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -20,14 +16,8 @@ const nextConfig = {
     NEXT_PUBLIC_API_TIMEOUT: process.env.NEXT_PUBLIC_API_TIMEOUT,
   },
 
-  webpack: (config) => {
-    config.resolve.fallback = {
-      fs: false,
-      net: false,
-      tls: false,
-    };
-    return config;
-  },
+  // Turbopack conflict avoid karne ke liye
+  turbopack: {},
 };
 
 export default nextConfig;
