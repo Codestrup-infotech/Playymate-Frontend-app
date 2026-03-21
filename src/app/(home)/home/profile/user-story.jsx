@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { User, MoreHorizontal, Heart, Send, MessageCircle, Flag, X, ChevronLeft, ChevronRight, Volume2, VolumeX, Pause, Play } from "lucide-react";
 import { userService } from "@/services/user";
 import { useTheme } from "@/lib/ThemeContext";
+import { Heart as HeartFilled } from "lucide-react";
 
 export default function UserStory({ userId, profile }) {
   const { theme } = useTheme();
@@ -23,6 +24,11 @@ export default function UserStory({ userId, profile }) {
 
   // ✅ Popup state
   const [showOptions, setShowOptions] = useState(false);
+
+  // ✅ Like state - persist locally for story viewer session
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+  const [initializedLikeState, setInitializedLikeState] = useState(false);
 
   // Initial fetch for showing story ring on profile
   useEffect(() => {
@@ -159,6 +165,73 @@ export default function UserStory({ userId, profile }) {
   }, [storyIndex, showStoryViewer, isPaused, goToNextStory]);
 
   const currentStory = stories[storyIndex] || null;
+
+  // ✅ Sync like state with current story only on first load
+  useEffect(() => {
+    if (currentStory && !initializedLikeState) {
+      // Only initialize from API data once per story
+      const wasLiked = currentStory.is_liked || currentStory.liked || false;
+      setIsLiked(wasLiked);
+      setInitializedLikeState(true);
+    }
+  }, [storyIndex, currentStory, initializedLikeState]);
+
+  // Reset initialization flag when opening story viewer
+  useEffect(() => {
+    if (showStoryViewer) {
+      setInitializedLikeState(false);
+    }
+  }, [showStoryViewer]);
+
+  // ✅ Handle like/unlike toggle
+  const handleLikeToggle = async (e) => {
+    e.stopPropagation();
+    if (!currentStory || likeLoading) return;
+
+    // Get the correct story ID (story_id or _id)
+    const storyId = currentStory.story_id || currentStory._id || currentStory.id;
+    console.log('[UserStory] Toggle like - Story ID:', storyId, 'Current liked state:', isLiked);
+    
+    if (!storyId) {
+      console.error('[UserStory] No story ID found');
+      return;
+    }
+
+    // Optimistic update - immediately toggle the UI
+    const newLikedState = !isLiked;
+    setIsLiked(newLikedState);
+    
+    setLikeLoading(true);
+    try {
+      const response = await userService.toggleStoryLike(storyId);
+      const result = response?.data;
+      
+      console.log('[UserStory] Like toggle response:', result);
+      
+      if (result?.status === 'success') {
+        // Confirm with API response
+        const apiLiked = result.data?.liked || false;
+        setIsLiked(apiLiked);
+        // Update the story in the stories array to reflect the new like state
+        setStories((prevStories) =>
+          prevStories.map((story, idx) =>
+            idx === storyIndex
+              ? { ...story, is_liked: apiLiked }
+              : story
+          )
+        );
+      } else {
+        // Revert on error
+        setIsLiked(!newLikedState);
+      }
+    } catch (err) {
+      console.error('[UserStory] Error toggling like:', err);
+      // Revert on error
+      setIsLiked(!newLikedState);
+    } finally {
+      setLikeLoading(false);
+    }
+  };
 
   // Helper to format time ago
   const getTimeAgo = (dateString) => {
@@ -337,9 +410,17 @@ export default function UserStory({ userId, profile }) {
                 <MessageCircle size={24} />
                 <span className="text-xs">Message</span>
               </button>
-              <button className="flex flex-col items-center gap-1">
-                <Heart size={24} />
-                <span className="text-xs">Like</span>
+              <button 
+                className={`flex flex-col items-center gap-1 ${isLiked ? 'text-red-500' : 'text-white'}`}
+                onClick={handleLikeToggle}
+                disabled={likeLoading}
+              >
+                {isLiked ? (
+                  <HeartFilled size={24} className="animate-pulse" />
+                ) : (
+                  <Heart size={24} />
+                )}
+                <span className="text-xs">{isLiked ? 'Liked' : 'Like'}</span>
               </button>
               <button className="flex flex-col items-center gap-1">
                 <Send size={24} />

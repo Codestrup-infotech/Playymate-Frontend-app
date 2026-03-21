@@ -37,6 +37,7 @@ import BioPopup from "@/app/components/profileCompletion/BioPopup.jsx";
 import UserPostDetailModal from "../../components/UserPostDetailModal.jsx";
 import UserFollowModal from "../../components/UserFollowersFollowing.jsx";
 import UserStory from "../user-story.jsx";
+import Highlights from "../../components/highlights.jsx";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -426,6 +427,9 @@ export default function UserProfilePage() {
             </div>
           </div>
         )}
+
+        {/* Highlights Section */}
+        <Highlights userId={profileData?._id} isOwner={isOwnProfile} />
 
         {/* Tabs */}
         <div className={`${isDark ? "bg-gray-800" : "bg-white"} rounded-2xl shadow-sm overflow-hidden`}>

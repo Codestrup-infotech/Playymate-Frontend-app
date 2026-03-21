@@ -148,6 +148,15 @@ api.post("/api/v1/auth/signup/email-password", {
 
   // Check follow status
   getFollowStatus: (userId) => api.get(`/users/${userId}/follow-status`),
+
+  // ============ LIKES/REACTIONS ============
+  // Toggle like on story
+  toggleStoryLike: (storyId) => 
+    api.post('/likes/toggle', {
+      content_type: 'story',
+      content_id: storyId,
+      reaction: 'like'
+    }),
 };
 
 export default userService;
