@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint"
   },
   "dependencies": {
     "@aws-amplify/ui-react-liveness": "^3.6.1",
@@ -16,20 +16,19 @@
     "@aws-sdk/s3-request-presigner": "^3.1009.0",
     "aws-amplify": "^6.16.3",
     "axios": "^1.13.4",
-    "express-rate-limit": "^8.3.1",
     "firebase": "^12.9.0",
     "lucide-react": "^0.563.0",
-    "next": "16.1.6",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
+    "next": "14.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "react-icons": "^5.6.0",
     "socket.io-client": "^4.8.3",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.24",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.2.5",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19"
   }
