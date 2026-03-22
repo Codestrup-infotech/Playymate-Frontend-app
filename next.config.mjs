@@ -17,7 +17,7 @@ const nextConfig = {
   },
 
   // Turbopack conflict avoid karne ke liye
-  turbopack: {},
+  // turbopack: {},
 };
 
 export default nextConfig;
