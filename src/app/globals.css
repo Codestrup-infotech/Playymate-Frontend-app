@@ -2,17 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-
-
+/* Buttons */
 .btn-main {
   @apply w-full py-3 rounded-xl font-semibold mb-3;
-  background: linear-gradient(90deg,#ff4ecd,#ff9f43);
+  background: linear-gradient(90deg, #ff4ecd, #ff9f43);
 }
 
 .btn-outline {
   @apply w-full py-3 border border-gray-700 rounded-xl mb-3;
 }
 
+/* Inputs */
 .input {
   @apply w-full bg-[#111] border border-gray-700 px-4 py-3 rounded-xl mb-6 outline-none;
 }
@@ -25,9 +25,11 @@
   @apply w-12 h-12 text-center bg-[#111] border border-gray-700 rounded-lg text-xl;
 }
 
+/* ========================= */
+/* Orbit Animations */
+/* ========================= */
 
-
-/* Animation for Outer Ring (6 Avatars) */
+/* Outer Ring (6 Avatars) */
 @keyframes orbit-outer {
   0%, 100% {
     transform: rotate(var(--angle)) translate(150px) rotate(calc(var(--angle) * -1));
@@ -43,7 +45,7 @@
   }
 }
 
-/* Animation for Inner Ring Edge (2 Avatars - Half in/Half out) */
+/* Inner Ring (2 Avatars) */
 @keyframes orbit-inner {
   0%, 100% {
     transform: rotate(var(--angle)) translate(96px) rotate(calc(var(--angle) * -1));
@@ -72,20 +74,55 @@
 
 
 
-/* .animate-variant2 {
-  animation:
-    blast-out 0.5s ease-out forwards,
-    orbit-spin 16s linear infinite;
 
-  animation-delay: 1.34s, 2.2s;
-} */
+/* ========================= */
+/* Mobile Responsive Orbit Animations */
+/* ========================= */
+
+@keyframes orbit-outer {
+  0%, 100% {
+    transform: rotate(var(--angle)) translate(130px) rotate(calc(var(--angle) * -1));
+  }
+  25% {
+    transform: rotate(calc(var(--angle) - 30deg)) translate(160px) rotate(calc((var(--angle) - 30deg) * -1));
+  }
+  50% {
+    transform: rotate(var(--angle)) translate(130px) rotate(calc(var(--angle) * -1));
+  }
+  75% {
+    transform: rotate(calc(var(--angle) + 30deg)) translate(160px) rotate(calc((var(--angle) + 30deg) * -1));
+  }
+}
+
+/* Inner Ring (2 Avatars) */
+@keyframes orbit-inner {
+  0%, 100% {
+    transform: rotate(var(--angle)) translate(90px) rotate(calc(var(--angle) * -1));
+  }
+  25% {
+    transform: rotate(calc(var(--angle) - 30deg)) translate(75px) rotate(calc((var(--angle) - 30deg) * -1));
+  }
+  50% {
+    transform: rotate(var(--angle)) translate(90px) rotate(calc(var(--angle) * -1));
+  }
+  75% {
+    transform: rotate(calc(var(--angle) + 30deg)) translate(75px) rotate(calc((var(--angle) + 30deg) * -1));
+  }
+}
+
+.animate-orbit-outer {
+  animation: orbit-outer 7s ease-in-out infinite;
+}
+
+.animate-orbit-inner {
+  animation: orbit-inner 7s ease-in-out infinite;
+}
 
 
 
-
-
-
-/* Personal Verifiction Flow */
+/* ========================= */
+/* Scrollbar Styles */
+/* ========================= */
 
 /* Hide scrollbar but keep scrolling */
 .scrollbar-hide::-webkit-scrollbar {
@@ -94,24 +131,22 @@
 }
 
 .scrollbar-hide {
-  -ms-overflow-style: none;   /* IE / old Edge */
-  scrollbar-width: none;     /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-
-/* Dark custom scrollbar */
+/* Custom Dark Scrollbar */
 .custom-scrollbar {
-  scrollbar-width: thin;            /* Firefox */
-  scrollbar-color: #393935 #000000;    /* thumb track */
+  scrollbar-width: thin;
+  scrollbar-color: #393935 #000000;
 }
 
-/* Chrome, Edge, Safari */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent; /* no bg color */
+  background: transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
@@ -119,57 +154,17 @@
   border-radius: 9999px;
 }
 
+/* ========================= */
+/* Verification Scan Animation */
+/* ========================= */
 
-/* Animation for Outer Ring (6 Avatars) */
-@keyframes orbit-outer {
-  0%, 100% {
-    transform: rotate(var(--angle)) translate(150px) rotate(calc(var(--angle) * -1));
-  }
-  25% {
-    transform: rotate(calc(var(--angle) - 40deg)) translate(180px) rotate(calc((var(--angle) - 40deg) * -1));
-  }
-  50% {
-    transform: rotate(var(--angle)) translate(150px) rotate(calc(var(--angle) * -1));
-  }
-  75% {
-    transform: rotate(calc(var(--angle) + 40deg)) translate(180px) rotate(calc((var(--angle) + 40deg) * -1));
-  }
-}
-
-/* Animation for Inner Ring Edge (2 Avatars - Half in/Half out) */
-@keyframes orbit-inner {
-  0%, 100% {
-    transform: rotate(var(--angle)) translate(96px) rotate(calc(var(--angle) * -1));
-  }
-  25% {
-    transform: rotate(calc(var(--angle) - 40deg)) translate(110px) rotate(calc((var(--angle) - 40deg) * -1));
-  }
-  50% {
-    transform: rotate(var(--angle)) translate(96px) rotate(calc(var(--angle) * -1));
-  }
-  75% {
-    transform: rotate(calc(var(--angle) + 40deg)) translate(110px) rotate(calc((var(--angle) + 40deg) * -1));
-  }
-}
-
-.animate-orbit-outer {
-  animation: orbit-outer 7s ease-in-out infinite;
-}
-
-.animate-orbit-inner {
-  animation: orbit-inner 7s ease-in-out infinite;
-}
-
-/* verifiction capture line */
 @keyframes scan {
   0% {
     top: 10%;
   }
-
   50% {
     top: 80%;
   }
-
   100% {
     top: 10%;
   }
@@ -178,4 +173,3 @@
 .animate-scan {
   animation: scan 2.2s linear infinite;
 }
-

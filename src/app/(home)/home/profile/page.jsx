@@ -34,6 +34,7 @@ import BioPopup from "@/app/components/profileCompletion/BioPopup.jsx";
 import PostDetailModal from "../components/PostDetailModal.jsx";
 import FollowModal from "../components/FollowersFollowing.jsx";
 import Highlights from '../components/highlights.jsx';
+import CoverPhotoUpload from './cover-photo.jsx';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -122,6 +123,9 @@ export default function ProfilePage() {
   const [selectedPostLoading, setSelectedPostLoading] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
 
+  // Cover photo state
+  const [coverPhoto, setCoverPhoto] = useState(null);
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -136,6 +140,8 @@ export default function ProfilePage() {
         console.log("=============================");
 
         setProfile(data);
+        // Set cover photo from profile data
+        setCoverPhoto(data?.cover_photo?.url || null);
       } catch (err) {
         console.error("Profile fetch error:", err);
         setError(err.message || "Failed to load profile");
@@ -150,6 +156,16 @@ export default function ProfilePage() {
   const handleBioSave = (newBio) => {
     setProfile((prev) => ({ ...prev, bio: newBio }));
     setShowBioPopup(false);
+  };
+
+  // Handle cover photo update
+  const handleCoverPhotoUpdate = (newCoverPhotoUrl) => {
+    setCoverPhoto(newCoverPhotoUrl);
+    // Also update the profile data
+    setProfile((prev) => ({
+      ...prev,
+      cover_photo: newCoverPhotoUrl ? { url: newCoverPhotoUrl } : null
+    }));
   };
 
   // Fetch posts when Posts tab is active
@@ -504,7 +520,17 @@ export default function ProfilePage() {
       >
 
   {/* ───── COVER PHOTO ───── */}
-  <div className="relative h-52 w-full bg-gradient-to-l from-[#FF8319] to-[#EF3AFF]  ">
+  <div className="relative h-52 w-full">
+    {/* Cover photo or gradient background */}
+    {coverPhoto ? (
+      <img 
+        src={coverPhoto} 
+        alt="Cover Photo" 
+        className="w-full h-full object-cover"
+      />
+    ) : (
+      <div className="absolute inset-0 bg-gradient-to-l from-[#FF8319] to-[#EF3AFF]" />
+    )}
 
     {/* overlay */}
     <div className="absolute inset-0 bg-black/20" />
@@ -516,10 +542,12 @@ export default function ProfilePage() {
 
             {is_own_profile && (
               <div className="flex gap-2">
-                <button className="px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg text-sm flex items-center gap-2">
-                  <ImageIcon size={16} />
-                  Edit Cover Photo
-                </button>
+                <CoverPhotoUpload
+                  userId={profile?._id}
+                  currentCoverPhoto={coverPhoto}
+                  onCoverPhotoUpdate={handleCoverPhotoUpdate}
+                  isDark={isDark}
+                />
 
                 <button
                   onClick={() => router.push("/home/profile/edit")}

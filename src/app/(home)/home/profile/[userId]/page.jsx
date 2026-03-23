@@ -12,7 +12,7 @@ import {
   ShieldCheck,
   Mail,
   Phone,
-  GraduationCap,
+  GraduationCap,  
   Briefcase,
   Calendar,
   User,
@@ -25,7 +25,8 @@ import {
   Film,
   ArrowLeft,
   UserPlus,
-  UserMinus
+  UserMinus,
+  ChevronDown
 } from "lucide-react";
 
 
@@ -38,6 +39,8 @@ import UserPostDetailModal from "../../components/UserPostDetailModal.jsx";
 import UserFollowModal from "../../components/UserFollowersFollowing.jsx";
 import UserStory from "../user-story.jsx";
 import Highlights from "../../components/highlights.jsx";
+import UserFollowUnfollow from "../../components/UserFollowUnfollow.jsx";
+import SharePopup from "../../components/sharepopup.jsx";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -129,7 +132,15 @@ export default function UserProfilePage() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [selectedPostLoading, setSelectedPostLoading] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
+  const [showFollowOptions, setShowFollowOptions] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  
+  // Mute/Unmute state
+  const [isMuted, setIsMuted] = useState(false);
+  const [isCloseFriend, setIsCloseFriend] = useState(false);
+  
+  // Share popup state
+  const [showSharePopup, setShowSharePopup] = useState(false);
 
   // Helper function to check if string is a valid MongoDB ObjectId
   const isObjectId = (str) => {
@@ -142,6 +153,97 @@ export default function UserProfilePage() {
     setCurrentUserId(user?.user_id || user?._id);
     setCurrentUser(user);
   }, []);
+
+  // Handle follow a user
+  const handleFollow = async () => {
+    try {
+      await userService.followUser(userId);
+      setProfile((prev) => ({
+        ...prev,
+        is_following: true,
+        stats: {
+          ...prev.stats,
+          followers_count: (prev.stats?.followers_count || 0) + 1
+        }
+      }));
+    } catch (error) {
+      console.error("Error following user:", error);
+    }
+  };
+
+  // Handle unfollow from popup
+  const handleUnfollowFromPopup = async () => {
+    try {
+      await userService.unfollowUser(userId);
+      setProfile((prev) => ({
+        ...prev,
+        is_following: false,
+        stats: {
+          ...prev.stats,
+          followers_count: Math.max((prev.stats?.followers_count || 0) - 1, 0)
+        }
+      }));
+      // Don't close popup - keep it open so user can re-follow if needed
+    } catch (error) {
+      console.error("Error unfollowing user:", error);
+    }
+  };
+
+  // Handle mute user
+  const handleMuteUser = async () => {
+    try {
+      await userService.muteUser(userId);
+      setIsMuted(true);
+      console.log("User muted successfully");
+    } catch (error) {
+      console.error("Error muting user:", error);
+    }
+  };
+
+  // Handle unmute user
+  const handleUnmuteUser = async () => {
+    try {
+      await userService.unmuteUser(userId);
+      setIsMuted(false);
+      console.log("User unmuted successfully");
+    } catch (error) {
+      console.error("Error unmuting user:", error);
+    }
+  };
+
+  // Handle add to close friends
+  const handleAddToCloseFriends = async () => {
+    try {
+      // Use the username from profile state or from userId if it's a username
+      const username = profile?.username || userId;
+      if (!username) {
+        console.error("No username available to add to close friends");
+        return;
+      }
+      await userService.addToCloseFriends(username);
+      setIsCloseFriend(true);
+      console.log("User added to close friends");
+    } catch (error) {
+      console.error("Error adding to close friends:", error);
+    }
+  };
+
+  // Handle remove from close friends
+  const handleRemoveFromCloseFriends = async () => {
+    try {
+      // Use the username from profile state or from userId if it's a username
+      const username = profile?.username || userId;
+      if (!username) {
+        console.error("No username available to remove from close friends");
+        return;
+      }
+      await userService.removeFromCloseFriends(username);
+      setIsCloseFriend(false);
+      console.log("User removed from close friends");
+    } catch (error) {
+      console.error("Error removing from close friends:", error);
+    }
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -171,6 +273,10 @@ export default function UserProfilePage() {
         console.log("===================================");
         
         setProfile(data);
+        
+        // Set mute and close friend status from API response
+        setIsMuted(data.is_muted === true);
+        setIsCloseFriend(data.is_close_friend === true);
         
         // URL Rewrite: If user has username and current URL uses userId, update URL to show username
         if (data.username && userId !== data.username) {
@@ -387,11 +493,14 @@ export default function UserProfilePage() {
                   </>
                 ) : (
                   <>
-                    <button className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2">
+                    <button 
+                      onClick={() => profileData.is_following ? setShowFollowOptions(true) : handleFollow()}
+                      className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2"
+                    >
                       {profileData.is_following ? (
                         <>
-                          <UserMinus size={16} />
-                          Unfollow
+                          <span>Following</span>
+                          <ChevronDown size={16} />
                         </>
                       ) : (
                         <>
@@ -404,7 +513,10 @@ export default function UserProfilePage() {
                       <MessageCircle size={16} />
                       Message
                     </button>
-                    <button className={`p-2 rounded-lg ${isDark ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-100 hover:bg-gray-200"}`}>
+                    <button 
+                      onClick={() => setShowSharePopup(true)}
+                      className={`p-2 rounded-lg ${isDark ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-100 hover:bg-gray-200"}`}
+                    >
                       <Share2 size={20} className={isDark ? "text-white" : "text-gray-700"} />
                     </button>
                   </>
@@ -571,6 +683,23 @@ export default function UserProfilePage() {
         />
       )}
 
+      {/* Follow/Unfollow Options Popup */}
+      <UserFollowUnfollow
+        isOpen={showFollowOptions}
+        onClose={() => setShowFollowOptions(false)}
+        userId={userId}
+        onUnfollow={handleUnfollowFromPopup}
+        userName={profileData?.full_name || profileData?.username}
+        userProfileImage={profileData?.profile_image_url}
+        isMuted={isMuted}
+        isCloseFriend={isCloseFriend}
+        onMute={handleMuteUser}
+        onUnmute={handleUnmuteUser}
+        onAddCloseFriend={handleAddToCloseFriends}
+        onRemoveCloseFriend={handleRemoveFromCloseFriends}
+        username={profileData?.username}
+      />
+
       {/* Followers/Following Modal */}
       <UserFollowModal
         type={followModalType}
@@ -581,6 +710,16 @@ export default function UserProfilePage() {
         followersData={profileData?.followers}
         followingData={profileData?.following}
         mutualData={profileData?.mutual}
+      />
+
+      {/* Share Profile Popup */}
+      <SharePopup
+        isOpen={showSharePopup}
+        onClose={() => setShowSharePopup(false)}
+        contentType="profile"
+        contentId={profileData?.username || userId}
+        thumbnail={profileData?.profile_image_url}
+        title={profileData?.full_name ? `@${profileData.username} - ${profileData.full_name}` : `@${profileData?.username}`}
       />
     </div>
   );

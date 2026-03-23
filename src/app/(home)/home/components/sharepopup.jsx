@@ -373,16 +373,10 @@ function DMUserPicker({ contentType, contentId, thumbnail, title, onShareSuccess
       
       // ALWAYS store the thumbnail - even if API doesn't return signed_urls
       // This ensures we have at least the thumbnail to display
+      // Note: content_author_id will be stored in the main shareData block below
       if (thumbnail) {
         console.log('[DMUserPicker] Storing thumbnail as fallback:', thumbnail);
-        const shareData = {
-          content_id: contentId,
-          content_type: contentType,
-          signed_urls: { media: [{ type: 'image', url: thumbnail }] },
-          timestamp: Date.now()
-        };
-        sessionStorage.setItem('latest_share', JSON.stringify(shareData));
-        console.log('[DMUserPicker] Stored thumbnail in sessionStorage:', shareData);
+        // content_author_id will be stored in the main block below if available
       }
       
       if (shareData) {
@@ -390,17 +384,24 @@ function DMUserPicker({ contentType, contentId, thumbnail, title, onShareSuccess
         const signed_urls = shareData.signed_urls || shareData.media;
         const content_type = shareData.content_type || 'post';
         const share_id = shareData.share_id; // Store the share_id
+        const content_author_id = shareData.content_author_id; // Store original post author
+        const sharer_id = shareData.sharer_id; // Store sharer ID
+        
+        console.log('[DMUserPicker] shareData content_author_id:', content_author_id);
+        console.log('[DMUserPicker] shareData sharer_id:', sharer_id);
         
         // Also use the thumbnail if no signed_urls
         const displayUrls = signed_urls || { media: thumbnail ? [{ type: 'image', url: thumbnail }] : [] };
         
-        console.log('[DMUserPicker] Storing share data for display:', { content_id, content_type, share_id, signed_urls: displayUrls });
+        console.log('[DMUserPicker] Storing share data for display:', { content_id, content_type, share_id, content_author_id, sharer_id, signed_urls: displayUrls });
         // Store in sessionStorage for the messages page to retrieve
         try {
           const shareKey = `share_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           sessionStorage.setItem(shareKey, JSON.stringify({
             content_id,
             content_type,
+            content_author_id,
+            sharer_id,
             share_id,
             signed_urls: displayUrls,
             timestamp: Date.now()
@@ -409,6 +410,8 @@ function DMUserPicker({ contentType, contentId, thumbnail, title, onShareSuccess
           sessionStorage.setItem('latest_share', JSON.stringify({
             content_id,
             content_type,
+            content_author_id,
+            sharer_id,
             share_id,
             signed_urls: displayUrls,
             timestamp: Date.now()

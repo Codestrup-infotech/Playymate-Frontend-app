@@ -83,10 +83,17 @@ export default function UserStory({ userId, profile }) {
 
       const allStories = [...activeStories, ...archivedStories];
       
-      console.log("[UserStory] Fetched stories:", { activeStories, archivedStories, allStories, count: allStories.length });
+      // ✅ Sort stories by creation date - newest first (first story shown first)
+      const sortedStories = allStories.sort((a, b) => {
+        const dateA = new Date(a.created_at || a.createdAt || 0);
+        const dateB = new Date(b.created_at || b.createdAt || 0);
+        return dateA - dateB; // Oldest first (chronological order)
+      });
       
-      if (allStories.length > 0) {
-        setStories(allStories);
+      console.log("[UserStory] Fetched stories:", { activeStories, archivedStories, allStories, sortedStories, count: sortedStories.length });
+      
+      if (sortedStories.length > 0) {
+        setStories(sortedStories);
         setHasStories(true);
         setStoryIndex(0);
         setShowStoryViewer(true);

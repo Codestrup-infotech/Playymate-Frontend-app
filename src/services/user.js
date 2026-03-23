@@ -116,6 +116,13 @@ api.post("/api/v1/auth/signup/email-password", {
     });
   },
 
+  // Upload cover photo to presigned URL
+  uploadCoverPhotoToPresigned: async (presignedUrl, file, contentType) => {
+    return axios.put(presignedUrl, file, {
+      headers: { 'Content-Type': contentType },
+    });
+  },
+
   // ============ HELPERS ============
   // Get current user profile (if needed)
   getMe: () => api.get('/users/me'),
@@ -149,6 +156,29 @@ api.post("/api/v1/auth/signup/email-password", {
   // Check follow status
   getFollowStatus: (userId) => api.get(`/users/${userId}/follow-status`),
 
+  // ============ MUTE/UNMUTE ============
+  // Mute a user
+  muteUser: (userId, muteOptions = { mute_posts: true, mute_stories: true, mute_notifications: false }) => 
+    api.post(`/users/${userId}/mute`, muteOptions),
+
+  // Unmute a user
+  unmuteUser: (userId) => api.delete(`/users/${userId}/mute`),
+
+  // Get muted users list
+  getMutedUsers: (limit = 20, cursor = null) => 
+    api.get('/users/muted', { params: { limit, cursor } }),
+
+  // ============ CLOSE FRIENDS ============
+  // Add user to close friends (by username)
+  addToCloseFriends: (username) => api.post(`/close-friends/${username}`),
+
+  // Remove user from close friends (by username)
+  removeFromCloseFriends: (username) => api.delete(`/close-friends/${username}`),
+
+  // Get close friends list
+  getCloseFriends: (limit = 20, cursor = null) => 
+    api.get('/close-friends', { params: { limit, cursor } }),
+
   // ============ LIKES/REACTIONS ============
   // Toggle like on story
   toggleStoryLike: (storyId) => 
@@ -157,6 +187,26 @@ api.post("/api/v1/auth/signup/email-password", {
       content_id: storyId,
       reaction: 'like'
     }),
+
+  // ============ COVER PHOTO ============
+  // Step 1: Get presigned URL for cover photo upload
+  getCoverPhotoPresign: (userId, fileName, mimeType, sizeBytes) => 
+    api.post(`/users/${userId}/cover-photo/presign`, {
+      file_name: fileName,
+      mime_type: mimeType,
+      size_bytes: sizeBytes
+    }),
+
+  // Step 2: Confirm cover photo upload
+  confirmCoverPhoto: (userId, fileUrl, fileKey) => 
+    api.post(`/users/${userId}/cover-photo/confirm`, {
+      file_url: fileUrl,
+      file_key: fileKey
+    }),
+
+  // Delete cover photo
+  deleteCoverPhoto: (userId) => 
+    api.delete(`/users/${userId}/cover-photo`),
 };
 
 export default userService;
