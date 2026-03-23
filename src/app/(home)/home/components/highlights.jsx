@@ -8,11 +8,14 @@ import {
   createHighlight, 
   deleteHighlight,
   addStoryToHighlight,
+  removeStoryFromHighlight,
   getArchivedStories,
   getMyAllStories,
   getHighlightStories,
   markHighlightViewed,
-  updateHighlight
+  updateHighlight,
+  getStoryPreview,
+  getHighlightDetails
 } from "@/app/user/homefeed";
 
 /**
@@ -32,6 +35,10 @@ export default function Highlights({ userId, isOwner = false }) {
   const [viewingHighlight, setViewingHighlight] = useState(null);
   const [editingHighlight, setEditingHighlight] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
+  
+  // Story preview state
+  const [storyPreview, setStoryPreview] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Fetch highlights on mount
   useEffect(() => {
@@ -75,8 +82,8 @@ export default function Highlights({ userId, isOwner = false }) {
       const newHighlight = await createHighlight(name, selectedStories);
       console.log("[Highlights] Created highlight:", newHighlight);
       
-      // Add to local state
-      if (newHighlight) {
+      // Add to local state - API returns the created highlight with highlight_id
+      if (newHighlight && newHighlight.highlight_id) {
         setHighlights(prev => [newHighlight, ...prev]);
       }
       setShowCreateModal(false);
@@ -130,6 +137,53 @@ export default function Highlights({ userId, isOwner = false }) {
     });
   };
 
+  // Handle click on highlight to show story preview
+  const handleHighlightClick = async (highlight) => {
+    setLoadingPreview(true);
+    try {
+      console.log("[Highlights] Fetching story preview for highlight:", highlight.highlight_id);
+      
+      // First get highlight details to get the stories
+      const highlightData = await getHighlightDetails(highlight.highlight_id);
+      console.log("[Highlights] Highlight details:", highlightData);
+      
+      const stories = highlightData?.stories || [];
+      if (stories.length === 0) {
+        console.log("[Highlights] No stories in highlight");
+        // No stories, open the full viewer
+        setViewingHighlight(highlight);
+        return;
+      }
+      
+      // Get the first story's ID
+      const firstStory = stories[0];
+      const storyId = firstStory.story_id || firstStory.id;
+      
+      if (!storyId) {
+        console.log("[Highlights] No story ID found");
+        setViewingHighlight(highlight);
+        return;
+      }
+      
+      // Fetch story preview
+      const preview = await getStoryPreview(storyId);
+      console.log("[Highlights] Story preview:", preview);
+      
+      setStoryPreview({
+        ...preview,
+        highlight, // Pass the highlight info for context
+        allStories: stories, // Pass all stories for navigation
+        currentIndex: 0 // Current story index
+      });
+    } catch (err) {
+      console.error("[Highlights] Error fetching story preview:", err);
+      // Fall back to opening the full highlight viewer
+      setViewingHighlight(highlight);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
   // Loading skeleton
   if (loading) {
     return (
@@ -176,15 +230,15 @@ export default function Highlights({ userId, isOwner = false }) {
             className="flex flex-col items-center gap-1.5 flex-shrink-0"
           >
             <button
-              onClick={() => setViewingHighlight(highlight)}
+              onClick={() => handleHighlightClick(highlight)}
               className="focus:outline-none group"
             >
               {/* Ring */}
               <div className="p-[2px] rounded-full bg-gradient-to-tr from-yellow-400 via-orange-500 to-pink-500 group-hover:from-pink-400 group-hover:to-purple-500 transition-all">
                 <div className="w-[66px] h-[66px] rounded-full overflow-hidden border-2 border-white dark:border-gray-800 bg-gray-100">
-                  {highlight.cover_image ? (
+                  {highlight.cover_image_url ? (
                     <Image
-                      src={highlight.cover_image}
+                      src={highlight.cover_image_url}
                       alt={highlight.name}
                       width={66}
                       height={66}
@@ -236,6 +290,65 @@ export default function Highlights({ userId, isOwner = false }) {
         />
       )}
 
+      {/* Story Preview Modal */}
+      {storyPreview && (
+        <StoryPreviewModal
+          story={storyPreview}
+          highlight={storyPreview.highlight}
+          allStories={storyPreview.allStories || []}
+          currentIndex={storyPreview.currentIndex || 0}
+          onClose={() => setStoryPreview(null)}
+          onViewAll={() => {
+            setStoryPreview(null);
+            setViewingHighlight(storyPreview.highlight);
+          }}
+          loading={loadingPreview}
+          onRemoveStory={async () => {
+            console.log("[StoryPreviewModal] storyPreview:", storyPreview);
+            const storyId = storyPreview?.story_id || storyPreview?._id;
+            const highlightId = storyPreview?.highlight?.highlight_id;
+            console.log("[StoryPreviewModal] Removing story, storyId:", storyId, "highlightId:", highlightId);
+            if (storyId) {
+              try {
+                await removeStoryFromHighlight(storyId, highlightId);
+                console.log("[StoryPreviewModal] Story removed successfully");
+                setStoryPreview(null);
+                // Refresh the highlights
+                if (highlightId) {
+                  const updatedHighlight = await getHighlightDetails(highlightId);
+                  console.log("[StoryPreviewModal] Updated highlight:", updatedHighlight);
+                  if (updatedHighlight) {
+                    setViewingHighlight(updatedHighlight);
+                  }
+                }
+              } catch (err) {
+                console.error("[StoryPreviewModal] Error removing story:", err);
+                alert("Failed to remove story from highlight");
+              }
+            } else {
+              console.error("[StoryPreviewModal] No story_id found");
+            }
+          }}
+          onEditHighlight={async () => {
+            // Open edit modal for the highlight - fetch details first
+            setStoryPreview(null);
+            try {
+              const details = await getHighlightDetails(storyPreview.highlight.highlight_id);
+              const stories = details?.stories || [];
+              const existingStoryIds = stories.map(s => s.story_id || s.id);
+              setEditingHighlight({
+                ...storyPreview.highlight,
+                stories: stories,
+                existingStoryIds: existingStoryIds
+              });
+            } catch (err) {
+              console.error("[Highlights] Error fetching highlight details:", err);
+              setEditingHighlight(storyPreview.highlight);
+            }
+          }}
+        />
+      )}
+
       {/* Highlight Viewer Modal */}
       {viewingHighlight && (
         <HighlightViewerModal
@@ -249,6 +362,7 @@ export default function Highlights({ userId, isOwner = false }) {
       {editingHighlight && (
         <EditHighlightModal
           highlight={editingHighlight}
+          existingStoryIds={editingHighlight.existingStoryIds || []}
           onClose={() => setEditingHighlight(null)}
           onSave={handleEditHighlight}
         />
@@ -266,9 +380,23 @@ export default function Highlights({ userId, isOwner = false }) {
             style={{ top: contextMenu.y, left: contextMenu.x }}
           >
             <button
-              onClick={() => {
-                setEditingHighlight(contextMenu.highlight);
+              onClick={async () => {
                 setContextMenu(null);
+                // Fetch highlight details to get existing stories
+                try {
+                  const details = await getHighlightDetails(contextMenu.highlight.highlight_id);
+                  const stories = details?.stories || [];
+                  const existingStoryIds = stories.map(s => s.story_id || s.id);
+                  setEditingHighlight({
+                    ...contextMenu.highlight,
+                    stories: stories,
+                    existingStoryIds: existingStoryIds
+                  });
+                } catch (err) {
+                  console.error("[Highlights] Error fetching highlight details:", err);
+                  // Fallback: open without stories
+                  setEditingHighlight(contextMenu.highlight);
+                }
               }}
               className="w-full px-4 py-3 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
             >
@@ -297,6 +425,10 @@ function CreateHighlightModal({ onClose, onCreate }) {
   const [archivedStories, setArchivedStories] = useState([]);
   const [selectedStories, setSelectedStories] = useState([]);
   const [loadingStories, setLoadingStories] = useState(true);
+  
+  // State for story preview modal in CreateHighlightModal
+  const [previewStory, setPreviewStory] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Load both active and archived stories in one call
   useEffect(() => {
@@ -356,6 +488,28 @@ function CreateHighlightModal({ onClose, onCreate }) {
     );
   };
 
+  // Handle clicking on a story to preview it
+  const handleStoryClick = async (story, e) => {
+    e.stopPropagation(); // Prevent selecting the story
+    const storyId = story.story_id || story.id;
+    if (!storyId) return;
+    
+    setLoadingPreview(true);
+    try {
+      const previewData = await getStoryPreview(storyId);
+      setPreviewStory(previewData);
+    } catch (err) {
+      console.error("[CreateHighlight] Error fetching story preview:", err);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  // Close preview modal
+  const closePreview = () => {
+    setPreviewStory(null);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm max-h-[80vh] overflow-hidden flex flex-col">
@@ -412,7 +566,7 @@ function CreateHighlightModal({ onClose, onCreate }) {
                           }`}
                         >
                           <Image
-                            src={story.thumbnail_url || story.media_url || "/placeholder.jpg"}
+                            src={story.media?.url || story.thumbnail_url || story.media_url || "/placeholder.jpg"}
                             alt="story"
                             fill
                             className="object-cover"
@@ -436,19 +590,32 @@ function CreateHighlightModal({ onClose, onCreate }) {
                       {archivedStories.map((story) => (
                         <div
                           key={story.story_id || story.id}
-                          onClick={() => toggleStory(story.story_id || story.id)}
                           className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 transition ${
                             selectedStories.includes(story.story_id || story.id)
                               ? "border-purple-500"
                               : "border-transparent"
                           }`}
                         >
-                          <Image
-                            src={story.thumbnail_url || story.media_url || "/placeholder.jpg"}
-                            alt="story"
-                            fill
-                            className="object-cover"
-                          />
+                          {/* Story Image - Click to select */}
+                          <div onClick={() => toggleStory(story.story_id || story.id)} className="absolute inset-0">
+                            <Image
+                              src={story.media?.url || story.thumbnail_url || story.media_url || "/placeholder.jpg"}
+                              alt="story"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          {/* Preview Button */}
+                          <button
+                            onClick={(e) => handleStoryClick(story, e)}
+                            className="absolute top-1 right-1 bg-black/50 rounded-full p-1 hover:bg-black/70"
+                            title="Preview story"
+                          >
+                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
                           {selectedStories.includes(story.story_id || story.id) && (
                             <div className="absolute inset-0 bg-purple-500/40 flex items-center justify-center">
                               <span className="text-white text-lg">✓</span>
@@ -489,6 +656,231 @@ function CreateHighlightModal({ onClose, onCreate }) {
       </div>
     </div>
   );
+
+  // Story Preview Modal for CreateHighlightModal
+  return (
+    <>
+      {/* Main Create Highlight Modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm max-h-[80vh] overflow-hidden flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">New Highlight</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
+              ✕
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-4 overflow-y-auto flex-1">
+            {/* Name Input */}
+            <div className="mb-4">
+              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                Highlight Name *
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., Summer Matches 2025"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:outline-none focus:border-purple-400"
+                maxLength={50}
+              />
+            </div>
+
+            {/* Stories Selection */}
+            <div>
+              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-2">
+                Select Stories ({selectedStories.length} selected)
+              </label>
+              
+              {loadingStories ? (
+                <div className="flex justify-center py-4">
+                  <div className="w-6 h-6 border-2 border-purple-400/30 border-t-purple-500 rounded-full animate-spin" />
+                </div>
+              ) : (
+                <>
+                  {/* Active Stories Section */}
+                  {activeStories.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Active Stories (24h)</p>
+                      <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+                        {activeStories.map((story) => (
+                          <div
+                            key={story.story_id || story.id}
+                            className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 transition ${
+                              selectedStories.includes(story.story_id || story.id)
+                                ? "border-purple-500"
+                                : "border-transparent"
+                            }`}
+                          >
+                            {/* Story Image - Click to select */}
+                            <div onClick={() => toggleStory(story.story_id || story.id)} className="absolute inset-0">
+                              <Image
+                                src={story.media?.url || story.thumbnail_url || story.media_url || "/placeholder.jpg"}
+                                alt="story"
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                            {/* Preview Button */}
+                            <button
+                              onClick={(e) => handleStoryClick(story, e)}
+                              className="absolute top-1 right-1 bg-black/50 rounded-full p-1 hover:bg-black/70"
+                              title="Preview story"
+                            >
+                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                            {selectedStories.includes(story.story_id || story.id) && (
+                              <div className="absolute inset-0 bg-purple-500/40 flex items-center justify-center">
+                                <span className="text-white text-lg">✓</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Archived Stories Section */}
+                  {archivedStories.length > 0 && (
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Archived Stories</p>
+                      <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+                        {archivedStories.map((story) => (
+                          <div
+                            key={story.story_id || story.id}
+                            className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 transition ${
+                              selectedStories.includes(story.story_id || story.id)
+                                ? "border-purple-500"
+                                : "border-transparent"
+                            }`}
+                          >
+                            {/* Story Image - Click to select */}
+                            <div onClick={() => toggleStory(story.story_id || story.id)} className="absolute inset-0">
+                              <Image
+                                src={story.media?.url || story.thumbnail_url || story.media_url || "/placeholder.jpg"}
+                                alt="story"
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                            {/* Preview Button */}
+                            <button
+                              onClick={(e) => handleStoryClick(story, e)}
+                              className="absolute top-1 right-1 bg-black/50 rounded-full p-1 hover:bg-black/70"
+                              title="Preview story"
+                            >
+                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                            {selectedStories.includes(story.story_id || story.id) && (
+                              <div className="absolute inset-0 bg-purple-500/40 flex items-center justify-center">
+                                <span className="text-white text-lg">✓</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {activeStories.length === 0 && archivedStories.length === 0 && (
+                    <p className="text-sm text-gray-400 italic">
+                      No stories available. You can create a highlight without selecting stories.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex gap-2 p-4 border-t dark:border-gray-700">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !name.trim()}
+              className="flex-1 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:from-purple-600 hover:to-pink-600 disabled:opacity-50"
+            >
+              {loading ? "Creating..." : "Create"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Story Preview Modal */}
+      {(previewStory || loadingPreview) && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4">
+          <div className="relative w-full max-w-sm">
+            {loadingPreview ? (
+              <div className="flex items-center justify-center h-[70vh]">
+                <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : previewStory ? (
+              <>
+                {/* Story Media */}
+                <div className="relative aspect-[9/16] max-h-[85vh] rounded-lg overflow-hidden bg-black">
+                  {previewStory.media?.type === "video" ? (
+                    <video
+                      src={previewStory.media?.url}
+                      autoPlay
+                      loop
+                      muted
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <Image
+                      src={previewStory.media?.url || "/placeholder.jpg"}
+                      alt="story preview"
+                      fill
+                      className="object-contain"
+                    />
+                  )}
+                </div>
+                
+                {/* Author Info */}
+                {previewStory.author && (
+                  <div className="absolute top-4 left-4 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white">
+                      <Image
+                        src={previewStory.author.profile_image_url || "/placeholder.jpg"}
+                        alt={previewStory.author.full_name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="text-white">
+                      <p className="text-sm font-medium">{previewStory.author.full_name}</p>
+                      <p className="text-xs text-white/70">@{previewStory.author.username}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Close Button */}
+                <button
+                  onClick={closePreview}
+                  className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70"
+                >
+                  ✕
+                </button>
+              </>
+            ) : null}
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
 // ============================================
@@ -497,9 +889,12 @@ function CreateHighlightModal({ onClose, onCreate }) {
 function HighlightViewerModal({ highlight, onClose, onDelete }) {
   const [stories, setStories] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingStory, setDeletingStory] = useState(false);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const progressRef = useRef(null);
   const animationRef = useRef(null);
 
@@ -518,10 +913,12 @@ function HighlightViewerModal({ highlight, onClose, onDelete }) {
           console.log("[HighlightViewer] View tracking error (non-fatal):", e);
         }
         
-        // Get stories
-        const storiesData = await getHighlightStories(highlight.highlight_id);
-        console.log("[HighlightViewer] Stories:", storiesData);
-        setStories(storiesData);
+        // Get highlight details which includes stories
+        const highlightData = await getHighlightDetails(highlight.highlight_id);
+        console.log("[HighlightViewer] Highlight details:", highlightData);
+        
+        // Stories are returned in the highlight data
+        setStories(highlightData?.stories || []);
       } catch (err) {
         console.error("[HighlightViewer] Error:", err);
         setError("Failed to load stories");
@@ -549,14 +946,11 @@ function HighlightViewerModal({ highlight, onClose, onDelete }) {
     const animate = (timestamp) => {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
-      const progress = Math.min((elapsed / duration) * 100, 100);
+      const prog = Math.min((elapsed / duration) * 100, 100);
       
-      setCurrentIndex(prev => {
-        // Use functional update to get current index
-        return prev;
-      });
+      setProgress(prog);
       
-      if (progress < 100) {
+      if (prog < 100) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
         // Move to next story
@@ -569,6 +963,7 @@ function HighlightViewerModal({ highlight, onClose, onDelete }) {
           }
         });
         startTime = null;
+        setProgress(0);
       }
     };
     
@@ -602,13 +997,47 @@ function HighlightViewerModal({ highlight, onClose, onDelete }) {
     }
   };
 
+  // Delete current story from highlight
+  const handleDeleteStory = async () => {
+    if (!currentStory?.story_id) {
+      console.error("[HighlightViewer] No story_id found for current story");
+      return;
+    }
+    
+    if (!confirm("Remove this story from the highlight?")) return;
+    
+    setDeletingStory(true);
+    try {
+      console.log("[HighlightViewer] Deleting story:", currentStory.story_id, "highlight:", highlight.highlight_id);
+      await removeStoryFromHighlight(currentStory.story_id, highlight.highlight_id);
+      
+      // Remove from local state
+      const updatedStories = stories.filter((_, idx) => idx !== currentIndex);
+      setStories(updatedStories);
+      
+      // Adjust current index if needed
+      if (currentIndex >= updatedStories.length && updatedStories.length > 0) {
+        setCurrentIndex(updatedStories.length - 1);
+      } else if (updatedStories.length === 0) {
+        onClose(); // No more stories, close the viewer
+      }
+      
+      console.log("[HighlightViewer] Story removed successfully");
+    } catch (err) {
+      console.error("[HighlightViewer] Error deleting story:", err);
+      alert("Failed to remove story from highlight");
+    } finally {
+      setDeletingStory(false);
+    }
+  };
+
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center bg-black"
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-sm h-full max-h-[90vh] rounded-2xl overflow-hidden bg-black"
+        className="relative w-full max-w-sm h-full max-h-[95vh] rounded-2xl overflow-hidden bg-black"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Progress Bars */}
@@ -621,7 +1050,7 @@ function HighlightViewerModal({ highlight, onClose, onDelete }) {
                   width: idx < currentIndex 
                     ? '100%' 
                     : idx === currentIndex 
-                      ? `${((Date.now() % 5000) / 5000) * 100}%`
+                      ? `${progress}%`
                       : '0%'
                 }}
               />
@@ -632,9 +1061,9 @@ function HighlightViewerModal({ highlight, onClose, onDelete }) {
         {/* Header */}
         <div className="absolute top-6 left-4 right-4 z-10 flex items-center gap-2">
           <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white">
-            {highlight.cover_image ? (
+            {highlight.cover_image_url ? (
               <Image
-                src={highlight.cover_image}
+                src={highlight.cover_image_url}
                 alt={highlight.name}
                 width={32}
                 height={32}
@@ -653,7 +1082,54 @@ function HighlightViewerModal({ highlight, onClose, onDelete }) {
             )}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {/* Delete Button */}
+            {/* 3 Dots Menu Button */}
+            <div className="relative">
+              <button
+                onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                className="text-white hover:bg-white/10 rounded-full p-2 transition"
+                title="More options"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="12" r="1.5"/>
+                  <circle cx="12" cy="6" r="1.5"/>
+                  <circle cx="12" cy="18" r="1.5"/>
+                </svg>
+              </button>
+              
+              {/* Options Popup Menu */}
+              {showOptionsMenu && (
+                <div className="absolute right-0 top-10 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-1 z-20">
+                  <button
+                    onClick={() => {
+                      setShowOptionsMenu(false);
+                      handleDeleteStory();
+                    }}
+                    disabled={deletingStory}
+                    className="w-full px-4 py-2 text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 6L6 18"/>
+                      <path d="M6 6l12 12"/>
+                    </svg>
+                    Remove from highlight
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowOptionsMenu(false);
+                      // Edit highlight - will be implemented
+                    }}
+                    className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Edit highlight
+                  </button>
+                </div>
+              )}
+            </div>
+            {/* Delete Highlight Button */}
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="text-white hover:bg-red-500/20 rounded-full p-2 transition"
@@ -723,6 +1199,43 @@ function HighlightViewerModal({ highlight, onClose, onDelete }) {
           <div className="flex-1 cursor-pointer" onClick={goToNext} />
         </div>
 
+        {/* Visible Navigation Buttons */}
+        {stories.length > 1 && (
+          <>
+            {/* Previous Button */}
+            {currentIndex > 0 && (
+              <button
+                onClick={goToPrev}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition z-10"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+            )}
+            {/* Next Button */}
+            {currentIndex < stories.length - 1 && (
+              <button
+                onClick={goToNext}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition z-10"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Story Counter Badge */}
+        {stories.length > 1 && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 px-3 py-1 rounded-full">
+            <span className="text-white text-xs">
+              {currentIndex + 1} / {stories.length}
+            </span>
+          </div>
+        )}
+
         {/* Delete Confirmation Dialog */}
         {showDeleteConfirm && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60">
@@ -758,9 +1271,41 @@ function HighlightViewerModal({ highlight, onClose, onDelete }) {
 // ============================================
 // EDIT HIGHLIGHT MODAL
 // ============================================
-function EditHighlightModal({ highlight, onClose, onSave }) {
+function EditHighlightModal({ highlight, onClose, onSave, existingStoryIds = [] }) {
   const [name, setName] = useState(highlight.name || "");
+  const [description, setDescription] = useState(highlight.description || "");
+  const [isVisible, setIsVisible] = useState(highlight.is_visible !== false);
   const [loading, setLoading] = useState(false);
+  
+  // State for loading and displaying stories
+  const [activeStories, setActiveStories] = useState([]);
+  const [archivedStories, setArchivedStories] = useState([]);
+  const [loadingStories, setLoadingStories] = useState(true);
+  const [addingStoryId, setAddingStoryId] = useState(null);
+  const [message, setMessage] = useState(null);
+
+  // Load stories on mount
+  useEffect(() => {
+    const loadStories = async () => {
+      try {
+        console.log("[EditHighlight] Loading stories...");
+        const allStories = await getMyAllStories(20);
+        console.log("[EditHighlight] All stories response:", allStories);
+        
+        const active = allStories?.active_stories || [];
+        setActiveStories(Array.isArray(active) ? active : []);
+        
+        const archived = allStories?.archived_stories || [];
+        setArchivedStories(Array.isArray(archived) ? archived : []);
+        
+      } catch (err) {
+        console.error("[EditHighlight] Error loading stories:", err);
+      } finally {
+        setLoadingStories(false);
+      }
+    };
+    loadStories();
+  }, []);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -770,47 +1315,485 @@ function EditHighlightModal({ highlight, onClose, onSave }) {
 
     setLoading(true);
     try {
-      await onSave(highlight.highlight_id, { name: name.trim() });
+      await onSave(highlight.highlight_id, { 
+        name: name.trim(),
+        description: description.trim(),
+        is_visible: isVisible
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  // Add a story to the highlight
+  const handleAddStory = async (story) => {
+    const storyId = story.story_id || story.id;
+    if (!storyId) return;
+    
+    // Check if already in highlight
+    if (existingStoryIds.includes(storyId)) {
+      setMessage("Story already in highlight");
+      setTimeout(() => setMessage(null), 2000);
+      return;
+    }
+    
+    setAddingStoryId(storyId);
+    try {
+      console.log("[EditHighlight] Adding story to highlight:", highlight.highlight_id, storyId);
+      await addStoryToHighlight(highlight.highlight_id, storyId);
+      console.log("[EditHighlight] Story added successfully");
+      setMessage("Story added to highlight!");
+      setTimeout(() => setMessage(null), 2000);
+      
+      // Update the existingStoryIds so user can see it's now selected
+      if (onSave && typeof onSave === 'function') {
+        // Trigger a refresh by calling with empty update
+        onSave(highlight.highlight_id, {});
+      }
+    } catch (err) {
+      console.error("[EditHighlight] Error adding story:", err);
+      const errorMsg = err.response?.data?.message || "Failed to add story";
+      if (errorMsg.includes("already in highlight") || errorMsg.includes("STORY_ALREADY_IN_HIGHLIGHT")) {
+        setMessage("Story already in highlight");
+      } else {
+        setMessage(errorMsg);
+      }
+      setTimeout(() => setMessage(null), 3000);
+    } finally {
+      setAddingStoryId(null);
+    }
+  };
+
+  // Check if story is already in highlight
+  const isStoryInHighlight = (story) => {
+    const storyId = story.story_id || story.id;
+    return existingStoryIds.includes(storyId);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-          Edit Highlight
-        </h2>
-
-        <div className="mb-4">
-          <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-            Highlight Name *
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:outline-none focus:border-purple-400"
-            maxLength={50}
-          />
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm max-h-[85vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+            Edit Highlight
+          </h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
+            ✕
+          </button>
         </div>
 
-        <div className="flex gap-2">
+        {/* Content */}
+        <div className="p-4 overflow-y-auto flex-1">
+          {/* Message Toast */}
+          {message && (
+            <div className={`mb-3 px-3 py-2 rounded-lg text-sm ${
+              message.includes("already") || message.includes("Failed")
+                ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+            }`}>
+              {message}
+            </div>
+          )}
+
+          {/* Highlight Details */}
+          <div className="mb-4">
+            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+              Highlight Name *
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:outline-none focus:border-purple-400"
+              maxLength={50}
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:outline-none focus:border-purple-400 resize-none"
+              rows={2}
+              maxLength={200}
+            />
+          </div>
+
+          <div className="mb-4 flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="is_visible"
+              checked={isVisible}
+              onChange={(e) => setIsVisible(e.target.checked)}
+              className="w-4 h-4 text-purple-500 rounded focus:ring-purple-400"
+            />
+            <label htmlFor="is_visible" className="text-sm text-gray-600 dark:text-gray-400">
+              Make visible to others
+            </label>
+          </div>
+
+          {/* Stories to Add Section */}
+          <div className="border-t dark:border-gray-700 pt-4 mt-4">
+            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Add More Stories
+            </label>
+            
+            {loadingStories ? (
+              <div className="flex justify-center py-4">
+                <div className="w-6 h-6 border-2 border-purple-400/30 border-t-purple-500 rounded-full animate-spin" />
+              </div>
+            ) : (
+              <>
+                {/* Active Stories */}
+                {activeStories.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Active Stories (24h)</p>
+                    <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+                      {activeStories.map((story) => (
+                        <div
+                          key={story.story_id || story.id}
+                          onClick={() => handleAddStory(story)}
+                          className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 transition ${
+                            isStoryInHighlight(story)
+                              ? "border-green-500 opacity-60"
+                              : "border-transparent hover:border-purple-400"
+                          } ${addingStoryId === (story.story_id || story.id) ? "opacity-50" : ""}`}
+                        >
+                          <Image
+                            src={story.media?.url || story.thumbnail_url || story.media_url || "/placeholder.jpg"}
+                            alt="story"
+                            fill
+                            className="object-cover"
+                          />
+                          {isStoryInHighlight(story) ? (
+                            <div className="absolute inset-0 bg-green-500/40 flex items-center justify-center">
+                              <span className="text-white text-lg">✓</span>
+                            </div>
+                          ) : (
+                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition">
+                              <span className="text-white text-xs">Add +</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Archived Stories */}
+                {archivedStories.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Archived Stories</p>
+                    <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+                      {archivedStories.map((story) => (
+                        <div
+                          key={story.story_id || story.id}
+                          onClick={() => handleAddStory(story)}
+                          className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 transition ${
+                            isStoryInHighlight(story)
+                              ? "border-green-500 opacity-60"
+                              : "border-transparent hover:border-purple-400"
+                          } ${addingStoryId === (story.story_id || story.id) ? "opacity-50" : ""}`}
+                        >
+                          <Image
+                            src={story.media?.url || story.thumbnail_url || story.media_url || "/placeholder.jpg"}
+                            alt="story"
+                            fill
+                            className="object-cover"
+                          />
+                          {isStoryInHighlight(story) ? (
+                            <div className="absolute inset-0 bg-green-500/40 flex items-center justify-center">
+                              <span className="text-white text-lg">✓</span>
+                            </div>
+                          ) : (
+                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition">
+                              <span className="text-white text-xs">Add +</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {activeStories.length === 0 && archivedStories.length === 0 && (
+                  <p className="text-sm text-gray-400 italic">
+                    No stories available to add.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-2 p-4 border-t dark:border-gray-700">
           <button
             onClick={onClose}
             className="flex-1 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
-            Cancel
+            Close
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading || !name.trim()}
             className="flex-1 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:from-purple-600 hover:to-pink-600 disabled:opacity-50"
           >
-            {loading ? "Saving..." : "Save"}
+            {loading ? "Saving..." : "Save Changes"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// STORY PREVIEW MODAL
+// ============================================
+function StoryPreviewModal({ story, highlight, onClose, onViewAll, loading, onRemoveStory = () => {}, onEditHighlight = () => {}, allStories = [], currentIndex = 0 }) {
+  // The API response format:
+  // {
+  //   "story_id": "story_xxx",
+  //   "media": { "url": "...", "type": "image", "duration": 5 },
+  //   "author": { "_id": "...", "full_name": "...", "username": "...", "profile_image_url": "..." },
+  //   "created_at": "...",
+  //   "expires_at": "...",
+  //   ...
+  // }
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const progressRef = useRef(null);
+  const animationRef = useRef(null);
+
+  const stories = allStories.length > 0 ? allStories : (story ? [story] : []);
+  const totalStories = stories.length;
+  const currentStoryIndex = currentIndex;
+
+  // Progress bar animation
+  useEffect(() => {
+    if (totalStories <= 1) return;
+
+    const duration = 5000; // 5 seconds per story
+    let startTime;
+
+    const animate = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const prog = Math.min((elapsed / duration) * 100, 100);
+      setProgress(prog);
+
+      if (prog < 100) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [currentStoryIndex, totalStories]);
+
+  const mediaUrl = story?.media?.url || story?.media_url;
+  const mediaType = story?.media?.type || story?.media_type || "image";
+  const author = story?.author || {};
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+      onClick={() => {
+        setShowOptionsMenu(false);
+        onClose();
+      }}
+    >
+      <div 
+        className="relative w-full max-w-sm mx-4 rounded-2xl overflow-hidden bg-black"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Loading State */}
+        {loading && (
+          <div className="w-full h-[580px] flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          </div>
+        )}
+
+        {/* Progress Bar - Show when there are multiple stories */}
+        {!loading && totalStories > 1 && (
+          <div className="absolute top-2 left-2 right-2 z-10 flex gap-1">
+            {stories.map((_, idx) => (
+              <div key={idx} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-white transition-all duration-100 ease-linear"
+                  style={{
+                    width: idx < currentStoryIndex 
+                      ? '100%' 
+                      : idx === currentStoryIndex 
+                        ? `${progress}%`
+                        : '0%'
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Story Content */}
+        {!loading && story && (
+          <>
+            {/* Media */}
+            {mediaType === "video" ? (
+              <video
+                src={mediaUrl}
+                className="w-full h-[580px] object-cover"
+                autoPlay
+                muted
+                playsInline
+              />
+            ) : (
+              <div className="relative w-full h-[580px]">
+                <Image
+                  src={mediaUrl || "/placeholder.jpg"}
+                  alt="story preview"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            )}
+
+            {/* Header with author info */}
+            <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/60 to-transparent">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
+                  <Image
+                    src={author.profile_image_url || "/placeholder.jpg"}
+                    alt={author.full_name}
+                    width={40}
+                    height={40}
+                    className="object-cover w-full h-full"
+                  />
+                </div>
+                <div>
+                  <p className="text-white font-semibold text-sm">
+                    {author.full_name || "User"}
+                  </p>
+                  <p className="text-white/70 text-xs">
+                    @{author.username || "username"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Highlight info badge */}
+            {highlight && (
+              <div className="absolute top-16 left-4 right-4">
+                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                  <span className="text-white text-xs font-medium">
+                    {highlight.name}
+                  </span>
+                  {totalStories > 1 && (
+                    <span className="text-white/70 text-xs">
+                      ({currentStoryIndex + 1}/{totalStories})
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            {totalStories > 1 && (
+              <>
+                {currentStoryIndex > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Navigate to previous story - for now just show view all
+                      onViewAll();
+                    }}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                  </button>
+                )}
+                {currentStoryIndex < totalStories - 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Navigate to next story - for now just show view all
+                      onViewAll();
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* 3-dot menu button */}
+            <div className="absolute top-3 right-3">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowOptionsMenu(!showOptionsMenu);
+                }}
+                className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white hover:bg-black/60 transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="6" r="2"/>
+                  <circle cx="12" cy="12" r="2"/>
+                  <circle cx="12" cy="18" r="2"/>
+                </svg>
+              </button>
+              
+              {/* Options dropdown menu */}
+              {showOptionsMenu && (
+                <div className="absolute right-0 top-10 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg py-1 z-50">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowOptionsMenu(false);
+                      onRemoveStory();
+                    }}
+                    className="w-full px-4 py-2 text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 6L6 18"/>
+                      <path d="M6 6l12 12"/>
+                    </svg>
+                    Remove from highlight
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowOptionsMenu(false);
+                      onEditHighlight();
+                    }}
+                    className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Edit highlight
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
