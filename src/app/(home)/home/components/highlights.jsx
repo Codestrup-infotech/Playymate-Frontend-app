@@ -112,6 +112,15 @@ export default function Highlights({ userId, isOwner = false }) {
   const handleEditHighlight = async (highlightId, data) => {
     try {
       console.log("[Highlights] Updating highlight:", highlightId, data);
+      
+      // If this is a refresh request (after adding story), just refresh the list
+      if (data?.refresh) {
+        const updatedHighlights = await getMyHighlights();
+        const highlightsData = Array.isArray(updatedHighlights) ? updatedHighlights : (updatedHighlights?.highlights || []);
+        setHighlights(highlightsData);
+        return;
+      }
+      
       await updateHighlight(highlightId, data);
       
       // Update local state
@@ -119,6 +128,11 @@ export default function Highlights({ userId, isOwner = false }) {
         h.highlight_id === highlightId ? { ...h, ...data } : h
       ));
       setEditingHighlight(null);
+      
+      // Refresh the highlights list to get updated data
+      const updatedHighlights = await getMyHighlights();
+      const highlightsData = Array.isArray(updatedHighlights) ? updatedHighlights : (updatedHighlights?.highlights || []);
+      setHighlights(highlightsData);
     } catch (err) {
       console.error("[Highlights] Error updating highlight:", err);
       alert("Failed to update highlight. Please try again.");
@@ -234,14 +248,14 @@ export default function Highlights({ userId, isOwner = false }) {
               className="focus:outline-none group"
             >
               {/* Ring */}
-              <div className="p-[2px] rounded-full bg-gradient-to-tr from-yellow-400 via-orange-500 to-pink-500 group-hover:from-pink-400 group-hover:to-purple-500 transition-all">
-                <div className="w-[66px] h-[66px] rounded-full overflow-hidden border-2 border-white dark:border-gray-800 bg-gray-100">
+              <div className="p-[3px] rounded-full bg-gradient-to-tr from-yellow-400 via-orange-500 to-pink-500 group-hover:from-pink-400 group-hover:to-purple-500 transition-all">
+                <div className="w-[80px] h-[80px] rounded-full overflow-hidden border-2 border-white dark:border-gray-800 bg-gray-100">
                   {highlight.cover_image_url ? (
                     <Image
                       src={highlight.cover_image_url}
                       alt={highlight.name}
-                      width={66}
-                      height={66}
+                      width={80}
+                      height={80}
                       className="object-cover w-full h-full"
                     />
                   ) : (
@@ -266,7 +280,7 @@ export default function Highlights({ userId, isOwner = false }) {
             onClick={() => setShowCreateModal(true)}
             className="flex flex-col items-center gap-1.5 flex-shrink-0 focus:outline-none group"
           >
-            <div className="w-[70px] h-[70px] rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 group-hover:border-purple-400 group-hover:bg-purple-50 transition-all dark:border-gray-600 dark:bg-gray-800 dark:group-hover:border-purple-400 dark:group-hover:bg-purple-900/20">
+            <div className="w-[80px] h-[80px] rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 group-hover:border-purple-400 group-hover:bg-purple-50 transition-all dark:border-gray-600 dark:bg-gray-800 dark:group-hover:border-purple-400 dark:group-hover:bg-purple-900/20">
               <svg
                 className="w-6 h-6 text-gray-400 group-hover:text-purple-500"
                 fill="none"
@@ -297,6 +311,7 @@ export default function Highlights({ userId, isOwner = false }) {
           highlight={storyPreview.highlight}
           allStories={storyPreview.allStories || []}
           currentIndex={storyPreview.currentIndex || 0}
+          isOwner={isOwner}
           onClose={() => setStoryPreview(null)}
           onViewAll={() => {
             setStoryPreview(null);
@@ -312,15 +327,11 @@ export default function Highlights({ userId, isOwner = false }) {
               try {
                 await removeStoryFromHighlight(storyId, highlightId);
                 console.log("[StoryPreviewModal] Story removed successfully");
-                setStoryPreview(null);
-                // Refresh the highlights
-                if (highlightId) {
-                  const updatedHighlight = await getHighlightDetails(highlightId);
-                  console.log("[StoryPreviewModal] Updated highlight:", updatedHighlight);
-                  if (updatedHighlight) {
-                    setViewingHighlight(updatedHighlight);
-                  }
-                }
+                setStoryPreview(null); // Just close the modal, NO setViewingHighlight()
+                // Refresh the highlights row silently
+                const updated = await getMyHighlights();
+                const data = Array.isArray(updated) ? updated : (updated?.highlights || []);
+                setHighlights(data);
               } catch (err) {
                 console.error("[StoryPreviewModal] Error removing story:", err);
                 alert("Failed to remove story from highlight");
@@ -346,6 +357,20 @@ export default function Highlights({ userId, isOwner = false }) {
               setEditingHighlight(storyPreview.highlight);
             }
           }}
+          onDeleteHighlight={async () => {
+            const highlightId = storyPreview?.highlight?.highlight_id;
+            if (!highlightId) return;
+            if (!confirm("Delete this entire highlight? This cannot be undone.")) return;
+            try {
+              await deleteHighlight(highlightId);
+              setStoryPreview(null);
+              // Remove from highlights row immediately
+              setHighlights(prev => prev.filter(h => h.highlight_id !== highlightId));
+            } catch (err) {
+              console.error("[Highlights] Error deleting highlight:", err);
+              alert("Failed to delete highlight. Please try again.");
+            }
+          }}
         />
       )}
 
@@ -355,6 +380,7 @@ export default function Highlights({ userId, isOwner = false }) {
           highlight={viewingHighlight}
           onClose={() => setViewingHighlight(null)}
           onDelete={handleDeleteHighlight}
+          isOwner={isOwner}
         />
       )}
 
@@ -886,7 +912,7 @@ function CreateHighlightModal({ onClose, onCreate }) {
 // ============================================
 // HIGHLIGHT VIEWER MODAL (Instagram-style)
 // ============================================
-function HighlightViewerModal({ highlight, onClose, onDelete }) {
+function HighlightViewerModal({ highlight, onClose, onDelete, isOwner = false }) {
   const [stories, setStories] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -953,15 +979,15 @@ function HighlightViewerModal({ highlight, onClose, onDelete }) {
       if (prog < 100) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
-        // Move to next story
-        setCurrentIndex(prev => {
-          if (prev < stories.length - 1) {
-            return prev + 1;
-          } else {
+        // Move to next story or close
+        if (currentIndex < stories.length - 1) {
+          setCurrentIndex(currentIndex + 1);
+        } else {
+          // Use setTimeout to avoid updating during render
+          setTimeout(() => {
             onClose();
-            return prev;
-          }
-        });
+          }, 0);
+        }
         startTime = null;
         setProgress(0);
       }
@@ -974,7 +1000,7 @@ function HighlightViewerModal({ highlight, onClose, onDelete }) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [currentIndex, stories.length, loading]);
+  }, [currentIndex, stories.length, loading, onClose]);
 
   // Reset progress when story changes
   useEffect(() => {
@@ -1082,65 +1108,69 @@ function HighlightViewerModal({ highlight, onClose, onDelete }) {
             )}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {/* 3 Dots Menu Button */}
-            <div className="relative">
+            {/* 3 Dots Menu Button - Only show for owner */}
+            {isOwner && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                  className="text-white hover:bg-white/10 rounded-full p-2 transition"
+                  title="More options"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="12" r="1.5"/>
+                    <circle cx="12" cy="6" r="1.5"/>
+                    <circle cx="12" cy="18" r="1.5"/>
+                  </svg>
+                </button>
+                
+                {/* Options Popup Menu */}
+                {showOptionsMenu && (
+                  <div className="absolute right-0 top-10 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-1 z-20">
+                    <button
+                      onClick={() => {
+                        setShowOptionsMenu(false);
+                        handleDeleteStory();
+                      }}
+                      disabled={deletingStory}
+                      className="w-full px-4 py-2 text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6L6 18"/>
+                        <path d="M6 6l12 12"/>
+                      </svg>
+                      Remove from highlight
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowOptionsMenu(false);
+                        // Edit highlight - will be implemented
+                      }}
+                      className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                      Edit highlight
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Delete Highlight Button - Only show for owner */}
+            {isOwner && (
               <button
-                onClick={() => setShowOptionsMenu(!showOptionsMenu)}
-                className="text-white hover:bg-white/10 rounded-full p-2 transition"
-                title="More options"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-white hover:bg-red-500/20 rounded-full p-2 transition"
+                title="Delete highlight"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="12" cy="12" r="1.5"/>
-                  <circle cx="12" cy="6" r="1.5"/>
-                  <circle cx="12" cy="18" r="1.5"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 6h18"/>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
                 </svg>
               </button>
-              
-              {/* Options Popup Menu */}
-              {showOptionsMenu && (
-                <div className="absolute right-0 top-10 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-1 z-20">
-                  <button
-                    onClick={() => {
-                      setShowOptionsMenu(false);
-                      handleDeleteStory();
-                    }}
-                    disabled={deletingStory}
-                    className="w-full px-4 py-2 text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 6L6 18"/>
-                      <path d="M6 6l12 12"/>
-                    </svg>
-                    Remove from highlight
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowOptionsMenu(false);
-                      // Edit highlight - will be implemented
-                    }}
-                    className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                    Edit highlight
-                  </button>
-                </div>
-              )}
-            </div>
-            {/* Delete Highlight Button */}
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="text-white hover:bg-red-500/20 rounded-full p-2 transition"
-              title="Delete highlight"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18"/>
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-              </svg>
-            </button>
+            )}
             <button 
               onClick={onClose}
               className="text-white hover:bg-white/10 rounded-full p-1"
@@ -1271,7 +1301,7 @@ function HighlightViewerModal({ highlight, onClose, onDelete }) {
 // ============================================
 // EDIT HIGHLIGHT MODAL
 // ============================================
-function EditHighlightModal({ highlight, onClose, onSave, existingStoryIds = [] }) {
+function EditHighlightModal({ highlight, onClose, onSave, existingStoryIds: existingStoryIdsProp = [] }) {
   const [name, setName] = useState(highlight.name || "");
   const [description, setDescription] = useState(highlight.description || "");
   const [isVisible, setIsVisible] = useState(highlight.is_visible !== false);
@@ -1283,19 +1313,37 @@ function EditHighlightModal({ highlight, onClose, onSave, existingStoryIds = [] 
   const [loadingStories, setLoadingStories] = useState(true);
   const [addingStoryId, setAddingStoryId] = useState(null);
   const [message, setMessage] = useState(null);
+  
+  // State to track existing story IDs locally (for adding new stories)
+  const [existingStoryIds, setExistingStoryIds] = useState(existingStoryIdsProp);
 
   // Load stories on mount
   useEffect(() => {
     const loadStories = async () => {
       try {
         console.log("[EditHighlight] Loading stories...");
-        const allStories = await getMyAllStories(20);
-        console.log("[EditHighlight] All stories response:", allStories);
         
-        const active = allStories?.active_stories || [];
+        // First try to get active stories
+        let active = [];
+        try {
+          const activeRes = await getMyAllStories(20);
+          console.log("[EditHighlight] Active stories response:", activeRes);
+          active = activeRes?.active_stories || [];
+        } catch (e) {
+          console.log("[EditHighlight] No active stories:", e.message);
+        }
         setActiveStories(Array.isArray(active) ? active : []);
         
-        const archived = allStories?.archived_stories || [];
+        // Then get archived stories using the correct API
+        let archived = [];
+        try {
+          const archivedRes = await getArchivedStories(20);
+          console.log("[EditHighlight] Archived stories response:", archivedRes);
+          // API returns { data: { stories: [...] } }
+          archived = archivedRes?.data?.stories || archivedRes?.stories || [];
+        } catch (e) {
+          console.log("[EditHighlight] No archived stories:", e.message);
+        }
         setArchivedStories(Array.isArray(archived) ? archived : []);
         
       } catch (err) {
@@ -1331,7 +1379,7 @@ function EditHighlightModal({ highlight, onClose, onSave, existingStoryIds = [] 
     if (!storyId) return;
     
     // Check if already in highlight
-    if (existingStoryIds.includes(storyId)) {
+    if (existingStoryIdsProp.includes(storyId)) {
       setMessage("Story already in highlight");
       setTimeout(() => setMessage(null), 2000);
       return;
@@ -1345,18 +1393,23 @@ function EditHighlightModal({ highlight, onClose, onSave, existingStoryIds = [] 
       setMessage("Story added to highlight!");
       setTimeout(() => setMessage(null), 2000);
       
-      // Update the existingStoryIds so user can see it's now selected
-      if (onSave && typeof onSave === 'function') {
-        // Trigger a refresh by calling with empty update
-        onSave(highlight.highlight_id, {});
+      // Trigger parent to refresh highlights
+      if (onSave) {
+        await onSave(highlight.highlight_id, { refresh: true });
       }
     } catch (err) {
       console.error("[EditHighlight] Error adding story:", err);
-      const errorMsg = err.response?.data?.message || "Failed to add story";
-      if (errorMsg.includes("already in highlight") || errorMsg.includes("STORY_ALREADY_IN_HIGHLIGHT")) {
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || "Failed to add story";
+      console.log("[EditHighlight] Error details:", err.response?.data);
+      
+      // Check for various conflict/error codes
+      if (err.response?.status === 409 || 
+          errorMsg?.toLowerCase().includes("already") || 
+          errorMsg?.toLowerCase().includes("conflict") ||
+          errorMsg?.toLowerCase().includes("duplicate")) {
         setMessage("Story already in highlight");
       } else {
-        setMessage(errorMsg);
+        setMessage(errorMsg || "Failed to add story");
       }
       setTimeout(() => setMessage(null), 3000);
     } finally {
@@ -1367,7 +1420,7 @@ function EditHighlightModal({ highlight, onClose, onSave, existingStoryIds = [] 
   // Check if story is already in highlight
   const isStoryInHighlight = (story) => {
     const storyId = story.story_id || story.id;
-    return existingStoryIds.includes(storyId);
+    return existingStoryIdsProp.includes(storyId);
   };
 
   return (
@@ -1554,7 +1607,7 @@ function EditHighlightModal({ highlight, onClose, onSave, existingStoryIds = [] 
 // ============================================
 // STORY PREVIEW MODAL
 // ============================================
-function StoryPreviewModal({ story, highlight, onClose, onViewAll, loading, onRemoveStory = () => {}, onEditHighlight = () => {}, allStories = [], currentIndex = 0 }) {
+function StoryPreviewModal({ story, highlight, onClose, onViewAll, loading, onRemoveStory = () => {}, onEditHighlight = () => {}, onDeleteHighlight = () => {}, allStories = [], currentIndex = 0, isOwner = false }) {
   // The API response format:
   // {
   //   "story_id": "story_xxx",
@@ -1566,12 +1619,33 @@ function StoryPreviewModal({ story, highlight, onClose, onViewAll, loading, onRe
   // }
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [localIndex, setLocalIndex] = useState(currentIndex);
+  const [currentStory, setCurrentStory] = useState(story);
+  const [loadingNav, setLoadingNav] = useState(false);
   const progressRef = useRef(null);
   const animationRef = useRef(null);
 
+  // Navigate to a specific story by index
+  const navigateTo = async (index) => {
+    if (index < 0 || index >= allStories.length) return;
+    setLocalIndex(index);
+    const target = allStories[index];
+    const storyId = target?.story_id || target?.id;
+    if (!storyId) return;
+    setLoadingNav(true);
+    try {
+      const preview = await getStoryPreview(storyId);
+      setCurrentStory({ ...preview, highlight });
+    } catch (e) {
+      console.error('[StoryPreviewModal] Nav error:', e);
+    } finally {
+      setLoadingNav(false);
+    }
+  };
+
   const stories = allStories.length > 0 ? allStories : (story ? [story] : []);
   const totalStories = stories.length;
-  const currentStoryIndex = currentIndex;
+  const currentStoryIndex = localIndex;
 
   // Progress bar animation
   useEffect(() => {
@@ -1600,9 +1674,9 @@ function StoryPreviewModal({ story, highlight, onClose, onViewAll, loading, onRe
     };
   }, [currentStoryIndex, totalStories]);
 
-  const mediaUrl = story?.media?.url || story?.media_url;
-  const mediaType = story?.media?.type || story?.media_type || "image";
-  const author = story?.author || {};
+  const mediaUrl = currentStory?.media?.url || currentStory?.media_url;
+  const mediaType = currentStory?.media?.type || currentStory?.media_type || "image";
+  const author = currentStory?.author || {};
 
   return (
     <div 
@@ -1701,7 +1775,7 @@ function StoryPreviewModal({ story, highlight, onClose, onViewAll, loading, onRe
                   </span>
                   {totalStories > 1 && (
                     <span className="text-white/70 text-xs">
-                      ({currentStoryIndex + 1}/{totalStories})
+                      ({localIndex + 1}/{totalStories})
                     </span>
                   )}
                 </div>
@@ -1711,12 +1785,11 @@ function StoryPreviewModal({ story, highlight, onClose, onViewAll, loading, onRe
             {/* Navigation Buttons */}
             {totalStories > 1 && (
               <>
-                {currentStoryIndex > 0 && (
+                {localIndex > 0 && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Navigate to previous story - for now just show view all
-                      onViewAll();
+                      navigateTo(localIndex - 1);
                     }}
                     className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition"
                   >
@@ -1725,12 +1798,11 @@ function StoryPreviewModal({ story, highlight, onClose, onViewAll, loading, onRe
                     </svg>
                   </button>
                 )}
-                {currentStoryIndex < totalStories - 1 && (
+                {localIndex < totalStories - 1 && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Navigate to next story - for now just show view all
-                      onViewAll();
+                      navigateTo(localIndex + 1);
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition"
                   >
@@ -1742,56 +1814,74 @@ function StoryPreviewModal({ story, highlight, onClose, onViewAll, loading, onRe
               </>
             )}
 
-            {/* 3-dot menu button */}
-            <div className="absolute top-3 right-3">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowOptionsMenu(!showOptionsMenu);
-                }}
-                className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white hover:bg-black/60 transition"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="12" cy="6" r="2"/>
-                  <circle cx="12" cy="12" r="2"/>
-                  <circle cx="12" cy="18" r="2"/>
-                </svg>
-              </button>
-              
-              {/* Options dropdown menu */}
-              {showOptionsMenu && (
-                <div className="absolute right-0 top-10 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg py-1 z-50">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowOptionsMenu(false);
-                      onRemoveStory();
-                    }}
-                    className="w-full px-4 py-2 text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 6L6 18"/>
-                      <path d="M6 6l12 12"/>
-                    </svg>
-                    Remove from highlight
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowOptionsMenu(false);
-                      onEditHighlight();
-                    }}
-                    className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                    Edit highlight
-                  </button>
-                </div>
-              )}
-            </div>
+            {/* 3-dot menu button - Only show for owner */}
+            {isOwner && (
+              <div className="absolute top-3 right-3">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowOptionsMenu(!showOptionsMenu);
+                  }}
+                  className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white hover:bg-black/60 transition"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="6" r="2"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="12" cy="18" r="2"/>
+                  </svg>
+                </button>
+                
+                {/* Options dropdown menu */}
+                {showOptionsMenu && (
+                  <div className="absolute right-0 top-10 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg py-1 z-50">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowOptionsMenu(false);
+                        onRemoveStory();
+                      }}
+                      className="w-full px-4 py-2 text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6L6 18"/>
+                        <path d="M6 6l12 12"/>
+                      </svg>
+                      Remove from highlight
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowOptionsMenu(false);
+                        onEditHighlight();
+                      }}
+                      className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                      Edit highlight
+                    </button>
+                    {/* Delete highlight button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowOptionsMenu(false);
+                        onDeleteHighlight();
+                      }}
+                      className="w-full px-4 py-2 text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18"/>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                      </svg>
+                      Delete highlight
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

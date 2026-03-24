@@ -92,6 +92,11 @@
       "type": "string"
     },
     {
+      "key": "target_username",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "recipient_id",
       "value": "",
       "type": "string"
@@ -1484,6 +1489,50 @@
           }
         },
         {
+          "name": "3a. Create Story with Mentions (close friends only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const d = pm.response.json().data;",
+                  "  pm.collectionVariables.set('story_id', d.story_id);",
+                  "  console.log('story_id with mentions set to:', d.story_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"media_url\": \"{{story_file_url}}\",\n  \"media_type\": \"image\",\n  \"caption\": \"Great game today! @friendusername \",\n  \"visibility\": \"close_friends\",\n  \"overlays\": [\n    {\n      \"type\": \"mention\",\n      \"content\": \"@friendusername\",\n      \"position\": { \"x\": 30, \"y\": 50 }\n    },\n    {\n      \"type\": \"text\",\n      \"content\": \"Check out this play!\",\n      \"position\": { \"x\": 50, \"y\": 80 },\n      \"font_size\": 20,\n      \"color\": \"#FFFFFF\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/stories/create",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stories",
+                "create"
+              ]
+            },
+            "description": "Create a story with mention overlays. Mentions are validated - only followers can be mentioned. Visibility set to close_friends."
+          }
+        },
+        {
           "name": "4. Get Story Feed (followed users)",
           "request": {
             "method": "GET",
@@ -2304,6 +2353,177 @@
                   ]
                 },
                 "description": "Withdraw a pending report (can only withdraw reports that are still pending)"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🔐 Close Friends",
+      "item": [
+        {
+          "name": "1. Get My Close Friends List",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/close-friends",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "close-friends"
+              ]
+            },
+            "description": "Get the authenticated user's close friends list. Returns list of users marked as close friends."
+          }
+        },
+        {
+          "name": "2. Add User to Close Friends",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  console.log('User added to close friends');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/close-friends/{{target_username}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "close-friends",
+                "{{target_username}}"
+              ]
+            },
+            "description": "Add a user to close friends by username. User must follow you first. Replace {{target_username}} with the username to add."
+          }
+        },
+        {
+          "name": "3. Remove User from Close Friends",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  console.log('User removed from close friends');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/v1/close-friends/{{target_username}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "close-friends",
+                "{{target_username}}"
+              ]
+            },
+            "description": "Remove a user from close friends by username. Replace {{target_username}} with the username to remove."
+          }
+        },
+        {
+          "name": "── Story Visibility with Close Friends ──",
+          "item": [
+            {
+              "name": "4. Create Story (close friends only)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "  const d = pm.response.json().data;",
+                      "  pm.collectionVariables.set('story_id', d.story_id);",
+                      "  console.log('Close friends story_id set to:', d.story_id);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"media_url\": \"{{story_file_url}}\",\n  \"media_type\": \"image\",\n  \"caption\": \"Only for close friends! \",\n  \"visibility\": \"close_friends\",\n  \"overlays\": [\n    {\n      \"type\": \"text\",\n      \"content\": \"💎 Close Friends Only\",\n      \"position\": { \"x\": 50, \"y\": 50 },\n      \"font_size\": 18,\n      \"color\": \"#FFD700\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/stories/create",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "stories",
+                    "create"
+                  ]
+                },
+                "description": "Create a story visible only to close friends. Only users in your close friends list can see this story."
+              }
+            },
+            {
+              "name": "5. Get Story Feed (includes close friends stories)",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/api/v1/stories/feed?limit=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "stories",
+                    "feed"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "Get story feed. Includes stories from followed users and close friends (where viewer is in their close friends list)."
               }
             }
           ]

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, Suspense } from "react";
 import { X, ArrowLeft, MapPin, Users, ChevronDown, ChevronUp, Smile, Plus, Minus, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import postService from "@/app/user/post";
@@ -21,7 +21,7 @@ const FILTERS = [
 // ---- Adjustment Sliders ----
 const ADJUSTMENTS = ["Brightness", "Contrast", "Fade", "Saturation", "Temperature", "Vignette", "Highlights", "Shadows"];
 
-export default function CreatePostPage() {
+function CreatePostContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -37,7 +37,7 @@ export default function CreatePostPage() {
   const [isLoadingPost, setIsLoadingPost] = useState(false);
 
   // Crop state
-  const [cropAspect, setCropAspect] = useState("1:1");
+ const [cropAspect, setCropAspect] = useState("4:5");
 
   // Edit state
   const [editTab, setEditTab] = useState("Filters");
@@ -65,6 +65,11 @@ export default function CreatePostPage() {
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationError, setLocationError] = useState("");
   
+  const [showSizeChange, setShowSizeChange] = useState(false);
+
+  const [showAspectLabel, setShowAspectLabel] = useState(false);
+
+
   // User info
   const [userInfo, setUserInfo] = useState(null);
   
@@ -428,10 +433,34 @@ export default function CreatePostPage() {
     return { filter: combined.trim() };
   };
 
+  // Get aspect ratio style for crop preview
+  const getAspectRatioStyle = () => {
+    switch (cropAspect) {
+      case "1:1":
+        return { aspectRatio: "1/1" };
+      case "4:5":
+        return { aspectRatio: "4/5" };
+      case "16:9":
+        return { aspectRatio: "16/9" };
+      default:
+        return {};
+    }
+  };
+
   const mediaEl = fileType === "video" ? (
     <video src={videoUrl} className="max-h-full max-w-full object-contain" autoPlay loop muted={!soundOn} />
   ) : (
-    <img src={file} style={getImageStyle()} className="max-h-full max-w-full object-contain" alt="preview" />
+  <div
+  style={getAspectRatioStyle()}
+  className="relative bg-black overflow-hidden"
+>
+  <img
+    src={file}
+    style={getImageStyle()}
+    className="absolute w-full h-full object-cover"
+    alt="preview"
+  />
+</div>
   );
 
   // Determine modal size
@@ -530,13 +559,64 @@ export default function CreatePostPage() {
           {step === "crop" && (
             <div className="flex w-full h-full">
               {/* Image area */}
-              <div className="flex-1 bg-white  p-3 relative flex items-center justify-center overflow-hidden">
-                {mediaEl}
+              <div className="flex-1 bg-gray-100 p-3 relative flex items-center justify-center overflow-hidden">
+                {/* Aspect ratio overlay popup */}
+                <div className="absolute bottom-14 left-3 z-20 bg-black/90 rounded-xl p-3 flex gap-4">
+                  {["1:1", "4:5", "16:9"].map((r) => (
+                    <button
+                      key={r}
+                 onClick={() => {
+  setCropAspect(r);
+  setShowAspectLabel(true);
+}}
+                      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition ${
+                        cropAspect === r ? "bg-white/30" : "hover:bg-white/10"
+                      }`}
+                    >
+                      <div
+                        className={`border-2 border-white ${
+                          r === "1:1" ? "w-6 h-6" : r === "4:5" ? "w-5 h-6" : "w-8 h-5"
+                        } rounded-sm`}
+                      />
+                      <span className="text-white text-[10px] font-medium">{r}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Image container with aspect ratio */}
+        <div className="w-full h-full flex items-center justify-center  ">
+  <div
+    style={getAspectRatioStyle()}
+    className="relative  overflow-hidden w-full max-w-[400px]"
+  >
+    {/* Aspect ratio label */}
+ {showAspectLabel && (
+  <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-3 py-1 rounded-full z-20">
+    {cropAspect}
+  </div>
+)}
+
+    {/* Image */}
+    <img
+      src={file}
+      style={getImageStyle()}
+      className="absolute w-full h-full object-cover pt-4 pb-4"
+      alt="preview"
+    />
+  </div>
+</div>
 
                 {/* Bottom toolbar */}
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between z-10">
                   {/* Aspect ratio button */}
-                  <button className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-black/80 transition">
+                  <button 
+                    onClick={() => {
+                      // Toggle aspect ratio popup visibility
+                      const popup = document.getElementById('aspect-popup');
+                      if (popup) popup.classList.toggle('hidden');
+                    }} 
+                    className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-black/80 transition"
+                  >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                       <rect x="3" y="5" width="18" height="14" rx="2"/>
                     </svg>
@@ -555,26 +635,6 @@ export default function CreatePostPage() {
                     </button>
                   </div>
                 </div>
-
-                {/* Aspect ratio overlay popup (always visible for demo) */}
-                <div className="absolute bottom-14 left-3 bg-black/80 rounded-xl p-3 flex gap-4">
-                  {["1:1", "4:5", "16:9"].map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setCropAspect(r)}
-                      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition ${
-                        cropAspect === r ? "bg-white/20" : "hover:bg-white/10"
-                      }`}
-                    >
-                      <div
-                        className={`border-2 border-white ${
-                          r === "1:1" ? "w-6 h-6" : r === "4:5" ? "w-5 h-6" : "w-8 h-5"
-                        } rounded-sm`}
-                      />
-                      <span className="text-white text-[10px] font-medium">{r}</span>
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           )}
@@ -583,7 +643,9 @@ export default function CreatePostPage() {
           {step === "edit" && fileType === "image" && (
             <div className="flex w-full h-full ">
               <div className="flex-1 bg-white p-3 flex items-center justify-center overflow-hidden ">
-                <img src={file} style={getImageStyle()} className="max-h-full max-w-full object-contain" alt="edit" />
+                <div style={getAspectRatioStyle()} className="flex items-center justify-center bg-gray-100 max-w-full max-h-full">
+                  <img src={file} style={getImageStyle()} className="max-h-full max-w-full object-contain" alt="edit" />
+                </div>
               </div>
 
               <div className="w-[340px] border-l border-gray-200 flex flex-col overflow-hidden">
@@ -662,13 +724,15 @@ export default function CreatePostPage() {
           {step === "edit" && fileType === "video" && (
             <div className="flex w-full h-full">
               <div className="flex-1 bg-black flex items-center justify-center overflow-hidden">
-                <video
-                  src={videoUrl}
-                  className="max-h-full max-w-full object-contain"
-                  autoPlay
-                  loop
-                  muted={!soundOn}
-                />
+                <div style={getAspectRatioStyle()} className="flex items-center justify-center bg-gray-900 max-w-full max-h-full">
+                  <video
+                    src={videoUrl}
+                    className="max-h-full max-w-full object-contain"
+                    autoPlay
+                    loop
+                    muted={!soundOn}
+                  />
+                </div>
               </div>
 
               <div className="w-[340px] border-l border-gray-200 overflow-y-auto p-5 space-y-6">
@@ -958,5 +1022,21 @@ export default function CreatePostPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Wrapper component with Suspense boundary for useSearchParams
+export default function CreatePostPage() {
+  return (
+    <Suspense fallback={
+      <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center">
+        <div className="bg-white rounded-xl shadow-2xl p-8">
+          <Loader2 className="animate-spin mx-auto" size={32} />
+          <p className="text-gray-500 mt-4">Loading...</p>
+        </div>
+      </div>
+    }>
+      <CreatePostContent />
+    </Suspense>
   );
 }

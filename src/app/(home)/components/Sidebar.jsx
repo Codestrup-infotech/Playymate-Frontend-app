@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { useTheme } from "@/lib/ThemeContext";
+import { useFeedRefresh } from "@/context/FeedRefreshContext";
 
 // ─── More Menu Popup ──────────────────────────────────────────────────────────
 
@@ -257,6 +258,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
+  const { triggerRefresh } = useFeedRefresh();
 
   const isDark = theme === "dark";
   const [isHover, setIsHover] = useState(false);
@@ -298,9 +300,19 @@ export default function Sidebar() {
   const handleCreateStory = () => { router.push("/home/create-story"); setOpenCreateMenu(false); };
   const toggleCreateMenu = () => setOpenCreateMenu((p) => !p);
 
+  const handleHomeClick = (e) => {
+    // If already on home page, trigger refresh
+    if (pathname === "/home") {
+      e.preventDefault();
+      triggerRefresh();
+      return;
+    }
+    // Otherwise, let the Link navigate normally
+  };
+
   // Main nav items — removed Logout, Switch Mode (moved to More menu)
   const menu = [
-    { name: "Home",         icon: <Home size={22} />,         path: "/home" },
+    { name: "Home",         icon: <Home size={22} />,         path: "/home", onClick: handleHomeClick },
     { name: "Search",       icon: <Search size={22} />,       path: "/home/search" },
     { name: "Explore",      icon: <Compass size={22} />,      path: "/home/explore" },
     { name: "Reels",        icon: <Video size={22} />,        path: "/home/reels" },
@@ -410,6 +422,7 @@ export default function Sidebar() {
               <Link
                 key={item.name}
                 href={item.path}
+                onClick={item.onClick}
                 className={`flex items-center gap-4 px-3 py-3 rounded-lg transition-all duration-300
                   ${pathname === item.path ? activeColor : inactiveColor}`}
               >

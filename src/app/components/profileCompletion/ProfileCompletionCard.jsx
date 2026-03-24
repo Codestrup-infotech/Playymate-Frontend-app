@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus, List, FileText, X, Loader2 } from "lucide-react";
+import { UserPlus, List, FileText, X, Loader2, Check } from "lucide-react";
 import UsernamePopup from "./UsernamePopup";
 import BioPopup from "./BioPopup";
 
@@ -100,10 +100,18 @@ export default function ProfileCompletionCard({ profileCard, userData, onRefresh
           {/* Tile 1 - Create Username */}
           <button
             onClick={() => setShowUsernamePopup(true)}
-            className="bg-gradient-to-tr from-purple-500 to-orange-400 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-[#2d2d4a] transition-colors min-h-[120px]"
+            className={`rounded-xl p-4 flex flex-col items-center justify-center text-center transition-colors min-h-[120px] ${
+              !isUsernamePending && userData?.username
+                ? "bg-green-500/20 border-2 border-green-500"
+                : "bg-gradient-to-tr from-purple-500 to-orange-400 hover:from-purple-600 hover:to-orange-500"
+            }`}
           >
-            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center mb-2">
-              <UserPlus className="w-5 h-5 text-purple-400" />
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${!isUsernamePending && userData?.username ? "bg-green-500/30" : "bg-purple-500/20"}`}>
+              {!isUsernamePending && userData?.username ? (
+                <Check className="w-5 h-5 text-green-400" />
+              ) : (
+                <UserPlus className="w-5 h-5 text-purple-400" />
+              )}
             </div>
             <span className="text-black font-medium text-sm">Create Username</span>
             {displayUsername ? (
@@ -116,10 +124,18 @@ export default function ProfileCompletionCard({ profileCard, userData, onRefresh
           {/* Tile 2 - Select Profile Type */}
           <button
             onClick={handleProfileTypeSelect}
-            className="bg-gradient-to-tr from-purple-500 to-orange-400 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-[#2d2d4a] transition-colors min-h-[120px]"
+            className={`rounded-xl p-4 flex flex-col items-center justify-center text-center transition-colors min-h-[120px] ${
+              !isProfileTypePending && userData?.profile_main_type
+                ? "bg-green-500/20 border-2 border-green-500"
+                : "bg-gradient-to-tr from-purple-500 to-orange-400 hover:from-purple-600 hover:to-orange-500"
+            }`}
           >
-            <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center mb-2">
-              <List className="w-5 h-5 text-orange-400" />
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${!isProfileTypePending && userData?.profile_main_type ? "bg-green-500/30" : "bg-orange-500/20"}`}>
+              {!isProfileTypePending && userData?.profile_main_type ? (
+                <Check className="w-5 h-5 text-green-400" />
+              ) : (
+                <List className="w-5 h-5 text-orange-400" />
+              )}
             </div>
             <span className="text-black font-medium text-sm">Select Main Profile Type</span>
             {displayProfileType ? (
@@ -132,10 +148,18 @@ export default function ProfileCompletionCard({ profileCard, userData, onRefresh
           {/* Tile 3 - Add Bio */}
           <button
             onClick={() => setShowBioPopup(true)}
-            className="bg-gradient-to-tr from-purple-500 to-orange-400 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-[#2d2d4a] transition-colors min-h-[120px]"
+            className={`rounded-xl p-4 flex flex-col items-center justify-center text-center transition-colors min-h-[120px] ${
+              !isBioPending && userData?.bio
+                ? "bg-green-500/20 border-2 border-green-500"
+                : "bg-gradient-to-tr from-purple-500 to-orange-400 hover:from-purple-600 hover:to-orange-500"
+            }`}
           >
-            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center mb-2">
-              <FileText className="w-5 h-5 text-blue-400" />
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${!isBioPending && userData?.bio ? "bg-green-500/30" : "bg-blue-500/20"}`}>
+              {!isBioPending && userData?.bio ? (
+                <Check className="w-5 h-5 text-green-400" />
+              ) : (
+                <FileText className="w-5 h-5 text-blue-400" />
+              )}
             </div>
             <span className="text-white font-medium text-sm">Add Bio</span>
             {displayBio ? (

@@ -8,7 +8,10 @@ import {
   MapPin,
   Link as LinkIcon,
   User,
-  AtSign
+  AtSign,
+  Trash2,
+  Upload,
+  X
 } from "lucide-react";
 import {
   getCurrentUserId,
@@ -33,6 +36,8 @@ export default function EditProfilePage() {
   const [userId, setUserId] = useState(null);
   const [profilePhotos, setProfilePhotos] = useState([]);
   const [showPhotoManager, setShowPhotoManager] = useState(false);
+  const [showProfilePhotoPopup, setShowProfilePhotoPopup] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // profile data from backend
   const [formData, setFormData] = useState({
@@ -91,7 +96,35 @@ export default function EditProfilePage() {
       const imageUrl = URL.createObjectURL(file);
       setProfileImage(imageUrl);
       setSelectedFile(file);
+      setShowProfilePhotoPopup(false);
     }
+  };
+
+  // Handle delete profile photo
+  const handleDeleteProfilePhoto = async () => {
+    if (!userId) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteAvatar(userId);
+      setProfileImage("/loginAvatars/profile.png");
+      setSelectedFile(null);
+      setShowProfilePhotoPopup(false);
+    } catch (error) {
+      console.error("Failed to delete profile photo:", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Open popup when clicking camera button
+  const handleProfilePhotoClick = () => {
+    setShowProfilePhotoPopup(true);
+  };
+
+  // Handle select from computer
+  const handleSelectFromComputer = () => {
+    fileInputRef.current?.click();
   };
 
   // update profile
@@ -182,7 +215,7 @@ export default function EditProfilePage() {
               </div>
 
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={handleProfilePhotoClick}
                 className="absolute bottom-0 right-0 p-2 bg-purple-600 rounded-full hover:bg-purple-700"
               >
                 {isUploading ? (
@@ -210,6 +243,57 @@ export default function EditProfilePage() {
 
           </div>
         </div>
+
+        {/* Profile Photo Popup */}
+        {showProfilePhotoPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowProfilePhotoPopup(false)}
+            />
+            
+            {/* Popup Content */}
+            <div className="relative bg-white dark:bg-[#17172b] rounded-2xl w-[300px] mx-4 overflow-hidden shadow-xl">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-white/10">
+                <h3 className="font-semibold text-lg">Profile Photo</h3>
+                <button 
+                  onClick={() => setShowProfilePhotoPopup(false)}
+                  className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              {/* Options */}
+              <div className="py-2">
+                {/* Select from Computer */}
+                <button
+                  onClick={handleSelectFromComputer}
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-white/5 text-left"
+                >
+                  <Upload size={20} className="text-purple-600" />
+                  <span className="font-medium">Select from computer</span>
+                </button>
+                
+                {/* Delete Profile */}
+                <button
+                  onClick={handleDeleteProfilePhoto}
+                  disabled={isDeleting}
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-white/5 text-left text-red-500"
+                >
+                  {isDeleting ? (
+                    <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Trash2 size={20} />
+                  )}
+                  <span className="font-medium">Delete profile photo</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Basic Info */}
         <div className="rounded-xl p-6 space-y-4 bg-white dark:bg-[#17172b] border border-gray-200 dark:border-white/5">

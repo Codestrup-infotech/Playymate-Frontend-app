@@ -162,3 +162,35 @@ export const blockUser = (userId, reason = "") =>
 
 export const unblockUser = (userId) =>
   api.delete(`/users/${userId}/block`);
+
+// ─────────────────────────────────────────────
+// 4. MESSAGE REQUESTS (for shared content)
+// ─────────────────────────────────────────────
+
+/**
+ * Get pending message requests
+ * Returns requests with shared_content (post/reel preview)
+ */
+export const getMessageRequests = ({ limit = 20, cursor } = {}) => {
+  const params = { limit };
+  if (cursor) params.cursor = cursor;
+  return api.get("/messages/requests", { params });
+};
+
+/**
+ * Accept a message request
+ */
+export const acceptMessageRequest = (conversationId) =>
+  api.post(`/messages/requests/${conversationId}/accept`);
+
+/**
+ * Decline a message request
+ */
+export const declineMessageRequest = (conversationId) =>
+  api.post(`/messages/requests/${conversationId}/decline`);
+
+/**
+ * Block user and decline request
+ */
+export const blockAndDeclineRequest = (conversationId) =>
+  api.post(`/messages/requests/${conversationId}/block`);

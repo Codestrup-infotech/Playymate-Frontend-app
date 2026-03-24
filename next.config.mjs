@@ -1,20 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 's3.wasabisys.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'playymate.s3.wasabisys.com',
-        pathname: '/**',
-      },
-    ],
+  output: 'standalone',
+  reactStrictMode: true,
+
+  typescript: {
+    ignoreBuildErrors: true,
   },
+
+  images: {
+    unoptimized: true,
+  },
+
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    NEXT_PUBLIC_API_TIMEOUT: process.env.NEXT_PUBLIC_API_TIMEOUT,
+  },
+
+  // Turbopack conflict avoid karne ke liye
+  // turbopack: {},
 };
 
 export default nextConfig;
-

@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import ComposeEmojiPicker from "../components/Composeemojipicker";
+import UserPostDetailModal from "../components/UserPostDetailModal";
+import { getPostById } from "@/app/user/homefeed";
+import postService from "@/app/user/post";
 
 import { io } from "socket.io-client";
 import {
@@ -22,7 +25,10 @@ import {
   updateConversation,
   leaveConversation,
   uploadMedia,
+  getMessageRequests,
 } from "@/services/messages";
+
+import { getUserById } from "@/services/user";
 
 // ─── Token & ID helpers ────────────────────────────────────────────────────────
 
@@ -131,23 +137,196 @@ function EmojiPicker({ onPick }) {
 
 // ─── Message Bubble ────────────────────────────────────────────────────────────
 
-function Bubble({ msg, myId, profileMap, onReply, onEdit, onDelete, onReact, onForward }) {
+function Bubble({ msg, myId, profileMap, messageRequests = [], onReply, onEdit, onDelete, onReact, onForward, onOpenPostDetail }) {
   const [hover, setHover] = useState(false);
+
+  // Find shared content from message requests if this is a message request
+  const getSharedContent = () => {
+    console.log('[Bubble] getSharedContent called for message:', msg._id, 'content:', msg.content);
+    
+    // First check message requests
+    if (msg.conversation_id) {
+      const request = messageRequests.find(r => r._id === msg.conversation_id);
+      if (request?.shared_content) {
+        console.log('[Bubble] Found shared_content from message request:', request.shared_content);
+        return request.shared_content;
+      }
+    }
+    
+    // Check if message has its own shared_content
+    if (msg.shared_content) {
+      console.log('[Bubble] Found shared_content in message:', msg.shared_content);
+      return msg.shared_content;
+    }
+    
+    // Check if message has signed_urls directly
+    if (msg.signed_urls?.media) {
+      console.log('[Bubble] Found signed_urls in message:', msg.signed_urls);
+      return { signed_urls: msg.signed_urls };
+    }
+    
+    // Check if message has media_url (for shared content)
+    if (msg.media_url) {
+      console.log('[Bubble] Found media_url in message:', msg.media_url);
+      return { 
+        media_url: msg.media_url,
+        content_type: msg.content_type,
+        content_id: msg.content_id,
+        signed_urls: { media: [{ type: msg.media_type || 'image', url: msg.media_url }] } 
+      };
+    }
+
+    // Check if message has shared_content directly
+    if (msg.shared_content) {
+      console.log('[Bubble] Found shared_content in message:', msg.shared_content);
+      return msg.shared_content;
+    }
+
+    // Check if message has content_author_id for shared content
+    if (msg.content_author_id) {
+      console.log('[Bubble] Found content_author_id in message:', msg.content_author_id);
+      // Could be used to fetch author info
+    }
+    
+    // Check if message has share_id (from share API response)
+    if (msg.share_id) {
+      console.log('[Bubble] Found share_id in message:', msg.share_id);
+      // Try to find matching share in sessionStorage
+      try {
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && (key.startsWith('share_') || key === 'latest_share')) {
+            const value = sessionStorage.getItem(key);
+            if (value) {
+              const shareData = JSON.parse(value);
+              if (shareData.share_id === msg.share_id || shareData.content_id === msg.content_id) {
+                console.log('[Bubble] Found matching share by share_id:', shareData);
+                return shareData;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log('[Bubble] Error matching by share_id:', e);
+      }
+    }
+    
+    // Also check for content_id
+    if (msg.content_id) {
+      console.log('[Bubble] Found content_id in message:', msg.content_id);
+      // Try to find matching share in sessionStorage
+      try {
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && (key.startsWith('share_') || key === 'latest_share')) {
+            const value = sessionStorage.getItem(key);
+            if (value) {
+              const shareData = JSON.parse(value);
+              if (shareData.content_id === msg.content_id) {
+                console.log('[Bubble] Found matching share by content_id:', shareData);
+                return shareData;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log('[Bubble] Error matching by content_id:', e);
+      }
+    }
+
+    // Fallback: If message content is "Shared a post", try to return the latest share from sessionStorage
+    // This handles the case where the message doesn't have share_id or content_id but is a shared post
+    if (msg.content === 'Shared a post') {
+      console.log('[Bubble] Message is "Shared a post", checking for latest_share');
+      try {
+        const latestShare = sessionStorage.getItem('latest_share');
+        if (latestShare) {
+          const shareData = JSON.parse(latestShare);
+          // Check if the share is recent (within last 5 minutes)
+          const now = Date.now();
+          if (shareData.timestamp && (now - shareData.timestamp < 5 * 60 * 1000)) {
+            console.log('[Bubble] Found recent latest_share:', shareData);
+            return shareData;
+          }
+        }
+      } catch (e) {
+        console.log('[Bubble] Error getting latest_share:', e);
+      }
+    }
+    
+    // ALWAYS check sessionStorage for shared content - don't limit to just "Shared" text
+    console.log('[Bubble] Checking sessionStorage for ALL messages...');
+    
+    try {
+      // First try latest_share
+      let latestShare = sessionStorage.getItem('latest_share');
+      console.log('[Bubble] sessionStorage latest_share:', latestShare);
+      
+      // If no latest_share, try iterating through all sessionStorage keys
+      if (!latestShare) {
+        console.log('[Bubble] No latest_share, checking all sessionStorage keys...');
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith('share_')) {
+            const value = sessionStorage.getItem(key);
+            console.log('[Bubble] Found share key:', key, 'value:', value);
+            if (value) {
+              latestShare = value;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (latestShare) {
+        const shareData = JSON.parse(latestShare);
+        // Extended time limit - 10 minutes for debugging
+        const timeDiff = Date.now() - shareData.timestamp;
+        console.log('[Bubble] Share data age:', timeDiff, 'ms (', Math.floor(timeDiff/1000), 'seconds)');
+        
+        if (timeDiff < 600000) { // 10 minutes
+          console.log('[Bubble] Found valid share data from sessionStorage:', shareData);
+          console.log('[Bubble] Returning shareData with signed_urls:', shareData.signed_urls);
+          return shareData;
+        } else {
+          console.log('[Bubble] Share data too old (>10 min):', timeDiff);
+        }
+      } else {
+        console.log('[Bubble] No sessionStorage share data found at all');
+      }
+    } catch (e) {
+      console.log('[Bubble] Error reading sessionStorage:', e);
+    }
+    
+    console.log('[Bubble] No shared content found, returning null');
+    return null;
+  };
+  const sharedContent = getSharedContent();
+  console.log('[Bubble] Assigned sharedContent:', sharedContent);
 
   // Debug: Log message data for shared content
   useEffect(() => {
     console.log('[Bubble] Message data:', { 
       _id: msg._id, 
       content: msg.content, 
-      content_type: msg.content_type,
-      shared_content_id: msg.shared_content_id,
-      shared_content_type: msg.shared_content_type,
-      thumbnail: msg.thumbnail,
-      title: msg.title,
+      message_type: msg.message_type,
+      shared_content: msg.shared_content,
       media_url: msg.media_url,
-      allKeys: Object.keys(msg)
+      signed_urls: msg.signed_urls,
+      conversation_id: msg.conversation_id,
+      allKeys: Object.keys(msg),
+      sharedContentFound: !!sharedContent,
+      hasSignedUrls: !!(sharedContent?.signed_urls?.media),
+      hasPreviewUrl: !!sharedContent?.preview_url
     });
-  }, [msg]);
+  }, [msg, sharedContent]);
+
+  // Check if this is a shared content message
+ const isSharedContent =
+  msg.content_type === "post" ||
+  msg.content_type === "reel" ||
+  msg.signed_urls?.media?.length > 0 ||
+  sharedContent?.preview_url;
   const [picker, setPicker] = useState(false);
 
   const senderId =
@@ -242,9 +421,328 @@ function Bubble({ msg, myId, profileMap, onReply, onEdit, onDelete, onReact, onF
             }`}
             style={isMe && !msg.is_deleted ? { background: "linear-gradient(135deg, #ec4899, #f97316)" } : {}}
           >
-            {msg.is_deleted ? "Message deleted" : msg.content}
+            {msg.is_deleted
+  ? "Message deleted"
+  : msg.content || (msg.content_type ? "Shared a post" : "")
+}
 
-            {!msg.is_deleted && msg.media_url && (
+            {/* Display shared content from message requests (preview_url) or sessionStorage */}
+            {console.log('[Bubble] Rendering sharedContent:', sharedContent) || !msg.is_deleted && sharedContent && (sharedContent.preview_url || sharedContent.media_url || (sharedContent.signed_urls && sharedContent.signed_urls.media)) && (
+              <div 
+                className="mt-2 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 max-w-xs cursor-pointer hover:opacity-90"
+                onClick={() => {
+                  if (onOpenPostDetail && sharedContent.content_id) {
+                    // Get the media URL - check multiple sources
+                    let mediaUrl = sharedContent.media_url || sharedContent.preview_url;
+                    if (sharedContent.signed_urls?.media?.[0]?.url) {
+                      mediaUrl = sharedContent.signed_urls.media[0].url;
+                    }
+                    
+                    // Get author info - use content_author_id (original post author) if available
+                    const authorId = sharedContent.content_author_id || msg.content_author_id;
+                    const sharerId = sharedContent.sharer_id || msg.sharer_id;
+                    
+                    // Function to get author profile - try profileMap first, then fetch API
+                    const getAuthorProfile = async () => {
+                      // First check profileMap
+                      if (authorId && profileMap) {
+                        let authorProfile = profileMap[authorId];
+                        if (!authorProfile && authorId?._id) {
+                          authorProfile = profileMap[authorId._id];
+                        }
+                        if (!authorProfile) {
+                          authorProfile = Object.values(profileMap).find(p => p._id === authorId || p.user_id === authorId);
+                        }
+                        if (authorProfile) {
+                          return {
+                            _id: authorProfile._id || authorProfile.user_id,
+                            username: authorProfile.username || authorProfile.handle || authorProfile.full_name || '',
+                            full_name: authorProfile.full_name || authorProfile.username || '',
+                            profile_image_url: authorProfile.profile_image_url || authorProfile.avatar || null,
+                            is_verified: authorProfile.is_verified || false
+                          };
+                        }
+                      }
+                      
+                      // If not found in profileMap and we have authorId, try to fetch
+                      if (authorId) {
+                        try {
+                          const userId = typeof authorId === 'string' ? authorId : authorId._id || authorId.user_id;
+                          if (userId) {
+                            const response = await getUserById(userId);
+                            if (response?.data) {
+                              const user = response.data;
+                              return {
+                                _id: user._id || user.id,
+                                username: user.username || user.handle || user.full_name || '',
+                                full_name: user.full_name || user.username || '',
+                                profile_image_url: user.profile_image_url || user.avatar || null,
+                                is_verified: user.is_verified || false
+                              };
+                            }
+                          }
+                        } catch (e) {
+                          console.log('[Bubble] Error fetching author profile:', e);
+                        }
+                      }
+                      
+                      // Fallback to sharer if author not found
+                      if (sharerId && profileMap) {
+                        let sharerProfile = profileMap[sharerId];
+                        if (!sharerProfile && sharerId?._id) {
+                          sharerProfile = profileMap[sharerId._id];
+                        }
+                        if (sharerProfile) {
+                          return {
+                            _id: sharerProfile._id || sharerProfile.user_id,
+                            username: sharerProfile.username || sharerProfile.handle || sharerProfile.full_name || '',
+                            full_name: sharerProfile.full_name || sharerProfile.username || '',
+                            profile_image_url: sharerProfile.profile_image_url || sharerProfile.avatar || null,
+                            is_verified: sharerProfile.is_verified || false
+                          };
+                        }
+                      }
+                      
+                      return null;
+                    };
+                    
+                    // Get author synchronously first, then open modal
+                    let authorObj = null;
+                    // Quick sync check in profileMap
+                    if (authorId && profileMap) {
+                      let authorProfile = profileMap[authorId];
+                      if (!authorProfile) authorProfile = Object.values(profileMap).find(p => p._id === authorId || p.user_id === authorId);
+                      if (authorProfile) {
+                        authorObj = {
+                          _id: authorProfile._id || authorProfile.user_id,
+                          username: authorProfile.username || authorProfile.handle || authorProfile.full_name || '',
+                          full_name: authorProfile.full_name || authorProfile.username || '',
+                          profile_image_url: authorProfile.profile_image_url || authorProfile.avatar || null,
+                          is_verified: authorProfile.is_verified || false
+                        };
+                      }
+                    }
+                    
+                    // Second try: msg.sender_id is an object with profile data (sharer - Mahi7)
+                    if (!authorObj && typeof msg.sender_id === 'object' && msg.sender_id && msg.sender_id.full_name) {
+                      const senderObj = msg.sender_id;
+                      authorObj = {
+                        _id: senderObj._id || senderObj.id || senderObj.user_id,
+                        username: senderObj.username || senderObj.handle || senderObj.full_name || '',
+                        full_name: senderObj.full_name || senderObj.username || '',
+                        profile_image_url: senderObj.profile_image_url || senderObj.avatar || null,
+                        is_verified: senderObj.is_verified || false
+                      };
+                    }
+                    
+                    // Third try: msg.sender_id is a string ID, try profileMap
+                    if (!authorObj && msg.sender_id && profileMap) {
+                      const senderProfile = profileMap[msg.sender_id] || profileMap[msg.sender_id?._id] || profileMap[msg.sender_id?.id];
+                      if (senderProfile) {
+                        authorObj = {
+                          _id: senderProfile._id || senderProfile.user_id,
+                          username: senderProfile.username || senderProfile.handle || senderProfile.full_name || '',
+                          full_name: senderProfile.full_name || senderProfile.username || '',
+                          profile_image_url: senderProfile.profile_image_url || senderProfile.avatar || null,
+                          is_verified: senderProfile.is_verified || false
+                        };
+                      }
+                    }
+                    
+                    // Fourth try: Try sharedContent.author
+                    if (!authorObj && sharedContent.author) {
+                      const sharedAuthor = sharedContent.author;
+                      authorObj = {
+                        _id: sharedAuthor.user_id || sharedAuthor._id,
+                        username: sharedAuthor.username || sharedAuthor.full_name || '',
+                        full_name: sharedAuthor.full_name || sharedAuthor.username || '',
+                        profile_image_url: sharedAuthor.profile_image_url || sharedAuthor.avatar || null,
+                        is_verified: sharedAuthor.is_verified || false
+                      };
+                    }
+                    
+                    // Fetch full post details from API
+                    const fetchFullPost = async () => {
+                      try {
+                        console.log('[Bubble] Fetching full post details for:', sharedContent.content_id);
+                        // Try postService first
+                        let fullPost = null;
+                        try {
+                          const response = await postService.getPost(sharedContent.content_id);
+                          console.log('[Bubble] postService response:', response);
+                          fullPost = response?.data?.data || response?.data || response;
+                        } catch (e) {
+                          console.log('[Bubble] postService failed, trying getPostById:', e);
+                          fullPost = await getPostById(sharedContent.content_id);
+                        }
+                        console.log('[Bubble] Full post data received:', fullPost);
+                        
+                        // Ensure post has required ID field for modal
+                        if (fullPost) {
+                          fullPost.post_id = fullPost.post_id || fullPost._id || fullPost.id || sharedContent.content_id;
+                          fullPost._id = fullPost._id || fullPost.id || sharedContent.content_id;
+                          fullPost.content_type = fullPost.content_type || sharedContent.content_type || 'post';
+                          
+                          // Ensure media is in correct format for modal
+                          if (!fullPost.media || fullPost.media.length === 0) {
+                            // Try to get media from different API response fields
+                            if (sharedContent.signed_urls?.media) {
+                              fullPost.media = sharedContent.signed_urls.media;
+                            } else if (fullPost.media_url) {
+                              fullPost.media = [{
+                                url: fullPost.media_url,
+                                type: fullPost.media_type === 'video' ? 'video' : 'image'
+                              }];
+                            } else if (fullPost.images?.length > 0) {
+                              fullPost.media = fullPost.images.map(img => ({
+                                url: img.url || img,
+                                type: 'image'
+                              }));
+                            } else if (sharedContent.thumbnail || sharedContent.media_url) {
+                              // Fallback to sessionStorage thumbnail
+                              fullPost.media = [{
+                                url: sharedContent.thumbnail || sharedContent.media_url,
+                                type: 'image'
+                              }];
+                            }
+                          }
+                          
+                          // Use the API's author (original post author - mahi7), not the sharer
+                          // fullPost.author should be the original post author from the API
+                          const postWithAuthor = {
+                            ...fullPost,
+                            // Prefer API's original post author, fallback to our fetched authorObj
+                            author: fullPost.author || authorObj
+                          };
+                          console.log('[Bubble] Final postWithAuthor:', postWithAuthor);
+                          onOpenPostDetail(postWithAuthor);
+                        } else {
+                          // Fallback to basic postObj if API returns null
+                          const postObj = {
+                            _id: sharedContent.content_id,
+                            post_id: sharedContent.content_id,
+                            content_type: sharedContent.content_type || 'post',
+                            media: [{
+                              url: mediaUrl,
+                              type: sharedContent.content_type === 'reel' ? 'video' : 'image'
+                            }],
+                            content: {
+                              text: sharedContent.caption || '',
+                              location: sharedContent.location || null
+                            },
+                            author: authorObj,
+                            likes: [],
+                            comments: [],
+                            shares: []
+                          };
+                          onOpenPostDetail(postObj);
+                        }
+                      } catch (error) {
+                        console.error('[Bubble] Error fetching post:', error);
+                        // Fallback to basic postObj on error
+                        const postObj = {
+                          _id: sharedContent.content_id,
+                          post_id: sharedContent.content_id,
+                          content_type: sharedContent.content_type || 'post',
+                          media: [{
+                            url: mediaUrl,
+                            type: sharedContent.content_type === 'reel' ? 'video' : 'image'
+                          }],
+                          content: {
+                            text: sharedContent.caption || '',
+                            location: sharedContent.location || null
+                          },
+                          author: authorObj,
+                          likes: [],
+                          comments: [],
+                          shares: []
+                        };
+                        onOpenPostDetail(postObj);
+                      }
+                    };
+                    
+                    // Call the fetch function
+                    fetchFullPost();
+                  }
+                }}
+              >
+                {/* Show sharer info if available */}
+                {msg.sender_id && profileMap && profileMap[msg.sender_id] && (
+                  <div className="flex items-center gap-2 p-2 border-b border-gray-100">
+                    <img 
+                      src={profileMap[msg.sender_id]?.avatar || '/playymate-logo.png'} 
+                      alt={profileMap[msg.sender_id]?.full_name || 'User'} 
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      {profileMap[msg.sender_id]?.full_name || profileMap[msg.sender_id]?.username || 'User'}
+                    </span>
+                  </div>
+                )}
+                {/* If we have preview_url from message request */}
+                {sharedContent.preview_url ? (
+                  <img 
+                    src={sharedContent.preview_url} 
+                    alt={sharedContent.caption || "Shared content"} 
+                    className="w-full max-h-48 object-cover"
+                  />
+                ) : sharedContent.media_url ? (
+                  /* Check for media_url in sharedContent */
+                  <img 
+                    src={sharedContent.media_url} 
+                    alt={sharedContent.caption || "Shared content"} 
+                    className="w-full max-h-48 object-cover"
+                  />
+                ) : sharedContent.signed_urls?.media ? (
+                  /* Otherwise check signed_urls from sessionStorage */
+                  sharedContent.signed_urls.media.map((media, idx) => (
+                    <div key={idx} className="rounded-md overflow-hidden">
+                      {media.type === 'image' ? (
+                        <img 
+                          src={media.url} 
+                          alt="Shared content" 
+                          className="w-full max-h-48 object-cover"
+                        />
+                      ) : media.type === 'video' ? (
+                        <video 
+                          src={media.url} 
+                          controls 
+                          className="w-full max-h-48 rounded-md"
+                        />
+                      ) : null}
+                    </div>
+                  ))
+                ) : null}
+                {sharedContent.caption && (
+                  <p className="text-xs mt-1 opacity-70 p-2">{sharedContent.caption}</p>
+                )}
+              </div>
+            )}
+
+            {/* Display shared content from signed_urls (direct messages) - fallback */}
+          {!msg.is_deleted && msg.signed_urls?.media?.length > 0 && (
+              <div className="mt-2">
+                {msg.signed_urls.media.map((media, idx) => (
+                  <div key={idx} className="rounded-md overflow-hidden mt-1">
+                    {media.type === 'image' ? (
+                      <img 
+                        src={media.url} 
+                        alt="Shared content" 
+                        className="h-60 w-60 rounded-md object-cover"
+                      />
+                    ) : media.type === 'video' ? (
+                      <video 
+                        src={media.url} 
+                        controls 
+                        className="h-60 w-60 rounded-md object-cover"
+                      />
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!msg.is_deleted && msg.media_url && !msg.signed_urls && (
               <div className="mt-1 text-xs opacity-70 flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                 Attachment
@@ -348,6 +846,7 @@ export default function MessagesPage() {
   const [profileMap,    setProfileMap]    = useState({});
   const [conversations, setConversations] = useState([]);
   const [convLoading,   setConvLoading]   = useState(true);
+  const [messageRequests, setMessageRequests] = useState([]);
   const [selectedConv,  setSelectedConv]  = useState(null);
   const [messages,      setMessages]      = useState([]);
   const [msgLoading,    setMsgLoading]    = useState(false);
@@ -363,6 +862,21 @@ export default function MessagesPage() {
   const [renameInput,   setRenameInput]   = useState("");
   const [typingUsers,   setTypingUsers]   = useState({});
   const [connected,     setConnected]     = useState(false);
+
+  // Post modal state
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [showPostModal, setShowPostModal] = useState(false);
+
+  // Handle opening post detail modal
+  const handleOpenPostDetail = (post) => {
+    setSelectedPost(post);
+    setShowPostModal(true);
+  };
+
+  const handleClosePostDetail = () => {
+    setShowPostModal(false);
+    setSelectedPost(null);
+  };
 
 
   // emoji
@@ -596,6 +1110,22 @@ const handleEmojiPick = (emoji) => {
   }, [mergeProfiles]);
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
+
+  // Fetch message requests on mount
+  useEffect(() => {
+    const fetchMessageRequests = async () => {
+      try {
+        const response = await getMessageRequests({ limit: 20 });
+        console.log('[Messages] Message requests response:', response);
+        if (response.status === 'success' && response.data) {
+          setMessageRequests(response.data.requests || []);
+        }
+      } catch (err) {
+        console.error('Error fetching message requests:', err);
+      }
+    };
+    fetchMessageRequests();
+  }, []);
 
   // ── fetchMessages ────────────────────────────────────────────────────────────
 
@@ -935,6 +1465,11 @@ const handleEmojiPick = (emoji) => {
           </div>
         </div>
 
+<div className=" flex justify-end px-4 py-2"> 
+  <button>request</button>
+</div>
+
+
         <div className="flex-1 overflow-y-auto">
           {convLoading ? (
             <div className="p-4 space-y-3">
@@ -1027,11 +1562,13 @@ const handleEmojiPick = (emoji) => {
                   msg={msg}
                   myId={myId}
                   profileMap={profileMap}
+                  messageRequests={messageRequests}
                   onReply={(m) => { setReplyTo(m); setEditingMsg(null); }}
                   onEdit={(m) => { setEditingMsg(m); setReplyTo(null); setText(m.content); }}
                   onDelete={handleDelete}
                   onReact={handleReact}
                   onForward={handleForward}
+                  onOpenPostDetail={handleOpenPostDetail}
                 />
               ))
             )}
@@ -1169,6 +1706,15 @@ const handleEmojiPick = (emoji) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Post Detail Modal for shared content */}
+      {showPostModal && selectedPost && (
+        <UserPostDetailModal
+          post={selectedPost}
+          isLoading={false}
+          onClose={handleClosePostDetail}
+        />
       )}
     </div>
   );

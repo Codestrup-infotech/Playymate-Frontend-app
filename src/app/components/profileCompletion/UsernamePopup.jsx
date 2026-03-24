@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { X, Check, Loader2 } from "lucide-react";
-import { getUsernameSuggestions, updateUserProfile, getCurrentUserId } from "@/services/profile.service";
+import { getUsernameSuggestions, updateUserProfile } from "@/services/profile.service";
+import { userService } from "@/services/user";
 
 export default function UsernamePopup({ onClose, onSave, initialUsername }) {
   const [username, setUsername] = useState(initialUsername || "");
@@ -11,6 +12,23 @@ export default function UsernamePopup({ onClose, onSave, initialUsername }) {
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState(initialUsername || "");
   const [error, setError] = useState(null);
+  const [userId, setUserId] = useState(null);
+
+  // Fetch current user data to get user ID (same as edit page)
+  useEffect(() => {
+    async function fetchCurrentUser() {
+      try {
+        const res = await userService.getMe();
+        const data = res?.data?.data || res?.data;
+        if (data && data._id) {
+          setUserId(data._id);
+        }
+      } catch (error) {
+        console.error("Failed to fetch current user:", error);
+      }
+    }
+    fetchCurrentUser();
+  }, []);
 
   // Fetch suggestions from API when username changes (debounced)
   const fetchSuggestions = useCallback(async (input) => {
@@ -72,12 +90,19 @@ export default function UsernamePopup({ onClose, onSave, initialUsername }) {
     setSelected("");
   };
 
+  // Handle clicking on a suggestion - set it directly without API call
   const handleSelectSuggestion = (suggestion) => {
     setSelected(suggestion);
     setUsername(suggestion);
+    // Don't trigger API fetch when selecting a suggestion
   };
 
   const handleSave = async () => {
+    if (!userId) {
+      setError("User not found. Please refresh and try again.");
+      return;
+    }
+
     const finalUsername = selected || username;
     if (finalUsername.length < 3) {
       setError("Username must be at least 3 characters");
@@ -88,11 +113,6 @@ export default function UsernamePopup({ onClose, onSave, initialUsername }) {
     setError(null);
 
     try {
-      const userId = getCurrentUserId();
-      if (!userId) {
-        throw new Error("User not found");
-      }
-
       await updateUserProfile(userId, { username: finalUsername });
       onSave(finalUsername);
     } catch (err) {

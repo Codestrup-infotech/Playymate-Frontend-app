@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { X, Heart, MessageSquare, Share2, CheckCircle } from "lucide-react";
 import postService from "@/app/user/post";
 import { toggleLike } from "@/app/user/homefeed";
@@ -45,6 +46,7 @@ export default function UserPostDetailModal({
   onClose,
   currentUser
 }) {
+  const router = useRouter();
   const [commentText, setCommentText] = useState("");
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
@@ -288,26 +290,38 @@ export default function UserPostDetailModal({
             <div className="w-full md:w-1/2 flex flex-col">
 
               {/* AUTHOR */}
-              <div className="flex items-center gap-3 p-4 border-b">
+              {/* Debug: log author data */}
+              {console.log('[Modal] postData.author:', postData.author) || console.log('[Modal] post.author:', post.author) || null}
+              {/* Use post prop as fallback for author fields in case API overwrites them */}
+              {(() => {
+                const authorId = postData.author?._id || post.author?._id || postData.author?.user_id || post.author?.user_id;
+                const handleAuthorClick = () => {
+                  if (authorId) {
+                    router.push(`/home/profile/${authorId}`);
+                  }
+                };
+                return (
+                <div className="flex items-center gap-3 p-4 border-b cursor-pointer" onClick={handleAuthorClick}>
                 <img
-                  src={postData.author?.profile_image_url || "/loginAvatars/profile.png"}
+                  src={postData.author?.profile_image_url || post.author?.profile_image_url || "/loginAvatars/profile.png"}
                   className="w-10 h-10 rounded-full object-cover"
                   alt="Author"
                 />
                 <div>
                   <p className="font-semibold text-gray-900">
-                    {postData.author?.username || postData.author?.full_name}
+                    {(postData.author?.username || postData.author?.full_name || post.author?.username || post.author?.full_name) || 'Unknown User'}
                   </p>
-                  {postData.content?.location && (
+                  {(postData.content?.location || post.content?.location) && (
                     <p className="text-xs text-gray-400">
-                      {typeof postData.content.location === 'string'
-                        ? postData.content.location
-                        : postData.content.location?.display_text || postData.content.location?.city || ''}
+                      {typeof (postData.content?.location || post.content?.location) === 'string'
+                        ? (postData.content?.location || post.content?.location)
+                        : (postData.content?.location?.display_text || post.content?.location?.display_text || postData.content?.location?.city || post.content?.location?.city || '')}
                     </p>
                   )}
                 </div>
-                {postData.author?.is_verified && <CheckCircle size={16} className="text-blue-400"/>}
+                {(postData.author?.is_verified || post.author?.is_verified) && <CheckCircle size={16} className="text-blue-400"/>}
               </div>
+                )})()}
 
               {/* COMMENTS */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">

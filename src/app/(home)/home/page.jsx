@@ -1,23 +1,55 @@
  "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   MessageCircle, Heart, Send, ShoppingCart, MapPin,
   Users, Image, X, RefreshCw, Loader2, Plus, ChevronLeft, ChevronRight
 } from "lucide-react";
-import { getMyStory, getStoryFeed, sortStoriesByCreatedAtASC } from "@/app/user/homefeed";
+import { getMyStory, getStoryFeed, sortStoriesByCreatedAtASC, sortStoryGroupsByLatestFirst } from "@/app/user/homefeed";
 import userService from "@/services/user";
 import ProfileCompletionCard from "@/app/components/profileCompletion/ProfileCompletionCard";
 import { useTheme } from "@/lib/ThemeContext";
 import SuggestedUsers from "./components/SuggestedUsers";
 import OwnStoryViewerModal from "./profile/story";
+import UserPostDetailModal from "./components/UserPostDetailModal";
+import SharePopup from "./components/sharepopup";
 import useFeed from "@/hooks/useFeed";
+import { Volume2 } from "lucide-react";
+import { useFeedRefresh } from "@/context/FeedRefreshContext";
 
 /* ─── Small helper components ─── */
 
-function PostCard({ post, isDark, cardBg, mutedText, iconBtn }) {
+function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, onShareClick, onUserClick }) {
   const [liked, setLiked] = useState(false);
   const videoRef = useRef(null);
+
+
+  const [isMuted, setIsMuted] = useState(true);
+
+
+
+  useEffect(() => {
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      if (videoRef.current) {
+        if (entry.isIntersecting) {
+          videoRef.current.play().catch(() => {});
+        } else {
+          videoRef.current.pause();
+        }
+      }
+    },
+    { threshold: 0.7 }
+  );
+
+  if (videoRef.current) {
+    observer.observe(videoRef.current);
+  }
+
+  return () => {
+    if (videoRef.current) observer.unobserve(videoRef.current);
+  };
+}, []);
 
   // Handle video end - pause and reset to start (Instagram-style)
   const handleVideoEnded = () => {
@@ -26,6 +58,11 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn }) {
       videoRef.current.currentTime = 0;
     }
   };
+
+  
+
+
+
   // Support both old format (post.data) and new format (transformed feed item with type: "post")
   // The transformed followingFeedItems have: { type: "post", data: { author, content, media, engagement, ... } }
   const author = post.data?.author ?? post.author ?? {};
@@ -35,7 +72,7 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn }) {
   const userAction = post.data?.user_action ?? post.user_action ?? {};
   const likesCount = engagement?.likes_count ?? post.data?.likes_count ?? post.likes_count ?? 0;
   const commentsCount = engagement?.comments_count ?? post.data?.comments_count ?? post.comments_count ?? 0;
-  const sharesCount = engagement?.shares_count ?? 0;
+  const sharesCount = engagement?.shares_count ?? post.data?.shares_count ?? post.shares_count ?? 0;
   const savesCount = engagement?.saves_count ?? 0;
   const isLikedByYou = userAction?.liked_by_you ?? liked;
   const isSavedByYou = userAction?.saved_by_you ?? false;
@@ -44,93 +81,180 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn }) {
   return (
     <div className={`${cardBg} rounded-xl overflow-hidden shadow-sm transition-colors duration-300`}>
       {/* Author row */}
-      <div className="flex items-center gap-3 p-4">
-        {author.profile_image_url ? (
-          <img src={author.profile_image_url} alt={author.full_name} className="w-10 h-10 rounded-full object-cover" />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-orange-500" />
-        )}
-        <div>
-          <h4 className="font-semibold text-sm">{author.full_name || "Unknown"}</h4>
-          {author.username && <p className={`text-xs ${mutedText}`}>@{author.username}</p>}
-        </div>
-        {contentType === 'reel' && (
-          <span className="ml-auto text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">Reel</span>
-        )}
-      </div>
+     <div 
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:opacity-80"
+        onClick={() => onUserClick && onUserClick(post)}
+      >
+  <img
+    src={author.profile_image_url}
+    className="w-10 h-10 rounded-full object-cover"
+  />
+  <div>
+    <h4 className={`text-sm font-semibold ${isDark ? "text-white" : "text-black"}`}>
+      {author.full_name}
+    </h4>
+    <p className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+      @{author.username}
+    </p>
+  </div>
+</div>
 
       {/* Media - Instagram-style: maintain original aspect ratio, no stretching */}
-      {media.length > 0 && (
-        <div className="w-full bg-black flex items-center justify-center">
-          {media[0].type === "video" ? (
-            <video 
-              src={media[0].url} 
-              controls 
-              className="w-full h-auto max-h-[80vh] object-contain"
-              playsInline
-            />
-          ) : (
-            <img 
-              src={media[0].url} 
-              alt="post media" 
-              className="w-full h-auto object-contain"
-            />
-          )}
-        </div>
-      )}
+     {/* {media.length > 0 && (
+ <div className="w-full h-[400px] px-3 py-3 flex justify-center items-center ">
+    {media[0].type === "video" ? (
+      <video
+        src={media[0].url}
+        controls
+        className="w-full h-full "
+      />
+    ) : (
+     <img
+  src={media[0].url}
+  alt="post media"
+  className="w-a h-full  "
+/>
+    )}
+  </div>
+)} */}
+
+{media.length > 0 && (
+  <div className="relative w-full h-auto px-3 py-3 flex justify-center items-center">
+    {media[0].type === "video" ? (
+      <>
+        <video
+          ref={videoRef}
+          src={media[0].url}
+          className="w-auto h-[480px] rounded-xl "
+          autoPlay
+          loop
+          muted={isMuted}
+          playsInline
+          controls={false}
+          onClick={() => {
+            if (videoRef.current.paused) {
+              videoRef.current.play();
+            } else {
+              videoRef.current.pause();
+            }
+          }}
+        />
+
+        {/* 🔊 Sound button only */}
+      <button
+  onClick={(e) => {
+    e.stopPropagation();
+    setIsMuted(m => !m);
+  }}
+  className="absolute bottom-3 right-5 bg-black/60 text-white p-2 rounded-full flex items-center justify-center"
+>
+  <div className="relative">
+    
+    {/* 🔊 Sound Icon */}
+    <Volume2 size={18} />
+
+    {/* 🔇 Backslash "\" when muted */}
+    {isMuted && (
+      <span className="absolute inset-0 flex items-center justify-center">
+        <span className="w-[2px] h-5 bg-white rotate-[-45deg]"></span>
+      </span>
+    )}
+
+  </div>
+</button>
+      </>
+    ) : (
+      <img
+        src={media[0].url}
+        alt="post media"
+        className="w-full h-auto   object-cover rounded-xl "
+      />
+    )}
+  </div>
+)}
 
       {/* Text */}
-      {content.text && (
-        <p className={`px-4 py-3 text-sm ${isDark ? "text-gray-200" : "text-gray-800"}`}>
-          {content.text}
-        </p>
-      )}
+     {content.text && (
+  <p className={`px-4 py-2 text-base font-medium ${isDark ? "text-white" : "text-black"}`}>
+    {content.text}
+  </p>
+)}
 
       {/* Hashtags */}
-      {content.hashtags && content.hashtags.length > 0 && (
-        <p className={`px-4 pb-2 text-sm ${isDark ? "text-blue-400" : "text-blue-600"}`}>
-          {content.hashtags.map(tag => `#${tag}`).join(' ')}
-        </p>
-      )}
+     {content.hashtags && content.hashtags.length > 0 && (
+  <p className={`px-4 pb-2 text-sm font-semibold ${isDark ? "text-blue-400" : "text-blue-600"}`}>
+    {content.hashtags.map(tag => `#${tag}`).join(' ')}
+  </p>
+)}
 
       {/* Location */}
-      {content.location?.display_text && (
-        <p className={`px-4 pb-2 text-xs flex items-center gap-1 ${mutedText}`}>
-          <MapPin size={12} /> {content.location.display_text}
-        </p>
-      )}
+     {content.location?.display_text && (
+  <p className={`px-4 pb-2 text-sm flex items-center gap-1 ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+    <MapPin size={14} /> {content.location.display_text}
+  </p>
+)}
 
       {/* Actions */}
-      <div className="flex justify-between items-center px-4 pb-4 text-sm">
-        <div className="flex items-center gap-5">
-          <button
-            onClick={() => setLiked(l => !l)}
-            className={`flex items-center gap-1.5 transition-colors ${isLikedByYou ? "text-pink-500" : iconBtn}`}
-          >
-            <Heart size={18} className={isLikedByYou ? "fill-pink-500" : ""} />
-            <span>{isLikedByYou ? likesCount + 1 : likesCount}</span>
-          </button>
-          <button className={`flex items-center gap-1.5 transition-colors ${iconBtn}`}>
-            <MessageCircle size={18} />
-            <span>{commentsCount}</span>
-          </button>
-        </div>
-        <div className="flex items-center gap-3">
-          {savesCount > 0 && (
-            <span className={`text-xs ${mutedText}`}>Save: {savesCount}</span>
-          )}
-          <button className={`flex items-center gap-1.5 transition-colors ${iconBtn}`}>
-            <Send size={18} />
-          </button>
-        </div>
-      </div>
+   <div className="flex justify-between items-center px-4 pb-4 mt-auto">
+
+  {/* LEFT SIDE */}
+  <div className="flex items-center gap-6">
+
+    {/* ❤️ Like */}
+    <button
+      onClick={() => setLiked(l => !l)}
+      className={`${isLikedByYou ? "text-pink-500" : isDark ? "text-white" : "text-black"} flex items-center gap-2`}
+    >
+      <Heart size={20} className={isLikedByYou ? "fill-pink-500" : ""} />
+      <span className="text-sm font-semibold">
+        {isLikedByYou ? likesCount + 1 : likesCount}
+      </span>
+    </button>
+
+    {/* 💬 Comment */}
+    <button 
+      onClick={() => onCommentClick && onCommentClick(post)}
+      className={`${isDark ? "text-white" : "text-black"} flex items-center gap-2`}
+    >
+      <MessageCircle size={20} />
+      <span className="text-sm font-semibold">{commentsCount}</span>
+    </button>
+
+    {/* 📤 Share (moved LEFT) */}
+    <button 
+      onClick={() => onShareClick && onShareClick(post)}
+      className={`${isDark ? "text-white" : "text-black"}`}
+    >
+      <Send size={20} />
+      {sharesCount > 0 && <span className="text-xs ml-1">{sharesCount}</span>}
+    </button>
+
+  </div>
+
+  {/* RIGHT SIDE */}
+  <button className={`${isDark ? "text-white" : "text-black"}`}>
+    {/* 🔖 Save */}
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="22"
+      height="22"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+    </svg>
+  </button>
+
+</div>
     </div>
   );
 }
 
 function VenueCard({ venue, isDark, cardBg, mutedText }) {
   return (
-    <div className={`${cardBg} rounded-xl overflow-hidden shadow-sm transition-colors duration-300`}>
+   <div className={`${cardBg} rounded-xl shadow-sm w-[450px] h-[400px] overflow-hidden flex flex-col`}>
       {venue.image_url && (
         <img src={venue.image_url} alt={venue.name} className="w-full h-40 object-cover" />
       )}
@@ -176,10 +300,10 @@ function FriendActivityCard({ item, isDark, cardBg, mutedText }) {
   );
 }
 
-function FeedItemRenderer({ item, isDark, cardBg, mutedText, iconBtn }) {
+function FeedItemRenderer({ item, isDark, cardBg, mutedText, iconBtn, onCommentClick, onShareClick, onUserClick }) {
   if (!item) return null;
   if (item.type === "post") {
-    return <PostCard post={item} isDark={isDark} cardBg={cardBg} mutedText={mutedText} iconBtn={iconBtn} />;
+    return <PostCard post={item} isDark={isDark} cardBg={cardBg} mutedText={mutedText} iconBtn={iconBtn} onCommentClick={onCommentClick} onShareClick={onShareClick} onUserClick={onUserClick} />;
   }
   if (item.type === "venue") {
     const venue = item.data ?? item;
@@ -208,14 +332,22 @@ function FeedItemRenderer({ item, isDark, cardBg, mutedText, iconBtn }) {
 
 /* ─── Main Page ─── */
 
-export default function HomePage() {
+function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [userStories, setUserStories] = useState([]);
+  const [followerStories, setFollowerStories] = useState([]);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [isViewingStory, setIsViewingStory] = useState(false);
   const [userProfile, setUserProfile] = useState({});
+  const [viewingFollowerStory, setViewingFollowerStory] = useState(false);
+  const [followerStoryIndex, setFollowerStoryIndex] = useState(0);
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [isPostDetailOpen, setIsPostDetailOpen] = useState(false);
+  const [sharePost, setSharePost] = useState(null);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [shareCount, setShareCount] = useState(0);
   const fileInputRef = useRef(null);
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -289,6 +421,19 @@ export default function HomePage() {
           } catch (storyErr) {
             console.log("[HomePage] Error fetching stories:", storyErr.message);
           }
+
+          // Fetch follower/following stories
+          try {
+            const storyFeedResult = await getStoryFeed(20);
+            if (storyFeedResult?.items && Array.isArray(storyFeedResult.items)) {
+              // Already sorted by latest first from the API
+              const followerStoriesData = storyFeedResult.items;
+              console.log("[HomePage] Follower stories loaded:", followerStoriesData.length);
+              setFollowerStories(followerStoriesData);
+            }
+          } catch (followerStoryErr) {
+            console.log("[HomePage] Error fetching follower stories:", followerStoryErr.message);
+          }
         }
       } catch (err) {
         console.log("[HomePage] Error fetching user data:", err.message);
@@ -312,6 +457,17 @@ export default function HomePage() {
     refresh,
     fetchUserProfile,
   } = useFeed();
+
+  // Listen for feed refresh triggers from Sidebar
+  const { refreshTrigger } = useFeedRefresh();
+
+  // Trigger feed refresh when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      console.log("[HomePage] Feed refresh triggered");
+      refresh();
+    }
+  }, [refreshTrigger, refresh]);
 
   const cardBg = isDark ? "bg-[#1a1a2e]" : "bg-white";
   const mutedText = isDark ? "text-gray-400" : "text-gray-500";
@@ -340,6 +496,96 @@ export default function HomePage() {
     setCurrentStoryIndex(0);
   };
 
+  // Handle viewing follower story
+  const handleViewFollowerStory = (index) => {
+    setFollowerStoryIndex(index);
+    setViewingFollowerStory(true);
+  };
+
+  // Close follower story viewer
+  const closeFollowerStoryViewer = () => {
+    setViewingFollowerStory(false);
+    setFollowerStoryIndex(0);
+  };
+
+  // Navigate to next follower story
+  const goToNextFollowerStory = () => {
+    const currentUserStories = followerStories[followerStoryIndex]?.stories || [];
+    // For now, just close the viewer - can be enhanced to view all stories in sequence
+    closeFollowerStoryViewer();
+  };
+
+  // Navigate to previous follower story
+  const goToPrevFollowerStory = () => {
+    if (followerStoryIndex > 0) {
+      setFollowerStoryIndex(followerStoryIndex - 1);
+    }
+  };
+
+  // Handle opening post detail modal on comment click
+  const handleCommentClick = (post) => {
+    console.log("Opening post detail for comment:", post);
+    
+    // Transform post data to match UserPostDetailModal expected format
+    const transformedPost = {
+      post_id: post?.data?.content_id || post?.data?.post_id || post?.post_id || post?._id || post?.id,
+      content_type: post?.data?.content_type || post?.content_type || 'post',
+      author: post?.data?.author || post?.author || {},
+      content: post?.data?.content || post?.content || {},
+      media: post?.data?.media || post?.media || [],
+      engagement: post?.data?.engagement || post?.engagement || {},
+      likes_count: post?.data?.engagement?.likes_count || post?.data?.likes_count || post?.likes_count || 0,
+      comments_count: post?.data?.engagement?.comments_count || post?.data?.comments_count || post?.comments_count || 0,
+      comments: post?.data?.comments || post?.comments || [],
+      is_liked: post?.data?.user_action?.liked_by_you || post?.is_liked || false,
+      created_at: post?.data?.created_at || post?.created_at,
+    };
+    
+    setSelectedPost(transformedPost);
+    setIsPostDetailOpen(true);
+  };
+
+  // Close post detail modal
+  const closePostDetail = () => {
+    setIsPostDetailOpen(false);
+    setSelectedPost(null);
+  };
+
+  // Handle opening share popup
+  const handleShareClick = (post) => {
+    console.log("Opening share for post:", post);
+    const postId = post?.data?.content_id || post?.data?.post_id || post?.post_id || post?._id || post?.id;
+    setSharePost({
+      contentId: postId,
+      contentType: post?.data?.content_type || post?.content_type || 'post',
+      thumbnail: post?.data?.media?.[0]?.url || post?.media?.[0]?.url || null,
+      title: post?.data?.content?.text || post?.content?.text || null,
+    });
+    // Get share count from engagement
+    const count = post?.data?.engagement?.shares_count || post?.shares_count || 0;
+    setShareCount(count);
+    setIsShareOpen(true);
+  };
+
+  // Handle share success
+  const handleShareSuccess = () => {
+    setShareCount(prev => prev + 1);
+  };
+
+  // Close share popup
+  const closeSharePopup = () => {
+    setIsShareOpen(false);
+    setSharePost(null);
+  };
+
+  // Handle user click - navigate to profile
+  const handleUserClick = (post) => {
+    const userId = post?.data?.author?.user_id || post?.data?.author?._id || post?.author?.user_id || post?.author?._id;
+    if (userId) {
+      router.push(`/home/profile/${userId}`);
+    }
+  };
+
   // Navigate to next story
   const goToNextStory = () => {
     if (currentStoryIndex < userStories.length - 1) {
@@ -366,10 +612,10 @@ export default function HomePage() {
 
   return (
     <>
-      <div className=" flex  space-x-10 ">
+    <div className="flex items-start gap-8 px-14 max-w-[1200px] mx-auto w-full">
 
         {/* ── Feed Column ── */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="flex-1 max-w-[470px] space-y-6">
 
           {/* Stories row */}
           <div className="flex gap-4 overflow-x-auto pb-2">
@@ -420,22 +666,26 @@ export default function HomePage() {
 
      
 
-{suggestedFollows.slice(0, 5).map((u, index) => (
-  <div key={u.user_id || index} className="flex flex-col items-center shrink-0">
+{followerStories.slice(0, 5).map((storyGroup, index) => (
+  <div 
+    key={storyGroup.user?.user_id || index} 
+    className="flex flex-col items-center shrink-0 cursor-pointer"
+    onClick={() => handleViewFollowerStory(index)}
+  >
     <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-500 to-orange-500 p-[2px]">
-      {u.profile_image_url ? (
+      {storyGroup.user?.profile_image_url ? (
         <img
-          src={u.profile_image_url}
-          alt={u.full_name}
+          src={storyGroup.user.profile_image_url}
+          alt={storyGroup.user.full_name}
           className="w-full h-full rounded-full object-cover"
         />
       ) : (
         <div className="w-full h-full rounded-full bg-gray-300 flex items-center justify-center text-sm font-semibold">
-          {u.full_name?.charAt(0)}
+          {storyGroup.user?.full_name?.charAt(0) || '?'}
         </div>
       )}
     </div>
-    <p className="text-xs mt-1">{u.full_name}</p>
+    <p className="text-xs mt-1">{storyGroup.user?.full_name}</p>
   </div>
 ))}
 
@@ -470,6 +720,65 @@ export default function HomePage() {
             onPrev={goToPrevStory}
           />
 
+          {/* Follower Story Viewer Modal */}
+          {viewingFollowerStory && followerStories[followerStoryIndex] && (
+            <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+              <button 
+                className="absolute top-4 right-4 text-white z-50"
+                onClick={closeFollowerStoryViewer}
+              >
+                <X size={28} />
+              </button>
+              
+              {/* Navigation arrows */}
+              <button 
+                className="absolute left-4 text-white z-50"
+                onClick={goToPrevFollowerStory}
+                disabled={followerStoryIndex === 0}
+              >
+                <ChevronLeft size={40} />
+              </button>
+              
+              <button 
+                className="absolute right-4 text-white z-50"
+                onClick={goToNextFollowerStory}
+              >
+                <ChevronRight size={40} />
+              </button>
+
+              {/* Story content */}
+              <div className="relative w-full h-full max-w-lg max-h-[90vh]">
+                {followerStories[followerStoryIndex]?.stories?.[0]?.media_type === 'video' ? (
+                  <video
+                    src={followerStories[followerStoryIndex].stories[0].media_url}
+                    className="w-full h-full object-contain"
+                    autoPlay
+                    loop
+                    controls
+                  />
+                ) : (
+                  <img
+                    src={followerStories[followerStoryIndex]?.stories?.[0]?.media_url}
+                    alt="Story"
+                    className="w-full h-full object-contain"
+                  />
+                )}
+                
+                {/* User info overlay */}
+                <div className="absolute top-4 left-4 flex items-center gap-2">
+                  <img
+                    src={followerStories[followerStoryIndex]?.user?.profile_image_url || '/loginAvatars/profile.png'}
+                    alt={followerStories[followerStoryIndex]?.user?.full_name}
+                    className="w-10 h-10 rounded-full object-cover border-2 border-white"
+                  />
+                  <span className="text-white font-semibold">
+                    {followerStories[followerStoryIndex]?.user?.full_name}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Profile Completion Card - from Feed API */}
           {profileCard?.enabled && (
             <ProfileCompletionCard 
@@ -483,7 +792,7 @@ export default function HomePage() {
           )}
 
           {/* Refresh button */}
-          <div className="flex justify-end">
+          {/* <div className="flex justify-end">
             <button
               onClick={refresh}
               disabled={loading}
@@ -492,7 +801,7 @@ export default function HomePage() {
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               Refresh Feed
             </button>
-          </div>
+          </div> */}
 
           {/* Error state */}
           {error && (
@@ -531,6 +840,9 @@ export default function HomePage() {
                   cardBg={cardBg}
                   mutedText={mutedText}
                   iconBtn={iconBtn}
+                  onCommentClick={handleCommentClick}
+                  onShareClick={handleShareClick}
+                  onUserClick={handleUserClick}
                 />
               ))}
             </div>
@@ -547,6 +859,9 @@ export default function HomePage() {
                   cardBg={cardBg}
                   mutedText={mutedText}
                   iconBtn={iconBtn}
+                  onCommentClick={handleCommentClick}
+                  onShareClick={handleShareClick}
+                  onUserClick={handleUserClick}
                 />
               ))}
             </div>
@@ -595,8 +910,8 @@ export default function HomePage() {
         </div>
 
         {/* ── Right Panel ── */}
-        <div className="hidden lg:block ">
-          <div className="sticky top-0 h-[calc(100vh-9rem)] overflow-y-auto pr-1 custom-scrollbar space-y-6">
+        <div className="hidden lg:flex flex-col w-[320px] shrink-0">
+          <div className="sticky top-6 space-y-6">
 
             {/* Suggested follows from feed API */}
             {suggestedFollows.length > 0 && (
@@ -605,8 +920,8 @@ export default function HomePage() {
                   Suggested for you
                 </h3>
                 <div className="space-y-3">
-                  {suggestedFollows.slice(0, 6).map((u) => (
-                    <div key={u.user_id} className="flex items-center gap-3">
+                  {suggestedFollows.slice(0, 6).map((u, index) => (
+                    <div key={u.user_id || `suggested-${index}`} className="flex items-center gap-3">
                       {u.profile_image_url ? (
                         <img src={u.profile_image_url} alt={u.full_name} className="w-9 h-9 rounded-full object-cover" />
                       ) : (
@@ -639,6 +954,40 @@ export default function HomePage() {
         </div>
 
       </div>
+
+      {/* User Post Detail Modal */}
+      {isPostDetailOpen && selectedPost && (
+        <UserPostDetailModal
+          post={selectedPost}
+          isLoading={false}
+          onClose={closePostDetail}
+          currentUser={userProfile}
+        />
+      )}
+
+      {/* Share Popup */}
+      <SharePopup
+        isOpen={isShareOpen}
+        onClose={closeSharePopup}
+        contentType={sharePost?.contentType || "post"}
+        contentId={sharePost?.contentId}
+        thumbnail={sharePost?.thumbnail}
+        title={sharePost?.title}
+        onShareSuccess={handleShareSuccess}
+      />
     </>
+  );
+}
+
+// Wrapper component with Suspense boundary for useSearchParams
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    }>
+      <HomePageContent />
+    </Suspense>
   );
 }
