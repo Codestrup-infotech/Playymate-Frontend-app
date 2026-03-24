@@ -337,6 +337,7 @@ export default function HomePage() {
   const searchParams = useSearchParams();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [userStories, setUserStories] = useState([]);
+  const [storyAuthor, setStoryAuthor] = useState(null);
   const [followerStories, setFollowerStories] = useState([]);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [isViewingStory, setIsViewingStory] = useState(false);
@@ -371,14 +372,28 @@ export default function HomePage() {
           if (profile?._id) {
             const result = await getMyStory(profile._id);
             let userStoriesArray = [];
-            if (Array.isArray(result)) {
+            let authorData = null;
+
+            // Handle new return format: { stories: [], author: {} }
+            if (result && result.stories) {
+              userStoriesArray = result.stories;
+              authorData = result.author || null;
+            } else if (Array.isArray(result)) {
+              // Handle old format (direct array)
               userStoriesArray = result;
             } else if (result) {
               userStoriesArray = [result];
             }
+
             // Apply defensive sorting - oldest first (ASC) for Instagram-style viewing
             const sortedStories = sortStoriesByCreatedAtASC(userStoriesArray);
             console.log("[HomePage] Sorted stories (ASC):", sortedStories.map(s => s.createdAt));
+            console.log("[HomePage] Author data:", authorData);
+            
+            // Set author data
+            if (authorData) {
+              setStoryAuthor(authorData);
+            }
             setUserStories(sortedStories);
           }
         } catch (err) {
@@ -410,15 +425,29 @@ export default function HomePage() {
           try {
             const result = await getMyStory(profile._id);
             let userStoriesArray = [];
-            if (Array.isArray(result)) {
+            let authorData = null;
+
+            // Handle new return format: { stories: [], author: {} }
+            if (result && result.stories) {
+              userStoriesArray = result.stories;
+              authorData = result.author || null;
+            } else if (Array.isArray(result)) {
+              // Handle old format (direct array)
               userStoriesArray = result;
             } else if (result) {
               userStoriesArray = [result];
             }
+
             // Apply defensive sorting - oldest first (ASC) for Instagram-style viewing
             const sortedStories = sortStoriesByCreatedAtASC(userStoriesArray);
             console.log("[HomePage] User stories loaded (sorted ASC):", sortedStories.map(s => s.createdAt));
+            console.log("[HomePage] Author data:", authorData);
             setUserStories(sortedStories);
+            
+            // Set author data
+            if (authorData) {
+              setStoryAuthor(authorData);
+            }
           } catch (storyErr) {
             console.log("[HomePage] Error fetching stories:", storyErr.message);
           }
@@ -702,6 +731,7 @@ export default function HomePage() {
             onClose={closeStoryViewer}
             onNext={goToNextStory}
             onPrev={goToPrevStory}
+            initialProfile={storyAuthor}
           />
 
           {/* Follower Story Viewer - Using UserStory Component */}

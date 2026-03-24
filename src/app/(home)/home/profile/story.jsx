@@ -81,6 +81,7 @@ export default function OwnStoryViewerModal( {
   const [internalStories, setInternalStories] = useState([]);
   const [internalIndex, setInternalIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [storyAuthor, setStoryAuthor] = useState(null);
 
     const router = useRouter();          // 👈 add here
   const [showMenu, setShowMenu] = useState(false);  // 👈 add here
@@ -226,6 +227,18 @@ export default function OwnStoryViewerModal( {
   const stories = isControlled ? controlledStories : internalStories;
   const currentIndex = isControlled ? controlledIndex : internalIndex;
 
+  // Extract author from controlled stories or initialProfile
+  useEffect(() => {
+    if (isControlled && initialProfile?.username) {
+      // Use initialProfile when passed from parent (page.jsx)
+      setStoryAuthor(initialProfile);
+      console.log("[OwnStoryViewerModal] Author from initialProfile:", initialProfile);
+    } else if (!isControlled && initialProfile?.username) {
+      // For internal mode, also use initialProfile
+      setStoryAuthor(initialProfile);
+    }
+  }, [isControlled, initialProfile]);
+
 
 
   useEffect(() => {
@@ -237,11 +250,23 @@ export default function OwnStoryViewerModal( {
           const result = await getMyStory(initialProfile._id);
 
           let userStoriesArray = [];
+          let authorData = null;
 
-          if (Array.isArray(result)) {
+          // Handle different response structures
+          if (result && result.data) {
+            // Response has data object with active_stories and author
+            userStoriesArray = result.data.active_stories || [];
+            authorData = result.data.author || null;
+          } else if (Array.isArray(result)) {
             userStoriesArray = result;
           } else if (result) {
             userStoriesArray = [result];
+          }
+
+          // Store author info
+          if (authorData) {
+            setStoryAuthor(authorData);
+            console.log("[OwnStoryViewerModal] Author data:", authorData);
           }
 
           // Apply defensive sorting - oldest first (ASC) for Instagram-style viewing
@@ -444,53 +469,70 @@ useEffect(() => {
 
 </div>
 
-          {/* TOP BAR */}
-
-          <div className="absolute top-4 left-4 right-4 flex items-center justify-between text-white">
-
-            <div className="flex items-center gap-3">
-
-              <img
-                src={initialProfile?.profile_picture || "/default-avatar.png"}
-                className="w-8 h-8 rounded-full object-cover"
-              />
-
-              <div className="text-sm">
-                <div className="font-semibold">
-                  {initialProfile?.username || "Your Story"}
-                </div>
-                <div className="text-xs text-gray-300">
-                  {currentStory.time_ago || "13m"}
+          {/* TOP BAR - User Info Row */}
+          <div className="absolute top-4 left-4 right-4 text-white">
+            {/* Row 1: User Photo, Username, Time (all in one row) */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <img
+                  src={storyAuthor?.profile_image_url || initialProfile?.profile_image_url || initialProfile?.profile_picture || "/default-avatar.png"}
+                  className="w-8 h-8 rounded-full object-cover border border-white/30"
+                />
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold">
+                    {storyAuthor?.username || initialProfile?.username || "Your Story"}
+                  </span>
+                  <span className="text-xs text-gray-300">
+                    {formatTimeAgo(currentStory?.created_at) || "1m"}
+                  </span>
                 </div>
               </div>
 
+              {/* Sound, Play/Pause, Three dots (same position) */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsMuted(!isMuted)}
+                  className="p-1 bg-black/40 rounded-md"
+                >
+                  {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </button>
+
+                <button
+                  onClick={() => setIsPaused(!isPaused)}
+                  className="p-1 bg-black/40 rounded-md"
+                >
+                  {isPaused ? <Play size={18} /> : <Pause size={18} />}
+                </button>
+
+                <button
+                  onClick={() => setShowMenu(true)}
+                  className="p-1 bg-black/40 rounded-md"
+                >
+                  <MoreHorizontal size={18} />
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Row 2: Location */}
+            {currentStory?.location?.display_text && (
+              <div className="mt-2 flex items-center gap-1">
+                <svg className="w-3 h-3 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                <span className="text-xs text-gray-300">
+                  {currentStory.location.display_text}
+                </span>
+              </div>
+            )}
 
-              <button
-                onClick={() => setIsMuted(!isMuted)}
-                className="p-2 bg-black/40 rounded-md"
-              >
-                {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-              </button>
-
-              <button
-                onClick={() => setIsPaused(!isPaused)}
-                className="p-2 bg-black/40 rounded-md"
-              >
-                {isPaused ? <Play size={18} /> : <Pause size={18} />}
-              </button>
-
-            <button
-  onClick={() => setShowMenu(true)}
-  className="p-2 bg-black/40 rounded-md"
->
-  <MoreHorizontal size={18} />
-</button>
-
-            </div>
-
+            {/* Row 3: Caption */}
+            {currentStory?.caption && (
+              <div className="mt-1">
+                <span className="text-sm text-white">
+                  {currentStory.caption}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* PROGRESS BAR - Show for all stories */}

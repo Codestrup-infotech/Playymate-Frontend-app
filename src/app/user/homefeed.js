@@ -575,7 +575,12 @@ export const getMyStory = async (userId = null) => {
         // Apply defensive sorting - oldest first (ASC)
         const sortedStories = sortStoriesByCreatedAtASC(storiesData.active_stories);
         console.log("[getMyStory] Sorted stories (ASC):", sortedStories.map(s => s.createdAt));
-        return sortedStories;
+        
+        // Return object with both stories and author
+        return {
+          stories: sortedStories,
+          author: storiesData.author || null
+        };
       }
       
       console.log("[getMyStory] No active_stories found");
@@ -594,7 +599,11 @@ export const getMyStory = async (userId = null) => {
       console.log("[getMyStory] /stories/me response:", storyData);
       
       if (storyData) {
-        return [storyData]; // Return as array
+        // Return object with both stories and author
+        return {
+          stories: [storyData],
+          author: storyData.author || null
+        };
       }
     } catch (meErr) {
       console.log("[getMyStory] /stories/me error:", meErr.message);
