@@ -215,4 +215,12 @@ api.post("/api/v1/auth/signup/email-password", {
     api.delete(`/users/${userId}/cover-photo`),
 };
 
+// Direct exports for commonly used functions
+export const getUserById = (userId) => userService.getUserById(userId);
+export const getUserStories = (userId) => userService.getUserStories(userId);
+export const getFollowers = (userId, limit, cursor) => userService.getFollowers(userId, limit, cursor);
+export const getFollowing = (userId, limit, cursor) => userService.getFollowing(userId, limit, cursor);
+export const followUser = (userId) => userService.followUser(userId);
+export const unfollowUser = (userId) => userService.unfollowUser(userId);
+
 export default userService;

@@ -1,5 +1,5 @@
  "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   MessageCircle, Heart, Send, ShoppingCart, MapPin,
@@ -15,7 +15,8 @@ import UserStory from "./profile/user-story";
 import UserPostDetailModal from "./components/UserPostDetailModal";
 import SharePopup from "./components/sharepopup";
 import useFeed from "@/hooks/useFeed";
-import { AiOutlineSound } from "react-icons/ai";
+import { Volume2 } from "lucide-react";
+import { useFeedRefresh } from "@/context/FeedRefreshContext";
 
 /* ─── Small helper components ─── */
 
@@ -151,7 +152,7 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, on
   <div className="relative">
     
     {/* 🔊 Sound Icon */}
-    <AiOutlineSound size={18} />
+    <Volume2 size={18} />
 
     {/* 🔇 Backslash "\" when muted */}
     {isMuted && (
@@ -332,7 +333,7 @@ function FeedItemRenderer({ item, isDark, cardBg, mutedText, iconBtn, onCommentC
 
 /* ─── Main Page ─── */
 
-export default function HomePage() {
+function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -492,6 +493,17 @@ export default function HomePage() {
     fetchUserProfile,
   } = useFeed();
 
+  // Listen for feed refresh triggers from Sidebar
+  const { refreshTrigger } = useFeedRefresh();
+
+  // Trigger feed refresh when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      console.log("[HomePage] Feed refresh triggered");
+      refresh();
+    }
+  }, [refreshTrigger, refresh]);
+
   const cardBg = isDark ? "bg-[#1a1a2e]" : "bg-white";
   const mutedText = isDark ? "text-gray-400" : "text-gray-500";
   const iconBtn = isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900";
@@ -631,10 +643,10 @@ export default function HomePage() {
 
   return (
     <>
-      <div className=" flex justify-between px-14 ">
+    <div className="flex items-start gap-8 px-14 max-w-[1200px] mx-auto w-full">
 
         {/* ── Feed Column ── */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="flex-1 max-w-[470px] space-y-6">
 
           {/* Stories row */}
           <div className="flex gap-4 overflow-x-auto pb-2">
@@ -756,7 +768,7 @@ export default function HomePage() {
           )}
 
           {/* Refresh button */}
-          <div className="flex justify-end">
+          {/* <div className="flex justify-end">
             <button
               onClick={refresh}
               disabled={loading}
@@ -765,7 +777,7 @@ export default function HomePage() {
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               Refresh Feed
             </button>
-          </div>
+          </div> */}
 
           {/* Error state */}
           {error && (
@@ -874,8 +886,8 @@ export default function HomePage() {
         </div>
 
         {/* ── Right Panel ── */}
-        <div className="hidden lg:block   ">
-          <div className="sticky top-0 h-[calc(100vh-9rem)] overflow-y-auto pr-1 custom-scrollbar space-y-6">
+        <div className="hidden lg:flex flex-col w-[320px] shrink-0">
+          <div className="sticky top-6 space-y-6">
 
             {/* Suggested follows from feed API */}
             {suggestedFollows.length > 0 && (
@@ -940,5 +952,18 @@ export default function HomePage() {
         onShareSuccess={handleShareSuccess}
       />
     </>
+  );
+}
+
+// Wrapper component with Suspense boundary for useSearchParams
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    }>
+      <HomePageContent />
+    </Suspense>
   );
 }

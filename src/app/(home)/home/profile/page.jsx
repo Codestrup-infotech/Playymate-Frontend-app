@@ -469,6 +469,7 @@ export default function ProfilePage() {
   const {
     _id,
     full_name,
+    username,
     email,
     phone,
     bio,
@@ -486,6 +487,7 @@ export default function ProfilePage() {
     is_own_profile,
     account_status,
     verification_badge,
+    profile_main_type = {},
   } = profile;
 
   const allInterests = flattenInterests(interests);
@@ -537,7 +539,7 @@ export default function ProfilePage() {
 
           <div className="absolute top-4 left-6 right-6 flex justify-between items-start">
             <h1 className="text-white text-2xl font-bold">
-              {full_name || "User"}
+              {username || "User"}
             </h1>
 
             {is_own_profile && (
@@ -585,6 +587,13 @@ export default function ProfilePage() {
                   }`}
                 />
               </div>
+              {profile_main_type?.value && (
+                <div className="text-center mt-2">
+                  <span className="text-xs font-medium text-white bg-gradient-to-r from-purple-500 to-orange-500 px-3 py-1 rounded-full">
+                    {profile_main_type.value}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* DETAILS */}

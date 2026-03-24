@@ -6,6 +6,7 @@ import { ThemeProvider, useTheme } from "@/lib/ThemeContext";
 import MessagesFloatingButton from "@/app/(home)/home/components/MessagesFloatingButton";
 import { usePathname } from "next/navigation";
 import MessagesPage from "./home/messages/page";
+import { FeedRefreshProvider } from "@/context/FeedRefreshContext";
 
 function AppLayoutInner({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -48,7 +49,9 @@ function AppLayoutInner({ children }) {
 export default function AppLayout({ children }) {
   return (
     <ThemeProvider>
-      <AppLayoutInner>{children}</AppLayoutInner>
+      <FeedRefreshProvider>
+        <AppLayoutInner>{children}</AppLayoutInner>
+      </FeedRefreshProvider>
     </ThemeProvider>
   );
 }

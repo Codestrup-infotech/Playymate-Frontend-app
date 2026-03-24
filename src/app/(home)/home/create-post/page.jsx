@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, Suspense } from "react";
 import { X, ArrowLeft, MapPin, Users, ChevronDown, ChevronUp, Smile, Plus, Minus, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import postService from "@/app/user/post";
@@ -21,7 +21,7 @@ const FILTERS = [
 // ---- Adjustment Sliders ----
 const ADJUSTMENTS = ["Brightness", "Contrast", "Fade", "Saturation", "Temperature", "Vignette", "Highlights", "Shadows"];
 
-export default function CreatePostPage() {
+function CreatePostContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -1022,5 +1022,21 @@ export default function CreatePostPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Wrapper component with Suspense boundary for useSearchParams
+export default function CreatePostPage() {
+  return (
+    <Suspense fallback={
+      <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center">
+        <div className="bg-white rounded-xl shadow-2xl p-8">
+          <Loader2 className="animate-spin mx-auto" size={32} />
+          <p className="text-gray-500 mt-4">Loading...</p>
+        </div>
+      </div>
+    }>
+      <CreatePostContent />
+    </Suspense>
   );
 }

@@ -77,7 +77,7 @@ export const getCurrentUserId = () => {
     const userData = localStorage.getItem("user");
     if (userData) {
       const user = JSON.parse(userData);
-      return user._id || user.id;
+      return user._id || user.id || user.user_id;
     }
     return localStorage.getItem("user_id");
   }

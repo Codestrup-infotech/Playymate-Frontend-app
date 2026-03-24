@@ -617,6 +617,20 @@ export const getMyStory = async (userId = null) => {
 };
 
 /**
+ * GET /api/v1/stories/:storyId
+ * Get story preview by ID - returns story details including media, author, etc.
+ * Used when clicking on a highlight to preview the story
+ */
+export const getStoryPreview = async (storyId) => {
+  console.log("[getStoryPreview] Fetching story preview:", storyId);
+  const res = await axios.get(`${API_BASE}/stories/${storyId}`, {
+    headers: getAuthHeaders(),
+  });
+  console.log("[getStoryPreview] Response:", res.data);
+  return res.data.data;
+};
+
+/**
  * GET /api/v1/stories/:id
  * Get a single story (marks as viewed)
  */
@@ -666,25 +680,16 @@ export const deleteStory = async (storyId) => {
 /**
  * POST /api/v1/stories/:storyId/highlight
  * Save a story to a highlight
+ * Request body: { highlight_id: string }
  */
 export const saveStoryToHighlight = async (storyId, highlightId) => {
+  console.log("[saveStoryToHighlight] Saving story to highlight:", { storyId, highlightId });
   const res = await axios.post(
     `${API_BASE}/stories/${storyId}/highlight`,
     { highlight_id: highlightId },
     { headers: { ...getAuthHeaders(), "Content-Type": "application/json" } }
   );
-  return res.data.data;
-};
-
-/**
- * DELETE /api/v1/stories/:storyId/highlight
- * Remove a story from a highlight
- */
-export const removeStoryFromHighlight = async (storyId, highlightId) => {
-  const res = await axios.delete(`${API_BASE}/stories/${storyId}/highlight`, {
-    data: { highlight_id: highlightId },
-    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-  });
+  console.log("[saveStoryToHighlight] Response:", res.data);
   return res.data.data;
 };
 
@@ -695,17 +700,56 @@ export const removeStoryFromHighlight = async (storyId, highlightId) => {
 /**
  * POST /api/v1/highlights/create
  * Create a new highlight collection
- * Request body: { name: string, storyIds: string[] }
+ * Request body: { name: string, description?: string, is_visible?: boolean }
+ * Then adds stories to the highlight one by one
  */
-export const createHighlight = async (name, storyIds = []) => {
-  console.log("[createHighlight] Creating highlight:", { name, storyIds });
+export const createHighlight = async (name, storyIds = [], description = "", is_visible = true) => {
+  console.log("[createHighlight] Creating highlight:", { name, storyIds, description, is_visible });
+  
+  // First create the highlight
   const res = await axios.post(
     `${API_BASE}/highlights/create`,
-    { name, storyIds },
+    { 
+      name, 
+      description: description || "",
+      is_visible: is_visible !== false
+    },
     { headers: { ...getAuthHeaders(), "Content-Type": "application/json" } }
   );
   console.log("[createHighlight] Response:", res.data);
-  return res.data.data;
+  
+  const highlight = res.data.data;
+  
+  // If storyIds provided, add them to the highlight
+  if (highlight && highlight.highlight_id && storyIds && storyIds.length > 0) {
+    console.log("[createHighlight] Adding stories to highlight:", storyIds);
+    for (const storyId of storyIds) {
+      try {
+        await axios.post(
+          `${API_BASE}/highlights/${highlight.highlight_id}/stories`,
+          { story_id: storyId },
+          { headers: { ...getAuthHeaders(), "Content-Type": "application/json" } }
+        );
+        console.log("[createHighlight] Added story:", storyId);
+      } catch (storyErr) {
+        console.error("[createHighlight] Error adding story:", storyId, storyErr);
+      }
+    }
+    
+    // Fetch the updated highlight with stories
+    try {
+      const highlightRes = await axios.get(
+        `${API_BASE}/highlights/${highlight.highlight_id}`,
+        { headers: getAuthHeaders() }
+      );
+      return highlightRes.data.data || highlight;
+    } catch (fetchErr) {
+      console.log("[createHighlight] Error fetching updated highlight:", fetchErr);
+      return highlight;
+    }
+  }
+  
+  return highlight;
 };
 
 /**
@@ -730,7 +774,6 @@ export const getMyHighlights = async (page = 1, limit = 20) => {
 /**
  * GET /api/v1/users/:userId/highlights?page=1&limit=20
  * Get another user's highlights
- * NOTE: This endpoint may not exist - returns empty array if 400/404
  */
 export const getUserHighlights = async (userId, page = 1, limit = 20) => {
   console.log("[getUserHighlights] Fetching highlights for userId:", userId);
@@ -741,8 +784,8 @@ export const getUserHighlights = async (userId, page = 1, limit = 20) => {
     console.log("[getUserHighlights] Response:", res.data);
     return res.data.data?.highlights ?? [];
   } catch (err) {
-    console.log("[getUserHighlights] Error or endpoint not found:", err.response?.status, err.message);
-    // Endpoint may not exist - return empty array
+    console.log("[getUserHighlights] Error:", err.response?.status, err.message);
+    // Return empty array on error
     return [];
   }
 };
@@ -761,13 +804,40 @@ export const addStoryToHighlight = async (highlightId, storyId) => {
 };
 
 /**
+ * DELETE /api/v1/stories/:storyId/highlight
+ * Remove a story from its highlight (only removes from highlight, doesn't delete story)
+ */
+export const removeStoryFromHighlight = async (storyId, highlightId) => {
+  console.log("[removeStoryFromHighlight] Removing story from highlight:", storyId, "highlightId:", highlightId);
+  try {
+    const res = await axios.delete(
+      `${API_BASE}/stories/${storyId}/highlight`,
+      { 
+        data: { highlight_id: highlightId },
+        headers: { 
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    console.log("[removeStoryFromHighlight] Response:", res.data);
+    return res.data;
+  } catch (err) {
+    console.error("[removeStoryFromHighlight] Error:", err.response?.data || err.message);
+    throw err;
+  }
+};
+
+/**
  * DELETE /api/v1/highlights/:highlightId
  * Delete a highlight collection
  */
 export const deleteHighlight = async (highlightId) => {
+  console.log("[deleteHighlight] Deleting highlight:", highlightId);
   const res = await axios.delete(`${API_BASE}/highlights/${highlightId}`, {
     headers: getAuthHeaders(),
   });
+  console.log("[deleteHighlight] Response:", res.data);
   return res.data.data;
 };
 
@@ -789,8 +859,26 @@ export const getArchivedStories = async (limit = 20) => {
  * Tries with user_id from localStorage first, then falls back to "me"
  */
 export const getMyAllStories = async (limit = 20) => {
-  // Try to get actual user ID from localStorage
-  const userId = localStorage.getItem("user_id") || "me";
+  // Try to get actual user ID - check multiple storage keys
+  let userId = sessionStorage.getItem("user_id") || localStorage.getItem("user_id") || localStorage.getItem("_id");
+  
+  // If no userId found, try to get it from /users/me endpoint
+  if (!userId || userId === "me") {
+    try {
+      console.log("[getMyAllStories] No userId in storage, fetching from /users/me...");
+      const meRes = await axios.get(`${API_BASE}/users/me`, {
+        headers: getAuthHeaders(),
+      });
+      const userData = meRes.data.data || meRes.data;
+      userId = userData?._id || userData?.id;
+      console.log("[getMyAllStories] Got userId from /users/me:", userId);
+    } catch (meErr) {
+      console.log("[getMyAllStories] Failed to get user from /users/me:", meErr.message);
+    }
+  }
+  
+  // Fallback to "me" if still no userId
+  userId = userId || "me";
   console.log("[getMyAllStories] Using userId:", userId);
   
   // First try: /users/{userId}/stories (with actual user ID)
@@ -809,7 +897,7 @@ export const getMyAllStories = async (limit = 20) => {
   } catch (err) {
     console.log("[getMyAllStories] /users/" + userId + "/stories failed:", err.response?.status, err.message);
     
-    // Second try: /users/me/stories
+    // Second try: /users/me/stories (only if we had a real userId that failed)
     if (userId !== "me") {
       try {
         console.log("[getMyAllStories] Trying /users/me/stories...");
@@ -869,12 +957,14 @@ export const getUserStories = async (userId, limit = 20) => {
 
 /**
  * GET /api/v1/highlights/:highlightId
- * Get highlight details
+ * Get highlight details (includes stories)
  */
 export const getHighlightDetails = async (highlightId) => {
+  console.log("[getHighlightDetails] Fetching highlight:", highlightId);
   const res = await axios.get(`${API_BASE}/highlights/${highlightId}`, {
     headers: getAuthHeaders(),
   });
+  console.log("[getHighlightDetails] Response:", res.data);
   return res.data.data;
 };
 
@@ -883,9 +973,11 @@ export const getHighlightDetails = async (highlightId) => {
  * Update highlight
  */
 export const updateHighlight = async (highlightId, data) => {
+  console.log("[updateHighlight] Updating highlight:", highlightId, data);
   const res = await axios.put(`${API_BASE}/highlights/${highlightId}`, data, {
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
   });
+  console.log("[updateHighlight] Response:", res.data);
   return res.data.data;
 };
 
@@ -894,9 +986,11 @@ export const updateHighlight = async (highlightId, data) => {
  * Get stories in a highlight
  */
 export const getHighlightStories = async (highlightId) => {
+  console.log("[getHighlightStories] Fetching stories for highlight:", highlightId);
   const res = await axios.get(`${API_BASE}/highlights/${highlightId}/stories`, {
     headers: getAuthHeaders(),
   });
+  console.log("[getHighlightStories] Response:", res.data);
   return res.data.data?.stories ?? [];
 };
 
