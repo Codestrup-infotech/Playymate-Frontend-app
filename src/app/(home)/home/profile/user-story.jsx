@@ -6,7 +6,7 @@ import { userService } from "@/services/user";
 import { useTheme } from "@/lib/ThemeContext";
 import { Heart as HeartFilled } from "lucide-react";
 
-export default function UserStory({ userId, profile }) {
+export default function UserStory({ userId, profile, showRing = true }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
@@ -265,15 +265,15 @@ export default function UserStory({ userId, profile }) {
 
       {/* PROFILE IMAGE */}
       <div className="relative">
-        <div
-          className={`w-32 h-32 rounded-full p-[3px] ${
-            hasStories
-              ? "bg-gradient-to-tr from-yellow-400 via-orange-500 to-pink-500"
-              : "bg-gray-100"
-          }`}
-          onClick={handleProfilePhotoClick}
-        >
-          <div className="w-full h-full rounded-full overflow-hidden border-2 border-white">
+       <div
+  className={`w-20 h-20 rounded-full p-[2px] cursor-pointer ${
+    showRing && hasStories
+      ? "bg-gradient-to-tr from-yellow-400 via-orange-500 to-pink-500"
+      : "bg-transparent"
+  }`}
+  onClick={handleProfilePhotoClick}
+>
+         <div className="w-full h-full rounded-full overflow-hidden border border-white">
             {profile.profile_image_url ? (
               <img
                 src={profile.profile_image_url}
@@ -412,35 +412,43 @@ export default function UserStory({ userId, profile }) {
             )}
 
             {/* Bottom Action Bar - Message, Like, Share */}
-            <div className="absolute bottom-6 left-0 right-0 px-6 flex items-center justify-around text-white">
-              <button className="flex flex-col items-center gap-1">
-                <MessageCircle size={24} />
-                <span className="text-xs">Message</span>
-              </button>
-              <button 
-                className={`flex flex-col items-center gap-1 ${isLiked ? 'text-red-500' : 'text-white'}`}
-                onClick={handleLikeToggle}
-                disabled={likeLoading}
-              >
-                {isLiked ? (
-                  <HeartFilled size={24} className="animate-pulse" />
-                ) : (
-                  <Heart size={24} />
-                )}
-                <span className="text-xs">{isLiked ? 'Liked' : 'Like'}</span>
-              </button>
-              <button className="flex flex-col items-center gap-1">
-                <Send size={24} />
-                <span className="text-xs">Share</span>
-              </button>
-            </div>
+           <div className="absolute bottom-4 left-4 right-4 flex items-center gap-3">
+
+  {/* Message Input */}
+ <div className="flex-1 bg-black/40  rounded-full px-4 py-2">
+    <input
+      type="text"
+      placeholder={`Reply to ${profile.username || profile.full_name}...`}
+      className="w-full bg-transparent outline-none text-white placeholder-gray-300 text-sm"
+    />
+  </div>
+
+  {/* Like */}
+  <button
+    onClick={handleLikeToggle}
+    disabled={likeLoading}
+    className="text-white"
+  >
+    {isLiked ? (
+      <HeartFilled size={24} className="text-white fill-white" />
+    ) : (
+      <Heart size={24} />
+    )}
+  </button>
+
+  {/* Share */}
+  <button className="text-white">
+    <Send size={24} />
+  </button>
+
+</div>
           </div>
         </div>
       )}
 
       {/* ✅ STORY VIEWER MORE OPTIONS POPUP */}
       {showOptions && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
           {/* Overlay */}
           <div
             className="absolute inset-0 bg-black/40"
@@ -448,7 +456,7 @@ export default function UserStory({ userId, profile }) {
           />
 
           {/* Popup */}
-          <div className="relative w-full max-w-md bg-white rounded-t-2xl overflow-hidden">
+         <div className="relative w-[280px] bg-white rounded-xl overflow-hidden shadow-lg">
             {/* Report */}
             <button className="flex items-center justify-center gap-2 w-full py-4 text-red-500 border-b">
               <Flag size={18} />

@@ -8,7 +8,6 @@ import postService from "@/app/user/post";
 
 import { io } from "socket.io-client";
 import {
-  getConversations,
   getMessages,
   sendMessage,
   editMessage,
@@ -25,10 +24,98 @@ import {
   updateConversation,
   leaveConversation,
   uploadMedia,
-  getMessageRequests,
 } from "@/services/messages";
 
 import { getUserById } from "@/services/user";
+import { searchAccounts } from "@/app/user/search";
+import MessagesSidebar from "../components/MessagesSidebar";
+
+// ─── UI helpers for Bubble (shared with sidebar) ─────────────────────────────────
+
+function initials(name = "") {
+  const p = (name || "").trim().split(" ");
+  return ((p[0]?.[0] || "") + (p[1]?.[0] || "")).toUpperCase();
+}
+
+const COLORS = [
+  "bg-blue-100 text-blue-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-orange-100 text-orange-700",
+  "bg-violet-100 text-violet-700",
+  "bg-rose-100 text-rose-700",
+  "bg-amber-100 text-amber-700",
+];
+
+function colorFor(str = "") {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xffff;
+  return COLORS[h % COLORS.length];
+}
+
+function formatTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const diff = Date.now() - d;
+  if (diff < 86400000) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (diff < 604800000) return d.toLocaleDateString([], { weekday: "short" });
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+
+function formatMessageDate(date) {
+  const d = new Date(date);
+  const now = new Date();
+
+  const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  if (diffDays === 1) {
+    return "Yesterday";
+  }
+
+  if (diffDays < 7) {
+    return d.toLocaleDateString([], { weekday: "short" }) + " " +
+           d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  return d.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+// ─── Avatar ────────────────────────────────────────────────────────────────────
+
+function Avatar({ name = "", imgUrl = null, size = 9 }) {
+  const cls = `w-${size} h-${size} rounded-full flex-shrink-0 object-cover`;
+  if (imgUrl) return <img src={imgUrl} alt={name} className={cls} />;
+  return (
+    <div className={`${cls} flex items-center justify-center text-xs font-semibold ${colorFor(name)}`}>
+      {initials(name) || "?"}
+    </div>
+  );
+}
+
+function getConvName(conv, myId) {
+  if (conv.is_group) return conv.group_name || "Group";
+  const other = (conv.participants || []).find(
+    (p) => (p.user_id?._id || p.user_id) !== myId
+  );
+  return other?.user_id?.full_name || "Unknown";
+}
+
+function getConvImg(conv, myId) {
+  if (conv.is_group) return null;
+  const other = (conv.participants || []).find(
+    (p) => (p.user_id?._id || p.user_id) !== myId
+  );
+  return other?.user_id?.profile_image_url || null;
+}
 
 // ─── Token & ID helpers ────────────────────────────────────────────────────────
 
@@ -60,72 +147,13 @@ function getAuthToken() {
   );
 }
 
-// ─── UI helpers ────────────────────────────────────────────────────────────────
-
-function initials(name = "") {
-  const p = (name || "").trim().split(" ");
-  return ((p[0]?.[0] || "") + (p[1]?.[0] || "")).toUpperCase();
-}
-
-const COLORS = [
-  "bg-blue-100 text-blue-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-orange-100 text-orange-700",
-  "bg-violet-100 text-violet-700",
-  "bg-rose-100 text-rose-700",
-  "bg-amber-100 text-amber-700",
-];
-
-function colorFor(str = "") {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xffff;
-  return COLORS[h % COLORS.length];
-}
-
-function formatTime(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const diff = Date.now() - d;
-  if (diff < 86400000) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  if (diff < 604800000) return d.toLocaleDateString([], { weekday: "short" });
-  return d.toLocaleDateString([], { month: "short", day: "numeric" });
-}
-
-function getConvName(conv, myId) {
-  if (conv.is_group) return conv.group_name || "Group";
-  const other = (conv.participants || []).find(
-    (p) => (p.user_id?._id || p.user_id) !== myId
-  );
-  return other?.user_id?.full_name || "Unknown";
-}
-
-function getConvImg(conv, myId) {
-  if (conv.is_group) return null;
-  const other = (conv.participants || []).find(
-    (p) => (p.user_id?._id || p.user_id) !== myId
-  );
-  return other?.user_id?.profile_image_url || null;
-}
-
-// ─── Avatar ────────────────────────────────────────────────────────────────────
-
-function Avatar({ name = "", imgUrl = null, size = 9 }) {
-  const cls = `w-${size} h-${size} rounded-full flex-shrink-0 object-cover`;
-  if (imgUrl) return <img src={imgUrl} alt={name} className={cls} />;
-  return (
-    <div className={`${cls} flex items-center justify-center text-xs font-semibold ${colorFor(name)}`}>
-      {initials(name) || "?"}
-    </div>
-  );
-}
-
 // ─── Emoji Picker ──────────────────────────────────────────────────────────────
 
 const EMOJIS = ["❤️", "👍", "😂", "😮", "😢", "🙏"];
 
 function EmojiPicker({ onPick }) {
   return (
-    <div className="absolute bottom-8 bg-white border border-gray-200 rounded-2xl shadow-xl px-3 py-2 flex gap-1 z-30 left-0">
+    <div className="absolute bottom-8 bg-white  border border-gray-200 rounded-2xl shadow-xl px-3 py-2 flex gap-1 z-30 left-0">
       {EMOJIS.map((e) => (
         <button key={e} onClick={() => onPick(e)} className="text-lg hover:scale-125 transition-transform">
           {e}
@@ -385,7 +413,11 @@ function Bubble({ msg, myId, profileMap, messageRequests = [], onReply, onEdit, 
 
         <div className={`flex items-end gap-1.5 relative ${isMe ? "flex-row-reverse" : "flex-row"}`}>
           {hover && !msg.is_deleted && (
-            <div className="flex items-center gap-0.5">
+           <div
+  className={`absolute ${
+    isMe ? "right-full mr-2" : "left-full ml-2"
+  } top-1/2 -translate-y-1/2 flex items-center gap-1`}
+>
               <div className="relative">
                 <button onClick={() => setPicker((v) => !v)} className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-xs">😊</button>
                 {picker && (
@@ -393,18 +425,18 @@ function Bubble({ msg, myId, profileMap, messageRequests = [], onReply, onEdit, 
                 )}
               </div>
               <button onClick={() => onReply(msg)} className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center" title="Reply">
-                <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
+                <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
               </button>
               <button onClick={() => onForward(msg._id)} className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center" title="Forward">
-                <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </button>
               {isMe && (
                 <>
                   <button onClick={() => onEdit(msg)} className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center" title="Edit">
-                    <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                   </button>
                   <button onClick={() => onDelete(msg._id)} className="w-6 h-6 rounded-full bg-gray-100 hover:bg-red-100 flex items-center justify-center" title="Delete">
-                    <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </>
               )}
@@ -421,6 +453,9 @@ function Bubble({ msg, myId, profileMap, messageRequests = [], onReply, onEdit, 
             }`}
             style={isMe && !msg.is_deleted ? { background: "linear-gradient(135deg, #ec4899, #f97316)" } : {}}
           >
+
+
+            
             {msg.is_deleted
   ? "Message deleted"
   : msg.content || (msg.content_type ? "Shared a post" : "")
@@ -787,53 +822,6 @@ function Bubble({ msg, myId, profileMap, messageRequests = [], onReply, onEdit, 
   );
 }
 
-// ─── Conversation list item ────────────────────────────────────────────────────
-
-function ConvItem({ conv, myId, active, onClick }) {
-  const name    = getConvName(conv, myId);
-  const img     = getConvImg(conv, myId);
-  const unread  = conv.unread_counts?.[myId] || 0;
-  const pinned  = (conv.pinned_by || []).includes(myId);
-  const lm      = conv.last_message;
-  const preview = lm
-    ? lm.is_deleted ? "Message deleted" : lm.content || (lm.media_type ? "📎 Media" : "")
-    : "No messages yet";
-
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-gray-50 ${
-        active ? "bg-pink-50 border-r-2 border-r-pink-500" : "hover:bg-gray-50"
-      }`}
-    >
-      <div className="relative flex-shrink-0">
-        <Avatar name={name} imgUrl={img} size={10} />
-        {conv.is_group && (
-          <span className="absolute -bottom-0.5 -right-0.5 bg-orange-100 text-orange-600 text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center border border-white">G</span>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-gray-900 truncate">{name}</span>
-          <span className="text-[10px] text-gray-400 ml-1 flex-shrink-0">{formatTime(conv.last_message_at)}</span>
-        </div>
-        <div className="flex items-center justify-between mt-0.5">
-          <span className="text-xs text-gray-500 truncate">{preview}</span>
-          <div className="flex items-center gap-1 ml-1 flex-shrink-0">
-            {pinned && <span className="text-[10px]">📌</span>}
-            {unread > 0 && (
-              <span
-                className="text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1"
-                style={{ background: "linear-gradient(135deg,#ec4899,#f97316)" }}
-              >{unread}</span>
-            )}
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-}
-
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export default function MessagesPage() {
@@ -858,6 +846,12 @@ export default function MessagesPage() {
   const [uploading,     setUploading]     = useState(false);
   const [showNewConv,   setShowNewConv]   = useState(false);
   const [newConvInput,  setNewConvInput]  = useState("");
+  // Search functionality for new conversation
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedSearchUser, setSelectedSearchUser] = useState(null);
+  const searchDebounceRef = useRef(null);
   const [showRename,    setShowRename]    = useState(false);
   const [renameInput,   setRenameInput]   = useState("");
   const [typingUsers,   setTypingUsers]   = useState({});
@@ -898,6 +892,71 @@ const handleEmojiPick = (emoji) => {
     textarea.focus();
   });
 };
+
+// ── User search helper ──────────────────────────────────────────────────────────
+
+// Normalize user object to have consistent fields
+function normalizeUser(user) {
+  const id = user.user_id || user.id || user._id || "";
+  return {
+    _id: id,
+    user_id: id,
+    id: id,
+    username: user.username || user.handle || "",
+    full_name: user.full_name || user.name || user.display_name || "",
+    avatar: user.avatar || user.profile_image_url || null,
+    profile_image_url: user.profile_image_url || user.avatar || null,
+  };
+}
+
+// ── Search effect for new conversation ─────────────────────────────────────────
+
+useEffect(() => {
+  // Clear search when modal closes
+  if (!showNewConv) {
+    setSearchQuery("");
+    setSearchResults([]);
+    setSelectedSearchUser(null);
+    return;
+  }
+  
+  // Clear previous timeout
+  clearTimeout(searchDebounceRef.current);
+  
+  // Reset if search is empty
+  if (!searchQuery.trim() || searchQuery.trim().length < 2) {
+    setSearchResults([]);
+    setSearchLoading(false);
+    return;
+  }
+  
+  // Set loading and debounce
+  setSearchLoading(true);
+  
+  searchDebounceRef.current = setTimeout(async () => {
+    try {
+      console.log("[NewConv] Searching for:", searchQuery.trim());
+      const response = await searchAccounts(searchQuery.trim(), 20);
+      console.log("[NewConv] Search response:", response);
+      
+      if ((response.status === "success" || response.success) && response.data) {
+        const results = response.data.items || response.data.results || response.data || [];
+        setSearchResults(Array.isArray(results) ? results.map(normalizeUser) : []);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error("[NewConv] Search error:", error);
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, 500);
+  
+  return () => clearTimeout(searchDebounceRef.current);
+}, [searchQuery, showNewConv]);
+
+// ── Start conversation with searched user ─────────────────────────────────────────
 
   // ── Merge profiles ───────────────────────────────────────────────────────────
 
@@ -1088,44 +1147,6 @@ const handleEmojiPick = (emoji) => {
   }, [myId]); // ← IMPORTANT: removed appendMessage from deps to prevent socket reconnect loop
 
   // ── Load conversations ───────────────────────────────────────────────────────
-
-  const fetchConversations = useCallback(async () => {
-    setConvLoading(true);
-    try {
-      const data  = await getConversations({ limit: 50 });
-      const convs = data?.conversations || [];
-      setConversations(convs);
-      const users = [];
-      convs.forEach((c) => {
-        (c.participants || []).forEach((p) => {
-          if (p.user_id && typeof p.user_id === "object") users.push(p.user_id);
-        });
-      });
-      mergeProfiles(users);
-    } catch (e) {
-      console.error("fetchConversations:", e.message);
-    } finally {
-      setConvLoading(false);
-    }
-  }, [mergeProfiles]);
-
-  useEffect(() => { fetchConversations(); }, [fetchConversations]);
-
-  // Fetch message requests on mount
-  useEffect(() => {
-    const fetchMessageRequests = async () => {
-      try {
-        const response = await getMessageRequests({ limit: 20 });
-        console.log('[Messages] Message requests response:', response);
-        if (response.status === 'success' && response.data) {
-          setMessageRequests(response.data.requests || []);
-        }
-      } catch (err) {
-        console.error('Error fetching message requests:', err);
-      }
-    };
-    fetchMessageRequests();
-  }, []);
 
   // ── fetchMessages ────────────────────────────────────────────────────────────
 
@@ -1329,7 +1350,6 @@ const handleEmojiPick = (emoji) => {
         ? await unpinConversation(selectedConv._id)
         : await pinConversation(selectedConv._id);
       setSelectedConv((p) => ({ ...p, pinned_by: u.pinned_by }));
-      await fetchConversations();
     } catch (e) { console.error(e.message); }
   };
 
@@ -1341,7 +1361,6 @@ const handleEmojiPick = (emoji) => {
         ? await unarchiveConversation(selectedConv._id)
         : await archiveConversation(selectedConv._id);
       setSelectedConv((p) => ({ ...p, archived_by: u.archived_by }));
-      await fetchConversations();
     } catch (e) { console.error(e.message); }
   };
 
@@ -1353,7 +1372,7 @@ const handleEmojiPick = (emoji) => {
       const conv = await createConversation({ participants: [newConvInput.trim()] });
       setShowNewConv(false);
       setNewConvInput("");
-      await fetchConversations();
+      // Refresh handled by sidebar
       handleSelectConv(conv);
     } catch (e) { alert("Failed: " + e.message); }
   };
@@ -1366,7 +1385,7 @@ const handleEmojiPick = (emoji) => {
       const u = await updateConversation(selectedConv._id, { group_name: renameInput.trim() });
       setSelectedConv((p) => ({ ...p, group_name: u.group_name }));
       setShowRename(false);
-      await fetchConversations();
+      // Refresh handled by sidebar
     } catch (e) { alert("Failed: " + e.message); }
   };
 
@@ -1382,7 +1401,7 @@ const handleEmojiPick = (emoji) => {
       setSelectedConv(null);
       selectedConvRef.current = null;
       setMessages([]);
-      await fetchConversations();
+      // Refresh handled by sidebar
     } catch (e) { console.error(e.message); }
   };
 
@@ -1428,74 +1447,24 @@ const handleEmojiPick = (emoji) => {
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-screen bg-[#F5F6FA] font-Poppins overflow-hidden">
+    <div className="flex lg:max-h-[560px]  rounded-xl mr-8 font-Poppins overflow-hidden">
 
       {/* ── Sidebar ──────────────────────────────────────────────────────── */}
-      <div className="w-80 flex-shrink-0 flex flex-col bg-white border-r border-gray-100">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
-            <div
-              className={`w-2 h-2 rounded-full ${connected ? "bg-green-400" : "bg-gray-300"}`}
-              title={connected ? "Connected" : "Connecting..."}
-            />
-          </div>
-          <button
-            onClick={() => setShowNewConv(true)}
-            className="w-8 h-8 rounded-full flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg,#ec4899,#f97316)" }}
-          >
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="px-4 py-3 border-b border-gray-100">
-          <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search..."
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-pink-400 focus:bg-white transition-colors"
-            />
-          </div>
-        </div>
-
-<div className=" flex justify-end px-4 py-2"> 
-  <button>request</button>
-</div>
-
-
-        <div className="flex-1 overflow-y-auto">
-          {convLoading ? (
-            <div className="p-4 space-y-3">
-              {Array(5).fill(0).map((_, i) => (
-                <div key={i} className="h-14 rounded-2xl bg-gray-100 animate-pulse" />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <p className="text-center py-12 text-sm text-gray-400">No conversations</p>
-          ) : (
-            filtered.map((conv) => (
-              <ConvItem
-                key={conv._id}
-                conv={conv}
-                myId={myId}
-                active={selectedConv?._id === conv._id}
-                onClick={() => handleSelectConv(conv)}
-              />
-            ))
-          )}
-        </div>
-      </div>
+      <MessagesSidebar
+        connected={connected}
+        search={search}
+        setSearch={setSearch}
+        setShowNewConv={setShowNewConv}
+        selectedConv={selectedConv}
+        onSelectConv={handleSelectConv}
+        onConversationsChange={setConversations}
+        onMessageRequestsChange={setMessageRequests}
+        myId={myId}
+      />
 
       {/* ── Chat ─────────────────────────────────────────────────────────── */}
       {!selectedConv ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-[#F5F6FA]">
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-white ">
           <div className="w-16 h-16 rounded-2xl bg-pink-50 flex items-center justify-center">
             <svg className="w-8 h-8 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -1556,21 +1525,37 @@ const handleEmojiPick = (emoji) => {
             ) : messages.length === 0 ? (
               <p className="text-center py-12 text-sm text-gray-400">No messages yet. Say hello! 👋</p>
             ) : (
-              messages.map((msg) => (
-                <Bubble
-                  key={msg._id}
-                  msg={msg}
-                  myId={myId}
-                  profileMap={profileMap}
-                  messageRequests={messageRequests}
-                  onReply={(m) => { setReplyTo(m); setEditingMsg(null); }}
-                  onEdit={(m) => { setEditingMsg(m); setReplyTo(null); setText(m.content); }}
-                  onDelete={handleDelete}
-                  onReact={handleReact}
-                  onForward={handleForward}
-                  onOpenPostDetail={handleOpenPostDetail}
-                />
-              ))
+            messages.map((msg, index) => {
+  const prev = messages[index - 1];
+
+  const showDate =
+    !prev ||
+    new Date(prev.created_at).toDateString() !==
+      new Date(msg.created_at).toDateString();
+
+  return (
+    <div key={msg._id}>
+      {showDate && (
+        <div className="text-center text-xs text-gray-400 my-2">
+          {formatMessageDate(msg.created_at)}
+        </div>
+      )}
+
+      <Bubble
+        msg={msg}
+        myId={myId}
+        profileMap={profileMap}
+        messageRequests={messageRequests}
+        onReply={(m) => { setReplyTo(m); setEditingMsg(null); }}
+        onEdit={(m) => { setEditingMsg(m); setReplyTo(null); setText(m.content); }}
+        onDelete={handleDelete}
+        onReact={handleReact}
+        onForward={handleForward}
+        onOpenPostDetail={handleOpenPostDetail}
+      />
+    </div>
+  );
+})
             )}
 
             {isTyping && (
@@ -1657,25 +1642,143 @@ const handleEmojiPick = (emoji) => {
         </div>
       )}
 
-      {/* ── New conversation modal ────────────────────────────────────────── */}
+      {/* ── New conversation modal with search ────────────────────────────────────── */}
       {showNewConv && (
         <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4" onClick={() => setShowNewConv(false)}>
-          <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-semibold text-gray-900 mb-4">New conversation</h3>
-            <label className="text-xs text-gray-500 mb-1.5 block">User ID</label>
-            <input
-              value={newConvInput}
-              onChange={(e) => setNewConvInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleNewConv()}
-              placeholder="Enter user ID..."
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-pink-400 transition-colors"
-              autoFocus
-            />
-            <div className="flex gap-2 mt-4">
-              <button onClick={handleNewConv} className="flex-1 py-2.5 text-white text-sm font-bold rounded-2xl" style={{ background: "linear-gradient(135deg,#ec4899,#f97316)" }}>
-                Start chat
-              </button>
-              <button onClick={() => setShowNewConv(false)} className="px-4 py-2 border border-gray-200 text-gray-500 text-sm rounded-2xl hover:bg-gray-50">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm max-h-[500px] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-900 mb-3">New conversation</h3>
+              {/* Search input */}
+              <div className="relative">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8" strokeWidth="2" />
+                  <path d="M21 21l-4.35-4.35" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search people..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-pink-400 transition-colors"
+                  autoFocus
+                />
+                {searchLoading && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <svg className="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Search results */}
+            <div className="flex-1 overflow-y-auto p-2">
+              {searchQuery.trim().length < 2 ? (
+                <div className="text-center text-gray-400 py-8 text-sm">
+                  Type at least 2 characters to search
+                </div>
+              ) : searchResults.length === 0 && !searchLoading ? (
+                <div className="text-center text-gray-400 py-8 text-sm">
+                  No users found
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {/* Sort: Following/Followers first, then others */}
+                  {(() => {
+                    const followingUsers = searchResults.filter(u => u.following === true || u.following === 'true');
+                    const otherUsers = searchResults.filter(u => !u.following || u.following === false || u.following === 'false');
+                    
+                    const renderUserRow = (user) => {
+                      const userId = user._id || user.id || user.user_id;
+                      const displayName = user.full_name || user.username || "";
+                      const handle = user.username || "";
+                      const avatarUrl = user.profile_image_url || user.avatar;
+                      // Check if following - more robust check for different API response formats
+                      const isFollowing = user.following === true || user.following === 'true' || user.following === true || Boolean(user.following);
+                      
+                      return (
+                        <button
+                          key={userId}
+                          onClick={async () => {
+                            try {
+                              console.log("[NewConv] Creating conversation with user:", userId);
+                              const conv = await createConversation({ participants: [userId] });
+                              console.log("[NewConv] Conversation created:", conv);
+                              if (conv?.data?.conversation) {
+                                setSelectedConv(conv.data.conversation);
+                                setConversations(prev => [conv.data.conversation, ...prev]);
+                              } else if (conv?.conversation) {
+                                setSelectedConv(conv.conversation);
+                                setConversations(prev => [conv.conversation, ...prev]);
+                              }
+                              setShowNewConv(false);
+                              setSearchQuery("");
+                              setSearchResults([]);
+                            } catch (err) {
+                              console.error("[NewConv] Error creating conversation:", err);
+                              alert("Failed to start conversation. Please try again.");
+                            }
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                        >
+                          {avatarUrl ? (
+                            <img 
+                              src={avatarUrl} 
+                              alt={displayName} 
+                              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${colorFor(userId)}`}>
+                              {initials(displayName) || "?"}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-gray-900 truncate">{displayName}</div>
+                            {handle && <div className="text-xs text-gray-500 truncate">@{handle}</div>}
+                          </div>
+                          {isFollowing && (
+                            <span className="text-xs font-medium text-pink-500 bg-pink-50 px-2 py-1 rounded-full flex-shrink-0">
+                              Following
+                            </span>
+                          )}
+                        </button>
+                      );
+                    };
+                    
+                    return (
+                      <>
+                        {followingUsers.length > 0 && (
+                          <>
+                            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-2">
+                              Following
+                            </div>
+                            {followingUsers.map(renderUserRow)}
+                          </>
+                        )}
+                        {otherUsers.length > 0 && (
+                          <>
+                            {followingUsers.length > 0 && (
+                              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-2 mt-2">
+                                Others
+                              </div>
+                            )}
+                            {otherUsers.map(renderUserRow)}
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+            
+            {/* Footer */}
+            <div className="p-3 border-t border-gray-100">
+              <button 
+                onClick={() => setShowNewConv(false)} 
+                className="w-full py-2.5 border border-gray-200 text-gray-500 text-sm rounded-2xl hover:bg-gray-50"
+              >
                 Cancel
               </button>
             </div>
