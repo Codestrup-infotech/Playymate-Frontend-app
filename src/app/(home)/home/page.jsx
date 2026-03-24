@@ -11,6 +11,7 @@ import ProfileCompletionCard from "@/app/components/profileCompletion/ProfileCom
 import { useTheme } from "@/lib/ThemeContext";
 import SuggestedUsers from "./components/SuggestedUsers";
 import OwnStoryViewerModal from "./profile/story";
+import UserStory from "./profile/user-story";
 import UserPostDetailModal from "./components/UserPostDetailModal";
 import SharePopup from "./components/sharepopup";
 import useFeed from "@/hooks/useFeed";
@@ -221,13 +222,13 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, on
     </button>
 
     {/* 📤 Share (moved LEFT) */}
-    <button 
-      onClick={() => onShareClick && onShareClick(post)}
-      className={`${isDark ? "text-white" : "text-black"}`}
-    >
-      <Send size={20} />
-      {sharesCount > 0 && <span className="text-xs ml-1">{sharesCount}</span>}
-    </button>
+   <button 
+  onClick={() => onShareClick && onShareClick(post)}
+  className={`${isDark ? "text-white" : "text-black"} flex items-center gap-2`}
+>
+  <Send size={20} />
+  <span className="text-sm font-semibold">{sharesCount}</span>
+</button>
 
   </div>
 
@@ -340,9 +341,10 @@ function HomePageContent() {
   const [followerStories, setFollowerStories] = useState([]);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [isViewingStory, setIsViewingStory] = useState(false);
-  const [userProfile, setUserProfile] = useState({});
+  const [userProfile, setUserProfile] = useState({});  
   const [viewingFollowerStory, setViewingFollowerStory] = useState(false);
   const [followerStoryIndex, setFollowerStoryIndex] = useState(0);
+  const [selectedFollowerProfile, setSelectedFollowerProfile] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
   const [isPostDetailOpen, setIsPostDetailOpen] = useState(false);
   const [sharePost, setSharePost] = useState(null);
@@ -425,11 +427,15 @@ function HomePageContent() {
           // Fetch follower/following stories
           try {
             const storyFeedResult = await getStoryFeed(20);
+            console.log("[HomePage] Story feed response:", storyFeedResult);
+            console.log("[HomePage] Story feed items:", storyFeedResult?.items);
             if (storyFeedResult?.items && Array.isArray(storyFeedResult.items)) {
               // Already sorted by latest first from the API
               const followerStoriesData = storyFeedResult.items;
               console.log("[HomePage] Follower stories loaded:", followerStoriesData.length);
               setFollowerStories(followerStoriesData);
+            } else {
+              console.log("[HomePage] No follower stories found or invalid format");
             }
           } catch (followerStoryErr) {
             console.log("[HomePage] Error fetching follower stories:", followerStoryErr.message);
@@ -496,11 +502,7 @@ function HomePageContent() {
     setCurrentStoryIndex(0);
   };
 
-  // Handle viewing follower story
-  const handleViewFollowerStory = (index) => {
-    setFollowerStoryIndex(index);
-    setViewingFollowerStory(true);
-  };
+
 
   // Close follower story viewer
   const closeFollowerStoryViewer = () => {
@@ -667,24 +669,18 @@ function HomePageContent() {
      
 
 {followerStories.slice(0, 5).map((storyGroup, index) => (
-  <div 
-    key={storyGroup.user?.user_id || index} 
-    className="flex flex-col items-center shrink-0 cursor-pointer"
-    onClick={() => handleViewFollowerStory(index)}
-  >
-    <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-500 to-orange-500 p-[2px]">
-      {storyGroup.user?.profile_image_url ? (
-        <img
-          src={storyGroup.user.profile_image_url}
-          alt={storyGroup.user.full_name}
-          className="w-full h-full rounded-full object-cover"
-        />
-      ) : (
-        <div className="w-full h-full rounded-full bg-gray-300 flex items-center justify-center text-sm font-semibold">
-          {storyGroup.user?.full_name?.charAt(0) || '?'}
-        </div>
-      )}
-    </div>
+  <div key={storyGroup.user?.user_id || index} className="flex flex-col items-center shrink-0">
+    
+    <UserStory
+      userId={storyGroup.user?.user_id}
+      profile={{
+        _id: storyGroup.user?.user_id,
+        full_name: storyGroup.user?.full_name,
+        username: storyGroup.user?.username,
+        profile_image_url: storyGroup.user?.profile_image_url
+      }}
+    />
+
     <p className="text-xs mt-1">{storyGroup.user?.full_name}</p>
   </div>
 ))}
@@ -720,63 +716,13 @@ function HomePageContent() {
             onPrev={goToPrevStory}
           />
 
-          {/* Follower Story Viewer Modal */}
-          {viewingFollowerStory && followerStories[followerStoryIndex] && (
-            <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
-              <button 
-                className="absolute top-4 right-4 text-white z-50"
-                onClick={closeFollowerStoryViewer}
-              >
-                <X size={28} />
-              </button>
-              
-              {/* Navigation arrows */}
-              <button 
-                className="absolute left-4 text-white z-50"
-                onClick={goToPrevFollowerStory}
-                disabled={followerStoryIndex === 0}
-              >
-                <ChevronLeft size={40} />
-              </button>
-              
-              <button 
-                className="absolute right-4 text-white z-50"
-                onClick={goToNextFollowerStory}
-              >
-                <ChevronRight size={40} />
-              </button>
-
-              {/* Story content */}
-              <div className="relative w-full h-full max-w-lg max-h-[90vh]">
-                {followerStories[followerStoryIndex]?.stories?.[0]?.media_type === 'video' ? (
-                  <video
-                    src={followerStories[followerStoryIndex].stories[0].media_url}
-                    className="w-full h-full object-contain"
-                    autoPlay
-                    loop
-                    controls
-                  />
-                ) : (
-                  <img
-                    src={followerStories[followerStoryIndex]?.stories?.[0]?.media_url}
-                    alt="Story"
-                    className="w-full h-full object-contain"
-                  />
-                )}
-                
-                {/* User info overlay */}
-                <div className="absolute top-4 left-4 flex items-center gap-2">
-                  <img
-                    src={followerStories[followerStoryIndex]?.user?.profile_image_url || '/loginAvatars/profile.png'}
-                    alt={followerStories[followerStoryIndex]?.user?.full_name}
-                    className="w-10 h-10 rounded-full object-cover border-2 border-white"
-                  />
-                  <span className="text-white font-semibold">
-                    {followerStories[followerStoryIndex]?.user?.full_name}
-                  </span>
-                </div>
-              </div>
-            </div>
+          {/* Follower Story Viewer - Using UserStory Component */}
+          {viewingFollowerStory && selectedFollowerProfile && (
+            <UserStory 
+              userId={selectedFollowerProfile._id} 
+              profile={selectedFollowerProfile}
+              showRing={false}
+            />
           )}
 
           {/* Profile Completion Card - from Feed API */}

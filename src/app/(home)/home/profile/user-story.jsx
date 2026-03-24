@@ -3,12 +3,16 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { User, MoreHorizontal, Heart, Send, MessageCircle, Flag, X, ChevronLeft, ChevronRight, Volume2, VolumeX, Pause, Play } from "lucide-react";
 import { userService } from "@/services/user";
+import { createConversation, sendMessage } from "@/services/messages";
 import { useTheme } from "@/lib/ThemeContext";
 import { Heart as HeartFilled } from "lucide-react";
+import SharePopup from "@/app/(home)/home/components/sharepopup";
+import { useRouter } from "next/navigation";
 
-export default function UserStory({ userId, profile }) {
+export default function UserStory({ userId, profile, showRing = true }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const router = useRouter();
 
   const [stories, setStories] = useState([]);
   const [hasStories, setHasStories] = useState(false);
@@ -29,6 +33,15 @@ export default function UserStory({ userId, profile }) {
   const [isLiked, setIsLiked] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
   const [initializedLikeState, setInitializedLikeState] = useState(false);
+
+  // ✅ Reply to story state
+  const [replyText, setReplyText] = useState('');
+  const [replyLoading, setReplyLoading] = useState(false);
+  const [replySent, setReplySent] = useState(false);
+
+  // ✅ Share story state
+  const [showShare, setShowShare] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
 
   // Initial fetch for showing story ring on profile
   useEffect(() => {
@@ -132,44 +145,60 @@ export default function UserStory({ userId, profile }) {
   }, [storyIndex]);
 
   // Progress bar animation
-  useEffect(() => {
-    if (!showStoryViewer || !stories[storyIndex]) return;
+useEffect(() => {
+  if (!showStoryViewer || !stories[storyIndex]) return;
 
-    let animationFrame;
-    let startTime;
-    const currentStory = stories[storyIndex];
-    
-    const isVideo = (currentStory.media?.type || currentStory.media_type) === "video";
-    const duration = (currentStory.duration || currentStory.media?.duration || currentStory.media_duration || 5) * 1000;
+  let animationFrame;
+  let startTime = null;
+  let pausedAt = null;
 
-    const animate = (timestamp) => {
-      if (!startTime) startTime = timestamp;
-      
-      if (isPaused) {
-        animationFrame = requestAnimationFrame(animate);
-        return;
-      }
+  const currentStory = stories[storyIndex];
 
-      const elapsed = timestamp - startTime;
-      const percent = Math.min((elapsed / duration) * 100, 100);
+  const isVideo =
+    (currentStory.media?.type || currentStory.media_type) === "video";
 
-      setProgress(percent);
+  const duration =
+    (currentStory.duration ||
+      currentStory.media?.duration ||
+      currentStory.media_duration ||
+      5) * 1000;
 
-      if (percent < 100) {
-        animationFrame = requestAnimationFrame(animate);
-      } else {
-        goToNextStory();
-      }
-    };
+  const animate = (timestamp) => {
+    if (!startTime) startTime = timestamp;
 
-    if (!isVideo) {
+    // ⛔ Pause handling
+    if (isPaused) {
+      if (!pausedAt) pausedAt = timestamp;
       animationFrame = requestAnimationFrame(animate);
+      return;
     }
 
-    return () => {
-      if (animationFrame) cancelAnimationFrame(animationFrame);
-    };
-  }, [storyIndex, showStoryViewer, isPaused, goToNextStory]);
+    // ▶ Resume handling (IMPORTANT FIX)
+    if (pausedAt) {
+      startTime += timestamp - pausedAt;
+      pausedAt = null;
+    }
+
+    const elapsed = timestamp - startTime;
+    const percent = Math.min((elapsed / duration) * 100, 100);
+
+    setProgress(percent);
+
+    if (percent < 100) {
+      animationFrame = requestAnimationFrame(animate);
+    } else {
+      goToNextStory();
+    }
+  };
+
+  if (!isVideo) {
+    animationFrame = requestAnimationFrame(animate);
+  }
+
+  return () => {
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+  };
+}, [storyIndex, showStoryViewer, isPaused, goToNextStory]);
 
   const currentStory = stories[storyIndex] || null;
 
@@ -240,6 +269,75 @@ export default function UserStory({ userId, profile }) {
     }
   };
 
+  // ✅ Handle reply to story (sends DM to story owner via messages API)
+  const handleReply = async (e) => {
+    e?.stopPropagation();
+    
+    if (!replyText.trim() || !currentStory || replyLoading) return;
+    
+    // The story owner is identified by the userId prop
+    const storyOwnerId = userId;
+    console.log('[UserStory] Reply to story - Owner ID:', storyOwnerId, 'Message:', replyText);
+    
+    if (!storyOwnerId) {
+      console.error('[UserStory] No story owner ID found for reply');
+      return;
+    }
+
+    setReplyLoading(true);
+    try {
+      // Step 1: Create or get existing conversation with the story owner
+      console.log('[UserStory] Creating conversation with story owner:', storyOwnerId);
+      const convResponse = await createConversation({ 
+        participants: [storyOwnerId] 
+      });
+      
+      console.log('[UserStory] Conversation response:', convResponse);
+      
+      // Extract conversation ID from response - handle different response formats
+      // The messages API interceptor returns res.data.data, so we need to check both structures
+      const conversationData = convResponse?.data?.conversation || 
+                             convResponse?.conversation ||
+                             convResponse;
+      const conversationId = conversationData?._id || conversationData?.id;
+                            
+      if (!conversationId) {
+        console.error('[UserStory] No conversation ID found in response:', convResponse);
+        throw new Error('Failed to create conversation');
+      }
+      
+      console.log('[UserStory] Conversation created:', conversationId);
+      
+      // Step 2: Send the reply message to the conversation
+      const messageResponse = await sendMessage(conversationId, {
+        message: replyText.trim()
+      });
+      
+      console.log('[UserStory] Message sent:', messageResponse);
+      
+      // Clear the input and show success feedback
+      setReplyText('');
+      setReplySent(true);
+      // Reset the sent state after 2 seconds
+      setTimeout(() => setReplySent(false), 2000);
+      console.log('[UserStory] Reply sent successfully! DM sent to story owner.');
+    } catch (err) {
+      console.error('[UserStory] Error sending reply:', err);
+      // Show error feedback
+      alert(err?.message || 'Failed to send reply. Please try again.');
+    } finally {
+      setReplyLoading(false);
+    }
+  };
+
+  // Handle enter key in reply input
+  const handleReplyKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleReply();
+    }
+  };
+
   // Helper to format time ago
   const getTimeAgo = (dateString) => {
     const date = new Date(dateString);
@@ -258,22 +356,26 @@ export default function UserStory({ userId, profile }) {
     <>
       {/* 3 DOT BUTTON */}
       <div className="absolute top-4 right-4 z-50">
-        <button onClick={() => setShowOptions(true)}>
+        <button onClick={() => {
+          console.log('[UserStory] Opening options menu - pausing story');
+          setIsPaused(true);
+          setShowOptions(true);
+        }}>
           <MoreHorizontal className="text-white" size={24} />
         </button>
       </div>
 
       {/* PROFILE IMAGE */}
       <div className="relative">
-        <div
-          className={`w-32 h-32 rounded-full p-[3px] ${
-            hasStories
-              ? "bg-gradient-to-tr from-yellow-400 via-orange-500 to-pink-500"
-              : "bg-gray-100"
-          }`}
-          onClick={handleProfilePhotoClick}
-        >
-          <div className="w-full h-full rounded-full overflow-hidden border-2 border-white">
+       <div
+  className={`w-20 h-20 rounded-full p-[2px] cursor-pointer ${
+    showRing && hasStories
+      ? "bg-gradient-to-tr from-yellow-400 via-orange-500 to-pink-500"
+      : "bg-transparent"
+  }`}
+  onClick={handleProfilePhotoClick}
+>
+         <div className="w-full h-full rounded-full overflow-hidden border border-white">
             {profile.profile_image_url ? (
               <img
                 src={profile.profile_image_url}
@@ -320,7 +422,13 @@ export default function UserStory({ userId, profile }) {
 
             {/* Top Bar */}
             <div className="absolute top-4 left-4 right-4 flex items-center justify-between text-white">
-              <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  console.log('[UserStory] Navigate to user profile from top bar:', userId);
+                  router.push(`/home/profile/${userId}`);
+                }}
+                className="flex items-center gap-3"
+              >
                 <img
                   src={profile.profile_image_url || "/default-avatar.png"}
                   className="w-8 h-8 rounded-full object-cover"
@@ -333,33 +441,37 @@ export default function UserStory({ userId, profile }) {
                     {getTimeAgo(currentStory.created_at)}
                   </div>
                 </div>
-              </div>
+              </button>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsMuted(!isMuted)}
-                  className="p-2 bg-black/40 rounded-md"
+                  className="p-1 bg-black/40 rounded-md"
                 >
                   {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                 </button>
 
                 <button
                   onClick={() => setIsPaused(!isPaused)}
-                  className="p-2 bg-black/40 rounded-md"
+                  className="p-1 bg-black/40 rounded-md"
                 >
                   {isPaused ? <Play size={18} /> : <Pause size={18} />}
                 </button>
 
                 <button
-                  onClick={() => setShowOptions(true)}
-                  className="p-2 bg-black/40 rounded-md"
+                  onClick={() => {
+                    console.log('[UserStory] Opening options menu - pausing story');
+                    setIsPaused(true);
+                    setShowOptions(true);
+                  }}
+                  className="p-1 bg-black/40 rounded-md"
                 >
                   <MoreHorizontal size={18} />
                 </button>
 
                 <button
                   onClick={closeStoryViewer}
-                  className="p-2 bg-black/40 rounded-md"
+                  className="p-1 bg-black/40 rounded-md"
                 >
                   <X size={18} />
                 </button>
@@ -412,43 +524,112 @@ export default function UserStory({ userId, profile }) {
             )}
 
             {/* Bottom Action Bar - Message, Like, Share */}
-            <div className="absolute bottom-6 left-0 right-0 px-6 flex items-center justify-around text-white">
-              <button className="flex flex-col items-center gap-1">
-                <MessageCircle size={24} />
-                <span className="text-xs">Message</span>
-              </button>
-              <button 
-                className={`flex flex-col items-center gap-1 ${isLiked ? 'text-red-500' : 'text-white'}`}
-                onClick={handleLikeToggle}
-                disabled={likeLoading}
-              >
-                {isLiked ? (
-                  <HeartFilled size={24} className="animate-pulse" />
-                ) : (
-                  <Heart size={24} />
-                )}
-                <span className="text-xs">{isLiked ? 'Liked' : 'Like'}</span>
-              </button>
-              <button className="flex flex-col items-center gap-1">
-                <Send size={24} />
-                <span className="text-xs">Share</span>
-              </button>
-            </div>
+           {/* Bottom Action Bar - Message, Like, Share */}
+{/* Bottom Action Bar */}
+<div className="absolute bottom-4 left-4 right-4">
+
+  {!replyText ? (
+    // ✅ DEFAULT STATE (small + icons visible)
+    <div className="flex items-center gap-3">
+      
+      {/* Small Input */}
+      <div className="flex items-center bg-black/40 rounded-full px-3 w-[180px]">
+        <input
+          type="text"
+          value={replyText}
+          onChange={(e) => setReplyText(e.target.value)}
+          onFocus={() => setIsPaused(true)}
+          placeholder={`Reply to ${profile.username || profile.full_name}...`}
+          className="flex-1 bg-transparent outline-none text-white placeholder-gray-300 text-sm py-2"
+        />
+      </div>
+
+      {/* Icons */}
+      <div className="flex items-center gap-3">
+        <button onClick={handleLikeToggle} className="text-white">
+          {isLiked ? (
+            <HeartFilled size={24} className="fill-white" />
+          ) : (
+            <Heart size={24} />
+          )}
+        </button>
+
+        <button 
+          onClick={() => {
+            // Get the current story's ID
+            const storyId = currentStory?.story_id || currentStory?._id || currentStory?.id;
+            console.log('[UserStory] Share button clicked for story:', storyId);
+            setIsPaused(true);
+            setShowShare(true);
+          }}
+          className="text-white"
+        >
+          <Send size={24} />
+        </button>
+      </div>
+    </div>
+  ) : (
+    // ✅ EXPANDED STATE (full width input like your image)
+    <div className="flex items-center bg-black/40 rounded-full px-4 py-2 w-full border border-white/20">
+      
+      <input
+        type="text"
+        value={replyText}
+        onChange={(e) => setReplyText(e.target.value)}
+        onBlur={() => setIsPaused(false)}
+        onKeyDown={handleReplyKeyDown}
+        className="flex-1 bg-transparent outline-none text-white text-sm"
+        autoFocus
+      />
+
+      <button
+        onClick={handleReply}
+        disabled={!replyText.trim() || replyLoading}
+        className="text-blue-400 font-medium ml-3"
+      >
+        {replyLoading ? "..." : "Send"}
+      </button>
+    </div>
+  )}
+
+</div>
           </div>
         </div>
       )}
 
+      {/* ✅ SHARE STORY POPUP */}
+      <SharePopup
+        isOpen={showShare}
+        onClose={() => {
+          console.log('[UserStory] Closing share popup - resuming story');
+          setShowShare(false);
+          setIsPaused(false);
+        }}
+        contentType="story"
+        contentId={currentStory?.story_id || currentStory?._id || currentStory?.id}
+        thumbnail={currentStory?.media?.url || currentStory?.media_url}
+        title={null}
+        onShareSuccess={() => {
+          setShowShare(false);
+          setIsPaused(false);
+          console.log('[UserStory] Story shared successfully!');
+        }}
+      />
+
       {/* ✅ STORY VIEWER MORE OPTIONS POPUP */}
       {showOptions && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
           {/* Overlay */}
           <div
             className="absolute inset-0 bg-black/40"
-            onClick={() => setShowOptions(false)}
+            onClick={() => {
+              setShowOptions(false);
+              setIsPaused(false);
+            }}
           />
 
           {/* Popup */}
-          <div className="relative w-full max-w-md bg-white rounded-t-2xl overflow-hidden">
+         <div className="relative w-[280px] bg-white rounded-xl overflow-hidden shadow-lg">
             {/* Report */}
             <button className="flex items-center justify-center gap-2 w-full py-4 text-red-500 border-b">
               <Flag size={18} />
@@ -456,14 +637,25 @@ export default function UserStory({ userId, profile }) {
             </button>
 
             {/* About this account */}
-            <button className="flex items-center justify-center gap-2 w-full py-4 border-b">
+            <button 
+              onClick={() => {
+                console.log('[UserStory] Navigate to user profile:', userId);
+                setShowOptions(false);
+                setIsPaused(false);
+                router.push(`/home/profile/${userId}`);
+              }}
+              className="flex items-center justify-center gap-2 w-full py-4 border-b"
+            >
               <User size={18} />
               About this account
             </button>
 
             {/* Cancel */}
             <button
-              onClick={() => setShowOptions(false)}
+              onClick={() => {
+                setShowOptions(false);
+                setIsPaused(false);
+              }}
               className="w-full py-4 text-gray-600"
             >
               Cancel

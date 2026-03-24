@@ -455,15 +455,40 @@ export const getStoryFeed = async (limit = 20, cursor = null) => {
   params.append("limit", limit);
   if (cursor) params.append("cursor", cursor);
 
+  console.log("[getStoryFeed] Calling API with params:", params.toString());
+  
   const res = await axios.get(`${API_BASE}/stories/feed?${params.toString()}`, {
     headers: getAuthHeaders(),
   });
-  const data = res.data.data;
   
-  // Apply defensive sorting for story groups
-  // Users sorted by their latest story DESC (most recent first)
-  if (data?.items && Array.isArray(data.items)) {
-    const sortedItems = data.items.map(group => ({
+  console.log("[getStoryFeed] Raw API response:", res.data);
+  
+  const data = res.data.data;
+  console.log("[getStoryFeed] Data:", data);
+  
+  // Handle different response formats:
+  // Format 1: { stories: [...], next_cursor, has_more } - stories directly in array
+  // Format 2: { items: [{ user, stories: [...] }] } - grouped by user
+  let storyItems = [];
+  
+  if (data?.stories && Array.isArray(data.stories)) {
+    // Format 1: Flat array of stories with embedded author
+    console.log("[getStoryFeed] Processing format 1: stories array");
+    storyItems = normalizeStoriesWithAuthors(data.stories);
+  } else if (data?.items && Array.isArray(data.items)) {
+    // Format 2: Array of story groups with user and stories
+    console.log("[getStoryFeed] Processing format 2: items array");
+    storyItems = data.items;
+  } else {
+    console.log("[getStoryFeed] Unexpected data format:", data);
+    return data;
+  }
+
+  console.log("[getStoryFeed] Processed story items:", storyItems.length);
+  
+  // Apply sorting
+  if (storyItems.length > 0) {
+    const sortedItems = storyItems.map(group => ({
       ...group,
       // Sort stories within each user by createdAt ASC (oldest first)
       stories: sortStoriesByCreatedAtASC(group.stories || [])
@@ -476,7 +501,44 @@ export const getStoryFeed = async (limit = 20, cursor = null) => {
     };
   }
   
-  return data;
+  return { items: [] };
+};
+
+/**
+ * Normalize stories from format where each story has embedded author
+ * Convert to format expected by frontend: { user, stories: [...] }
+ */
+const normalizeStoriesWithAuthors = (stories) => {
+  if (!Array.isArray(stories)) return [];
+  
+  // Group stories by author
+  const groupedByAuthor = {};
+  
+  stories.forEach(story => {
+    const authorId = story.author?._id || story.author_id;
+    if (!authorId) return;
+    
+    if (!groupedByAuthor[authorId]) {
+      groupedByAuthor[authorId] = {
+        user: {
+          user_id: authorId,
+          full_name: story.author?.full_name || 'Unknown',
+          profile_image_url: story.author?.profile_image_url || '',
+        },
+        stories: [],
+      };
+    }
+    
+    // Normalize the story format
+    groupedByAuthor[authorId].stories.push({
+      ...story,
+      media_url: story.media?.url || story.media_url,
+      media_type: story.media?.type || story.media_type || 'image',
+      createdAt: story.created_at,
+    });
+  });
+  
+  return Object.values(groupedByAuthor);
 };
 
 /**

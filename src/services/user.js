@@ -188,6 +188,12 @@ api.post("/api/v1/auth/signup/email-password", {
       reaction: 'like'
     }),
 
+  // Reply to a story - sends a DM to the story owner
+  replyToStory: (storyId, message) => 
+    api.post(`/stories/${storyId}/reply`, {
+      message
+    }),
+
   // ============ COVER PHOTO ============
   // Step 1: Get presigned URL for cover photo upload
   getCoverPhotoPresign: (userId, fileName, mimeType, sizeBytes) => 

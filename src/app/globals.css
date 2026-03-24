@@ -79,7 +79,7 @@
 /* Mobile Responsive Orbit Animations */
 /* ========================= */
 
-@keyframes orbit-outer {
+/* @keyframes orbit-outer {
   0%, 100% {
     transform: rotate(var(--angle)) translate(130px) rotate(calc(var(--angle) * -1));
   }
@@ -92,10 +92,10 @@
   75% {
     transform: rotate(calc(var(--angle) + 30deg)) translate(160px) rotate(calc((var(--angle) + 30deg) * -1));
   }
-}
+} */
 
 /* Inner Ring (2 Avatars) */
-@keyframes orbit-inner {
+/* @keyframes orbit-inner {
   0%, 100% {
     transform: rotate(var(--angle)) translate(90px) rotate(calc(var(--angle) * -1));
   }
@@ -108,15 +108,15 @@
   75% {
     transform: rotate(calc(var(--angle) + 30deg)) translate(75px) rotate(calc((var(--angle) + 30deg) * -1));
   }
-}
+} */
 
-.animate-orbit-outer {
+/* .animate-orbit-outer {
   animation: orbit-outer 7s ease-in-out infinite;
 }
 
 .animate-orbit-inner {
   animation: orbit-inner 7s ease-in-out infinite;
-}
+} */
 
 
 
