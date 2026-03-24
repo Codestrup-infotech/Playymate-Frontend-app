@@ -29,7 +29,7 @@ export default function HelpPage() {
   return (
     <div className="w-full max-w-2xl">
       
-      {/* Header */}
+      {/* Header  main */}
       <h1 className="text-xl font-semibold mb-6">
         Help
       </h1>
