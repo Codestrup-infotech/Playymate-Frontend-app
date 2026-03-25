@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { X, ArrowLeft, MapPin, Users, ChevronDown, ChevronUp, Smile, Plus, Minus, Loader2 } from "lucide-react";
+import { X, ArrowLeft, MapPin, Users, ChevronDown, ChevronUp, Smile, Plus, Minus, Loader2, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { presignStoryUpload, createStory } from "@/app/user/homefeed";
 import { userService } from "@/services/user";
@@ -66,6 +66,18 @@ export default function CreateStoryPage() {
   const [userInfo, setUserInfo] = useState(null);
   const [error, setError] = useState(null);
   
+
+
+  const [closeFriends, setCloseFriends] = useState(false);
+const [turnOffSharing, setTurnOffSharing] = useState(false);
+
+
+const [showMentions, setShowMentions] = useState(false);
+const [mentionSearch, setMentionSearch] = useState("");
+const [mentionUsers, setMentionUsers] = useState([]);
+const [selectedMentions, setSelectedMentions] = useState([]);
+const [loadingMentions, setLoadingMentions] = useState(false);
+
   useEffect(() => {
     // Fetch user info
     const fetchUserInfo = async () => {
@@ -84,6 +96,85 @@ export default function CreateStoryPage() {
     };
     fetchUserInfo();
   }, []);
+
+  // Fetch followers and following when mentions section is opened
+  useEffect(() => {
+    if (showMentions && mentionUsers.length === 0) {
+      const fetchFollowersFollowing = async () => {
+        setLoadingMentions(true);
+        try {
+          const meRes = await userService.getMe();
+          const meData = meRes?.data?.data || meRes?.data;
+          
+          console.log("User data response:", meRes);
+          
+          if (meData && meData._id) {
+            // Try to get followers and following from getMe response first
+            let followersData = meData?.followers || meData?.follower_list || meData?.followers_list || [];
+            let followingData = meData?.following || meData?.following_list || meData?.following_list || [];
+            
+            console.log("Followers:", followersData);
+            console.log("Following:", followingData);
+            
+            // If no data from getMe, fetch separately
+            if ((!followersData || followersData.length === 0) && (!followingData || followingData.length === 0)) {
+              try {
+                const [followersRes, followingRes] = await Promise.all([
+                  userService.getFollowers(meData._id, 100, null),
+                  userService.getFollowing(meData._id, 100, null)
+                ]);
+                
+                followersData = followersRes?.data?.data?.items || followersRes?.data?.data || followersRes?.data || [];
+                followingData = followingRes?.data?.data?.items || followingRes?.data?.data || followingRes?.data || [];
+                
+                console.log("Followers from API:", followersData);
+                console.log("Following from API:", followingData);
+              } catch (apiErr) {
+                console.error("Error fetching followers/following:", apiErr);
+              }
+            }
+            
+            // Combine and remove duplicates
+            const allUsers = [...followersData, ...followingData];
+            const uniqueUsers = allUsers.filter((user, index, self) => {
+              return index === self.findIndex((u) => u._id === user._id);
+            });
+            
+            console.log("Unique users:", uniqueUsers);
+            setMentionUsers(uniqueUsers);
+          }
+        } catch (error) {
+          console.error("Error fetching mentions data:", error);
+        } finally {
+          setLoadingMentions(false);
+        }
+      };
+      
+      fetchFollowersFollowing();
+    }
+  }, [showMentions]);
+
+  // Handle selecting a mention
+  const handleSelectMention = (user) => {
+    // Add to selected mentions if not already selected
+    if (!selectedMentions.find(m => m._id === user._id)) {
+      setSelectedMentions([...selectedMentions, user]);
+      // Add @username to caption
+      setCaption(prev => prev + (prev ? " " : "") + "@" + (user.username || user.full_name?.toLowerCase().replace(/\s+/g, "_") || ""));
+    }
+    setShowMentions(false);
+    setMentionSearch("");
+  };
+
+  // Handle removing a mention
+  const handleRemoveMention = (userId) => {
+    const user = selectedMentions.find(m => m._id === userId);
+    if (user) {
+      const mentionText = "@" + (user.username || user.full_name?.toLowerCase().replace(/\s+/g, "_") || "");
+      setCaption(prev => prev.replace(mentionText, "").replace(/\s+/g, " ").trim());
+    }
+    setSelectedMentions(selectedMentions.filter(m => m._id !== userId));
+  };
 
   // Handle getting current location via geolocation API
   const handleGetCurrentLocation = () => {
@@ -207,11 +298,11 @@ export default function CreateStoryPage() {
     if (!selected) return;
     
     // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'];
-    if (!validTypes.includes(selected.type)) {
-      setError("Please select a valid image or video file");
-      return;
-    }
+   // Allow all file types
+if (!selected.type) {
+  setError("Invalid file");
+  return;
+}
     
     // Validate file size (max 50MB for stories)
     if (selected.size > 50 * 1024 * 1024) {
@@ -237,12 +328,11 @@ export default function CreateStoryPage() {
     const dropped = e.dataTransfer.files[0];
     if (!dropped) return;
     
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'];
-    if (!validTypes.includes(dropped.type)) {
-      setError("Please select a valid image or video file");
-      return;
-    }
+    // Allow all file types but still validate existence
+if (!dropped || dropped.size === 0) {
+  setError("Invalid file");
+  return;
+}
     
     // Validate file size (max 50MB for stories)
     if (dropped.size > 50 * 1024 * 1024) {
@@ -322,6 +412,7 @@ export default function CreateStoryPage() {
         media_type: fileType,
         caption: caption || "",
         location: location,
+        mentions: selectedMentions.map(m => m._id),
       };
       
       console.log("[CreateStory] Creating story with data:", storyData);
@@ -356,19 +447,17 @@ export default function CreateStoryPage() {
 
   // Get aspect ratio style for crop preview
   const getAspectRatioStyle = () => {
-    switch (cropAspect) {
-      case "1:1":
-        return { aspectRatio: "1/1" };
-      case "4:5":
-        return { aspectRatio: "4/5" };
-      case "16:9":
-        return { aspectRatio: "16/9" };
-      case "9:16":
-        return { aspectRatio: "9/16" };
-      default:
-        return {};
-    }
-  };
+  switch (cropAspect) {
+    case "1:1":
+      return { aspectRatio: "1/1" };
+    case "4:5":
+      return { aspectRatio: "4/5" };
+    case "9:16":
+      return { aspectRatio: "9/16" };
+    default:
+      return {};
+  }
+};
 
   const mediaEl = fileType === "video" ? (
     <video src={videoUrl} className="max-h-full max-w-full object-contain" autoPlay loop muted={!soundOn} />
@@ -389,11 +478,31 @@ export default function CreateStoryPage() {
   // Determine modal size
   const isWide = step !== "upload";
 
+
+
+  const ToggleButton = ({ state, setState }) => {
+  return (
+    <button
+      onClick={() => setState((prev) => !prev)}
+      className={`w-11 h-6 flex items-center rounded-full p-[2px] transition duration-300 ${
+        state ? "bg-[#0095f6]" : "bg-gray-300"
+      }`}
+    >
+      <div
+        className={`w-5 h-5 bg-white rounded-full shadow-md transform transition duration-300 ${
+          state ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+};
+
+
   return (
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center">
       <div
         className={`bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
-          isWide ? "w-[940px] h-[600px]" : "w-[520px] h-[480px]"
+          isWide ? "w-[700px] h-[540px]" : "w-[520px] h-[480px]"
         }`}
       >
         {/* ── HEADER ── */}
@@ -485,7 +594,9 @@ export default function CreateStoryPage() {
                 Select from computer
               </button>
               <input type="file" ref={fileInput} className="hidden" accept="image/*,video/*" onChange={handleFile} />
-              <p className="text-xs text-gray-400">Supported: JPEG, PNG, GIF, WebP, MP4, WebM (max 50MB)</p>
+<p className="text-xs text-gray-400">
+  Supported all file types (max 50MB)
+</p>
             </div>
           )}
 
@@ -493,85 +604,73 @@ export default function CreateStoryPage() {
           {step === "crop" && (
             <div className="flex w-full h-full">
               {/* Image area */}
-              <div className="flex-1 bg-gray-100 p-3 relative flex items-center justify-center overflow-hidden">
-                {/* Aspect ratio overlay popup */}
-                <div className="absolute bottom-14 left-3 z-20 bg-black/90 rounded-xl p-3 flex gap-4">
-                  {["1:1", "4:5", "16:9", "9:16"].map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => {
-                        setCropAspect(r);
-                        setShowAspectLabel(true);
-                      }}
-                      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition ${
-                        cropAspect === r ? "bg-white/30" : "hover:bg-white/10"
-                      }`}
-                    >
-                      <div
-                        className={`border-2 border-white ${
-                          r === "1:1" ? "w-6 h-6" : r === "4:5" ? "w-5 h-6" : r === "9:16" ? "w-4 h-7" : "w-8 h-5"
-                        } rounded-sm`}
-                      />
-                      <span className="text-white text-[10px] font-medium">{r}</span>
-                    </button>
-                  ))}
-                </div>
+              <div className="flex-1  p-3 relative flex items-center justify-center overflow-hidden">
+               
 
-                {/* Image container with aspect ratio */}
-                <div className="w-full h-full flex items-center justify-center">
-                  <div
-                    style={getAspectRatioStyle()}
-                    className="relative overflow-hidden w-full max-w-[350px]"
-                  >
-                    {/* Aspect ratio label */}
-                    {showAspectLabel && (
-                      <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-3 py-1 rounded-full z-20">
-                        {cropAspect}
-                      </div>
-                    )}
+              {/* Image container with aspect ratio */}
+<div className="w-full h-full flex flex-col items-center justify-center relative">
 
-                    {/* Image/Video preview */}
-                    {fileType === "video" ? (
-                      <video
-                        src={videoUrl}
-                        className="absolute w-full h-full object-cover"
-                        autoPlay
-                        loop
-                        muted
-                      />
-                    ) : (
-                      <img
-                        src={file}
-                        style={getImageStyle()}
-                        className="absolute w-full h-full object-cover"
-                        alt="preview"
-                      />
-                    )}
-                  </div>
-                </div>
+  {/* IMAGE CONTAINER */}
+  <div
+    style={getAspectRatioStyle()}
+    className="relative overflow-hidden h-full max-h-[500px]"
+  >
+    {/* Aspect ratio label */}
+    {showAspectLabel && (
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-3 py-1 rounded-full z-20">
+        {cropAspect}
+      </div>
+    )}
 
-                {/* Bottom toolbar */}
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between z-10">
-                  {/* Aspect ratio button */}
-                  <button className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-black/80 transition">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                      <rect x="3" y="5" width="18" height="14" rx="2"/>
-                    </svg>
-                  </button>
+    {/* Image / Video */}
+    {fileType === "video" ? (
+      <video
+        src={videoUrl}
+        className="w-full h-full object-cover"
+        autoPlay
+        loop
+        muted
+      />
+    ) : (
+      <img
+        src={file}
+        style={getImageStyle()}
+        className="w-full h-full object-cover"
+        alt="preview"
+      />
+    )}
+  </div>
 
-                  {/* Multi-select / zoom */}
-                  <div className="flex items-center gap-2">
-                    <button className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-black/80 transition">
-                      <Plus size={16} />
-                    </button>
-                    <button className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-black/80 transition">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="2" y="7" width="10" height="10" rx="1.5"/>
-                        <rect x="12" y="5" width="10" height="14" rx="1.5"/>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
+  {/* ✅ FIXED BUTTONS (BOTTOM CENTER) */}
+  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 bg-black/70 rounded-xl px-4 py-2 flex gap-4">
+    {["1:1", "4:5", "9:16"].map((r) => (
+      <button
+        key={r}
+        onClick={() => {
+          setCropAspect(r);
+          setShowAspectLabel(true);
+        }}
+        className={`flex flex-col items-center px-3 py-1.5 rounded-lg transition ${
+          cropAspect === r ? "bg-white/30" : "hover:bg-white/10"
+        }`}
+      >
+        <div
+          className={`border-2 border-white ${
+            r === "1:1"
+              ? "w-6 h-6"
+              : r === "4:5"
+              ? "w-5 h-6"
+              : "w-4 h-7"
+          } rounded-sm`}
+        />
+        <span className="text-white text-[10px] font-medium">{r}</span>
+      </button>
+    ))}
+  </div>
+
+</div>
+
+              
               </div>
             </div>
           )}
@@ -580,7 +679,7 @@ export default function CreateStoryPage() {
           {step === "edit" && fileType === "image" && (
             <div className="flex w-full h-full">
               <div className="flex-1 bg-white p-3 flex items-center justify-center overflow-hidden">
-                <div style={getAspectRatioStyle()} className="flex items-center justify-center bg-gray-100 max-w-full max-h-full">
+                <div style={getAspectRatioStyle()} className="flex items-center justify-center  max-w-full max-h-full">
                   <img src={file} style={getImageStyle()} className="max-h-full max-w-full object-contain" alt="edit" />
                 </div>
               </div>
@@ -749,13 +848,7 @@ export default function CreateStoryPage() {
                 ) : (
                   <img src={file} style={getImageStyle()} className="max-h-full max-w-full object-contain" alt="share" />
                 )}
-                {/* Tag people tooltip */}
-                <div className="absolute top-4 left-4">
-                  <div className="bg-black/80 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-2">
-                    <Users size={14} />
-                    {fileType === "video" ? "Tag people" : "Click photo to tag people"}
-                  </div>
-                </div>
+               
               </div>
 
               {/* Right panel */}
@@ -774,20 +867,42 @@ export default function CreateStoryPage() {
                   <span className="text-sm font-semibold text-[#262626]">{userInfo?.username || 'user'}</span>
                 </div>
 
+                {/* Selected mentions display */}
+                {selectedMentions.length > 0 && (
+                  <div className="px-4 py-2 border-b border-gray-100 flex flex-wrap gap-2">
+                    {selectedMentions.map((user) => (
+                      <div
+                        key={user._id}
+                        className="flex items-center gap-1 bg-[#0095f6]/10 text-[#0095f6] px-2 py-1 rounded-full text-sm"
+                      >
+                        <span>@{user.username || user.full_name}</span>
+                        <button
+                          onClick={() => handleRemoveMention(user._id)}
+                          className="hover:bg-[#0095f6]/20 rounded-full p-0.5"
+                        >
+                          <XCircle size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Caption */}
                 <div className="px-4 py-3 border-b border-gray-100">
                   <textarea
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
                     placeholder="Write a caption..."
-                    maxLength={150}
-                    className="w-full resize-none text-sm outline-none placeholder:text-gray-400 min-h-[60px]"
+maxLength={50}
+                    className="w-full resize-none text-sm outline-none placeholder:text-gray-400 min-h-[30px]"
                   />
                   <div className="flex items-center justify-between mt-2">
                     <button className="text-gray-400 hover:text-gray-600 transition">
                       <Smile size={20} />
                     </button>
-                    <span className="text-xs text-gray-400">{caption.length}/150</span>
+                  <span className="text-xs text-gray-400">
+  {caption.length}/50
+</span>
                   </div>
                 </div>
 
@@ -818,65 +933,112 @@ export default function CreateStoryPage() {
                   )}
                 </div>
 
-                {/* Add collaborators */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50">
-                  <span className="text-sm text-[#262626]">Add collaborators</span>
-                  <Users size={18} className="text-gray-500" />
-                </div>
+            {/* Add mention in story */}
+<div className="border-b border-gray-100">
+  <button
+    onClick={() => setShowMentions((prev) => !prev)}
+    className="flex items-center justify-between w-full px-4 py-3 hover:bg-gray-50"
+  >
+    <span className="text-sm text-[#262626]">Add mention in story</span>
 
-                {/* Accessibility */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50">
-                  <span className="text-sm text-[#262626]">Accessibility</span>
-                  <ChevronDown size={18} className="text-gray-500" />
-                </div>
+    {showMentions ? (
+      <ChevronUp size={18} className="text-gray-500" />
+    ) : (
+      <ChevronDown size={18} className="text-gray-500" />
+    )}
+  </button>
 
-                {/* Advanced settings */}
-                <div className="border-b border-gray-100">
-                  <button
-                    onClick={() => setAdvancedOpen(!advancedOpen)}
-                    className="flex items-center justify-between w-full px-4 py-3 hover:bg-gray-50"
-                  >
-                    <span className="text-sm font-semibold text-[#262626]">Advanced settings</span>
-                    {advancedOpen ? <ChevronUp size={18} className="text-gray-500" /> : <ChevronDown size={18} className="text-gray-500" />}
-                  </button>
+  {showMentions && (
+    <div className="px-4 pb-4">
+      {/* Search box */}
+      <input
+        type="text"
+        value={mentionSearch}
+        onChange={(e) => setMentionSearch(e.target.value)}
+        placeholder="Search user..."
+        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#0095f6]"
+      />
 
-                  {advancedOpen && (
-                    <div className="px-4 pb-4 space-y-4">
-                      {/* Hide likes */}
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-[#262626]">Hide like and view counts on this story</span>
-                          <button
-                            onClick={() => setHideLikes(!hideLikes)}
-                            className={`w-12 h-6 rounded-full relative transition-colors flex-shrink-0 ml-3 ${hideLikes ? "bg-[#0095f6]" : "bg-gray-300"}`}
-                          >
-                            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${hideLikes ? "translate-x-6" : "translate-x-0.5"}`} />
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
-                          Only you will see the total number of likes and views on this story. You can change this later by going to the ··· menu at the top of the story.{" "}
-                          <a href="#" className="text-[#0095f6]">Learn more</a>
-                        </p>
-                      </div>
-
-                      {/* Turn off commenting */}
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-[#262626]">Turn off commenting</span>
-                          <button
-                            onClick={() => setNoComments(!noComments)}
-                            className={`w-12 h-6 rounded-full relative transition-colors flex-shrink-0 ml-3 ${noComments ? "bg-[#0095f6]" : "bg-gray-300"}`}
-                          >
-                            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${noComments ? "translate-x-6" : "translate-x-0.5"}`} />
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1.5">
-                          You can change this later by going to the ··· menu at the top of your story.
-                        </p>
-                      </div>
-                    </div>
+      {/* Loading state */}
+      {loadingMentions ? (
+        <div className="mt-3 flex items-center justify-center py-4">
+          <div className="w-6 h-6 border-2 border-gray-300 border-t-[#0095f6] rounded-full animate-spin"></div>
+        </div>
+      ) : (
+        /* Result list - show only 2 users visible, rest under scroll */
+        <div className="mt-3 max-h-[150px] overflow-y-auto">
+          {mentionUsers
+            .filter((u) => {
+              const name = u.full_name || u.username || "";
+              return name.toLowerCase().includes(mentionSearch.toLowerCase());
+            })
+            .slice(0, 2)   // ✅ ONLY 2 USERS
+            .map((user) => (
+              <div
+                key={user._id}
+                className="flex items-center gap-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg px-2"
+                onClick={() => handleSelectMention(user)}
+              >
+                <img
+                  src={user.profile_image_url || "/default-avatar.png"}
+                  className="w-8 h-8 rounded-full object-cover"
+                  alt={user.full_name || user.username}
+                />
+                <div className="flex flex-col">
+                  <span className="text-sm text-[#262626]">{user.full_name || user.username}</span>
+                  {user.username && user.username !== user.full_name && (
+                    <span className="text-xs text-gray-500">@{user.username}</span>
                   )}
                 </div>
+              </div>
+            ))}
+        </div>
+      )}
+    </div>
+  )}
+</div>
+
+               
+
+              {/* Advanced settings */}
+<div className="border-b border-gray-100">
+  <button
+    onClick={() => setAdvancedOpen(!advancedOpen)}
+    className="flex items-center justify-between w-full px-4 py-3 hover:bg-gray-50"
+  >
+    <span className="text-sm font-semibold text-[#262626]">Advanced settings</span>
+    {advancedOpen ? (
+      <ChevronUp size={18} className="text-gray-500" />
+    ) : (
+      <ChevronDown size={18} className="text-gray-500" />
+    )}
+  </button>
+
+  {advancedOpen && (
+    <div className="px-4 pb-4 space-y-5">
+
+      {/* Close Friends */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-[#262626]">Add to close friends only</span>
+        <ToggleButton state={closeFriends} setState={setCloseFriends} />
+      </div>
+
+      {/* Turn off commenting */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-[#262626]">Turn off commenting</span>
+        <ToggleButton state={noComments} setState={setNoComments} />
+      </div>
+
+      {/* Turn off settings */}
+    {/* Turn off sharing */}
+<div className="flex items-center justify-between">
+  <span className="text-sm text-[#262626]">Turn off sharing</span>
+  <ToggleButton state={turnOffSharing} setState={setTurnOffSharing} />
+</div>
+
+    </div>
+  )}
+</div>
               </div>
             </div>
           )}

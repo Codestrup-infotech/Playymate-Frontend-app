@@ -41,10 +41,40 @@ function CreatePostContent() {
 
   // Edit state
   const [editTab, setEditTab] = useState("Filters");
-  const [selectedFilter, setSelectedFilter] = useState("Normal");
-  const [adjustments, setAdjustments] = useState(
-    Object.fromEntries(ADJUSTMENTS.map((a) => [a, 0]))
-  );
+  // Per-image filter and adjustment state - stored as array indexed by image
+  const [imageEdits, setImageEdits] = useState({});
+  
+  // Helper to get filter for a specific image
+  const getImageFilter = (index) => {
+    return imageEdits[index]?.filter || "Normal";
+  };
+  
+  // Helper to get adjustments for a specific image
+  const getImageAdjustments = (index) => {
+    return imageEdits[index]?.adjustments || Object.fromEntries(ADJUSTMENTS.map((a) => [a, 0]));
+  };
+  
+  // Helper to set filter for a specific image
+  const setImageFilter = (index, filter) => {
+    setImageEdits((prev) => ({
+      ...prev,
+      [index]: {
+        ...prev[index],
+        filter
+      }
+    }));
+  };
+  
+  // Helper to set adjustments for a specific image
+  const setImageAdjustments = (index, newAdjustments) => {
+    setImageEdits((prev) => ({
+      ...prev,
+      [index]: {
+        ...prev[index],
+        adjustments: newAdjustments
+      }
+    }));
+  };
 
   // Video edit
   const [soundOn, setSoundOn] = useState(true);
@@ -72,6 +102,11 @@ function CreatePostContent() {
 
   // User info
   const [userInfo, setUserInfo] = useState(null);
+
+
+  const [files, setFiles] = useState([]); // multiple images
+const [currentIndex, setCurrentIndex] = useState(0);
+
   
   useEffect(() => {
     // Fetch user info
@@ -259,21 +294,51 @@ function CreatePostContent() {
     setLocationError("");
   };
 
-  const fileInput = useRef();
+  const fileInput = useRef(null);
+
+  const handleAddMoreFiles = () => {
+    // Try using the ref first
+    if (fileInput.current) {
+      fileInput.current.click();
+      return;
+    }
+    // Fallback to getElementById
+    const input = document.getElementById('fileInput');
+    if (input) {
+      input.click();
+    }
+  };
 
   const handleFile = (e) => {
-    const selected = e.target.files[0];
-    if (!selected) return;
-    const isVideo = selected.type.startsWith("video/");
-    setFileType(isVideo ? "video" : "image");
-    if (isVideo) {
-      setVideoUrl(URL.createObjectURL(selected));
-      setFile(null);
+    const selectedFiles = Array.from(e.target.files);
+    if (!selectedFiles.length) return;
+
+    // Check if any selected file is a video
+    const hasVideo = selectedFiles.some((file) => file.type.startsWith("video/"));
+
+    const newFiles = selectedFiles.map((file) => ({
+      url: URL.createObjectURL(file),
+      type: file.type.startsWith("video/") ? "video" : "image",
+    }));
+
+    setFiles((prev) => {
+      const updatedFiles = [...prev, ...newFiles];
+      setCurrentIndex(updatedFiles.length - 1); // show latest on top
+      return updatedFiles;
+    });
+    
+    // Set fileType - if any video is selected, set as video; otherwise image
+    if (hasVideo) {
+      setFileType("video");
+      setVideoUrl(newFiles.find((f) => f.type === "video")?.url);
     } else {
-      setFile(URL.createObjectURL(selected));
-      setVideoUrl(null);
+      setFileType("image");
     }
+    
     setStep("crop");
+    
+    // Reset file input so same file can be selected again
+    e.target.value = '';
   };
 
   const handleDrop = useCallback((e) => {
@@ -311,16 +376,81 @@ function CreatePostContent() {
     
     try {
       let mediaData = [];
+
+      // Check if we're using existing media (editing mode with no new files)
+      const isExistingMedia = isEditing && existingPost?.media && existingPost.media.length > 0 && 
+        files.length === 0 && !file && !videoUrl;
       
-      // If editing, check if we need to upload new media
-      const isExistingMedia = isEditing && existingPost?.media && existingPost.media.length > 0 && file === existingPost.media[0].url;
+      // Check if there are new files to upload (images from files array)
+      const hasNewFiles = files.length > 0 && files[0]?.url?.startsWith('blob:');
       
-      // If there's a file and it's not existing media, upload it first
-      if ((file || videoUrl) && !isExistingMedia) {
+      if (isExistingMedia) {
+        // Keep existing media data
+        mediaData = existingPost.media.map(m => ({
+          type: m.type,
+          url: m.url,
+          thumbnail_url: m.thumbnail_url,
+          duration: m.duration,
+          width: m.width,
+          height: m.height
+        }));
+        setUploadProgress(100);
+      } else if (hasNewFiles) {
+        // Upload all multiple images
+        const totalFiles = files.length;
+        
+        for (let i = 0; i < files.length; i++) {
+          const item = files[i];
+          const fileToUpload = item.url;
+          const fileName = item.type === 'video' ? `video_${Date.now()}_${i}.mp4` : `image_${Date.now()}_${i}.jpg`;
+          const mimeType = item.type === 'video' ? 'video/mp4' : 'image/jpeg';
+          
+          // Get presigned URL
+          setUploadProgress(20 + (i * 30 / totalFiles));
+          
+          const presignResponse = await postService.presignMediaUpload({
+            filename: fileName,
+            mimeType: mimeType,
+            type: item.type
+          });
+          
+          const { upload_url, file_url, key } = presignResponse.data.data;
+          
+          setUploadProgress(40 + (i * 40 / totalFiles));
+          
+          // Upload the file
+          const fileBlob = await fetch(fileToUpload).then(r => r.blob());
+          await postService.uploadToPresignedUrl(upload_url, fileBlob, mimeType);
+          
+          // Get image dimensions
+          let width = 1920;
+          let height = 1080;
+          
+          if (item.type === 'image') {
+            const img = new Image();
+            await new Promise((resolve) => {
+              img.onload = resolve;
+              img.src = fileToUpload;
+            });
+            width = img.width;
+            height = img.height;
+          }
+          
+          mediaData.push({
+            type: item.type,
+            url: file_url,
+            thumbnail_url: null,
+            duration: null,
+            width,
+            height
+          });
+          
+          setUploadProgress(80 + (i * 15 / totalFiles));
+        }
+      } else if (file || videoUrl) {
+        // Single file upload (legacy support for video or single image)
         setUploadProgress(20);
         
-        // For now, we'll use the local URL as a placeholder
-        // In production, you would upload to presigned URL
         const fileToUpload = file || videoUrl;
         const fileName = file ? `image_${Date.now()}.jpg` : `video_${Date.now()}.mp4`;
         const mimeType = file ? "image/jpeg" : "video/mp4";
@@ -366,16 +496,22 @@ function CreatePostContent() {
         }];
         
         setUploadProgress(85);
-      } else if (isExistingMedia) {
-        // Keep existing media data
-        mediaData = existingPost.media.map(m => ({
-          type: m.type,
-          url: m.url,
-          thumbnail_url: m.thumbnail_url,
-          duration: m.duration,
-          width: m.width,
-          height: m.height
-        }));
+      } else if (files.length > 0) {
+        // Files array has URLs but not from blob (already uploaded or external URLs)
+        for (let i = 0; i < files.length; i++) {
+          const item = files[i];
+          
+          mediaData.push({
+            type: item.type,
+            url: item.url,
+            width: item.width || 1920,
+            height: item.height || 1080,
+          });
+        }
+        setUploadProgress(100);
+      } else {
+        // No files to upload - this shouldn't happen
+        throw new Error('No media to upload');
       }
       
       // Extract hashtags from caption
@@ -422,9 +558,11 @@ function CreatePostContent() {
     }
   };
 
-  // Compute CSS filter from adjustments + selected filter
-  const getImageStyle = () => {
-    const base = FILTERS.find((f) => f.name === selectedFilter)?.style?.filter || "";
+  // Compute CSS filter from adjustments + selected filter for a specific image
+  const getImageStyle = (imageIndex) => {
+    const filter = getImageFilter(imageIndex);
+    const adjustments = getImageAdjustments(imageIndex);
+    const base = FILTERS.find((f) => f.name === filter)?.style?.filter || "";
     const b = 1 + adjustments["Brightness"] / 100;
     const c = 1 + adjustments["Contrast"] / 100;
     const s = 1 + adjustments["Saturation"] / 100;
@@ -455,8 +593,8 @@ function CreatePostContent() {
   className="relative bg-black overflow-hidden"
 >
   <img
-    src={file}
-    style={getImageStyle()}
+   src={files[currentIndex]?.url}
+    style={getImageStyle(currentIndex)}
     className="absolute w-full h-full object-cover"
     alt="preview"
   />
@@ -527,6 +665,17 @@ function CreatePostContent() {
         {/* ── BODY ── */}
         <div className="flex flex-1 min-h-0">
 
+          {/* Hidden file input - always rendered but hidden */}
+          <input
+            id="fileInput"
+            type="file"
+            ref={fileInput}
+            className="hidden"
+            accept="image/*,video/*"
+            multiple
+            onChange={handleFile}
+          />
+
           {/* UPLOAD */}
           {step === "upload" && (
             <div
@@ -546,12 +695,11 @@ function CreatePostContent() {
               </div>
               <p className="text-[#262626] text-[18px] font-light">Drag photos and videos here</p>
               <button
-                onClick={() => fileInput.current.click()}
+                onClick={handleAddMoreFiles}
                 className="bg-[#0095f6] hover:bg-[#1877f2] text-white text-sm font-semibold px-5 py-2 rounded-lg transition"
               >
                 Select from computer
               </button>
-              <input type="file" ref={fileInput} className="hidden" accept="image/*,video/*" onChange={handleFile} />
             </div>
           )}
 
@@ -584,49 +732,129 @@ function CreatePostContent() {
                 </div>
 
                 {/* Image container with aspect ratio */}
-        <div className="w-full h-full flex items-center justify-center  ">
+      <div className="w-full h-full flex items-center justify-center">
   <div
     style={getAspectRatioStyle()}
-    className="relative  overflow-hidden w-full max-w-[400px]"
+    className="relative overflow-hidden w-full max-w-[400px]"
   >
     {/* Aspect ratio label */}
- {showAspectLabel && (
-  <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-3 py-1 rounded-full z-20">
-    {cropAspect}
-  </div>
-)}
+    {showAspectLabel && (
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-3 py-1 rounded-full z-30">
+        {cropAspect}
+      </div>
+    )}
 
-    {/* Image */}
-    <img
-      src={file}
-      style={getImageStyle()}
-      className="absolute w-full h-full object-cover pt-4 pb-4"
-      alt="preview"
-    />
+    {/* MULTI IMAGE STACK */}
+    <div className="relative w-full h-full flex items-center justify-center">
+      {files.map((item, index) => {
+        const isActive = index === currentIndex;
+
+        return (
+          <img
+            key={index}
+            src={item.url}
+            style={getImageStyle(index)}
+            className={`absolute w-full h-full object-cover transition-all duration-300 ${
+              isActive
+                ? "z-20 scale-100 opacity-100"
+                : "z-10 scale-95 opacity-60 translate-x-2"
+            }`}
+            alt="preview"
+          />
+        );
+      })}
+    </div>
+
+    {/* LEFT ARROW */}
+    {currentIndex > 0 && (
+      <button
+        onClick={() => setCurrentIndex((prev) => prev - 1)}
+        className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 text-white w-9 h-9 rounded-full flex items-center justify-center z-40"
+      >
+        {"<"}
+      </button>
+    )}
+
+    {/* RIGHT ARROW */}
+    {currentIndex < files.length - 1 && (
+      <button
+        onClick={() => setCurrentIndex((prev) => prev + 1)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 text-white w-9 h-9 rounded-full flex items-center justify-center z-40"
+      >
+        {">"}
+      </button>
+    )}
   </div>
 </div>
 
                 {/* Bottom toolbar */}
                 <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between z-10">
-                  {/* Aspect ratio button */}
-                  <button 
-                    onClick={() => {
-                      // Toggle aspect ratio popup visibility
-                      const popup = document.getElementById('aspect-popup');
-                      if (popup) popup.classList.toggle('hidden');
-                    }} 
-                    className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-black/80 transition"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                      <rect x="3" y="5" width="18" height="14" rx="2"/>
-                    </svg>
-                  </button>
-
-                  {/* Multi-select / zoom */}
+                  {/* Image counter and thumbnails */}
                   <div className="flex items-center gap-2">
-                    <button className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-black/80 transition">
+                    <button 
+                      onClick={() => {
+                        // Toggle aspect ratio popup visibility
+                        const popup = document.getElementById('aspect-popup');
+                        if (popup) popup.classList.toggle('hidden');
+                      }} 
+                      className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-black/80 transition"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <rect x="3" y="5" width="18" height="14" rx="2"/>
+                      </svg>
+                    </button>
+                    
+                    {/* Thumbnail strip */}
+                    {files.length > 1 && (
+                      <div className="flex items-center gap-1 bg-black/60 rounded-full p-1">
+                        {files.map((item, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setCurrentIndex(idx)}
+                            className={`relative w-7 h-7 rounded-full overflow-hidden transition ${
+                              idx === currentIndex ? 'ring-2 ring-white' : 'opacity-60 hover:opacity-100'
+                            }`}
+                          >
+                            <img src={item.url} alt="" className="w-full h-full object-cover" />
+                            {idx === currentIndex && (
+                              <span className="absolute bottom-0 right-0 w-4 h-4 bg-[#0095f6] rounded-full text-[10px] text-white flex items-center justify-center font-medium">
+                                {idx + 1}
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Add more / delete */}
+                  <div className="flex items-center gap-2">
+                    {/* Add more images button */}
+                    <button
+                      onClick={handleAddMoreFiles}
+                      className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-black/80 transition"
+                    >
                       <Plus size={16} />
                     </button>
+                    
+                    {/* Delete current image */}
+                    {files.length > 1 && (
+                      <button
+                        onClick={() => {
+                          const newFiles = files.filter((_, idx) => idx !== currentIndex);
+                          setFiles(newFiles);
+                          setCurrentIndex(Math.min(currentIndex, newFiles.length - 1));
+                        }}
+                        className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-red-500 transition"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3,6 5,6 21,6" />
+                          <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2" />
+                        </svg>
+                      </button>
+                    )}
+                    
+                    {/* Multi-select indicator */}
                     <button className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-black/80 transition">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <rect x="2" y="7" width="10" height="10" rx="1.5"/>
@@ -642,9 +870,41 @@ function CreatePostContent() {
           {/* EDIT — Image */}
           {step === "edit" && fileType === "image" && (
             <div className="flex w-full h-full ">
-              <div className="flex-1 bg-white p-3 flex items-center justify-center overflow-hidden ">
+              <div className="flex-1 bg-white p-3 relative flex items-center justify-center overflow-hidden ">
+                {/* Navigation arrows */}
+                {files.length > 1 && (
+                  <>
+                    {/* Left arrow */}
+                    {currentIndex > 0 && (
+                      <button
+                        onClick={() => setCurrentIndex((prev) => prev - 1)}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition z-20"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="15,18 9,12 15,6" />
+                        </svg>
+                      </button>
+                    )}
+                    {/* Right arrow */}
+                    {currentIndex < files.length - 1 && (
+                      <button
+                        onClick={() => setCurrentIndex((prev) => prev + 1)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition z-20"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="9,18 15,12 9,6" />
+                        </svg>
+                      </button>
+                    )}
+                    {/* Image counter */}
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1 z-20">
+                      <span>{currentIndex + 1}</span>/<span>{files.length}</span>
+                    </div>
+                  </>
+                )}
+                
                 <div style={getAspectRatioStyle()} className="flex items-center justify-center bg-gray-100 max-w-full max-h-full">
-                  <img src={file} style={getImageStyle()} className="max-h-full max-w-full object-contain" alt="edit" />
+                  <img src={files[currentIndex]?.url} style={getImageStyle(currentIndex)} className="max-h-full max-w-full object-contain" alt="edit" />
                 </div>
               </div>
 
@@ -673,14 +933,14 @@ function CreatePostContent() {
                       {FILTERS.map((f) => (
                         <button
                           key={f.name}
-                          onClick={() => setSelectedFilter(f.name)}
+                          onClick={() => setImageFilter(currentIndex, f.name)}
                           className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
-                            selectedFilter === f.name ? "ring-2 ring-[#0095f6]" : "hover:bg-gray-50"
+                            getImageFilter(currentIndex) === f.name ? "ring-2 ring-[#0095f6]" : "hover:bg-gray-50"
                           }`}
                         >
                           <div className="w-full aspect-square overflow-hidden rounded-md bg-gray-100">
                             <img
-                              src={file}
+                             src={files[currentIndex]?.url}
                               style={f.style}
                               className="w-full h-full object-cover"
                               alt={f.name}
@@ -699,16 +959,17 @@ function CreatePostContent() {
                         <div key={item}>
                           <div className="flex justify-between text-sm mb-2">
                             <span className="text-[#262626] font-medium">{item}</span>
-                            <span className="text-gray-400">{adjustments[item]}</span>
+                            <span className="text-gray-400">{getImageAdjustments(currentIndex)[item]}</span>
                           </div>
                           <input
                             type="range"
                             min="-100"
                             max="100"
-                            value={adjustments[item]}
-                            onChange={(e) =>
-                              setAdjustments((prev) => ({ ...prev, [item]: Number(e.target.value) }))
-                            }
+                            value={getImageAdjustments(currentIndex)[item]}
+                            onChange={(e) => {
+                              const newAdjustments = { ...getImageAdjustments(currentIndex), [item]: Number(e.target.value) };
+                              setImageAdjustments(currentIndex, newAdjustments);
+                            }}
                             className="w-full accent-[#262626] h-[3px]"
                           />
                         </div>
@@ -810,7 +1071,47 @@ function CreatePostContent() {
                 {fileType === "video" ? (
                   <video src={videoUrl} className="max-h-full max-w-full object-contain" autoPlay loop muted />
                 ) : (
-                  <img src={file} style={getImageStyle()} className="max-h-full max-w-full object-contain" alt="share" />
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    {/* Multiple images carousel */}
+                    {files.length > 1 ? (
+                      <>
+                        <img 
+                          src={files[currentIndex]?.url} 
+                          style={getImageStyle(currentIndex)} 
+                          className="max-h-full max-w-full object-contain" 
+                          alt="share" 
+                        />
+                        {/* Left arrow */}
+                        {currentIndex > 0 && (
+                          <button
+                            onClick={() => setCurrentIndex((prev) => prev - 1)}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="15,18 9,12 15,6" />
+                            </svg>
+                          </button>
+                        )}
+                        {/* Right arrow */}
+                        {currentIndex < files.length - 1 && (
+                          <button
+                            onClick={() => setCurrentIndex((prev) => prev + 1)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="9,18 15,12 9,6" />
+                            </svg>
+                          </button>
+                        )}
+                        {/* Image counter */}
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1">
+                          <span>{currentIndex + 1}</span>/<span>{files.length}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <img src={files[currentIndex]?.url} style={getImageStyle(currentIndex)} className="max-h-full max-w-full object-contain" alt="share" />
+                    )}
+                  </div>
                 )}
                 {/* Tag people tooltip */}
                 <div className="absolute top-4 left-4">

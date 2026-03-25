@@ -14,6 +14,7 @@ import {
 
 import { useTheme } from "@/lib/ThemeContext";
 import { useFeedRefresh } from "@/context/FeedRefreshContext";
+import { performLogout } from "@/services/logout";
 
 // ─── More Menu Popup ──────────────────────────────────────────────────────────
 
@@ -286,13 +287,9 @@ export default function Sidebar() {
   }, []);
 
   const handleLogout = () => {
-    // Clear all auth-related keys
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("token"); // clear old key too just in case
-  
-    // Use replace instead of push so user can't go back
-    router.replace("/login");
+    // Call the logout API, clear all tokens, and redirect to login
+    // Uses window.location.replace to clear browser history and prevent back navigation
+    performLogout();
   };
 
   const handleCreatePost = () => { router.push("/home/create-post"); setOpenCreateMenu(false); };
