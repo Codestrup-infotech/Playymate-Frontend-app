@@ -8,6 +8,7 @@ import postService from "@/app/user/post";
 import CallNow from "../components/CallNow";
 
 import { io } from "socket.io-client";
+import { Phone, Video } from "lucide-react";
 import {
   getMessages,
   sendMessage,
@@ -862,6 +863,10 @@ export default function MessagesPage() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [showPostModal, setShowPostModal] = useState(false);
 
+  // Incoming call state
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [showCallModal, setShowCallModal] = useState(false);
+
   // Handle opening post detail modal
   const handleOpenPostDetail = (post) => {
     setSelectedPost(post);
@@ -1138,6 +1143,49 @@ useEffect(() => {
           prev.map((m) => m._id === messageId ? { ...m, reactions } : m)
         );
       }
+    });
+
+    // ── Call notifications ───────────────────────────────────────────────────
+    socket.on("call:incoming", (data) => {
+      console.log("[Socket] Incoming call:", data);
+      // Handle incoming call notification
+      // Data should contain: call_id, caller_id, call_type, room_id, provider, etc.
+      if (data && data.call_id) {
+        // Store provider config for the call page
+        if (data.provider_config || data.provider) {
+          const callData = {
+            provider: data.provider || data.provider_config?.type,
+            ws_url: data.provider_config?.ws_url || data.rtc_ws_url,
+            token: data.token,
+            room_id: data.room_id,
+            app_id: data.provider_config?.app_id,
+          };
+          sessionStorage.setItem(`call_${data.call_id}`, JSON.stringify(callData));
+        }
+
+        setIncomingCall({
+          callId: data.call_id,
+          callerId: data.caller_id,
+          callerName: data.caller_name || data.caller_username,
+          callType: data.call_type || "video",
+          roomId: data.room_id,
+          provider: data.provider,
+          providerConfig: data.provider_config,
+        });
+        setShowCallModal(true);
+      }
+    });
+
+    socket.on("call:accepted", (data) => {
+      console.log("[Socket] Call accepted:", data);
+    });
+
+    socket.on("call:declined", (data) => {
+      console.log("[Socket] Call declined:", data);
+    });
+
+    socket.on("call:ended", (data) => {
+      console.log("[Socket] Call ended:", data);
     });
 
     return () => {
@@ -1820,6 +1868,72 @@ useEffect(() => {
           isLoading={false}
           onClose={handleClosePostDetail}
         />
+      )}
+
+      {/* Incoming Call Modal */}
+      {showCallModal && incomingCall && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-80 text-center shadow-xl">
+            <div className="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center mx-auto mb-4">
+              <Phone className="w-8 h-8 text-pink-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Incoming {incomingCall.callType === "audio" ? "Audio" : "Video"} Call
+            </h3>
+            <p className="text-gray-600 mb-4">
+              {incomingCall.callerName || "Unknown"} is calling you
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={async () => {
+                  try {
+                    const { acceptCall } = await import("@/app/user/call-now");
+                    const res = await acceptCall(incomingCall.callId);
+                    
+                    // Store provider config for the call page
+                    const providerConfig = res?.data?.provider_config;
+                    const token = res?.data?.token;
+                    const callData = {
+                      provider: incomingCall.provider || providerConfig?.type,
+                      ws_url: providerConfig?.ws_url || incomingCall.providerConfig?.ws_url,
+                      token: token,
+                      room_id: incomingCall.roomId,
+                      app_id: providerConfig?.app_id,
+                    };
+                    sessionStorage.setItem(`call_${incomingCall.callId}`, JSON.stringify(callData));
+                    
+                    // Open call page
+                    const url = `/call/${incomingCall.callId}?type=${incomingCall.callType}`;
+                    window.open(url, "_blank");
+                  } catch (err) {
+                    console.error("Failed to accept call:", err);
+                    alert("Failed to accept call");
+                  }
+                  setShowCallModal(false);
+                  setIncomingCall(null);
+                }}
+                className="px-6 py-2 bg-green-500 text-white rounded-full font-medium hover:bg-green-600"
+              >
+                Accept
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const { declineCall } = await import("@/app/user/call-now");
+                    await declineCall(incomingCall.callId);
+                  } catch (err) {
+                    console.error("Failed to decline call:", err);
+                  }
+                  setShowCallModal(false);
+                  setIncomingCall(null);
+                }}
+                className="px-6 py-2 bg-red-500 text-white rounded-full font-medium hover:bg-red-600"
+              >
+                Decline
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
