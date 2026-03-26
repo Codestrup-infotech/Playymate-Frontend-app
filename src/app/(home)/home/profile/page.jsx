@@ -22,7 +22,8 @@ import {
   MessageSquare,
   Play,
   Grid,
-  Film
+  Film,
+  Bookmark
 } from "lucide-react";
 
 
@@ -30,6 +31,7 @@ import { userService } from "@/services/user";
 import { useTheme } from "@/lib/ThemeContext";
 import postService from "@/app/user/post";
 import Activity from "../components/Activity.jsx";
+import SavedPosts from "../components/SavedPosts.jsx";
 import BioPopup from "@/app/components/profileCompletion/BioPopup.jsx";
 import PostDetailModal from "../components/PostDetailModal.jsx";
 import FollowModal from "../components/FollowersFollowing.jsx";
@@ -726,7 +728,7 @@ export default function ProfilePage() {
       >
         {/* tabs */}
         <div className="flex gap-6 border-b border-white/90 pb-4 mb-6 overflow-x-auto">
-          {["Posts", "Reels", "Events", "Activity"].map((tab) => (
+          {["Posts", "Reels", "Events", "Activity", "Saved"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -741,6 +743,7 @@ export default function ProfilePage() {
               {tab === "Posts" && <Grid size={16} className="inline mr-1" />}
               {tab === "Reels" && <Film size={16} className="inline mr-1" />}
               {tab === "Activity" && <Briefcase size={16} className="inline mr-1" />}
+              {tab === "Saved" && <Bookmark size={16} className="inline mr-1" />}
               {tab}
             </button>
           ))}
@@ -923,6 +926,11 @@ export default function ProfilePage() {
         {/* ── Activity Tab ── */}
         {activeTab === "Activity" && (
           <Activity profile={profile} isDark={isDark} />
+        )}
+
+        {/* ── Saved Tab ── */}
+        {activeTab === "Saved" && (
+          <SavedPosts isDark={isDark} />
         )}
       </div>
 

@@ -6,6 +6,7 @@ import {
   Users, Image, X, RefreshCw, Loader2, Plus, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { getMyStory, getStoryFeed, sortStoriesByCreatedAtASC, sortStoryGroupsByLatestFirst } from "@/app/user/homefeed";
+import { toggleLike } from "@/app/user/homefeed";
 import userService from "@/services/user";
 import ProfileCompletionCard from "@/app/components/profileCompletion/ProfileCompletionCard";
 import { useTheme } from "@/lib/ThemeContext";
@@ -21,7 +22,16 @@ import { useFeedRefresh } from "@/context/FeedRefreshContext";
 /* ─── Small helper components ─── */
 
 function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, onShareClick, onUserClick }) {
-  const [liked, setLiked] = useState(false);
+  // Initialize liked state from post data - check if user already liked this post
+  const postIsLiked = post?.is_liked === true || 
+                       post?.is_liked === "true" || 
+                       post?.data?.is_liked === true || 
+                       post?.data?.is_liked === "true" || 
+                       post?.user_action?.liked_by_you === true ||
+                       post?.data?.user_action?.liked_by_you === true;
+  
+  const [liked, setLiked] = useState(postIsLiked);
+  const [likeLoading, setLikeLoading] = useState(false);
   const videoRef = useRef(null);
 
 
@@ -203,12 +213,40 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, on
 
     {/* ❤️ Like */}
     <button
-      onClick={() => setLiked(l => !l)}
-      className={`${isLikedByYou ? "text-pink-500" : isDark ? "text-white" : "text-black"} flex items-center gap-2`}
+      onClick={async () => {
+        if (likeLoading) return;
+        
+        // Get post ID - check multiple sources
+        const postId = post?.data?.content_id || post?.data?.post_id || post?.post_id || post?._id || post?.id;
+        
+        // Optimistic update - immediately toggle the UI
+        const newLikedState = !liked;
+        setLiked(newLikedState);
+        setLikeLoading(true);
+        
+        try {
+          // Call the toggle like API
+          const result = await toggleLike("post", postId, "like");
+          console.log("[PostCard] Like toggle result:", result);
+          
+          // Update state based on API response (if available)
+          if (result && result.liked !== undefined) {
+            setLiked(result.liked);
+          }
+        } catch (error) {
+          console.error("[PostCard] Error toggling like:", error);
+          // Revert on error
+          setLiked(!newLikedState);
+        } finally {
+          setLikeLoading(false);
+        }
+      }}
+      disabled={likeLoading}
+      className={`${liked ? "text-pink-500" : isDark ? "text-white" : "text-black"} flex items-center gap-2 ${likeLoading ? 'opacity-50' : ''}`}
     >
-      <Heart size={20} className={isLikedByYou ? "fill-pink-500" : ""} />
+      <Heart size={20} className={liked ? "fill-pink-500" : ""} />
       <span className="text-sm font-semibold">
-        {isLikedByYou ? likesCount + 1 : likesCount}
+        {liked ? likesCount + 1 : likesCount}
       </span>
     </button>
 

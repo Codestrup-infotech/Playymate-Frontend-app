@@ -526,8 +526,8 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        {/* Interests */}
-        {flattenedInterests.length > 0 && (
+        {/* Interests - Only show for own profile */}
+        {isOwnProfile && flattenedInterests.length > 0 && (
           <div className={`${isDark ? "bg-gray-800" : "bg-white"} rounded-2xl p-6 mb-6 shadow-sm`}>
             <h2 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-gray-800"}`}>
               Interests
@@ -590,12 +590,12 @@ export default function UserProfilePage() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
                   </div>
                 ) : posts.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-1 mb-4">
                    {posts.map((post, index) => (
   <div
     key={post?._id || `post-${index}`}
                         onClick={() => handlePostClick(post)}
-                        className="aspect-square cursor-pointer overflow-hidden rounded-lg"
+                        className="aspect-[3/4] relative bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-80 transition"
                       >
                         {post.media && post.media.length > 0 ? (
                           <img

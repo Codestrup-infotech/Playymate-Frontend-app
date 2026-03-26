@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { X, Heart, MessageSquare, Share2, CheckCircle } from "lucide-react";
+import { X, Heart, MessageSquare, Share2, CheckCircle, Bookmark } from "lucide-react";
 import postService from "@/app/user/post";
 import { toggleLike } from "@/app/user/homefeed";
-import { getPostShareCount } from "@/app/user/share";
+import { getPostShareCount, addBookmark, checkBookmark, getCollections, createCollection, addToCollection } from "@/app/user/share";
 import SharePopup from "@/app/(home)/home/components/sharepopup";
 import ComposeEmojiPicker from "./Composeemojipicker";
 

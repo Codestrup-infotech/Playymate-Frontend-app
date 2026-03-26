@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { XCircle, CheckCircle, Heart, MessageSquare, Share2, MoreHorizontal } from "lucide-react";
+import { XCircle, CheckCircle, Heart, MessageSquare, Share2, MoreHorizontal, Bookmark } from "lucide-react";
 import postService from "@/app/user/post";
 import { toggleLike } from "@/app/user/homefeed";
-import { getPostShareCount } from "@/app/user/share";
+import { getPostShareCount, addBookmark, checkBookmark, getCollections, createCollection, addToCollection } from "@/app/user/share";
 import SharePopup from "@/app/(home)/home/components/sharepopup";
 
 // ✅ 1. Import the emoji picker
@@ -69,6 +69,16 @@ export default function PostDetailModal({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const commentInputRef = useRef(null);
 
+  // Bookmark state
+  const [showBookmarkModal, setShowBookmarkModal] = useState(false);
+  const [collections, setCollections] = useState([]);
+  const [loadingCollections, setLoadingCollections] = useState(false);
+  const [selectedCollection, setSelectedCollection] = useState(null);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
+  const [showCreateCollection, setShowCreateCollection] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState("");
+
   const menuRef = useRef(null);
   const isLikedRef = useRef(false);
   const router = useRouter();
@@ -123,6 +133,8 @@ useEffect(() => {
         }
         // If API returns null (failed), keep the existing is_liked value
       });
+      // Check bookmark status
+      checkBookmarkStatus();
     }
   }
 }, [selectedPost]);
@@ -401,6 +413,100 @@ setPostData(prev => ({
         ...prev,
         shares_count: (prev.shares_count || 0) + 1
       }));
+    }
+  };
+
+  // ----------------------------
+  // Bookmark Functions
+  // ----------------------------
+
+  const checkBookmarkStatus = async () => {
+    if (!postData?.post_id) return;
+    try {
+      const result = await checkBookmark(postData.post_id, "post");
+      setIsBookmarked(result.bookmarked);
+    } catch (error) {
+      console.error("Failed to check bookmark status:", error);
+    }
+  };
+
+  const fetchCollections = async () => {
+    try {
+      const result = await getCollections();
+      setCollections(result?.collections || []);
+    } catch (error) {
+      console.error("Failed to fetch collections:", error);
+      setCollections([]);
+    }
+  };
+
+  const handleBookmarkClick = async () => {
+    if (!postData?.post_id) return;
+    setBookmarkLoading(true);
+    try {
+      // First check if already bookmarked
+      const checkResult = await checkBookmark(postData.post_id, "post");
+      
+      // Fetch collections
+      await fetchCollections();
+      
+      if (checkResult.bookmarked) {
+        // Already bookmarked, show collections modal
+        setShowBookmarkModal(true);
+      } else {
+        // Not bookmarked yet
+        if (collections.length === 0) {
+          // No collections, prompt to create one
+          setShowCreateCollection(true);
+        } else {
+          // Show existing collections
+          setShowBookmarkModal(true);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to handle bookmark:", error);
+    } finally {
+      setBookmarkLoading(false);
+    }
+  };
+
+  const handleCreateAndSave = async () => {
+    if (!newCollectionName.trim() || !postData?.post_id) return;
+    try {
+      // Create new collection
+      const newCollection = await createCollection(newCollectionName.trim(), "", "private");
+      console.log("Created collection:", newCollection);
+      
+      // Add the post to the new collection
+      const bookmarkResult = await addBookmark("post", postData.post_id);
+      console.log("Created bookmark:", bookmarkResult);
+      
+      // Add bookmark to collection
+      await addToCollection(newCollection._id, bookmarkResult._id);
+      console.log("Added to collection:", newCollection._id);
+      
+      setIsBookmarked(true);
+      setShowCreateCollection(false);
+      setNewCollectionName("");
+      setShowBookmarkModal(false);
+    } catch (error) {
+      console.error("Failed to create and save:", error);
+    }
+  };
+
+  const handleSaveToCollection = async (collection) => {
+    if (!postData?.post_id || !collection?._id) return;
+    try {
+      // Create bookmark first
+      const bookmarkResult = await addBookmark("post", postData.post_id);
+      
+      // Add to collection
+      await addToCollection(collection._id, bookmarkResult._id);
+      
+      setIsBookmarked(true);
+      setShowBookmarkModal(false);
+    } catch (error) {
+      console.error("Failed to save to collection:", error);
     }
   };
 
@@ -712,6 +818,20 @@ setPostData(prev => ({
       </span>
     </div>
 
+    {/* BOOKMARK */}
+    <div className="flex flex-col items-center">
+      <button onClick={handleBookmarkClick} disabled={bookmarkLoading}>
+        <Bookmark 
+          size={24} 
+          className={isBookmarked ? "text-purple-500" : "text-black"}
+          fill={isBookmarked ? "#a855f7" : "none"}
+        />
+      </button>
+      <span className="text-black text-sm font-medium">
+        {isBookmarked ? "Saved" : "Save"}
+      </span>
+    </div>
+
   </div>
 
   {/* Share Popup */}
@@ -724,6 +844,96 @@ setPostData(prev => ({
     title={postData.caption || postData.title || null}
     onShareSuccess={handleShareSuccess}
   />
+
+  {/* Bookmark Collection Modal */}
+  {(showBookmarkModal || showCreateCollection) && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className={`w-full max-w-md rounded-xl p-6 ${isDark ? "bg-[#1a1a38]" : "bg-white"}`}>
+        {showCreateCollection ? (
+          <>
+            <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-gray-800"}`}>
+              Create New Collection
+            </h3>
+            <input
+              type="text"
+              value={newCollectionName}
+              onChange={(e) => setNewCollectionName(e.target.value)}
+              placeholder="Enter collection name"
+              className={`w-full px-4 py-2 rounded-lg border ${isDark ? "bg-[#12122a] border-white/10 text-white" : "bg-gray-50 border-gray-200"}`}
+              autoFocus
+            />
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowCreateCollection(false);
+                  setNewCollectionName("");
+                }}
+                className={`flex-1 py-2 rounded-lg ${isDark ? "bg-gray-700 text-white" : "bg-gray-200 text-gray-800"}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateAndSave}
+                disabled={!newCollectionName.trim()}
+                className="flex-1 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+              >
+                Create & Save
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-gray-800"}`}>
+                Save to Collection
+              </h3>
+              <button
+                onClick={() => setShowBookmarkModal(false)}
+                className={isDark ? "text-gray-400" : "text-gray-500"}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <button
+              onClick={() => {
+                setShowBookmarkModal(false);
+                setShowCreateCollection(true);
+              }}
+              className={`w-full p-3 rounded-lg mb-3 flex items-center gap-3 ${isDark ? "bg-[#12122a]" : "bg-gray-50"}`}
+            >
+              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                <span className="text-purple-500 text-lg">+</span>
+              </div>
+              <span className={isDark ? "text-white" : "text-gray-800"}>Create New Collection</span>
+            </button>
+
+            <div className="max-h-60 overflow-y-auto">
+              {collections.map((collection) => (
+                <button
+                  key={collection._id}
+                  onClick={() => handleSaveToCollection(collection)}
+                  className={`w-full p-3 rounded-lg mb-2 flex items-center gap-3 ${isDark ? "hover:bg-[#12122a]" : "hover:bg-gray-50"}`}
+                >
+                  <div className="w-10 h-10 rounded-lg bg-purple-900/30 flex items-center justify-center">
+                    <span className="text-purple-400">📁</span>
+                  </div>
+                  <div className="text-left">
+                    <p className={isDark ? "text-white" : "text-gray-800"}>
+                      {collection.collection_name}
+                    </p>
+                    <p className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                      {collection.bookmarks_count || 0} posts
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )}
 </div>
 
           {/* ✅ 4. COMMENT INPUT with emoji picker */}
