@@ -20,20 +20,37 @@ const BASE_URL = getBaseUrl();
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function getAuthHeaders() {
-    const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
-    if (!token) throw new Error("No auth token found");
-    return {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    };
+  if (typeof window === "undefined") {
+    throw new Error("Auth headers requested outside browser context");
   }
+
+  // Tokens are stored inconsistently across login flows; support all known keys.
+  const token =
+    window.sessionStorage.getItem("access_token") ||
+    window.sessionStorage.getItem("accessToken") ||
+    window.localStorage.getItem("access_token") ||
+    window.localStorage.getItem("accessToken") ||
+    window.localStorage.getItem("playymate_access_token") ||
+    window.sessionStorage.getItem("playymate_access_token");
+
+  if (!token) {
+    throw new Error("No auth token found (expected accessToken/access_token)");
+  }
+
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+}
 
 async function handleResponse(res) {
   const data = await res.json();
+  console.log("[API Response] Status:", res.status, "Body:", data);
   if (!res.ok || !data.success) {
     const err = new Error(data.message || "Request failed");
     err.code = data.error;
     err.status = res.status;
+    console.log("[API Error]", { code: err.code, status: err.status, message: err.message });
     throw err;
   }
   return data.data;
@@ -145,6 +162,7 @@ export async function getReelShareCount(reelId) {
  * @throws Will throw with code "ALREADY_BOOKMARKED" if duplicate
  */
 export async function addBookmark(contentType, contentId, notes = null) {
+  console.log("[addBookmark] API Request:", { contentType, contentId, notes });
   const body = { content_id: contentId, content_type: contentType };
   if (notes) body.notes = notes;
 
@@ -153,7 +171,9 @@ export async function addBookmark(contentType, contentId, notes = null) {
     headers: getAuthHeaders(),
     body: JSON.stringify(body),
   });
-  return handleResponse(res);
+  const result = await handleResponse(res);
+  console.log("[addBookmark] API Response:", result);
+  return result;
 }
 
 /**
@@ -181,11 +201,14 @@ export async function getBookmarks(limit = 20, contentType = null, cursor = null
  * @returns {Promise<{ bookmarked: boolean, bookmark_id: string|null }>}
  */
 export async function checkBookmark(contentId, contentType) {
+  console.log("[checkBookmark] API Request:", { contentId, contentType });
   const params = new URLSearchParams({ content_id: contentId, content_type: contentType });
   const res = await fetch(`${BASE_URL}/bookmarks/check?${params}`, {
     headers: getAuthHeaders(),
   });
-  return handleResponse(res);
+  const result = await handleResponse(res);
+  console.log("[checkBookmark] API Response:", result);
+  return result;
 }
 
 /**
@@ -194,11 +217,14 @@ export async function checkBookmark(contentId, contentType) {
  * @returns {Promise<{ removed: boolean }>}
  */
 export async function removeBookmark(bookmarkId) {
+  console.log("[removeBookmark] API Request:", { bookmarkId });
   const res = await fetch(`${BASE_URL}/bookmarks/${bookmarkId}`, {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
-  return handleResponse(res);
+  const result = await handleResponse(res);
+  console.log("[removeBookmark] API Response:", result);
+  return result;
 }
 
 // ─── Bookmark Collections API ─────────────────────────────────────────────────
@@ -211,6 +237,7 @@ export async function removeBookmark(bookmarkId) {
  * @returns {Promise<Object>} collection record
  */
 export async function createCollection(collectionName, description = "", visibility = "private") {
+  console.log("[createCollection] API Request:", { collectionName, description, visibility });
   const res = await fetch(`${BASE_URL}/bookmarks/collections`, {
     method: "POST",
     headers: getAuthHeaders(),
@@ -220,7 +247,9 @@ export async function createCollection(collectionName, description = "", visibil
       visibility,
     }),
   });
-  return handleResponse(res);
+  const result = await handleResponse(res);
+  console.log("[createCollection] API Response:", result);
+  return result;
 }
 
 /**
@@ -228,10 +257,13 @@ export async function createCollection(collectionName, description = "", visibil
  * @returns {Promise<{ collections: Array }>}
  */
 export async function getCollections() {
+  console.log("[getCollections] API Request: fetching collections");
   const res = await fetch(`${BASE_URL}/bookmarks/collections`, {
     headers: getAuthHeaders(),
   });
-  return handleResponse(res);
+  const result = await handleResponse(res);
+  console.log("[getCollections] API Response:", result);
+  return result;
 }
 
 /**
@@ -242,12 +274,15 @@ export async function getCollections() {
  * @throws Will throw with code "ALREADY_IN_COLLECTION" if duplicate
  */
 export async function addToCollection(collectionId, bookmarkId) {
+  console.log("[addToCollection] API Request:", { collectionId, bookmarkId });
   const res = await fetch(`${BASE_URL}/bookmarks/collections/${collectionId}/add`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify({ bookmark_id: bookmarkId }),
   });
-  return handleResponse(res);
+  const result = await handleResponse(res);
+  console.log("[addToCollection] API Response:", result);
+  return result;
 }
 
 /**
@@ -268,12 +303,14 @@ export async function updateCollection(collectionId, updates) {
 /**
  * Remove a bookmark from a collection (does NOT delete the bookmark itself)
  * @param {string} collectionId
+ * @param {string} bookmarkId - the bookmark's _id to remove
  * @returns {Promise<{ removed: boolean }>}
  */
-export async function removeFromCollection(collectionId) {
+export async function removeFromCollection(collectionId, bookmarkId) {
   const res = await fetch(`${BASE_URL}/bookmarks/collections/${collectionId}/remove`, {
     method: "DELETE",
     headers: getAuthHeaders(),
+    body: JSON.stringify({ bookmark_id: bookmarkId }),
   });
   return handleResponse(res);
 }

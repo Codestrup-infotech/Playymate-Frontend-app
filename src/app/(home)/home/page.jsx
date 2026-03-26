@@ -18,10 +18,12 @@ import SharePopup from "./components/sharepopup";
 import useFeed from "@/hooks/useFeed";
 import { Volume2 } from "lucide-react";
 import { useFeedRefresh } from "@/context/FeedRefreshContext";
+import { addBookmark, checkBookmark, removeBookmark, createCollection, getCollections, addToCollection } from "@/app/user/share";
+import CreateCollectionPopup from "./components/CreateCollection";
 
 /* ─── Small helper components ─── */
 
-function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, onShareClick, onUserClick }) {
+function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, onShareClick, onSaveClick, onUserClick, isBookmarked }) {
   // Initialize liked state from post data - check if user already liked this post
   const postIsLiked = post?.is_liked === true || 
                        post?.is_liked === "true" || 
@@ -271,16 +273,20 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, on
   </div>
 
   {/* RIGHT SIDE */}
-  <button className={`${isDark ? "text-white" : "text-black"}`}>
+  
+  <button 
+    onClick={() => onSaveClick && onSaveClick(post)}
+    className={`${isDark ? "text-white" : "text-black"}`}>
     {/* 🔖 Save */}
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="22"
       height="22"
-      fill="none"
+      fill={isBookmarked ? "currentColor" : "none"}
       stroke="currentColor"
       strokeWidth="2"
       viewBox="0 0 24 24"
+      className={isBookmarked ? "text-purple-500" : ""}
     >
       <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
     </svg>
@@ -389,6 +395,10 @@ function HomePageContent() {
   const [sharePost, setSharePost] = useState(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [shareCount, setShareCount] = useState(0);
+  const [selectedPostForBookmark, setSelectedPostForBookmark] = useState(null);
+  const [showCollectionPopup, setShowCollectionPopup] = useState(false);
+  const [postBookmarkStatus, setPostBookmarkStatus] = useState({}); // Track bookmark status per post
+  const [bookmarkId, setBookmarkId] = useState(null);
   const fileInputRef = useRef(null);
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -641,6 +651,64 @@ function HomePageContent() {
     setShareCount(prev => prev + 1);
   };
 
+  // Handle save/bookmark click
+  const handleSaveClick = async (post) => {
+    console.log("Save clicked for post:", post);
+    try {
+      const contentId = post?.data?.content_id || post?.data?.post_id || post?.post_id || post?._id || post?.id;
+      const contentType = post?.data?.content_type || post?.content_type || 'post';
+      
+      // Check current status
+      const currentStatus = postBookmarkStatus[contentId] || false;
+      
+      if (currentStatus) {
+        // Already bookmarked - remove from bookmarks
+        const { removeBookmark, checkBookmark } = await import("@/app/user/share");
+        const checkResult = await checkBookmark(contentId, contentType);
+        if (checkResult?.bookmark_id) {
+          await removeBookmark(checkResult.bookmark_id);
+          setPostBookmarkStatus(prev => ({ ...prev, [contentId]: false }));
+        }
+      } else {
+        // Not bookmarked - save to All Bookmarks AND show popup for collection
+        const { addBookmark, checkBookmark } = await import("@/app/user/share");
+        
+        // Check if already bookmarked
+        const checkResult = await checkBookmark(contentId, contentType);
+        if (checkResult?.bookmarked) {
+          // Already bookmarked - just update status and show popup
+          setPostBookmarkStatus(prev => ({ ...prev, [contentId]: true }));
+          setSelectedPostForBookmark(post);
+          setShowCollectionPopup(true);
+          return;
+        }
+        
+        // Create new bookmark
+        const bookmarkResult = await addBookmark(contentType, contentId);
+        console.log("Saved to bookmarks:", bookmarkResult);
+        setPostBookmarkStatus(prev => ({ ...prev, [contentId]: true }));
+        
+        // Show popup to optionally add to collection
+        setSelectedPostForBookmark(post);
+        setShowCollectionPopup(true);
+      }
+    } catch (error) {
+      console.error("Failed to handle save:", error);
+    }
+  };
+
+  // Check if post is bookmarked (for initial load)
+  const checkPostBookmarkStatus = async (contentId, contentType) => {
+    try {
+      const { checkBookmark } = await import("@/app/user/share");
+      const result = await checkBookmark(contentId, contentType);
+      return result?.bookmarked || false;
+    } catch (error) {
+      console.error("Failed to check bookmark status:", error);
+      return false;
+    }
+  };
+
   // Close share popup
   const closeSharePopup = () => {
     setIsShareOpen(false);
@@ -856,7 +924,9 @@ function HomePageContent() {
                   iconBtn={iconBtn}
                   onCommentClick={handleCommentClick}
                   onShareClick={handleShareClick}
+                  onSaveClick={handleSaveClick}
                   onUserClick={handleUserClick}
+                  isBookmarked={postBookmarkStatus[item?.data?.content_id || item?.data?.post_id] || false}
                 />
               ))}
             </div>
@@ -988,6 +1058,25 @@ function HomePageContent() {
         thumbnail={sharePost?.thumbnail}
         title={sharePost?.title}
         onShareSuccess={handleShareSuccess}
+      />
+
+      {/* Create Collection Popup */}
+      <CreateCollectionPopup
+        isOpen={showCollectionPopup}
+        onClose={() => {
+          setShowCollectionPopup(false);
+          setSelectedPostForBookmark(null);
+          setBookmarkId(null);
+        }}
+        contentId={selectedPostForBookmark?.data?.content_id || selectedPostForBookmark?.data?.post_id || selectedPostForBookmark?.post_id || selectedPostForBookmark?._id || selectedPostForBookmark?.id}
+        contentType={selectedPostForBookmark?.data?.content_type || selectedPostForBookmark?.content_type || 'post'}
+        isDark={isDark}
+        onSaveComplete={(saved) => {
+          const contentId = selectedPostForBookmark?.data?.content_id || selectedPostForBookmark?.data?.post_id || selectedPostForBookmark?.post_id || selectedPostForBookmark?._id || selectedPostForBookmark?.id;
+          if (saved && contentId) {
+            setPostBookmarkStatus(prev => ({ ...prev, [contentId]: true }));
+          }
+        }}
       />
     </>
   );
