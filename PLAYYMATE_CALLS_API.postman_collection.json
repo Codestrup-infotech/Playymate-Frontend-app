@@ -1,0 +1,319 @@
+{
+  "info": {
+    "name": "PLAYMATE Calls API",
+    "description": "Audio/Video/Group Call API endpoints for Playymate",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "{{baseUrl}}/api/v1"
+    },
+    {
+      "key": "callId",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Initiate Call - 1-to-1 Video",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/calls/initiate",
+          "host": ["{{baseUrl}}"],
+          "path": ["calls", "initiate"]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"call_type\": \"video\",\n  \"recipient_ids\": [\"{{recipient_user_id}}\"],\n  \"is_group_call\": false\n}"
+        }
+      }
+    },
+    {
+      "name": "Initiate Call - 1-to-1 Audio",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/calls/initiate",
+          "host": ["{{baseUrl}}"],
+          "path": ["calls", "initiate"]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"call_type\": \"audio\",\n  \"recipient_ids\": [\"{{recipient_user_id}}\"],\n  \"is_group_call\": false\n}"
+        }
+      }
+    },
+    {
+      "name": "Initiate Group Call",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/calls/initiate",
+          "host": ["{{baseUrl}}"],
+          "path": ["calls", "initiate"]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"call_type\": \"group\",\n  \"recipient_ids\": [\"{{user_id_1}}\", \"{{user_id_2}}\", \"{{user_id_3}}\"],\n  \"is_group_call\": true\n}"
+        }
+      }
+    },
+    {
+      "name": "Accept Call",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/calls/{{callId}}/accept",
+          "host": ["{{baseUrl}}"],
+          "path": ["calls", "{{callId}}", "accept"]
+        }
+      }
+    },
+    {
+      "name": "Decline Call",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/calls/{{callId}}/decline",
+          "host": ["{{baseUrl}}"],
+          "path": ["calls", "{{callId}}", "decline"]
+        }
+      }
+    },
+    {
+      "name": "Leave Call",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/calls/{{callId}}/leave",
+          "host": ["{{baseUrl}}"],
+          "path": ["calls", "{{callId}}", "leave"]
+        }
+      }
+    },
+    {
+      "name": "End Call (Host)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/calls/{{callId}}/end",
+          "host": ["{{baseUrl}}"],
+          "path": ["calls", "{{callId}}", "end"]
+        }
+      }
+    },
+    {
+      "name": "Add Member to Group Call",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/calls/{{callId}}/add",
+          "host": ["{{baseUrl}}"],
+          "path": ["calls", "{{callId}}", "add"]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": \"{{user_id_to_add}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Get Call History",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/calls/history?page=1&limit=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["calls", "history"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            },
+            {
+              "key": "call_type",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "status",
+              "value": "",
+              "disabled": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Active Call",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/calls/active",
+          "host": ["{{baseUrl}}"],
+          "path": ["calls", "active"]
+        }
+      }
+    },
+    {
+      "name": "Get Call By ID",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/calls/{{callId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["calls", "{{callId}}"]
+        }
+      }
+    },
+    {
+      "name": "Admin - Get Call List",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/admin/calls?page=1&limit=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "calls"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_token}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Admin - Get Call Detail",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/admin/calls/{{callId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "calls", "{{callId}}"]
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_token}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Admin - Get User Call History",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/admin/users/{{userId}}/calls?page=1&limit=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "users", "{{userId}}", "calls"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_token}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Admin - Get Call Stats",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/admin/calls/stats?period=week",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "calls", "stats"],
+          "query": [
+            {
+              "key": "period",
+              "value": "week"
+            }
+          ]
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_token}}"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

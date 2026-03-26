@@ -1,139 +1,269 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useSearchParams, useParams } from "next/navigation";
-import AgoraRTC from "agora-rtc-sdk-ng";
+import { useEffect, useRef, useState } from "react";
+import { useParams } from "next/navigation";
 import { PhoneOff, Mic, MicOff, Video, VideoOff } from "lucide-react";
-import { endCall } from "@/app/user/call-now";
+import { leaveCall } from "@/app/user/call-now";
 
 export default function CallPage() {
-  const params = useParams();
-  const searchParams = useSearchParams();
+  const { callId } = useParams();
 
-  const callId = params.callId;
-  const roomId = searchParams.get("room");
-  const type = searchParams.get("type");
+  const pcRef = useRef(null);
+  const wsRef = useRef(null);
+  const localStreamRef = useRef(null);
 
-  const clientRef = useRef(null);
-  const localTracks = useRef({ audio: null, video: null });
-
-  const [joined, setJoined] = useState(false);
   const [muted, setMuted] = useState(false);
-  const [videoOff, setVideoOff] = useState(type !== "video");
-
-  const APP_ID = process.env.NEXT_PUBLIC_AGORA_APP_ID;
-
-  // ⚠️ You should pass TOKEN + CHANNEL from API (currently using roomId)
-  const TOKEN = null; // replace with API token
-  const CHANNEL = roomId;
+  const [videoOff, setVideoOff] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const init = async () => {
       try {
-        const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-        clientRef.current = client;
-
-        await client.join(APP_ID, CHANNEL, TOKEN, null);
-
-        // Create tracks
-        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        let videoTrack = null;
-
-        if (type === "video") {
-          videoTrack = await AgoraRTC.createCameraVideoTrack();
-        }
-
-        localTracks.current = { audio: audioTrack, video: videoTrack };
-
-        // Play local video
-        if (videoTrack) {
-          videoTrack.play("local-player");
-        }
-
-        // Publish tracks
-        await client.publish(
-          videoTrack ? [audioTrack, videoTrack] : [audioTrack]
+        // 🔥 1. GET CALL DATA
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/calls/${callId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${
+                sessionStorage.getItem("access_token") ||
+                localStorage.getItem("access_token")
+              }`,
+            },
+          }
         );
 
-        setJoined(true);
+        const json = await res.json();
+        const data = json?.data;
 
-        // Subscribe to remote users
-        client.on("user-published", async (user, mediaType) => {
-          await client.subscribe(user, mediaType);
+        const call = data;
+        // ✅ provider_config is inside data object based on API response structure
+        // Try multiple paths for provider_config based on API response formats
+        let providerConfig = data?.provider_config;
+        let token = data?.token;
+        let providerType = call?.provider;
 
-          if (mediaType === "video") {
-            const player = document.createElement("div");
-            player.id = user.uid;
-            player.className = "w-48 h-64 bg-gray-800 rounded-xl";
-            document.getElementById("remote-container").appendChild(player);
-            user.videoTrack.play(player);
+        // If no provider_config, try to find it in the response
+        if (!providerConfig) {
+          providerConfig = json?.provider_config;
+        }
+
+        // Get provider type from provider_config or fall back to call.provider
+        if (providerConfig?.type) {
+          providerType = providerConfig.type;
+        } else if (!providerType && data?.provider) {
+          providerType = data.provider;
+        }
+
+        // Get token - try multiple sources
+        if (!token && json?.token) {
+          token = json.token;
+        }
+
+        console.log("Call data:", data);
+        console.log("Provider type:", providerType);
+        console.log("Provider config:", providerConfig);
+        console.log("Token:", token);
+
+        // ✅ Try to get provider config from sessionStorage if not in API response
+        if (!providerConfig && typeof window !== "undefined") {
+          const storedCallData = sessionStorage.getItem(`call_${callId}`);
+          if (storedCallData) {
+            const parsed = JSON.parse(storedCallData);
+            console.log("Stored call data:", parsed);
+            if (!providerType && parsed.provider) {
+              providerType = parsed.provider;
+            }
+            if (!providerConfig) {
+              providerConfig = {
+                type: parsed.provider,
+                ws_url: parsed.ws_url,
+                app_id: parsed.app_id,
+              };
+            }
+            if (!token && parsed.token) {
+              token = parsed.token;
+            }
           }
+        }
 
-          if (mediaType === "audio") {
-            user.audioTrack.play();
+        // ✅ Support both AGORA and WEBRTC_SELFHOSTED providers
+        const supportedProviders = ["AGORA", "WEBRTC_SELFHOSTED"];
+        if (!providerType || !supportedProviders.includes(providerType)) {
+          throw new Error(`Unsupported provider: ${providerType || "unknown"}`);
+        }
+
+        // 🔥 Handle based on provider type
+        if (providerType === "AGORA") {
+          // For AGORA, we need app_id and token
+          if (!providerConfig?.app_id) {
+            throw new Error("Agora app_id missing");
           }
+          if (!token) {
+            throw new Error("Agora token missing");
+          }
+          // TODO: Implement Agora SDK integration here
+          console.log("Agora call - app_id:", providerConfig.app_id);
+          return; // Placeholder - implement Agora logic
+        }
+
+        // WEBRTC_SELFHOSTED - use existing WebRTC logic
+        if (!providerConfig?.ws_url) {
+          throw new Error("Missing ws_url");
+        }
+
+        // 🔥 2. GET USER MEDIA
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: true,
         });
 
-        client.on("user-unpublished", (user) => {
-          const el = document.getElementById(user.uid);
-          if (el) el.remove();
+        localStreamRef.current = stream;
+
+        const localVideo = document.getElementById("local-video");
+        if (localVideo) localVideo.srcObject = stream;
+
+        // 🔥 3. CREATE PEER CONNECTION
+        const pc = new RTCPeerConnection({
+          iceServers: [
+            { urls: "stun:stun.l.google.com:19302" },
+          ],
         });
+
+        pcRef.current = pc;
+
+        // add tracks
+        stream.getTracks().forEach((track) => {
+          pc.addTrack(track, stream);
+        });
+
+        // remote stream
+        pc.ontrack = (event) => {
+          const remoteVideo = document.getElementById("remote-video");
+          if (remoteVideo) remoteVideo.srcObject = event.streams[0];
+        };
+
+        // ICE
+        pc.onicecandidate = (event) => {
+          if (event.candidate && wsRef.current) {
+            wsRef.current.send(
+              JSON.stringify({
+                type: "ice",
+                candidate: event.candidate,
+              })
+            );
+          }
+        };
+
+        // 🔥 4. CONNECT WEBSOCKET
+        const ws = new WebSocket(providerConfig.ws_url);
+        wsRef.current = ws;
+
+        ws.onopen = async () => {
+          // send join
+          ws.send(
+            JSON.stringify({
+              type: "join",
+              roomId: call.room_id,
+              token,
+            })
+          );
+
+          // create offer
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+
+          ws.send(
+            JSON.stringify({
+              type: "offer",
+              sdp: offer,
+            })
+          );
+        };
+
+        ws.onmessage = async (msg) => {
+          const data = JSON.parse(msg.data);
+
+          if (data.type === "answer") {
+            await pc.setRemoteDescription(
+              new RTCSessionDescription(data.sdp)
+            );
+          }
+
+          if (data.type === "ice") {
+            await pc.addIceCandidate(data.candidate);
+          }
+        };
 
       } catch (err) {
-        console.error("Agora Error:", err);
+        console.error(err);
+        setError(err.message);
       }
     };
 
     init();
+  }, [callId]);
 
-    return () => {
-      leaveCall();
-    };
-  }, []);
-
-  const leaveCall = async () => {
-    try {
-      if (localTracks.current.audio) localTracks.current.audio.close();
-      if (localTracks.current.video) localTracks.current.video.close();
-
-      await clientRef.current?.leave();
-      await endCall(callId);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      window.close();
-    }
-  };
-
+  // 🔥 CONTROLS
   const toggleMute = () => {
-    const audio = localTracks.current.audio;
-    if (!audio) return;
+    const audioTrack = localStreamRef.current?.getAudioTracks()[0];
+    if (!audioTrack) return;
 
-    audio.setEnabled(muted);
+    audioTrack.enabled = muted;
     setMuted(!muted);
   };
 
   const toggleVideo = () => {
-    const video = localTracks.current.video;
-    if (!video) return;
+    const videoTrack = localStreamRef.current?.getVideoTracks()[0];
+    if (!videoTrack) return;
 
-    video.setEnabled(videoOff);
+    videoTrack.enabled = videoOff;
     setVideoOff(!videoOff);
   };
+
+  const handleLeave = async () => {
+    try {
+      localStreamRef.current?.getTracks().forEach((t) => t.stop());
+      pcRef.current?.close();
+      wsRef.current?.close();
+
+      await leaveCall(callId);
+    } catch (e) {
+      console.error(e);
+    }
+
+    window.close();
+  };
+
+  if (error) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-black text-white">
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-black flex flex-col justify-between text-white">
 
-      {/* Remote users */}
-      <div id="remote-container" className="flex flex-wrap gap-4 p-4" />
+      {/* Remote */}
+      <video
+        id="remote-video"
+        autoPlay
+        playsInline
+        className="w-full h-full object-cover"
+      />
 
-      {/* Local video */}
-      <div className="flex justify-center">
-        <div id="local-player" className="w-64 h-96 bg-gray-800 rounded-xl" />
-      </div>
+      {/* Local */}
+      <video
+        id="local-video"
+        autoPlay
+        muted
+        playsInline
+        className="absolute bottom-20 right-4 w-40 h-60 rounded-xl"
+      />
 
       {/* Controls */}
-      <div className="flex justify-center gap-6 p-6">
+      <div className="flex justify-center gap-6 p-6 z-10">
 
         <button
           onClick={toggleMute}
@@ -142,17 +272,15 @@ export default function CallPage() {
           {muted ? <MicOff /> : <Mic />}
         </button>
 
-        {type === "video" && (
-          <button
-            onClick={toggleVideo}
-            className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center"
-          >
-            {videoOff ? <VideoOff /> : <Video />}
-          </button>
-        )}
+        <button
+          onClick={toggleVideo}
+          className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center"
+        >
+          {videoOff ? <VideoOff /> : <Video />}
+        </button>
 
         <button
-          onClick={leaveCall}
+          onClick={handleLeave}
           className="w-14 h-14 rounded-full bg-red-500 flex items-center justify-center"
         >
           <PhoneOff />

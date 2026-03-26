@@ -12,14 +12,18 @@ function getToken() {
   );
 }
 
+function getHeaders(json = false) {
+  return {
+    Authorization: `Bearer ${getToken()}`,
+    ...(json && { "Content-Type": "application/json" }),
+  };
+}
+
 // ── INITIATE CALL ─────────────────────────────
 export async function initiateCall(payload) {
   const res = await fetch(`${BASE_URL}/calls/initiate`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${getToken()}`,
-      "Content-Type": "application/json",
-    },
+    headers: getHeaders(true),
     body: JSON.stringify(payload),
   });
 
@@ -32,9 +36,7 @@ export async function initiateCall(payload) {
 export async function acceptCall(callId) {
   const res = await fetch(`${BASE_URL}/calls/${callId}/accept`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${getToken()}`,
-    },
+    headers: getHeaders(),
   });
 
   return res.json();
@@ -44,21 +46,7 @@ export async function acceptCall(callId) {
 export async function declineCall(callId) {
   const res = await fetch(`${BASE_URL}/calls/${callId}/decline`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${getToken()}`,
-    },
-  });
-
-  return res.json();
-}
-
-// ── END CALL ─────────────────────────────
-export async function endCall(callId) {
-  const res = await fetch(`${BASE_URL}/calls/${callId}/end`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${getToken()}`,
-    },
+    headers: getHeaders(),
   });
 
   return res.json();
@@ -68,9 +56,40 @@ export async function endCall(callId) {
 export async function leaveCall(callId) {
   const res = await fetch(`${BASE_URL}/calls/${callId}/leave`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${getToken()}`,
-    },
+    headers: getHeaders(),
+  });
+
+  return res.json();
+}
+
+// ── END CALL (HOST ONLY) ─────────────────────
+export async function endCall(callId) {
+  const res = await fetch(`${BASE_URL}/calls/${callId}/end`, {
+    method: "POST",
+    headers: getHeaders(),
+  });
+
+  return res.json();
+}
+
+// ── ADD PARTICIPANT (GROUP CALL) ─────────────
+export async function addParticipant(callId, userId) {
+  const res = await fetch(`${BASE_URL}/calls/${callId}/add`, {
+    method: "POST",
+    headers: getHeaders(true),
+    body: JSON.stringify({ user_id: userId }),
+  });
+
+  return res.json();
+}
+
+// ── GET CALL HISTORY ─────────────────────────
+export async function getCallHistory(params = {}) {
+  const query = new URLSearchParams(params).toString();
+
+  const res = await fetch(`${BASE_URL}/calls/history?${query}`, {
+    method: "GET",
+    headers: getHeaders(),
   });
 
   return res.json();
@@ -79,9 +98,18 @@ export async function leaveCall(callId) {
 // ── GET ACTIVE CALL ─────────────────────────
 export async function getActiveCall() {
   const res = await fetch(`${BASE_URL}/calls/active`, {
-    headers: {
-      Authorization: `Bearer ${getToken()}`,
-    },
+    method: "GET",
+    headers: getHeaders(),
+  });
+
+  return res.json();
+}
+
+// ── GET CALL BY ID ─────────────────────────
+export async function getCallById(callId) {
+  const res = await fetch(`${BASE_URL}/calls/${callId}`, {
+    method: "GET",
+    headers: getHeaders(),
   });
 
   return res.json();
