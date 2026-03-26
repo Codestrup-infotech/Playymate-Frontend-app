@@ -390,9 +390,9 @@ export default function UserProfilePage() {
   const flattenedInterests = flattenInterests(interests);
 
   return (
-    <div className={`min-h-screen ${isDark ? "bg-gray-900" : "bg-gray-50"}`}>
+    <div className={`min-h-screen lg:py-6 py-3 xl:mr-7 ${isDark ? "bg-gray-900" : "bg-white rounded-3xl "}`}>
       {/* Top Bar */}
-      <div className={`sticky top-0 z-50 ${isDark ? "bg-gray-900/95" : "bg-white/95"} backdrop-blur-sm border-b ${isDark ? "border-gray-800" : "border-gray-200"}`}>
+      {/* <div className={`sticky top-0 z-50 ${isDark ? "bg-gray-900/95" : "bg-white/95"} backdrop-blur-sm border-b ${isDark ? "border-gray-800" : "border-gray-200"}`}>
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <button 
             onClick={() => router.back()}
@@ -405,11 +405,22 @@ export default function UserProfilePage() {
           </h1>
           <div className="w-10"></div>
         </div>
-      </div>
+      </div> */}
 
       <div className="max-w-5xl mx-auto px-4 py-6">
+
+        
         {/* Profile Header */}
-        <div className={`${isDark ? "bg-gray-800" : "bg-white"} rounded-2xl p-6 mb-6 shadow-sm`}>
+        <div className={`${isDark ? "bg-gray-800" : "bg-white shadow-gray-300 "} rounded-2xl  lg:px-4 lg:py-6 p-1 py-1 mb-6 shadow-sm`}>
+
+            {/* <button 
+            onClick={() => router.back()}
+            className={`p-2 rounded-full ${isDark ? "hover:bg-gray-800" : "hover:bg-gray-100"}`}
+          >
+            <ArrowLeft size={20} className={isDark ? "text-white" : "text-gray-800"} />
+          </button> */}
+
+          
           <div className="flex flex-col md:flex-row gap-6">
             {/* Profile Image with Story Ring */}
             <div className="flex-shrink-0">
@@ -427,20 +438,26 @@ export default function UserProfilePage() {
 
             {/* Profile Info */}
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
+
+              
+              <div className="flex items-center gap-3 ">
                 <h1 className={`text-2xl font-bold font-Poppins ${isDark ? "text-white" : "text-gray-800"}`}>
                   {profileData.full_name || "Unknown User"}
                 </h1>
                 <VerificationBadge status={profileData.is_verified} />
+
               </div>
               
-              <p className={`text-sm mb-3 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                @{profileData.username || "username"}
+              <p className={`text-sm mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                @ {profileData.username || "username"}
               </p>
+
+
+
 
               {/* Location */}
               {location.display_text && (
-                <div className={`flex items-center gap-1 mb-4 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+                <div className={`flex items-center gap-1  mb-1 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
                   <MapPin size={14} />
                   <span className="text-sm">{location.display_text}</span>
                 </div>
@@ -448,7 +465,7 @@ export default function UserProfilePage() {
 
               {/* Bio */}
               {profileData.bio && (
-                <p className={`mb-4 ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+                <p className={`mb-4 lg:pl-4 underline ${isDark ? "text-gray-300" : "text-gray-700"}`}>
                   {profileData.bio}
                 </p>
               )}
@@ -495,7 +512,7 @@ export default function UserProfilePage() {
                   <>
                     <button 
                       onClick={() => profileData.is_following ? setShowFollowOptions(true) : handleFollow()}
-                      className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2"
+                      className="flex-1 max-w-56 px-4 py-2 bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] text-white rounded-lg hover:bg-gradient-to-r hover:from-[#FF8319] hover:to-[#EF3AFF] flex items-center justify-center gap-2"
                     >
                       {profileData.is_following ? (
                         <>
@@ -509,13 +526,13 @@ export default function UserProfilePage() {
                         </>
                       )}
                     </button>
-                    <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2">
+                    <button className="px-4 py-2 bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] text-white rounded-lg  hover:bg-gradient-to-r hover:from-[#FF8319] hover:to-[#EF3AFF] flex items-center justify-center gap-2">
                       <MessageCircle size={16} />
                       Message
                     </button>
                     <button 
                       onClick={() => setShowSharePopup(true)}
-                      className={`p-2 rounded-lg ${isDark ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-100 hover:bg-gray-200"}`}
+                      className={`p-2 rounded-lg ${isDark ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-300 hover:bg-gray-200"}`}
                     >
                       <Share2 size={20} className={isDark ? "text-white" : "text-gray-700"} />
                     </button>
@@ -550,7 +567,7 @@ export default function UserProfilePage() {
               onClick={() => setActiveTab("Posts")}
               className={`flex-1 py-4 flex items-center justify-center gap-2 font-medium transition-colors ${
                 activeTab === "Posts"
-                  ? "text-purple-600 border-b-2 border-purple-600"
+                  ? "text-[#F142E6] border-b-2 border-[#F142E6]"
                   : isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-800"
               }`}
             >
@@ -561,7 +578,7 @@ export default function UserProfilePage() {
               onClick={() => setActiveTab("Reels")}
               className={`flex-1 py-4 flex items-center justify-center gap-2 font-medium transition-colors ${
                 activeTab === "Reels"
-                  ? "text-purple-600 border-b-2 border-purple-600"
+                  ? "text-[#F142E6] border-b-2 border-[#F142E6]"
                   : isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-800"
               }`}
             >
@@ -572,7 +589,7 @@ export default function UserProfilePage() {
               onClick={() => setActiveTab("Events")}
               className={`flex-1 py-4 flex items-center justify-center gap-2 font-medium transition-colors ${
                 activeTab === "Events"
-                  ? "text-purple-600 border-b-2 border-purple-600"
+                  ? "text-[#F142E6] border-b-2 border-[#F142E6]"
                   : isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-800"
               }`}
             >

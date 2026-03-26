@@ -245,6 +245,14 @@ api.post("/api/v1/auth/signup/email-password", {
   // Set primary photo
   setPrimaryPhoto: (photoIndex) => 
     api.put(`/users/profile-photos/${photoIndex}/set-primary`),
+
+  // ============ PRIVACY SETTINGS ============
+  // Get privacy settings
+  getPrivacy: (userId) => api.get(`/users/${userId}/privacy`),
+
+  // Update privacy settings (uses PATCH as per API doc)
+  updatePrivacy: (userId, privacyData) => 
+    api.patch(`/users/${userId}/privacy`, privacyData),
 };
 
 // Direct exports for commonly used functions

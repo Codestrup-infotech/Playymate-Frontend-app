@@ -60,13 +60,22 @@ export default function CloseFriendsPage() {
           
           console.log("All users combined:", allUsers);
           
-          // Remove duplicates based on _id
+          // Remove duplicates based on _id and filter out users without username
           const uniqueUsers = allUsers.filter((user, index, self) => {
             const userId = user._id;
+            // Filter out users without username - they can't be added to close friends
+            if (!user.username) {
+              console.warn('Skipping user without username:', user);
+              return false;
+            }
             return index === self.findIndex((u) => u._id === userId);
           });
           
-          console.log("Unique users:", uniqueUsers);
+          console.log("Unique users with username:", uniqueUsers);
+          console.log("=== ALL USERS FOR CLOSE FRIENDS ===");
+          console.log("Total unique users:", uniqueUsers.length);
+          console.log("Users list:", uniqueUsers);
+          console.log("====================================");
           setUsers(uniqueUsers);
           console.log("Users set to state:", uniqueUsers);
         }
@@ -74,21 +83,52 @@ export default function CloseFriendsPage() {
         // Fetch current close friends list
         try {
           const closeFriendsRes = await closeFriendsService.getCloseFriends(100, null);
+          console.log("Close friends response:", closeFriendsRes);
+          console.log("Close friends response.data:", closeFriendsRes?.data);
+          console.log("Close friends response.data.data:", closeFriendsRes?.data?.data);
+          console.log("Close friends response.data.items:", closeFriendsRes?.data?.items);
           
           // Handle different response formats
           let closeFriendsData = [];
           const cfResData = closeFriendsRes?.data;
           
+          // Debug: Log all keys in the response data object
+          if (cfResData && typeof cfResData === 'object') {
+            console.log("Keys in cfResData:", Object.keys(cfResData));
+          }
+          
           if (Array.isArray(cfResData)) {
             closeFriendsData = cfResData;
           } else if (cfResData?.items && Array.isArray(cfResData.items)) {
             closeFriendsData = cfResData.items;
+          } else if (cfResData?.data?.members && Array.isArray(cfResData.data.members)) {
+            // Handle response.data.data.members format
+            closeFriendsData = cfResData.data.members;
           } else if (cfResData?.data && Array.isArray(cfResData.data)) {
             closeFriendsData = cfResData.data;
+          } else if (cfResData && typeof cfResData === 'object') {
+            // Try to find any array property in the object
+            for (const key of Object.keys(cfResData)) {
+              if (Array.isArray(cfResData[key])) {
+                console.log(`Found array in cfResData.${key}:`, cfResData[key]);
+                closeFriendsData = cfResData[key];
+                break;
+              }
+            }
           }
           
+          console.log("Close friends data parsed:", closeFriendsData);
+          
           // Get usernames of close friends for selection state
-          const closeFriendUsernames = closeFriendsData.map(f => f.username);
+          // Handle multiple possible field names for username
+         const closeFriendIds = closeFriendsData.map(f => f._id).filter(Boolean);
+setSelected(closeFriendIds);
+          
+          console.log("=== CLOSE FRIENDS LIST ===");
+          console.log("Total close friends:", closeFriendsData.length);
+          console.log("Close friend usernames:", closeFriendUsernames);
+          console.log("Close friends full data:", closeFriendsData);
+          console.log("=========================");
           setSelected(closeFriendUsernames);
         } catch (cfErr) {
           console.error("Error fetching close friends:", cfErr);
@@ -105,28 +145,30 @@ export default function CloseFriendsPage() {
   }, []);
 
   // Toggle user selection and save to API
-  const toggleUser = async (user) => {
-    const username = user.username;
-    const isCurrentlySelected = selected.includes(username);
-    
-    setSaving(true);
-    
-    try {
-      if (isCurrentlySelected) {
-        // Remove from close friends
-        await closeFriendsService.removeFromCloseFriends(username);
-        setSelected(selected.filter(s => s !== username));
-      } else {
-        // Add to close friends
-        await closeFriendsService.addToCloseFriends(username);
-        setSelected([...selected, username]);
-      }
-    } catch (err) {
-      console.error("Error updating close friends:", err);
-    } finally {
-      setSaving(false);
+ const toggleUser = async (user) => {
+  const userId = user._id;
+  const username = user.username;
+
+  if (!userId || !username) return;
+
+  const isCurrentlySelected = selected.includes(userId);
+
+  setSaving(true);
+
+  try {
+    if (isCurrentlySelected) {
+      await closeFriendsService.removeFromCloseFriends(username);
+      setSelected(selected.filter(id => id !== userId));
+    } else {
+      await closeFriendsService.addToCloseFriends(username);
+      setSelected([...selected, userId]);
     }
-  };
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setSaving(false);
+  }
+};
 
   // Filter users by search query
   const filteredUsers = users.filter((user) => {
@@ -139,15 +181,15 @@ export default function CloseFriendsPage() {
 
   // Sort users: close friends first, then others
   const sortedUsers = [...filteredUsers].sort((a, b) => {
-    const aIsCloseFriend = selected.includes(a.username);
-    const bIsCloseFriend = selected.includes(b.username);
+    const aIsCloseFriend = selected.includes(a._id);
+const bIsCloseFriend = selected.includes(b._id);
     if (aIsCloseFriend && !bIsCloseFriend) return -1;
     if (!aIsCloseFriend && bIsCloseFriend) return 1;
     return 0;
   });
 
   return (
-    <div className="w-full max-w-2xl">
+   <div className="w-full max-w-2xl h-full flex flex-col">
       {/* Header */}
       <h1 className="text-xl font-semibold mb-2">
         Close friends
@@ -179,10 +221,10 @@ export default function CloseFriendsPage() {
       {loading ? (
         <div className="text-center py-8">Loading...</div>
       ) : (
-        <div className="space-y-2">
+       <div className="flex-1 overflow-y-auto space-y-2 pr-1">
           {sortedUsers.map((user) => {
             const username = user.username;
-            const isSelected = selected.includes(username);
+            const isSelected = selected.includes(user._id);
             const userId = user.user_id || user.id || user._id;
 
             return (

@@ -31,7 +31,8 @@ export default function SettingsLayout({ children }) {
   ];
 
   return (
-    <div className="flex h-screen bg-white text-black">
+   
+   <div className="flex max-w-full h-screen fixed bg-white text-black overflow-hidden">
       
       {/* Sidebar (ALWAYS VISIBLE) */}
       <div className="w-72 border-r border-gray-200 p-4 overflow-y-auto">
@@ -60,9 +61,9 @@ export default function SettingsLayout({ children }) {
       </div>
 
       {/* RIGHT SIDE CONTENT */}
-      <div className="flex-1 p-8 overflow-y-auto">
+     <div className="flex-1 p-4">
         {children}
       </div>
-    </div>
-  );
+    </div> 
+  ); 
 }

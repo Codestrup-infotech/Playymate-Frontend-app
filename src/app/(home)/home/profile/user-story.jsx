@@ -389,13 +389,13 @@ useEffect(() => {
   return (
     <>
       {/* 3 DOT BUTTON */}
-      <div className="absolute top-4 right-4 z-50">
+      <div className="absolute top-4 right-4  z-50">
         <button onClick={() => {
           console.log('[UserStory] Opening options menu - pausing story');
           setIsPaused(true);
           setShowOptions(true);
         }}>
-          <MoreHorizontal className="text-white" size={24} />
+          <MoreHorizontal className="text-gray-400" size={24} />
         </button>
       </div>
 
@@ -409,7 +409,7 @@ useEffect(() => {
   }`}
   onClick={handleProfilePhotoClick}
 >
-         <div className="w-full h-full rounded-full overflow-hidden border border-white">
+         <div className="w-full h-full rounded-full overflow-hidden">
             {profile.profile_image_url ? (
               <img
                 src={profile.profile_image_url}
@@ -703,7 +703,7 @@ useEffect(() => {
 
       {/* ✅ STORY VIEWER MORE OPTIONS POPUP */}
       {showOptions && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+        <div className="fixed inset-0 z-[60]  flex items-center justify-center">
           {/* Overlay */}
           <div
             className="absolute inset-0 bg-black/40"

@@ -39,6 +39,7 @@ api.interceptors.request.use(
       console.log('API Request - Token value:', token ? token.substring(0, 20) + '...' : null);
       console.log('API Request - URL:', config.url);
       console.log('API Request - Method:', config.method);
+      console.log('API Request - Data:', config.data);
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
