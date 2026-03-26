@@ -67,10 +67,20 @@ export default function CoverPhotoUpload({
       // Step 3: Confirm the upload
       const confirmResponse = await userService.confirmCoverPhoto(userId, file_url, file_key);
       
+      console.log("=== COVER PHOTO CONFIRM RESPONSE ===");
+      console.log("confirmResponse:", confirmResponse);
+      console.log("confirmResponse.data:", confirmResponse?.data);
+      console.log("confirmResponse.data.data:", confirmResponse?.data?.data);
+      console.log("=====================================");
+      
       setUploadProgress(100);
 
       // Get the final cover photo URL from the response
-      const finalCoverPhotoUrl = confirmResponse.data?.data?.cover_photo?.url || file_url;
+      const finalCoverPhotoUrl = confirmResponse.data?.data?.cover_photo?.url || confirmResponse.data?.data?.cover_photo || confirmResponse.data?.cover_photo?.url || file_url;
+      
+      console.log("=== FINAL COVER PHOTO URL ===");
+      console.log("finalCoverPhotoUrl:", finalCoverPhotoUrl);
+      console.log("============================");
       
       // Notify parent component
       if (onCoverPhotoUpdate) {

@@ -10,7 +10,8 @@ import {
   Pause,
   Play,
   MoreHorizontal,
-  Eye
+  Eye,
+  MapPin
 } from "lucide-react";
 
 import { getMyStory, deleteStory, getStoryViewers } from "@/app/user/homefeed";
@@ -340,6 +341,39 @@ export default function OwnStoryViewerModal( {
 };
   const currentStory = stories[currentIndex] || null;
   
+
+  const getFilterStyle = (story) => {
+  if (!story) return {};
+
+  // Check both story.filter and story.media.filter
+  const f = story.filter || story.media?.filter;
+  const adj = story.adjustments || story.media?.adjustments || {};
+
+  const FILTER_MAP = {
+    Normal: "",
+    Clarendon: "contrast(1.2) saturate(1.35)",
+    Gingham: "brightness(1.05) hue-rotate(-10deg)",
+    Moon: "grayscale(1) contrast(1.1) brightness(1.1)",
+    Lark: "contrast(0.9) brightness(1.1) saturate(1.1)",
+    Reyes: "sepia(0.22) brightness(1.1) contrast(0.85) saturate(0.75)",
+    Juno: "saturate(1.4) contrast(1.1)",
+    Slumber: "saturate(0.66) brightness(1.05)"
+  };
+
+  const b = 1 + (adj.Brightness || 0) / 100;
+  const c = 1 + (adj.Contrast || 0) / 100;
+  const s = 1 + (adj.Saturation || 0) / 100;
+
+  // Only apply if there's a filter or adjustments
+  if (!f && Object.values(adj).every(v => v === 0)) {
+    return {};
+  }
+
+  return {
+    filter: `brightness(${b}) contrast(${c}) saturate(${s}) ${FILTER_MAP[f] || f || ""}`
+  };
+};
+
   // Debug: Log current story data when it changes
   console.log("[Current Story Data]", {
     story_id: currentStory?.story_id,
@@ -464,13 +498,56 @@ useEffect(() => {
     src={currentStory.media?.url || currentStory.media_url}
     alt="story"
     className="w-full h-full object-cover bg-black"
+    style={getFilterStyle(currentStory)}
   />
 )}
 
 </div>
 
+{/* Caption Overlay */}
+{currentStory?.caption && (
+  <div className="absolute bottom-20 left-4 right-4">
+    <p className="text-white text-sm font-medium text-center drop-shadow-lg">
+      {currentStory.caption}
+    </p>
+  </div>
+)}
+
+{/* Location Overlay */}
+{currentStory?.location && (
+  <div className="absolute top-12 left-12 flex items-center gap-1">
+    <MapPin size={14} className="text-white" />
+    <span className="text-white text-xs drop-shadow-lg">
+      {currentStory.location.display_text}
+    </span>
+  </div>
+)}
+
+{/* Mention Overlays */}
+{currentStory?.overlays && currentStory.overlays.length > 0 && (
+  <div className="absolute inset-0 pointer-events-none bg-red-600">
+    {currentStory.overlays.map((overlay, index) => (
+      overlay.type === "mention" && (
+        <div
+          key={index}
+          className="absolute flex items-center gap-1 bg-black/50 px-2 py-1 rounded-full"
+          style={{
+            left: `${overlay.position?.x || 30}%`,
+            top: `${overlay.position?.y || 50}%`,
+            transform: 'translate(-50%, -50%)'
+          }}
+        >
+          <span className="text-white text-xs font-medium">
+            {overlay.content}
+          </span>
+        </div>
+      )
+    ))}
+  </div>
+)}
+
           {/* TOP BAR - User Info Row */}
-          <div className="absolute top-4 left-4 right-4 text-white">
+          <div className="absolute top-4 left-4 right-4 text-white ">
             {/* Row 1: User Photo, Username, Time (all in one row) */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -514,7 +591,7 @@ useEffect(() => {
             </div>
 
             {/* Row 2: Location */}
-            {currentStory?.location?.display_text && (
+            {/* {currentStory?.location?.display_text && (
               <div className="mt-2 flex items-center gap-1">
                 <svg className="w-3 h-3 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
@@ -523,16 +600,16 @@ useEffect(() => {
                   {currentStory.location.display_text}
                 </span>
               </div>
-            )}
+            )} */}
 
             {/* Row 3: Caption */}
-            {currentStory?.caption && (
+            {/* {currentStory?.caption && (
               <div className="mt-1">
                 <span className="text-sm text-white">
                   {currentStory.caption}
                 </span>
               </div>
-            )}
+            )} */}
           </div>
 
           {/* PROGRESS BAR - Show for all stories */}

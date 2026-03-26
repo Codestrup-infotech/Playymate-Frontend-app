@@ -1,0 +1,900 @@
+{
+    "info": {
+        "name": "Playymate — User Profile API",
+        "_postman_id": "playymate-user-profile-v1",
+        "description": "Postman collection for the Playymate User Profile API based on USER_PROFILE_API.md.\n\nCovers:\n- 👤 Core Profile Endpoints (GET /me, GET /:id, PATCH /:id, stats, location)\n- 📷 Avatar/Profile Photo (presign, confirm, delete, profile photos)\n- 🎯 Interests (get, update, catalog)\n- 🔒 Privacy Settings (get, update)\n- 🏷️ Profile Main Type\n- 👤 Username Suggestions\n\n## Setup\n1. Set the `base_url` variable to your server, e.g. `http://localhost:3000`\n2. Set `access_token` by running the Login request first (or paste your JWT).\n3. All other variables (user_id, etc.) are auto-captured via test scripts.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:3000",
+            "type": "string"
+        },
+        {
+            "key": "access_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "user_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "avatar_upload_url",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "avatar_file_url",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "profile_photo_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "cover_upload_url",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "cover_file_url",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "cover_file_key",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{access_token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "👤 Core Profile",
+            "item": [
+                {
+                    "name": "1. Get Current User's Profile",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "  const d = pm.response.json().data;",
+                                    "  if (d && d._id) pm.collectionVariables.set('user_id', d._id);",
+                                    "  console.log('Current user_id:', d._id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/me",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "me"
+                            ]
+                        },
+                        "description": "Get the current authenticated user's profile"
+                    }
+                },
+                {
+                    "name": "2. Get User Profile by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}"
+                            ]
+                        },
+                        "description": "Get a user profile by their ID"
+                    }
+                },
+                {
+                    "name": "3. Update User Profile",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"full_name\": \"Test User Aditya\",\n  \"bio\": \"Sports enthusiast and provider\",\n  \"username\": \"testuseraditya\",\n  \"profile_location\": {\n    \"display_text\": \"Pune, Maharashtra\",\n    \"city\": \"Pune\",\n    \"state\": \"Maharashtra\"\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}"
+                            ]
+                        },
+                        "description": "Update user profile fields. Users can only update their own profile.\n\nField constraints:\n- full_name: Min 2 characters\n- bio: Max 200 characters, no phone/email/URL\n- username: 3-30 chars, lowercase, numbers, underscores only"
+                    }
+                },
+                {
+                    "name": "4. Get User Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/stats",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "stats"
+                            ]
+                        },
+                        "description": "Get user statistics including posts, followers, following counts"
+                    }
+                },
+                {
+                    "name": "5. Update User Location",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"display_text\": \"Mumbai, Maharashtra\",\n  \"city\": \"Mumbai\",\n  \"state\": \"Maharashtra\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/location",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "location"
+                            ]
+                        },
+                        "description": "Update user's location information. Users can only update their own location."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📷 Avatar/Profile Photo",
+            "item": [
+                {
+                    "name": "1. Get Presigned URL for Avatar Upload",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "  const d = pm.response.json().data;",
+                                    "  pm.collectionVariables.set('avatar_upload_url', d.upload_url);",
+                                    "  pm.collectionVariables.set('avatar_file_url', d.file_url);",
+                                    "  console.log('Avatar upload URL captured');",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"file_name\": \"avatar.jpg\",\n  \"mime_type\": \"image/jpeg\",\n  \"size_bytes\": 204800\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/avatar/presign",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "avatar",
+                                "presign"
+                            ]
+                        },
+                        "description": "Step 1 of avatar upload flow. Returns a presigned PUT URL valid for 5 min.\nClient uploads the image directly to Wasabi using upload_url, then passes file_url when confirming."
+                    }
+                },
+                {
+                    "name": "2. Confirm Avatar Upload",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"file_url\": \"{{avatar_file_url}}\",\n  \"file_key\": \"users/{{user_id}}/avatar.jpg\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/avatar/confirm",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "avatar",
+                                "confirm"
+                            ]
+                        },
+                        "description": "Step 2 of avatar upload flow. Confirm avatar upload after file is uploaded to the presigned URL.\n\nError codes:\n- FACE_NOT_DETECTED: No face found in image\n- MULTIPLE_FACES: More than one face detected\n- LOW_FACE_CONFIDENCE: Face confidence below 90%"
+                    }
+                },
+                {
+                    "name": "3. Delete Avatar",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/avatar",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "avatar"
+                            ]
+                        },
+                        "description": "Delete user's avatar and reset profile_image_url to null"
+                    }
+                },
+                {
+                    "name": "── Profile Photos (Additional) ──",
+                    "item": [
+                        {
+                            "name": "4. Get All Profile Photos",
+                            "request": {
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/users/profile-photos",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "users",
+                                        "profile-photos"
+                                    ]
+                                },
+                                "description": "Returns all uploaded profile photos with metadata.\nFirst photo is automatically primary (face validated).\nAdditional photos (up to 2) are optional and don't require face validation."
+                            }
+                        },
+                        {
+                            "name": "5. Delete Profile Photo",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/users/profile-photos/0",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "users",
+                                        "profile-photos",
+                                        "0"
+                                    ]
+                                },
+                                "description": "Delete a profile photo by index.\nCannot delete primary photo if it's the only photo."
+                            }
+                        },
+                        {
+                            "name": "6. Set Primary Photo",
+                            "request": {
+                                "method": "PUT",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/users/profile-photos/1/set-primary",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "users",
+                                        "profile-photos",
+                                        "1",
+                                        "set-primary"
+                                    ]
+                                },
+                                "description": "Set an existing photo as the primary profile photo.\nOnly photos with face verification can be set as primary."
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "🖼️ Cover Photo",
+            "item": [
+                {
+                    "name": "1. Get Presigned URL for Cover Photo",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "  const d = pm.response.json().data;",
+                                    "  pm.collectionVariables.set('cover_upload_url', d.upload_url);",
+                                    "  pm.collectionVariables.set('cover_file_url', d.file_url);",
+                                    "  pm.collectionVariables.set('cover_file_key', d.file_key);",
+                                    "  console.log('Cover upload URL captured');",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"file_name\": \"cover.jpg\",\n  \"mime_type\": \"image/jpeg\",\n  \"size_bytes\": 409600\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/cover-photo/presign",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "cover-photo",
+                                "presign"
+                            ]
+                        },
+                        "description": "Step 1 of cover photo upload flow. Returns a presigned PUT URL valid for 5 min.\nClient uploads the image directly to Wasabi using upload_url, then passes file_url when confirming."
+                    }
+                },
+                {
+                    "name": "2. Confirm Cover Photo Upload",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "  const d = pm.response.json().data;",
+                                    "  pm.collectionVariables.set('cover_file_url', d.cover_photo?.url || d.file_url);",
+                                    "  console.log('Cover photo confirmed');",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"file_url\": \"{{cover_file_url}}\",\n  \"file_key\": \"{{cover_file_key}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/cover-photo/confirm",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "cover-photo",
+                                "confirm"
+                            ]
+                        },
+                        "description": "Step 2 of cover photo upload flow. Confirm cover photo upload after file is uploaded to the presigned URL."
+                    }
+                },
+                {
+                    "name": "3. Delete Cover Photo",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/cover-photo",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "cover-photo"
+                            ]
+                        },
+                        "description": "Delete user's cover photo"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🎯 Interests",
+            "item": [
+                {
+                    "name": "1. Get User Interests",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/interests",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "interests"
+                            ]
+                        },
+                        "description": "Get user's interests. Users can only view their own interests."
+                    }
+                },
+                {
+                    "name": "2. Update User Interests",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"interests\": {\n    \"sports\": [\"football\", \"cricket\"],\n    \"hobbies\": [\"photography\"],\n    \"additional\": [\"food\"],\n    \"activities\": [\"hiking\"],\n    \"nostalgia\": []\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/interests",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "interests"
+                            ]
+                        },
+                        "description": "Update user's interests. Validates against interest catalog.\n\nInterest Categories & Limits:\n- sports: Max 5 items\n- hobbies: Max 5 items\n- additional: Max 3 items\n- activities: Max 3 items\n- nostalgia: Max 3 items\n\nError codes:\n- INVALID_INTEREST: Interest value not in catalog\n- INTEREST_LIMIT_EXCEEDED: More than max items selected"
+                    }
+                },
+                {
+                    "name": "3. Get Interest Catalog",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/interests/catalog",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "interests",
+                                "catalog"
+                            ]
+                        },
+                        "description": "Get all available interests with their allowed values and limits"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔒 Privacy Settings",
+            "item": [
+                {
+                    "name": "1. Get Privacy Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/privacy",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "privacy"
+                            ]
+                        },
+                        "description": "Get privacy settings for a user"
+                    }
+                },
+                {
+                    "name": "2. Update Privacy Settings",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"profile_visibility\": \"public\",\n  \"performance_visibility\": \"friends_only\",\n  \"social_visibility\": \"public\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/privacy",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "privacy"
+                            ]
+                        },
+                        "description": "Update privacy settings\n\nVisibility Options:\n- profile_visibility: public, friends_only, private\n- performance_visibility: public, friends_only, private\n- social_visibility: public, friends_only, private"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🏷️ Profile Main Type & Username",
+            "item": [
+                {
+                    "name": "1. Update Profile Main Type",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"main_type\": \"cricket\",\n  \"category\": \"sports\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/profile-main-type",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "profile-main-type"
+                            ]
+                        },
+                        "description": "Set the user's primary activity/sport category.\nThe main_type must be in user's selected interests.\n\nCategories: sports, hobbies, activities, additional, nostalgia\n\nError codes:\n- INVALID_CATEGORY: Invalid category value\n- INVALID_MAIN_TYPE: main_type must be in user's selected interests"
+                    }
+                },
+                {
+                    "name": "2. Get Username Suggestions",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/username/suggestions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "username",
+                                "suggestions"
+                            ]
+                        },
+                        "description": "Get username suggestions based on user's full name and profile main type"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔄 End-to-End Profile Flow",
+            "description": "Run these in order to test the complete user profile lifecycle",
+            "item": [
+                {
+                    "name": "Step 1 → Get Current User Profile",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Profile fetched successfully', () => {",
+                                    "  pm.response.to.have.status(200);",
+                                    "  const d = pm.response.json().data;",
+                                    "  pm.expect(d).to.have.property('_id');",
+                                    "  pm.collectionVariables.set('user_id', d._id);",
+                                    "  console.log('user_id set to:', d._id);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/me",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "me"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Step 2 → Get User Stats",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Stats fetched successfully', () => {",
+                                    "  pm.response.to.have.status(200);",
+                                    "  const d = pm.response.json().data;",
+                                    "  pm.expect(d).to.have.property('posts_count');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/stats",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "stats"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Step 3 → Get Interest Catalog",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Interest catalog fetched', () => {",
+                                    "  pm.response.to.have.status(200);",
+                                    "  const d = pm.response.json().data;",
+                                    "  pm.expect(d).to.have.property('sports');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/interests/catalog",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "interests",
+                                "catalog"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Step 4 → Get User Interests",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Interests fetched successfully', () => {",
+                                    "  pm.response.to.have.status(200);",
+                                    "  const d = pm.response.json().data;",
+                                    "  pm.expect(d).to.have.property('interests');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/interests",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "interests"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Step 5 → Get Privacy Settings",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Privacy settings fetched', () => {",
+                                    "  pm.response.to.have.status(200);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/{{user_id}}/privacy",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "{{user_id}}",
+                                "privacy"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Step 6 → Get Username Suggestions",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Username suggestions fetched', () => {",
+                                    "  pm.response.to.have.status(200);",
+                                    "  const d = pm.response.json().data;",
+                                    "  pm.expect(d).to.have.property('suggestions');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/users/username/suggestions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "username",
+                                "suggestions"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

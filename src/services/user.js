@@ -213,6 +213,38 @@ api.post("/api/v1/auth/signup/email-password", {
   // Delete cover photo
   deleteCoverPhoto: (userId) => 
     api.delete(`/users/${userId}/cover-photo`),
+
+  // ============ AVATAR / PROFILE PHOTO ============
+  // Step 1: Get presigned URL for avatar upload
+  getAvatarPresign: (userId, fileName, mimeType, sizeBytes) => 
+    api.post(`/users/${userId}/avatar/presign`, {
+      file_name: fileName,
+      mime_type: mimeType,
+      size_bytes: sizeBytes
+    }),
+
+  // Step 2: Confirm avatar upload
+  confirmAvatar: (userId, fileUrl, fileKey) => 
+    api.post(`/users/${userId}/avatar/confirm`, {
+      file_url: fileUrl,
+      file_key: fileKey
+    }),
+
+  // Delete avatar
+  deleteAvatar: (userId) => 
+    api.delete(`/users/${userId}/avatar`),
+
+  // Get all profile photos
+  getProfilePhotos: () => 
+    api.get('/users/profile-photos'),
+
+  // Delete profile photo
+  deleteProfilePhoto: (photoIndex) => 
+    api.delete(`/users/profile-photos/${photoIndex}`),
+
+  // Set primary photo
+  setPrimaryPhoto: (photoIndex) => 
+    api.put(`/users/profile-photos/${photoIndex}/set-primary`),
 };
 
 // Direct exports for commonly used functions

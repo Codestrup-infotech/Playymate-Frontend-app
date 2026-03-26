@@ -46,8 +46,13 @@ export default function CreateStoryPage() {
   // Share state
   const [caption, setCaption] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [hideLikes, setHideLikes] = useState(false);
-  const [noComments, setNoComments] = useState(false);
+  
+  // Visibility: 'public' or 'close_friends' (default: public)
+  const [visibility, setVisibility] = useState("public");
+  
+  // Allow comments and shares (default: true - enabled)
+  const [allowComments, setAllowComments] = useState(true);
+  const [allowShares, setAllowShares] = useState(true);
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
@@ -68,15 +73,14 @@ export default function CreateStoryPage() {
   
 
 
-  const [closeFriends, setCloseFriends] = useState(false);
-const [turnOffSharing, setTurnOffSharing] = useState(false);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [mentionUsers, setMentionUsers] = useState([]);
+  const [selectedMentions, setSelectedMentions] = useState([]);
+  const [loadingMentions, setLoadingMentions] = useState(false);
 
-
-const [showMentions, setShowMentions] = useState(false);
-const [mentionSearch, setMentionSearch] = useState("");
-const [mentionUsers, setMentionUsers] = useState([]);
-const [selectedMentions, setSelectedMentions] = useState([]);
-const [loadingMentions, setLoadingMentions] = useState(false);
+  // Mention overlays with positions
+  const [mentionOverlays, setMentionOverlays] = useState([]);
 
   useEffect(() => {
     // Fetch user info
@@ -154,25 +158,26 @@ const [loadingMentions, setLoadingMentions] = useState(false);
     }
   }, [showMentions]);
 
-  // Handle selecting a mention
+  // Handle selecting a mention - add overlay with position
   const handleSelectMention = (user) => {
-    // Add to selected mentions if not already selected
     if (!selectedMentions.find(m => m._id === user._id)) {
-      setSelectedMentions([...selectedMentions, user]);
-      // Add @username to caption
-      setCaption(prev => prev + (prev ? " " : "") + "@" + (user.username || user.full_name?.toLowerCase().replace(/\s+/g, "_") || ""));
+      const newMention = {
+        ...user,
+        // Position based on number of mentions (cascade from top-right)
+        position: { 
+          x: 30 + (selectedMentions.length * 15), 
+          y: 50 - (selectedMentions.length * 10) 
+        }
+      };
+      setSelectedMentions([...selectedMentions, newMention]);
     }
+
     setShowMentions(false);
     setMentionSearch("");
   };
 
-  // Handle removing a mention
+  // Handle removing a mention - also remove from overlays
   const handleRemoveMention = (userId) => {
-    const user = selectedMentions.find(m => m._id === userId);
-    if (user) {
-      const mentionText = "@" + (user.username || user.full_name?.toLowerCase().replace(/\s+/g, "_") || "");
-      setCaption(prev => prev.replace(mentionText, "").replace(/\s+/g, " ").trim());
-    }
     setSelectedMentions(selectedMentions.filter(m => m._id !== userId));
   };
 
@@ -371,12 +376,26 @@ if (!dropped || dropped.size === 0) {
     setUploadProgress(10);
     
     try {
-      const fileToUpload = file || videoUrl;
-      const fileName = file ? `story_image_${Date.now()}.jpg` : `story_video_${Date.now()}.mp4`;
-      const mimeType = file ? "image/jpeg" : "video/mp4";
-      const sizeBytes = fileToUpload ? (file?.size || videoUrl?.size || 0) : 0;
+      let fileToUpload = file || videoUrl;
+      let fileName = file ? `story_image_${Date.now()}.jpg` : `story_video_${Date.now()}.mp4`;
+      let mimeType = file ? "image/jpeg" : "video/mp4";
+      let sizeBytes = fileToUpload ? (file?.size || videoUrl?.size || 0) : 0;
       
       setUploadProgress(20);
+      
+      // If it's an image and has filter/adjustments, apply them before uploading
+      if (file && (selectedFilter !== "Normal" || Object.values(adjustments).some(v => v !== 0))) {
+        console.log("[CreateStory] Applying filter to image before upload...");
+        const filteredBlob = await applyFilterToImage(file, selectedFilter, adjustments);
+        
+        if (filteredBlob) {
+          // Create a File object from the blob
+          const filteredFile = new File([filteredBlob], fileName, { type: mimeType });
+          fileToUpload = URL.createObjectURL(filteredBlob);
+          sizeBytes = filteredBlob.size;
+          console.log("[CreateStory] Filter applied, new size:", sizeBytes);
+        }
+      }
       
       // Get presigned URL
       const presignData = await presignStoryUpload(fileName, mimeType, sizeBytes, "story");
@@ -389,7 +408,7 @@ if (!dropped || dropped.size === 0) {
       
       setUploadProgress(40);
       
-      // Upload the file
+      // Upload the file (filtered or original)
       const fileBlob = await fetch(fileToUpload).then(r => r.blob());
       
       const uploadResponse = await fetch(upload_url, {
@@ -407,13 +426,27 @@ if (!dropped || dropped.size === 0) {
       setUploadProgress(70);
       
       // Create the story record in the database
-      const storyData = {
-        media_url: file_url,
-        media_type: fileType,
-        caption: caption || "",
-        location: location,
-        mentions: selectedMentions.map(m => m._id),
-      };
+    const storyData = {
+  media_url: file_url,
+  media_type: fileType,
+  caption: caption || "",
+  location: location,
+  mentions: selectedMentions.map(m => m._id),
+  visibility: visibility,
+  allow_comments: allowComments,
+  allow_shares: allowShares,
+
+  // ✅ ADD THIS
+  filter: selectedFilter,
+  adjustments: adjustments,
+
+  overlays: selectedMentions.map((user) => ({
+    type: "mention",
+    content: "@" + (user.username || user.full_name?.toLowerCase().replace(/\s+/g, "_") || ""),
+    user_id: user._id,
+    position: user.position || { x: 30, y: 50 }
+  }))
+};
       
       console.log("[CreateStory] Creating story with data:", storyData);
       
@@ -434,6 +467,60 @@ if (!dropped || dropped.size === 0) {
     }
   };
 
+  // Apply filter to image using canvas before upload - bakes filter into the image
+  const applyFilterToImage = async (imageUrl, filter, adjustments) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        // Create canvas
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        
+        // Set canvas size to image size
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        // Filter map matching the UI filters
+        const FILTER_MAP = {
+          Normal: "",
+          Clarendon: "contrast(1.2) saturate(1.35)",
+          Gingham: "brightness(1.05) hue-rotate(-10deg)",
+          Moon: "grayscale(1) contrast(1.1) brightness(1.1)",
+          Lark: "contrast(0.9) brightness(1.1) saturate(1.1)",
+          Reyes: "sepia(0.22) brightness(1.1) contrast(0.85) saturate(0.75)",
+          Juno: "saturate(1.4) contrast(1.1)",
+          Slumber: "saturate(0.66) brightness(1.05)"
+        };
+        
+        // Calculate adjustment values
+        const b = 1 + (adjustments?.Brightness || 0) / 100;
+        const c = 1 + (adjustments?.Contrast || 0) / 100;
+        const s = 1 + (adjustments?.Saturation || 0) / 100;
+        const fade = 1 - Math.max(0, adjustments?.Fade || 0) / 200;
+        
+        // Combine all filters
+        const filterString = `brightness(${b}) contrast(${c}) saturate(${s}) opacity(${fade}) ${FILTER_MAP[filter] || ""}`;
+        
+        // Apply filter
+        ctx.filter = filterString;
+        
+        // Draw image onto canvas
+        ctx.drawImage(img, 0, 0);
+        
+        // Convert to blob
+        canvas.toBlob((blob) => {
+          resolve(blob);
+        }, "image/jpeg", 0.95);
+      };
+      img.onerror = () => {
+        // If image fails to load, return null
+        resolve(null);
+      };
+      img.src = imageUrl;
+    });
+  };
+
   // Compute CSS filter from adjustments + selected filter
   const getImageStyle = () => {
     const base = FILTERS.find((f) => f.name === selectedFilter)?.style?.filter || "";
@@ -448,6 +535,8 @@ if (!dropped || dropped.size === 0) {
   // Get aspect ratio style for crop preview
   const getAspectRatioStyle = () => {
   switch (cropAspect) {
+    case "16:9":
+      return { aspectRatio: "16/9" };
     case "1:1":
       return { aspectRatio: "1/1" };
     case "4:5":
@@ -499,15 +588,15 @@ if (!dropped || dropped.size === 0) {
 
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 bg-black/70 lg:flex items-center justify-center">
       <div
         className={`bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
-          isWide ? "w-[700px] h-[540px]" : "w-[520px] h-[480px]"
+          isWide ? "  lg:w-[700px] lg:h-[540px]" : "lg:w-[520px] lg:h-[480px]"
         }`}
       >
         {/* ── HEADER ── */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 flex-shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="lg:flex items-center justify-between border-b border-gray-200 px-4 py-3 flex-shrink-0">
+          <div className="lg:flex items-center gap-3">
             {step !== "upload" && (
               <button onClick={goBack} className="hover:opacity-60 transition">
                 <ArrowLeft size={20} />
@@ -521,7 +610,7 @@ if (!dropped || dropped.size === 0) {
             </h2>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="lg:flex items-center gap-2">
             {step === "crop" && (
               <button onClick={() => setStep("edit")} className="text-[#0095f6] font-semibold text-sm hover:text-blue-800">
                 Next
@@ -643,7 +732,7 @@ if (!dropped || dropped.size === 0) {
 
   {/* ✅ FIXED BUTTONS (BOTTOM CENTER) */}
   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 bg-black/70 rounded-xl px-4 py-2 flex gap-4">
-    {["1:1", "4:5", "9:16"].map((r) => (
+    {["16:9", "1:1", "4:5", "9:16"].map((r) => (
       <button
         key={r}
         onClick={() => {
@@ -656,7 +745,9 @@ if (!dropped || dropped.size === 0) {
       >
         <div
           className={`border-2 border-white ${
-            r === "1:1"
+            r === "16:9"
+              ? "w-7 h-4"
+              : r === "1:1"
               ? "w-6 h-6"
               : r === "4:5"
               ? "w-5 h-6"
@@ -843,12 +934,34 @@ if (!dropped || dropped.size === 0) {
             <div className="flex w-full h-full">
               {/* Media preview */}
               <div className="flex-1 bg-white p-3 relative flex items-center justify-center overflow-hidden">
-                {fileType === "video" ? (
-                  <video src={videoUrl} className="max-h-full max-w-full object-contain" autoPlay loop muted />
-                ) : (
-                  <img src={file} style={getImageStyle()} className="max-h-full max-w-full object-contain" alt="share" />
-                )}
-               
+                <div className="relative">
+                  {fileType === "video" ? (
+                    <video src={videoUrl} className="max-h-full max-w-full object-contain" autoPlay loop muted />
+                  ) : (
+                    <img src={file} style={getImageStyle()} className="max-h-full max-w-full object-contain" alt="share" />
+                  )}
+                  
+                  {/* Mention Overlays Display */}
+                  {selectedMentions.length > 0 && (
+                    <div className="absolute inset-0 pointer-events-none">
+                      {selectedMentions.map((user, index) => (
+                        <div
+                          key={user._id}
+                          className="absolute flex items-center gap-1 bg-black/50 px-2 py-1 rounded-full"
+                          style={{
+                            left: `${user.position?.x || 30 + (index * 15)}%`,
+                            top: `${user.position?.y || 50 - (index * 10)}%`,
+                            transform: 'translate(-50%, -50%)'
+                          }}
+                        >
+                          <span className="text-white text-xs font-medium">
+                            @{user.username || user.full_name?.toLowerCase().replace(/\s+/g, "_") || ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Right panel */}
@@ -1017,24 +1130,47 @@ maxLength={50}
   {advancedOpen && (
     <div className="px-4 pb-4 space-y-5">
 
-      {/* Close Friends */}
+      {/* Visibility Toggle - Public vs Close Friends */}
       <div className="flex items-center justify-between">
-        <span className="text-sm text-[#262626]">Add to close friends only</span>
-        <ToggleButton state={closeFriends} setState={setCloseFriends} />
+        <div className="flex flex-col">
+          <span className="text-sm text-[#262626]">Visibility</span>
+          <span className="text-xs text-gray-500">
+            {visibility === "public" ? "Public - Anyone can view" : "Close Friends - Only close friends can view"}
+          </span>
+        </div>
+        <button
+          onClick={() => setVisibility(visibility === "public" ? "close_friends" : "public")}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+            visibility === "close_friends" 
+              ? "bg-green-500 text-white" 
+              : "bg-gray-200 text-gray-700"
+          }`}
+        >
+          {visibility === "public" ? "Public" : "Close Friends"}
+        </button>
       </div>
 
-      {/* Turn off commenting */}
+      {/* Allow Comments Toggle */}
       <div className="flex items-center justify-between">
-        <span className="text-sm text-[#262626]">Turn off commenting</span>
-        <ToggleButton state={noComments} setState={setNoComments} />
+        <div className="flex flex-col">
+          <span className="text-sm text-[#262626]">Allow comments</span>
+          <span className="text-xs text-gray-500">
+            {allowComments ? "People can reply to your story" : "No one can reply to your story"}
+          </span>
+        </div>
+        <ToggleButton state={allowComments} setState={setAllowComments} />
       </div>
 
-      {/* Turn off settings */}
-    {/* Turn off sharing */}
-<div className="flex items-center justify-between">
-  <span className="text-sm text-[#262626]">Turn off sharing</span>
-  <ToggleButton state={turnOffSharing} setState={setTurnOffSharing} />
-</div>
+      {/* Allow Shares Toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col">
+          <span className="text-sm text-[#262626]">Allow shares</span>
+          <span className="text-xs text-gray-500">
+            {allowShares ? "People can share your story" : "No one can share your story"}
+          </span>
+        </div>
+        <ToggleButton state={allowShares} setState={setAllowShares} />
+      </div>
 
     </div>
   )}

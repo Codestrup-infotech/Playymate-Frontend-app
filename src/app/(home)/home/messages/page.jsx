@@ -5,6 +5,7 @@ import ComposeEmojiPicker from "../components/Composeemojipicker";
 import UserPostDetailModal from "../components/UserPostDetailModal";
 import { getPostById } from "@/app/user/homefeed";
 import postService from "@/app/user/post";
+import CallNow from "../components/CallNow";
 
 import { io } from "socket.io-client";
 import {
@@ -1494,6 +1495,7 @@ useEffect(() => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+                <CallNow selectedConv={selectedConv} myId={myId} />
               <button onClick={handlePin} className={`px-3 py-1.5 text-xs rounded-xl border transition-colors ${isPinned ? "bg-amber-50 border-amber-200 text-amber-600" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
                 {isPinned ? "📌 Pinned" : "Pin"}
               </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { User, MoreHorizontal, Heart, Send, MessageCircle, Flag, X, ChevronLeft, ChevronRight, Volume2, VolumeX, Pause, Play } from "lucide-react";
+import { User, MoreHorizontal, Heart, Send, MessageCircle, Flag, X, ChevronLeft, ChevronRight, Volume2, VolumeX, Pause, Play, MapPin } from "lucide-react";
 import { userService } from "@/services/user";
 import { createConversation, sendMessage } from "@/services/messages";
 import { useTheme } from "@/lib/ThemeContext";
@@ -13,6 +13,40 @@ export default function UserStory({ userId, profile, showRing = true }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const router = useRouter();
+
+  // Filter styles for story
+  const getFilterStyle = (story) => {
+    if (!story) return {};
+    
+    // Check both story.filter and story.media.filter
+    const filter = story.filter || story.media?.filter;
+    const adjustments = story.adjustments || story.media?.adjustments || {};
+    
+    const FILTER_MAP = {
+      Normal: "",
+      Clarendon: "contrast(1.2) saturate(1.35)",
+      Gingham: "brightness(1.05) hue-rotate(-10deg)",
+      Moon: "grayscale(1) contrast(1.1) brightness(1.1)",
+      Lark: "contrast(0.9) brightness(1.1) saturate(1.1)",
+      Reyes: "sepia(0.22) brightness(1.1) contrast(0.85) saturate(0.75)",
+      Juno: "saturate(1.4) contrast(1.1)",
+      Slumber: "saturate(0.66) brightness(1.05)"
+    };
+
+    const b = 1 + (adjustments.Brightness || 0) / 100;
+    const c = 1 + (adjustments.Contrast || 0) / 100;
+    const s = 1 + (adjustments.Saturation || 0) / 100;
+
+    // Only apply if there's a filter or adjustments
+    if (!filter && Object.values(adjustments).every(v => v === 0)) {
+      return {};
+    }
+    
+    // Apply the filter style
+    return { 
+      filter: `brightness(${b}) contrast(${c}) saturate(${s}) ${FILTER_MAP[filter] || filter || ""}` 
+    };
+  };
 
   const [stories, setStories] = useState([]);
   const [hasStories, setHasStories] = useState(false);
@@ -401,24 +435,68 @@ useEffect(() => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Story Content */}
-            {(currentStory.media?.type || currentStory.media_type) === "video" ? (
-              <video
-                ref={videoRef}
-                src={currentStory.media?.url || currentStory.media_url}
-                className="w-full h-full object-cover bg-black"
-                muted={isMuted}
-                autoPlay={!isPaused}
-                controls={false}
-                playsInline
-                onEnded={goToNextStory}
-              />
-            ) : (
-              <img
-                src={currentStory.media?.url || currentStory.media_url}
-                alt="story"
-                className="w-full h-full object-cover bg-black"
-              />
-            )}
+            <div className="relative w-full h-full">
+              {(currentStory.media?.type || currentStory.media_type) === "video" ? (
+                <video
+                  ref={videoRef}
+                  src={currentStory.media?.url || currentStory.media_url}
+                  className="w-full h-full object-cover bg-black"
+                  muted={isMuted}
+                  autoPlay={!isPaused}
+                  controls={false}
+                  playsInline
+                  onEnded={goToNextStory}
+                />
+              ) : (
+                <img
+                  src={currentStory.media?.url || currentStory.media_url}
+                  style={getFilterStyle(currentStory)}
+                  className="w-full h-full object-cover bg-black"
+                />
+              )}
+
+              {/* Caption Overlay */}
+              {currentStory?.caption && (
+                <div className="absolute bottom-20 left-4 right-4">
+                  <p className="text-white text-sm font-medium text-center drop-shadow-lg">
+                    {currentStory.caption}
+                  </p>
+                </div>
+              )}
+
+              {/* Location Overlay */}
+              {currentStory?.location && (
+                <div className="absolute top-16 left-4 flex items-center gap-1">
+                  <MapPin size={14} className="text-white" />
+                  <span className="text-white text-xs drop-shadow-lg">
+                    {currentStory.location.display_text}
+                  </span>
+                </div>
+              )}
+
+              {/* Mention Overlays */}
+              {currentStory?.overlays && currentStory.overlays.length > 0 && (
+                <div className="absolute inset-0 pointer-events-none">
+                  {currentStory.overlays.map((overlay, index) => (
+                    overlay.type === "mention" && (
+                      <div
+                        key={index}
+                        className="absolute flex items-center gap-1 bg-black/50 px-2 py-1 rounded-full"
+                        style={{
+                          left: `${overlay.position?.x || 30}%`,
+                          top: `${overlay.position?.y || 50}%`,
+                          transform: 'translate(-50%, -50%)'
+                        }}
+                      >
+                        <span className="text-white text-xs font-medium">
+                          {overlay.content}
+                        </span>
+                      </div>
+                    )
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Top Bar */}
             <div className="absolute top-4 left-4 right-4 flex items-center justify-between text-white">
@@ -532,17 +610,19 @@ useEffect(() => {
     // ✅ DEFAULT STATE (small + icons visible)
     <div className="flex items-center gap-3">
       
-      {/* Small Input */}
-      <div className="flex items-center bg-black/40 rounded-full px-3 w-[180px]">
-        <input
-          type="text"
-          value={replyText}
-          onChange={(e) => setReplyText(e.target.value)}
-          onFocus={() => setIsPaused(true)}
-          placeholder={`Reply to ${profile.username || profile.full_name}...`}
-          className="flex-1 bg-transparent outline-none text-white placeholder-gray-300 text-sm py-2"
-        />
-      </div>
+      {/* Reply Input - Only show if allow_comments is true */}
+      {currentStory?.allow_comments !== false ? (
+        <div className="flex items-center bg-black/40 rounded-full px-3 w-[180px]">
+          <input
+            type="text"
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            onFocus={() => setIsPaused(true)}
+            placeholder={`Reply to ${profile.username || profile.full_name}...`}
+            className="flex-1 bg-transparent outline-none text-white placeholder-gray-300 text-sm py-2"
+          />
+        </div>
+      ) : null}
 
       {/* Icons */}
       <div className="flex items-center gap-3">
@@ -554,22 +634,26 @@ useEffect(() => {
           )}
         </button>
 
-        <button 
-          onClick={() => {
-            // Get the current story's ID
-            const storyId = currentStory?.story_id || currentStory?._id || currentStory?.id;
-            console.log('[UserStory] Share button clicked for story:', storyId);
-            setIsPaused(true);
-            setShowShare(true);
-          }}
-          className="text-white"
-        >
-          <Send size={24} />
-        </button>
+        {/* Share Button - Only show if allow_shares is true */}
+        {currentStory?.allow_shares !== false ? (
+          <button 
+            onClick={() => {
+              // Get the current story's ID
+              const storyId = currentStory?.story_id || currentStory?._id || currentStory?.id;
+              console.log('[UserStory] Share button clicked for story:', storyId);
+              setIsPaused(true);
+              setShowShare(true);
+            }}
+            className="text-white"
+          >
+            <Send size={24} />
+          </button>
+        ) : null}
       </div>
     </div>
   ) : (
-    // ✅ EXPANDED STATE (full width input like your image)
+    // ✅ EXPANDED STATE (full width input like your image) - Only show if allow_comments is true
+    currentStory?.allow_comments !== false ? (
     <div className="flex items-center bg-black/40 rounded-full px-4 py-2 w-full border border-white/20">
       
       <input
@@ -590,6 +674,7 @@ useEffect(() => {
         {replyLoading ? "..." : "Send"}
       </button>
     </div>
+    ) : null
   )}
 
 </div>

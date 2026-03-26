@@ -35,6 +35,7 @@ import PostDetailModal from "../components/PostDetailModal.jsx";
 import FollowModal from "../components/FollowersFollowing.jsx";
 import Highlights from '../components/highlights.jsx';
 import CoverPhotoUpload from './cover-photo.jsx';
+import AvatarUpload from './avatar-upload.jsx';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -125,6 +126,8 @@ export default function ProfilePage() {
 
   // Cover photo state
   const [coverPhoto, setCoverPhoto] = useState(null);
+  // Avatar state
+  const [avatarUrl, setAvatarUrl] = useState(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -140,8 +143,16 @@ export default function ProfilePage() {
         console.log("=============================");
 
         setProfile(data);
-        // Set cover photo from profile data
-        setCoverPhoto(data?.cover_photo?.url || null);
+        // Set cover photo from profile data - check multiple possible field names
+        const coverPhotoUrl = data?.cover_photo?.url || data?.cover_photo || data?.coverPhoto?.url || data?.coverPhoto || null;
+        setCoverPhoto(coverPhotoUrl);
+        console.log("=== COVER PHOTO DEBUG ===");
+        console.log("data.cover_photo:", data?.cover_photo);
+        console.log("data.coverPhoto:", data?.coverPhoto);
+        console.log("Final coverPhotoUrl:", coverPhotoUrl);
+        console.log("=========================");
+        // Set avatar URL from profile data
+        setAvatarUrl(data?.profile_photos?.[0]?.url || data?.profile_image_url || null);
       } catch (err) {
         console.error("Profile fetch error:", err);
         setError(err.message || "Failed to load profile");
@@ -160,11 +171,25 @@ export default function ProfilePage() {
 
   // Handle cover photo update
   const handleCoverPhotoUpdate = (newCoverPhotoUrl) => {
+    console.log("=== HANDLE COVER PHOTO UPDATE ===");
+    console.log("newCoverPhotoUrl:", newCoverPhotoUrl);
+    console.log("=============================");
     setCoverPhoto(newCoverPhotoUrl);
     // Also update the profile data
     setProfile((prev) => ({
       ...prev,
       cover_photo: newCoverPhotoUrl ? { url: newCoverPhotoUrl } : null
+    }));
+  };
+
+  // Handle avatar update
+  const handleAvatarUpdate = (newAvatarUrl) => {
+    setAvatarUrl(newAvatarUrl);
+    // Also update the profile data
+    setProfile((prev) => ({
+      ...prev,
+      profile_image_url: newAvatarUrl,
+      profile_photos: [{ url: newAvatarUrl }]
     }));
   };
 
@@ -577,15 +602,25 @@ export default function ProfilePage() {
           <div className="flex gap-6 items-start flex-wrap md:flex-nowrap">
 
             {/* avatar */}
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 relative">
               <div className="w-28 h-28 md:w-36 md:h-36 rounded-[30px] p-[3px] bg-gradient-to-tr from-purple-500 to-orange-500">
-                <img
-                  src={profile_photos?.[0]?.url || profile_image_url || "/loginAvatars/profile.png"}
-                  alt={full_name}
-                  className={`w-full h-full rounded-3xl object-cover border-4 ${
-                    isDark ? "border-[#12122a]" : "border-white"
-                  }`}
-                />
+                <div className="relative w-full h-full">
+                  <img
+                    src={avatarUrl || profile_photos?.[0]?.url || profile_image_url || "/loginAvatars/profile.png"}
+                    alt={full_name}
+                    className={`w-full h-full rounded-3xl object-cover border-4 ${
+                      isDark ? "border-[#12122a]" : "border-white"
+                    }`}
+                  />
+                  {is_own_profile && (
+                    <AvatarUpload
+                      userId={profile?._id}
+                      currentAvatar={avatarUrl}
+                      onAvatarUpdate={handleAvatarUpdate}
+                      isDark={isDark}
+                    />
+                  )}
+                </div>
               </div>
               {profile_main_type?.value && (
                 <div className="text-center mt-2">
