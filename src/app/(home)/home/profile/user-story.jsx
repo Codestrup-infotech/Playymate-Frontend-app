@@ -391,14 +391,14 @@ useEffect(() => {
       {/* PROFILE IMAGE */}
       <div className="relative">
        <div
-  className={`w-20 h-20 rounded-full p-[2px] cursor-pointer ${
+  className={`w-20 h-20 rounded-2xl p-[2px] cursor-pointer ${
     showRing && hasStories
       ? "bg-gradient-to-tr from-yellow-400 via-orange-500 to-pink-500"
       : "bg-transparent"
   }`}
   onClick={handleProfilePhotoClick}
 >
-         <div className="w-full h-full rounded-full overflow-hidden">
+         <div className="w-full h-full rounded-2xl overflow-hidden">
             {profile.profile_image_url ? (
               <img
                 src={profile.profile_image_url}

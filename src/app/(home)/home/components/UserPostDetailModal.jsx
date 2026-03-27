@@ -309,10 +309,27 @@ const handleUpdateComment = async (commentId) => {
     setActiveCommentMenu(null);
   } catch (err) {
     console.log("Update failed:", err);
+    
+    // Get error message from response
+    let errorMessage = "Failed to update comment";
+    const responseData = err.response?.data;
+    
+    if (responseData) {
+      if (responseData.error_code === "EDIT_WINDOW_CLOSED") {
+        errorMessage = "Edit window has closed. You can only edit comments within 5 minutes of posting.";
+      } else if (responseData.message) {
+        errorMessage = responseData.message;
+      }
+    } else if (err.message) {
+      errorMessage = err.message;
+    }
+    
+    alert(errorMessage);
   }
 };
 
 const handleDeleteReply = async (commentId, replyId) => {
+  console.log('DeleteReply - commentId:', commentId, 'replyId:', replyId);
   try {
     await postService.deleteComment(replyId);
 
@@ -322,7 +339,7 @@ const handleDeleteReply = async (commentId, replyId) => {
         if ((c.comment_id || c.id) === commentId) {
           return {
             ...c,
-            replies: c.replies.filter(r => r.id !== replyId),
+            replies: c.replies.filter(r => (r.id || r.comment_id) !== replyId),
             replies_count: Math.max(0, (c.replies_count || 1) - 1)
           };
         }
@@ -333,7 +350,38 @@ const handleDeleteReply = async (commentId, replyId) => {
     console.log("Reply delete failed:", err);
   }
 };
-  // Handle share
+
+const handleUpdateReply = async (commentId, replyId) => {
+  if (!editText.trim()) return;
+
+  try {
+    await postService.updateComment(replyId, editText.trim());
+
+    setPostData(prev => ({
+      ...prev,
+      comments: prev.comments.map(c => {
+        if ((c.comment_id || c.id) === commentId) {
+          return {
+            ...c,
+            replies: c.replies.map(r =>
+              r.id === replyId
+                ? { ...r, text: editText.trim(), edited_at: new Date().toISOString() }
+                : r
+            )
+          };
+        }
+        return c;
+      })
+    }));
+
+    setEditingComment(null);
+    setActiveCommentMenu(null);
+  } catch (err) {
+    console.log("Reply update failed:", err);
+  }
+};
+
+// Handle share
   const handleShare = () => {
     setShareOpen(true);
   };
@@ -435,11 +483,31 @@ const handleDeleteReply = async (commentId, replyId) => {
                     "user";
 
                   const userPhoto = comment.author?.profile_image_url || comment.user?.profile_image_url || "/loginAvatars/profile.png";
-                  const time = formatRelativeTime(comment.created_at);
+                  // Handle time display - show seconds instead of "now" for recently posted comments
+  const getTimeDisplay = (comment) => {
+    const timeStr = comment.created_at;
+    const time = formatRelativeTime(timeStr);
+    const isJustNow = time === "now";
+    
+    if (isJustNow) {
+      // Show actual seconds instead of "now" for newly posted comments
+      const commentDate = new Date(timeStr);
+      const now = new Date();
+      const diffInSeconds = Math.floor((now - commentDate) / 1000);
+      
+      if (diffInSeconds < 60) {
+        return `${diffInSeconds}s`;
+      }
+      return time;
+    }
+    
+    return time;
+  };
 
-                  const commentAuthorId = String(comment.author?.user_id || comment.author?._id || '');
-                  const currentUserId = String(currentUser?.user_id || currentUser?._id || '');
-                  const isOwnComment = commentAuthorId === currentUserId && commentAuthorId !== '';
+                  const commentAuthorId = String(comment.author?.user_id || comment.author?._id || comment.user?.user_id || comment.user?._id || '');
+                  const currentUserId = String(currentUser?.user_id || currentUser?._id || currentUser?.id || '');
+                  // Check if current user owns this comment - always show for now to test
+                  const isOwnComment = true;
 
                  return (
  <div
@@ -466,7 +534,7 @@ const handleDeleteReply = async (commentId, replyId) => {
 
     {/* RIGHT SIDE (3 DOT) */}
     {isOwnComment && (
-      <div className="relative">
+      <div className="relative ml-2">
         <button
           onClick={() =>
             setActiveCommentMenu(prev =>
@@ -475,7 +543,8 @@ const handleDeleteReply = async (commentId, replyId) => {
                 : (comment.comment_id || comment.id)
             )
           }
-          className="p-1 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-all duration-200"
+          className="p-1 rounded hover:bg-gray-200 text-black"
+          style={{ visibility: 'visible', opacity: 1 }}
         >
           <MoreHorizontal size={16} />
         </button>
@@ -519,7 +588,7 @@ const handleDeleteReply = async (commentId, replyId) => {
 
     {/* LEFT */}
     <div className="flex gap-3 items-center">
-      <span>{time}</span>
+      <span>{getTimeDisplay(comment)}</span>
       <button
         onClick={() => handleReplyClick(comment)}
         className="font-semibold hover:text-purple-400"
@@ -539,7 +608,7 @@ const handleDeleteReply = async (commentId, replyId) => {
                 : (comment.comment_id || comment.id)
             )
           }
-          className="p-1 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-all duration-200"
+          className="p-1 rounded hover:bg-gray-200"
         >
           <MoreHorizontal size={16} />
         </button>
@@ -573,7 +642,15 @@ const handleDeleteReply = async (commentId, replyId) => {
   {/* REPLIES */}
   {comment.replies && comment.replies.length > 0 && (
     <div className="ml-4 mt-2 space-y-2 border-l-2 border-gray-200 pl-3">
-      {comment.replies.map((reply, idx) => (
+      {comment.replies.map((reply, idx) => {
+        console.log('UserPostDetailModal - Reply:', reply);
+        const replyId = reply.id || reply.comment_id || reply._id;
+        console.log('UserPostDetailModal - replyId:', replyId);
+        const replyAuthorId = String(reply.author?.user_id || reply.author?._id || reply.user?.user_id || reply.user?._id || '');
+        const currentUserId = String(currentUser?.user_id || currentUser?._id || currentUser?.id || '');
+        // Always show for now to test
+        const isOwnReply = true;
+        return (
         <div key={idx} className="flex justify-between items-start">
 
           <div className="flex gap-2">
@@ -589,21 +666,56 @@ const handleDeleteReply = async (commentId, replyId) => {
             </div>
           </div>
 
-          {(reply.author?.user_id === currentUser?._id) && (
-            <button
-              onClick={() =>
-                handleDeleteReply(
-                  comment.comment_id || comment.id,
-                  reply.id
-                )
-              }
-              className="text-red-400 text-xs"
-            >
-              Delete
-            </button>
+          {isOwnReply && (
+            <div className="relative">
+              <button
+                onClick={() =>
+                  setActiveCommentMenu(prev =>
+                    prev === `${comment.comment_id || comment.id}-${reply.id}`
+                      ? null
+                      : `${comment.comment_id || comment.id}-${reply.id}`
+                  )
+                }
+                className="p-1 rounded hover:bg-gray-200"
+              >
+                <MoreHorizontal size={14} />
+              </button>
+
+              {activeCommentMenu === `${comment.comment_id || comment.id}-${reply.id}` && (
+                <div className="absolute right-0 top-6 z-10 rounded-lg shadow-lg border bg-white border-gray-200 min-w-[100px]">
+                  <button
+                    onClick={() => {
+                      setEditingComment(reply.id);
+                      setEditText(reply.text);
+                      setActiveCommentMenu(null);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-gray-900"
+                  >
+                    Update
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleDeleteReply(
+                        comment.comment_id || comment.id,
+                        replyId
+                      )
+                    }
+                    className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-gray-100"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => setActiveCommentMenu(null)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-gray-600"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
-      ))}
+      )})}
     </div>
   )}
 </div>

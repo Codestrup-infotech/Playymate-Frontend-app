@@ -81,14 +81,28 @@ function VerificationBadge({ status }) {
   return <XCircle size={14} className="text-gray-500 inline ml-1" />;
 }
 
+// function StatBox({ value, label, isDark, onClick }) {
+//   return (
+//     <div 
+//       className={`text-center ${onClick ? "cursor-pointer hover:opacity-80" : ""}`}
+//       onClick={onClick}
+//     >
+//       <p className={`text-2xl font-medium font-Poppins ${isDark ? "text-white " : "text-black "}`}>{value ?? 0}</p>
+//       <p className={`text-sm font-Poppins mt-1 ${isDark ? "text-white " : "text-slate-800 "}`}>{label}</p>
+//     </div>
+//   );
+// }
+
 function StatBox({ value, label, isDark, onClick }) {
   return (
-    <div 
-      className={`text-center ${onClick ? "cursor-pointer hover:opacity-80" : ""}`}
+    <div
       onClick={onClick}
+      className="flex items-center gap-1 cursor-pointer"
     >
-      <p className={`text-2xl font-medium font-Poppins ${isDark ? "text-white " : "text-black "}`}>{value ?? 0}</p>
-      <p className={`text-sm font-Poppins mt-1 ${isDark ? "text-white " : "text-slate-800 "}`}>{label}</p>
+      <span className={`font-semibold ${isDark ? "text-white" : "text-black"}`}>
+        {value ?? 0}
+      </span>
+      <span className="text-gray-800">{label}</span>
     </div>
   );
 }
@@ -451,8 +465,10 @@ export default function UserProfilePage() {
             )}
           </div>
           
-          <div className="flex mt-5 flex-col md:flex-row gap-6">
+          <div className="flex mt-5 flex-col md:flex-row gap-10">
             {/* Profile Image with Story Ring */}
+
+            <div className="flex flex-col"> 
             <div className="flex-shrink-0">
               <UserStory 
                 userId={profileData._id} 
@@ -460,15 +476,22 @@ export default function UserProfilePage() {
                 isOwnProfile={isOwnProfile}
               />
               {profileData.is_verified && (
-                <div className="absolute bottom-1 right-1 bg-purple-600 rounded-full p-1">
+                <div className="absolute bottom-1 right-1 bg-purple-600  rounded-full p-1">
                   <ShieldCheck size={16} className="text-white" />
                 </div>
               )}
             </div>
-            
-
+             {/* Profile Main Type Badge */}
+              {profileData.profile_main_type?.value && (
+                <div className="mt-2">
+                  <span className="px-6 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-[#EF3AFF]  to-[#FF8319] text-white ">
+                    {capitalize(profileData.profile_main_type.value)}
+                  </span>
+                </div>
+              )}
+</div>
             {/* Profile Info */}
-            <div className="flex-1">
+            <div className="flex-1 ">
 
               
               <div className="flex items-center gap-3 ">
@@ -490,34 +513,13 @@ export default function UserProfilePage() {
                 @ {profileData.username || "username"}
               </p>
 
-              {/* Profile Main Type Badge */}
-              {profileData.profile_main_type?.value && (
-                <div className="mt-1">
-                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-orange-500 text-white ">
-                    {capitalize(profileData.profile_main_type.value)}
-                  </span>
-                </div>
-              )}
+             
 
 
 
-              {/* Location */}
-              {location.display_text && (
-                <div className={`flex items-center gap-1  mb-1 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                  <MapPin size={14} />
-                  <span className="text-sm">{location.display_text}</span>
-                </div>
-              )}
-
-              {/* Bio */} 
-              {profileData.bio && (
-                <p className={`mb-4 lg:pl-4 underline ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                  {profileData.bio}
-                </p>
-              )}
-
+             
               {/* Stats */}
-              <div className="flex gap-6 mb-4">
+              <div className="flex justify-start items-center gap-6 py-2">
                 <StatBox value={stats?.posts_count} label="Posts" isDark={isDark} />
                 <StatBox 
                   value={stats?.followers_count} 
@@ -538,6 +540,26 @@ export default function UserProfilePage() {
                   }}
                 />
               </div>
+           
+
+
+            {/* Location */}
+              {location.display_text && (
+                <div className={`flex items-center gap-1  mb-1 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+                  <MapPin size={14} />
+                  <span className="text-sm">{location.display_text}</span>
+                </div>
+              )}
+
+              {/* Bio */} 
+              {profileData.bio && (
+                <p className={`mb-4 lg:pl-4  ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+                  {profileData.bio}
+                </p>
+              )}
+
+
+
 
               {/* Action Buttons */}
               <div className="flex gap-3">
