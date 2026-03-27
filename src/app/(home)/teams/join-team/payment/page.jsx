@@ -1,15 +1,13 @@
 "use client"
 
-import { ArrowLeft, CreditCard, Smartphone, Wallet, Lock, Check, Info, Coins, Gem } from "lucide-react"
-import { useState } from "react"
+import { ArrowLeft, CreditCard, Smartphone, Wallet } from "lucide-react"
 import Link from "next/link"
 
 export default function PaymentPage() {
-  const [selectedMethod, setSelectedMethod] = useState('razorpay')
-
   return (
     <div className="min-h-screen bg-black text-white px-4 py-6 pb-24">
-      {/* Header */}
+
+      {/* HEADER */}
       <div className="flex items-center gap-3 mb-6">
         <Link href="/teams/join-team/onboarding" className="text-white text-xl">
           ←
@@ -17,107 +15,86 @@ export default function PaymentPage() {
         <h1 className="text-xl font-semibold">Payment</h1>
       </div>
 
-      {/* Joining Fee Card */}
-      <div className="relative rounded-[24px] p-[2px] mb-6 bg-gradient-to-r from-pink-500 via-purple-500 to-orange-400">
-        <div className="bg-zinc-900 rounded-[22px] p-6 text-center">
-          <p className="text-sm text-zinc-400 mb-1">Joining Fee</p>
-          <p className="text-4xl font-bold text-white mb-1">₹499</p>
-          <p className="text-sm text-zinc-500">Lorum Ipsum · Monthly</p>
+      {/* STEP BAR */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="h-1 flex-1 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"></div>
+          <div className="h-1 flex-1 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"></div>
+          <div className="h-1 flex-1 rounded-full bg-zinc-800"></div>
+        </div>
+
+        <div className="flex justify-between text-sm">
+          <span className="text-zinc-500">Onboarding</span>
+          <span className="text-pink-500 font-medium">Payment</span>
+          <span className="text-zinc-500">Success</span>
         </div>
       </div>
 
-      {/* Choose Payment Method Title */}
-      <h3 className="font-medium text-lg mb-4 text-zinc-300">Choose Payment Method</h3>
-
-      {/* Payment Options */}
-      <div className="space-y-3 mb-6">
-        {/* Razorpay Option */}
-        <button 
-          onClick={() => setSelectedMethod('razorpay')}
-          className={`w-full flex items-center justify-between p-4 rounded-[20px] transition-all ${
-            selectedMethod === 'razorpay' 
-              ? 'bg-zinc-800 border-2 border-pink-500 shadow-lg shadow-pink-500/20' 
-              : 'bg-zinc-900/80 border-2 border-transparent hover:bg-zinc-800'
-          }`}
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-              <Smartphone size={24} className="text-white" />
-            </div>
-            <div className="text-left">
-              <p className="font-medium text-white">Pay via Razorpay</p>
-              <p className="text-xs text-zinc-400">UPI, Cards, Net Banking</p>
-            </div>
+      {/* PAYMENT SUMMARY */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 mb-6">
+        <h3 className="font-semibold mb-4">Payment Summary</h3>
+        
+        <div className="space-y-3">
+          <div className="flex justify-between text-sm">
+            <span className="text-zinc-400">Team Name</span>
+            <span>Thunder Strikers</span>
           </div>
-          <div className="text-right">
-            <p className="text-lg text-zinc-400">₹499</p>
+          <div className="flex justify-between text-sm">
+            <span className="text-zinc-400">Joining Fee</span>
+            <span>$50.00</span>
           </div>
-        </button>
-
-        {/* Gold Coins Option - Featured/Highlighted */}
-        <button 
-          onClick={() => setSelectedMethod('gold')}
-          className={`w-full flex items-center justify-between p-4 rounded-[20px] transition-all ${
-            selectedMethod === 'gold' 
-              ? 'bg-zinc-800 border-2 border-pink-500 shadow-lg shadow-pink-500/30' 
-              : 'bg-zinc-900/80 border-2 border-transparent hover:bg-zinc-800'
-          }`}
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center">
-              <Coins size={24} className="text-white" />
-            </div>
-            <div className="text-left">
-              <p className="font-medium text-white">Pay with Gold Coins</p>
-              <p className="text-xs text-orange-400">Get 20% discount</p>
+          <div className="flex justify-between text-sm">
+            <span className="text-zinc-400">Processing Fee</span>
+            <span>$1.50</span>
+          </div>
+          <div className="border-t border-zinc-800 pt-3 mt-3">
+            <div className="flex justify-between font-semibold">
+              <span>Total</span>
+              <span className="text-pink-500">$51.50</span>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-yellow-400 flex items-center gap-1">
-              399 <Coins size={16} className="text-yellow-400" />
-            </p>
-            <p className="text-xs text-zinc-500 line-through">₹499</p>
-          </div>
-        </button>
-
-        {/* Diamonds Option */}
-        <button 
-          onClick={() => setSelectedMethod('diamonds')}
-          className={`w-full flex items-center justify-between p-4 rounded-[20px] transition-all ${
-            selectedMethod === 'diamonds' 
-              ? 'bg-zinc-800 border-2 border-pink-500 shadow-lg shadow-pink-500/20' 
-              : 'bg-zinc-900/80 border-2 border-transparent hover:bg-zinc-800'
-          }`}
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-              <Gem size={24} className="text-white" />
-            </div>
-            <div className="text-left">
-              <p className="font-medium text-white">Pay with Diamonds</p>
-              <p className="text-xs text-zinc-400">Full payment with diamonds</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-cyan-400 flex items-center gap-1">
-              250 <Gem size={16} className="text-cyan-400" />
-            </p>
-          </div>
-        </button>
+        </div>
       </div>
 
-      {/* Info Card */}
-      <div className="bg-zinc-900/80 rounded-2xl p-4 mb-6 flex items-start gap-3">
-        <Info size={20} className="text-zinc-400 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-zinc-400 leading-relaxed">
-          Gold coins give you a discount on the join fee. Diamond coins can cover the entire payment. Earn coins by participating in events and inviting friends!
-        </p>
+      {/* PAYMENT METHODS */}
+      <div className="space-y-4 mb-6">
+        <h3 className="font-semibold">Select Payment Method</h3>
+        
+        <label className="flex items-center gap-4 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 cursor-pointer hover:border-pink-500 transition">
+          <input type="radio" name="payment" className="w-5 h-5 text-pink-500 focus:ring-pink-500" defaultChecked />
+          <CreditCard size={24} className="text-zinc-400" />
+          <div>
+            <p className="font-medium">Credit/Debit Card</p>
+            <p className="text-xs text-zinc-500">Visa, Mastercard, Amex</p>
+          </div>
+        </label>
+
+        <label className="flex items-center gap-4 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 cursor-pointer hover:border-pink-500 transition">
+          <input type="radio" name="payment" className="w-5 h-5 text-pink-500 focus:ring-pink-500" />
+          <Smartphone size={24} className="text-zinc-400" />
+          <div>
+            <p className="font-medium">UPI</p>
+            <p className="text-xs text-zinc-500">Google Pay, PhonePe, Paytm</p>
+          </div>
+        </label>
+
+        <label className="flex items-center gap-4 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 cursor-pointer hover:border-pink-500 transition">
+          <input type="radio" name="payment" className="w-5 h-5 text-pink-500 focus:ring-pink-500" />
+          <Wallet size={24} className="text-zinc-400" />
+          <div>
+            <p className="font-medium">Wallet</p>
+            <p className="text-xs text-zinc-500">Pay from your wallet balance</p>
+          </div>
+        </label>
       </div>
 
-      {/* Bottom CTA Button */}
-      <div className="fixed bottom-6 left-4 right-4">
-        <Link href="/teams/join-team/success" className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-orange-400 py-4 rounded-[28px] font-semibold text-white shadow-lg shadow-pink-500/30 block text-center">
-          Select a Payment Method
+      {/* PAY BUTTON */}
+      <div className="fixed bottom-4 inset-x-4 flex justify-center">
+        <Link
+          href="/teams/join-team/success"
+          className="px-8 py-2.5 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-sm font-medium text-white flex items-center justify-center shadow-md"
+        >
+          Pay $51.50
         </Link>
       </div>
     </div>

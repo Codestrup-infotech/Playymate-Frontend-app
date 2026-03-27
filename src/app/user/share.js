@@ -307,12 +307,15 @@ export async function updateCollection(collectionId, updates) {
  * @returns {Promise<{ removed: boolean }>}
  */
 export async function removeFromCollection(collectionId, bookmarkId) {
+  console.log("[removeFromCollection] API Request:", { collectionId, bookmarkId });
   const res = await fetch(`${BASE_URL}/bookmarks/collections/${collectionId}/remove`, {
     method: "DELETE",
     headers: getAuthHeaders(),
     body: JSON.stringify({ bookmark_id: bookmarkId }),
   });
-  return handleResponse(res);
+  const result = await handleResponse(res);
+  console.log("[removeFromCollection] API Response:", result);
+  return result;
 }
 
 /**
