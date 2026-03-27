@@ -26,7 +26,9 @@ import {
   ArrowLeft,
   UserPlus,
   UserMinus,
-  ChevronDown
+  ChevronDown,
+  MoreHorizontal,
+  Flag
 } from "lucide-react";
 
 
@@ -141,6 +143,9 @@ export default function UserProfilePage() {
   
   // Share popup state
   const [showSharePopup, setShowSharePopup] = useState(false);
+  
+  // Options popup state
+  const [showOptions, setShowOptions] = useState(false);
 
   // Helper function to check if string is a valid MongoDB ObjectId
   const isObjectId = (str) => {
@@ -270,6 +275,14 @@ export default function UserProfilePage() {
         console.log("is_own_profile:", data.is_own_profile);
         console.log("username:", data.username);
         console.log("user_id:", data._id);
+        console.log("===================================");
+        
+        // Log profile_main_type specifically
+        console.log("=== PROFILE MAIN TYPE DEBUG ===");
+        console.log("profile_main_type:", data.profile_main_type);
+        console.log("profile_main_type?.value:", data.profile_main_type?.value);
+        console.log("profile_main_type type:", typeof data.profile_main_type);
+        console.log("profile_main_type?.type:", data.profile_main_type?.type);
         console.log("===================================");
         
         setProfile(data);
@@ -411,7 +424,11 @@ export default function UserProfilePage() {
 
         
         {/* Profile Header */}
-        <div className={`${isDark ? "bg-gray-800" : "bg-white shadow-gray-300 "} rounded-2xl  lg:px-4 lg:py-6 p-1 py-1 mb-6 shadow-sm`}>
+
+          
+           
+
+        <div className={`${isDark ? "bg-gray-800" : "bg-white shadow-gray-300 border "} rounded-2xl  lg:px-4 lg:py-6 p-1 py-1 mb-6 shadow-sm`}>
 
             {/* <button 
             onClick={() => router.back()}
@@ -420,8 +437,21 @@ export default function UserProfilePage() {
             <ArrowLeft size={20} className={isDark ? "text-white" : "text-gray-800"} />
           </button> */}
 
+
+ {/* Cover Photo Section */}
+          <div className="relative inset-0 h-52 w-full overflow-hidden">
+            {profileData.cover_photo ? (
+              <img 
+                src={profileData.cover_photo} 
+                alt="Cover" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-l from-[#FF8319] to-[#EF3AFF]" />
+            )}
+          </div>
           
-          <div className="flex flex-col md:flex-row gap-6">
+          <div className="flex mt-5 flex-col md:flex-row gap-6">
             {/* Profile Image with Story Ring */}
             <div className="flex-shrink-0">
               <UserStory 
@@ -435,6 +465,7 @@ export default function UserProfilePage() {
                 </div>
               )}
             </div>
+            
 
             {/* Profile Info */}
             <div className="flex-1">
@@ -445,13 +476,28 @@ export default function UserProfilePage() {
                   {profileData.full_name || "Unknown User"}
                 </h1>
                 <VerificationBadge status={profileData.is_verified} />
-
+                <button 
+                  onClick={() => setShowOptions(true)}
+                  className={`p-1 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
+                >
+                  <MoreHorizontal size={20} className={isDark ? "text-gray-400" : "text-gray-500"} />
+                </button>
               </div>
+              
+             
               
               <p className={`text-sm mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
                 @ {profileData.username || "username"}
               </p>
 
+              {/* Profile Main Type Badge */}
+              {profileData.profile_main_type?.value && (
+                <div className="mt-1">
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-orange-500 text-white ">
+                    {capitalize(profileData.profile_main_type.value)}
+                  </span>
+                </div>
+              )}
 
 
 
@@ -463,7 +509,7 @@ export default function UserProfilePage() {
                 </div>
               )}
 
-              {/* Bio */}
+              {/* Bio */} 
               {profileData.bio && (
                 <p className={`mb-4 lg:pl-4 underline ${isDark ? "text-gray-300" : "text-gray-700"}`}>
                   {profileData.bio}
@@ -542,6 +588,7 @@ export default function UserProfilePage() {
             </div>
           </div>
         </div>
+
 
         {/* Interests - Only show for own profile */}
         {isOwnProfile && flattenedInterests.length > 0 && (
@@ -738,6 +785,46 @@ export default function UserProfilePage() {
         thumbnail={profileData?.profile_image_url}
         title={profileData?.full_name ? `@${profileData.username} - ${profileData.full_name}` : `@${profileData?.username}`}
       />
+
+      {/* Options Popup */}
+      {showOptions && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          {/* Overlay */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowOptions(false)}
+          />
+
+          {/* Popup */}
+          <div className="relative w-[280px] bg-white rounded-xl overflow-hidden shadow-lg">
+            {/* Report */}
+            <button className="flex items-center justify-center gap-2 w-full py-4 text-red-500 border-b">
+              <Flag size={18} />
+              Report
+            </button>
+
+            {/* About this account */}
+            <button 
+              onClick={() => {
+                setShowOptions(false);
+                router.push(`/home/profile/${userId}`);
+              }}
+              className="flex items-center justify-center gap-2 w-full py-4 border-b"
+            >
+              <User size={18} />
+              About this account
+            </button>
+
+            {/* Cancel */}
+            <button
+              onClick={() => setShowOptions(false)}
+              className="w-full py-4 text-gray-600"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

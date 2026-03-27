@@ -22,25 +22,22 @@ export default function AccountPrivacyPage() {
   const [message, setMessage] = useState({ type: "", text: "" });
   const [savingField, setSavingField] = useState(null);
 
-  // Fetch current user and privacy settings
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
-        // Get current user
+
         const meRes = await userService.getMe();
         console.log('=== GET /users/me RESPONSE ===');
         console.log('Full response:', meRes);
         console.log('Response data:', meRes?.data);
         const userData = meRes?.data?.data || meRes?.data;
         console.log('User data:', userData);
-        
+
         if (userData && userData._id) {
           setCurrentUserId(userData._id);
           console.log('Current user ID:', userData._id);
-          
-          // Get privacy settings
+
           try {
             console.log('=== GET /users/{userId}/privacy REQUEST ===');
             console.log('Request URL:', `/users/${userData._id}/privacy`);
@@ -54,7 +51,7 @@ export default function AccountPrivacyPage() {
             console.log('Privacy data object:', privacyData);
             console.log('Privacy inner object:', privacyData.privacy);
             const innerPrivacy = privacyData.privacy || privacyData;
-            
+
             if (innerPrivacy) {
               setPrivacySettings({
                 profile_visibility: innerPrivacy.profile_visibility || "public",
@@ -77,11 +74,9 @@ export default function AccountPrivacyPage() {
     fetchData();
   }, []);
 
-  // Auto-save on visibility change
   const handleVisibilityChange = async (field, value) => {
     if (!currentUserId || saving) return;
 
-    // Optimistic update
     const oldValue = privacySettings[field];
     setPrivacySettings((prev) => ({
       ...prev,
@@ -113,8 +108,7 @@ export default function AccountPrivacyPage() {
       console.log('Updated privacy:', updateRes?.data?.data?.privacy);
 
       setMessage({ type: "success", text: `${getFieldLabel(field)} updated successfully!` });
-      
-      // Clear message after 2 seconds
+
       setTimeout(() => setMessage({ type: "", text: "" }), 2000);
     } catch (err) {
       console.error('=== ERROR UPDATING PRIVACY ===');
@@ -122,8 +116,7 @@ export default function AccountPrivacyPage() {
       console.error('Error response:', err?.response);
       console.error('Error status:', err?.response?.status);
       console.error('Error data:', err?.response?.data);
-      
-      // Revert on error
+
       setPrivacySettings((prev) => ({
         ...prev,
         [field]: oldValue,
@@ -135,9 +128,8 @@ export default function AccountPrivacyPage() {
     }
   };
 
-  // Helper to get field label
   const getFieldLabel = (field) => {
-    switch(field) {
+    switch (field) {
       case 'profile_visibility': return 'Profile Visibility';
       case 'performance_visibility': return 'Performance Visibility';
       case 'social_visibility': return 'Social Visibility';
@@ -145,40 +137,105 @@ export default function AccountPrivacyPage() {
     }
   };
 
-  // Render visibility option button
-  const renderOptionButton = (field, option) => {
-    const isSelected = privacySettings[field] === option.value;
-    const isSaving = savingField === field;
-    const Icon = option.icon;
+  const getSelectedIndex = (field) => {
+    return VISIBILITY_OPTIONS.findIndex((o) => o.value === privacySettings[field]);
+  };
+
+  const renderToggleGroup = (field) => {
+    const selectedIndex = getSelectedIndex(field);
+    const isSavingThis = savingField === field;
+
+    // Pill left position and width based on selectedIndex (3 equal slots inside padding 4px)
+    const pillStyles = [
+      { left: "4px", width: "calc(33.333% - 5px)" },
+      { left: "calc(33.333% + 1px)", width: "calc(33.333% - 2px)" },
+      { left: "calc(66.666% - 2px)", width: "calc(33.333% - 5px)" },
+    ];
 
     return (
-      <button
-        key={option.value}
-        onClick={() => handleVisibilityChange(field, option.value)}
-        disabled={saving}
-        className={`flex-1 p-3 rounded-xl border-2 transition-all ${
-          isSelected
-            ? "border-orange-500 bg-orange-50"
-            : "border-gray-200 hover:border-gray-300"
-        } ${saving ? "opacity-50" : ""}`}
-      >
-        <div className="flex flex-col items-center gap-1">
-          {isSaving ? (
-            <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
-          ) : (
-            <Icon
-              className={`w-5 h-5 ${isSelected ? "text-orange-500" : "text-gray-400"}`}
-            />
-          )}
-          <span
-            className={`text-sm font-medium ${
-              isSelected ? "text-orange-600" : "text-gray-600"
-            }`}
-          >
-            {option.label}
-          </span>
-        </div>
-      </button>
+
+
+
+
+      // <div className="relative flex items-center bg-gray-100  rounded-full p-1" style={{ minHeight: "7px" }}>
+     <div className="w-full overflow-x-auto flex xl:justify-center lg:justify-center scrollbar-hide">
+  <div className="relative flex items-center bg-gray-100 rounded-full px-1.5 py-0.5 min-w-[420px]">
+        {/* Sliding gradient pill */}
+
+
+
+        <div
+          className="absolute top-1 bottom-1 rounded-full transition-all duration-350 ease-in-out"
+          style={{
+          background: "linear-gradient(to right, #EF3AFF, #FF8319)",
+           boxShadow: "0 4px 14px rgba(239,58,255,0.4)",
+            left: pillStyles[selectedIndex].left,
+            width: pillStyles[selectedIndex].width,
+            transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+            transitionDuration: "350ms",
+          }}
+        />
+
+        {VISIBILITY_OPTIONS.map((option, index) => {
+          const isSelected = privacySettings[field] === option.value;
+          const Icon = option.icon;
+
+          return (
+            <button
+              key={option.value}
+              onClick={() => handleVisibilityChange(field, option.value)}
+              disabled={saving}
+              className={`relative z-10 flex items-center justify-center gap-2 px-4 min-w-[130px]  py-2 rounded-full transition-none ${
+                saving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+              }`}
+            >
+              {/* White circle with icon */}
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{
+                  background: isSelected ? "#ffffff" : "#e0e0e0",
+                  transition: "background 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              >
+                {isSavingThis && isSelected ? (
+                  <Loader2
+                    className="w-5 h-5 animate-spin"
+                    style={{ color: "#4fa8e8" }}
+                  />
+                ) : (
+                  <Icon
+                    className="w-5 h-5"
+                    style={{
+                      color: isSelected ? "#4fa8e8" : "#9ca3af",
+                      transition: "color 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Label */}
+              <span
+                className="text-xs font-medium leading-none"
+                style={{
+                  color: isSelected ? "#ffffff" : "#6b7280",
+                  transition: "color 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              >
+                {option.label}
+              </span>
+            </button>
+          );
+        })}
+
+</div> 
+
+
+      </div>
+
+
+
+
+
     );
   };
 
@@ -191,9 +248,9 @@ export default function AccountPrivacyPage() {
   }
 
   return (
-    <div className="w-full max-w-2xl">
+    <div className="h-full pb-10 px-3  overflow-y-auto">
       {/* Header */}
-      <h1 className="text-xl font-semibold mb-6">Account privacy</h1>
+      {/* <h1 className="text-xl font-semibold mb-6">Account privacy</h1> */}
 
       {/* Success/Error Message */}
       {message.text && (
@@ -210,7 +267,7 @@ export default function AccountPrivacyPage() {
       )}
 
       {/* Profile Visibility Section */}
-      <div className="border border-gray-300 rounded-2xl p-5 mb-6">
+      <div className="border border-gray-200 bg-gray-50 rounded-2xl p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-semibold">Profile Visibility</h2>
@@ -219,15 +276,11 @@ export default function AccountPrivacyPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          {VISIBILITY_OPTIONS.map((option) =>
-            renderOptionButton("profile_visibility", option)
-          )}
-        </div>
+        {renderToggleGroup("profile_visibility")}
       </div>
 
       {/* Performance Visibility Section */}
-      <div className="border border-gray-300 rounded-2xl p-5 mb-6">
+      <div className="border border-gray-200 bg-gray-50 rounded-2xl p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-semibold">Performance Visibility</h2>
@@ -236,15 +289,11 @@ export default function AccountPrivacyPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          {VISIBILITY_OPTIONS.map((option) =>
-            renderOptionButton("performance_visibility", option)
-          )}
-        </div>
+        {renderToggleGroup("performance_visibility")}
       </div>
 
       {/* Social Visibility Section */}
-      <div className="border border-gray-300 rounded-2xl p-5 mb-6">
+      <div className="border border-gray-200 bg-gray-50 rounded-2xl p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-semibold">Social Visibility</h2>
@@ -253,11 +302,7 @@ export default function AccountPrivacyPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          {VISIBILITY_OPTIONS.map((option) =>
-            renderOptionButton("social_visibility", option)
-          )}
-        </div>
+        {renderToggleGroup("social_visibility")}
       </div>
 
       {/* Description */}

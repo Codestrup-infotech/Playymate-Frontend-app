@@ -683,7 +683,7 @@ setPostData(prev => ({
               const isMenuOpen = openMenuId === commentId;
               const isEditing = editingComment === commentId;
               
-              const commentAuthorId = String(comment.author?.user_id || comment.user?.user_id || '');
+              const commentAuthorId = String(comment.author?.user_id || comment.author?._id || comment.user?.user_id || comment.user?._id || '');
               const postAuthorId    = String(postData.author?.user_id || postData.author?._id || postData.author?.id || '');
               const currentUserId   = String(currentUser?._id || currentUser?.user_id || currentUser?.id || '');
               

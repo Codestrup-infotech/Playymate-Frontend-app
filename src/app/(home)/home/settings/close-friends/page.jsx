@@ -52,13 +52,10 @@ export default function CloseFriendsPage() {
             }
           }
           
-          // Combine followers and following into one list
-          const allUsers = [
-            ...followersData,
-            ...followingData
-          ];
+          // Only use followers - API only allows adding followers as close friends
+          const allUsers = followersData;
           
-          console.log("All users combined:", allUsers);
+          console.log("Followers only:", allUsers);
           
           // Remove duplicates based on _id and filter out users without username
           const uniqueUsers = allUsers.filter((user, index, self) => {
@@ -126,10 +123,9 @@ setSelected(closeFriendIds);
           
           console.log("=== CLOSE FRIENDS LIST ===");
           console.log("Total close friends:", closeFriendsData.length);
-          console.log("Close friend usernames:", closeFriendUsernames);
+          console.log("Close friend IDs:", closeFriendIds);
           console.log("Close friends full data:", closeFriendsData);
           console.log("=========================");
-          setSelected(closeFriendUsernames);
         } catch (cfErr) {
           console.error("Error fetching close friends:", cfErr);
         }
@@ -145,30 +141,37 @@ setSelected(closeFriendIds);
   }, []);
 
   // Toggle user selection and save to API
- const toggleUser = async (user) => {
-  const userId = user._id;
-  const username = user.username;
+  const toggleUser = async (user) => {
+    const userId = user._id;
+    const username = user.username;
 
-  if (!userId || !username) return;
+    if (!userId || !username) return;
 
-  const isCurrentlySelected = selected.includes(userId);
+    const isCurrentlySelected = selected.includes(userId);
 
-  setSaving(true);
+    setSaving(true);
 
-  try {
-    if (isCurrentlySelected) {
-      await closeFriendsService.removeFromCloseFriends(username);
-      setSelected(selected.filter(id => id !== userId));
-    } else {
-      await closeFriendsService.addToCloseFriends(username);
-      setSelected([...selected, userId]);
+    try {
+      if (isCurrentlySelected) {
+        await closeFriendsService.removeFromCloseFriends(username);
+        setSelected(selected.filter(id => id !== userId));
+      } else {
+        await closeFriendsService.addToCloseFriends(username);
+        setSelected([...selected, userId]);
+      }
+    } catch (err) {
+      console.error("Error toggling close friend:", err);
+      
+      // Handle specific error: USER_NOT_A_FOLLOWER
+      if (err?.response?.data?.error_code === 'USER_NOT_A_FOLLOWER') {
+        alert('This user is not your follower. You can only add followers as close friends.');
+      } else {
+        alert('Failed to update close friends. Please try again.');
+      }
+    } finally {
+      setSaving(false);
     }
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setSaving(false);
-  }
-};
+  };
 
   // Filter users by search query
   const filteredUsers = users.filter((user) => {
@@ -182,7 +185,7 @@ setSelected(closeFriendIds);
   // Sort users: close friends first, then others
   const sortedUsers = [...filteredUsers].sort((a, b) => {
     const aIsCloseFriend = selected.includes(a._id);
-const bIsCloseFriend = selected.includes(b._id);
+    const bIsCloseFriend = selected.includes(b._id);
     if (aIsCloseFriend && !bIsCloseFriend) return -1;
     if (!aIsCloseFriend && bIsCloseFriend) return 1;
     return 0;
@@ -197,9 +200,7 @@ const bIsCloseFriend = selected.includes(b._id);
 
       <p className="text-sm text-gray-500 mb-4">
         We don't send notifications when you edit your close friends list.
-        <span className="text-blue-500 ml-1 cursor-pointer">
-          How it works.
-        </span>
+       
       </p>
 
       {/* Search */}
@@ -255,7 +256,7 @@ const bIsCloseFriend = selected.includes(b._id);
                 <button
                   className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-200 ${
                     isSelected
-                      ? "bg-orange-500 border-orange-500"
+                      ? "bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF] border-none "
                       : "border-gray-300 hover:border-gray-400"
                   }`}
                   onClick={(e) => {

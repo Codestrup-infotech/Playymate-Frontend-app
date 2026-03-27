@@ -76,15 +76,32 @@ function VerificationBadge({ status }) {
   return <XCircle size={14} className="text-gray-500 inline ml-1" />;
 }
 
+// function StatBox({ value, label, isDark, onClick }) {
+//   return (
+//     <div 
+//       className={`text-center ${onClick ? "cursor-pointer hover:opacity-80" : ""}`}
+//       onClick={onClick}
+//     >
+//       <p className={`text-2xl font-medium font-Poppins ${isDark ? "text-white " : "text-black "}`}>{value ?? 0}</p>
+//       <p className={`text-sm font-Poppins mt-1 ${isDark ? "text-white " : "text-slate-800 "}`}>{label}</p>
+//     </div>
+//   );
+// }
 function StatBox({ value, label, isDark, onClick }) {
   return (
-    <div 
-      className={`text-center ${onClick ? "cursor-pointer hover:opacity-80" : ""}`}
+    <span
       onClick={onClick}
+      className={`flex items-center gap-1 ${
+        onClick ? "cursor-pointer hover:opacity-80" : ""
+      }`}
     >
-      <p className={`text-2xl font-medium font-Poppins ${isDark ? "text-white " : "text-black "}`}>{value ?? 0}</p>
-      <p className={`text-sm font-Poppins mt-1 ${isDark ? "text-white " : "text-slate-800 "}`}>{label}</p>
-    </div>
+      <span className={`font-semibold ${isDark ? "text-white" : "text-black"}`}>
+        {value ?? 0}
+      </span>
+      <span className={`${isDark ? "text-white" : "text-slate-800"}`}>
+        {label}
+      </span>
+    </span>
   );
 }
 
@@ -652,11 +669,11 @@ export default function ProfilePage() {
 
 
               {/* stats */}
-              <div
-                className={`flex gap-6 py-2.5 mt-4 px-5 rounded-xl mb-4 w-fit border border-slate-100 shadow-md text-blue-900 ${
-                  isDark ? "bg-[#1a1a38]" : "bg-gray-200"
-                }`}
-              >
+             <div
+  className={`flex items-center gap-6 py-2 mt-4  w-fit ${
+    isDark ? "" : ""
+  }`}
+>
                 <StatBox value={stats?.posts_count} label="Posts" isDark={isDark} />
                 <StatBox 
                   value={stats?.followers_count} 
@@ -682,7 +699,7 @@ export default function ProfilePage() {
               {bio ? (
                 <div
                   onClick={() => is_own_profile && setShowBioPopup(true)}
-                  className={`text-sm leading-relaxed cursor-pointer hover:opacity-80 ${isDark ? "text-gray-300" : "text-gray-600"} ${is_own_profile ? "border-dashed w-80 border border-gray-500/30 p-2 rounded-xl" : ""}`}
+                  className={`text-sm leading-relaxed cursor-pointer hover:opacity-80 ${isDark ? "text-gray-300" : "text-gray-600"} ${is_own_profile ? "  " : ""}`}
                 >
                   {bio}
                 </div>
@@ -697,15 +714,15 @@ export default function ProfilePage() {
                 <p className="text-sm text-gray-500 italic">No bio yet</p>
               )}
 
-              <p className="text-sm text-gray-500 italic mt-2 flex items-center text-center rounded-md shadow-2xl">
-                <MapPin size={14} className="text-slate-500 flex-shrink-0" />
+              <p className="text-sm text-gray-500  mt-2 flex items-center text-center rounded-md shadow-2xl">
+                <MapPin size={14} className="text-[#F65B98] flex-shrink-0" />
                 <span className="ml-2">
                   {location || "No location added"}
                 </span>
               </p>
 
-              <div className="border border-orange-300 w-96 mt-3 py-3 flex justify-center items-center text-center rounded-md">
-                My Teams
+              <div className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF] text-white w-56 mt-3 py-3 flex justify-center items-center text-center rounded-md ">
+                Create Teams
               </div>
             </div>
           </div>

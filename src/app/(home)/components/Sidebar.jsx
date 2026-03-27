@@ -44,6 +44,7 @@ function MoreMenuPopup({ isOpen, onClose, anchorRef, isDark, onLogout, onTheme, 
 
   const sections = [
     {
+       label: "Account",
       items: [
         { icon: <Settings size={18} />, label: "Settings", path: "/home/settings" },
         // { icon: <Activity size={18} />, label: "Your Activity", path: "/home/activity" },
@@ -51,19 +52,11 @@ function MoreMenuPopup({ isOpen, onClose, anchorRef, isDark, onLogout, onTheme, 
         { icon: <Bell size={18} />, label: "Notifications", path: "/home/notifications" },
       ],
     },
-    {
-      label: "Account",
-      items: [
-        // { icon: <UserCheck size={18} />, label: "Switch Account", path: "/home/switch-account" },
-        // { icon: <Shield size={18} />, label: "Privacy & Security", path: "/home/privacy" },
-        { icon: <Eye size={18} />, label: "Close Friends", path: "/home/close-friends" },
-      ],
-    },
+  
     {
       label: "More",
       items: [
-        // { icon: <Flag size={18} />, label: "Report a Problem", path: "/home/report" },
-        // { icon: <Accessibility size={18} />, label: "Accessibility", path: "/home/accessibility" },
+      
         { icon: <Info size={18} />, label: "About", path: "/home/about" },
         {
           icon: theme === "dark" ? <Sun size={18} /> : <Moon size={18} />,
@@ -140,7 +133,7 @@ function MoreMenuPopup({ isOpen, onClose, anchorRef, isDark, onLogout, onTheme, 
         </div>
 
         {/* Sections */}
-        <div className="py-2 max-h-[65vh] overflow-y-auto scrollbar-hide">
+        <div className="py-2 max-h-[65vh]  overflow-y-auto scrollbar-hide">
           {sections.map((section, si) => (
             <div key={si}>
               {/* Divider between sections */}

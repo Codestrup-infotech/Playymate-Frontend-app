@@ -388,17 +388,6 @@ useEffect(() => {
 
   return (
     <>
-      {/* 3 DOT BUTTON */}
-      <div className="absolute top-4 right-4  z-50">
-        <button onClick={() => {
-          console.log('[UserStory] Opening options menu - pausing story');
-          setIsPaused(true);
-          setShowOptions(true);
-        }}>
-          <MoreHorizontal className="text-gray-400" size={24} />
-        </button>
-      </div>
-
       {/* PROFILE IMAGE */}
       <div className="relative">
        <div

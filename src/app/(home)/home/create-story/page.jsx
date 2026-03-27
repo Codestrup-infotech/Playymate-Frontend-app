@@ -53,6 +53,7 @@ export default function CreateStoryPage() {
   // Allow comments and shares (default: true - enabled)
   const [allowComments, setAllowComments] = useState(true);
   const [allowShares, setAllowShares] = useState(true);
+  
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
@@ -574,7 +575,7 @@ if (!dropped || dropped.size === 0) {
     <button
       onClick={() => setState((prev) => !prev)}
       className={`w-11 h-6 flex items-center rounded-full p-[2px] transition duration-300 ${
-        state ? "bg-[#0095f6]" : "bg-gray-300"
+        state ? "bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF]" : "bg-gray-300"
       }`}
     >
       <div
@@ -678,7 +679,7 @@ if (!dropped || dropped.size === 0) {
               <p className="text-[#262626] text-[18px] font-light">Drag photos and videos here</p>
               <button
                 onClick={() => fileInput.current.click()}
-                className="bg-[#0095f6] hover:bg-[#1877f2] text-white text-sm font-semibold px-5 py-2 rounded-lg transition"
+                className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF] text-white text-sm font-semibold px-5 py-2 rounded-lg transition"
               >
                 Select from computer
               </button>
@@ -1128,27 +1129,58 @@ maxLength={50}
   </button>
 
   {advancedOpen && (
-    <div className="px-4 pb-4 space-y-5">
+    <div className="px-4 pb-2 space-y-2">
 
       {/* Visibility Toggle - Public vs Close Friends */}
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col">
-          <span className="text-sm text-[#262626]">Visibility</span>
-          <span className="text-xs text-gray-500">
-            {visibility === "public" ? "Public - Anyone can view" : "Close Friends - Only close friends can view"}
-          </span>
-        </div>
-        <button
-          onClick={() => setVisibility(visibility === "public" ? "close_friends" : "public")}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-            visibility === "close_friends" 
-              ? "bg-green-500 text-white" 
-              : "bg-gray-200 text-gray-700"
-          }`}
-        >
-          {visibility === "public" ? "Public" : "Close Friends"}
-        </button>
-      </div>
+    <div className="flex flex-col gap-2">
+
+  {/* Public Toggle */}
+  <div className="flex items-center justify-between">
+    <div className="flex flex-col">
+      <span className="text-sm text-[#262626]">Public</span>
+      <span className="text-xs text-gray-500">
+        Anyone can view
+      </span>
+    </div>
+
+    <button
+      onClick={() => setVisibility("public")}
+      className={`w-12 h-6 flex items-center rounded-full p-1 transition ${
+        visibility === "public" ? "bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF]" : "bg-gray-300"
+      }`}
+    >
+      <div
+        className={`bg-white w-4 h-4 rounded-full shadow-md transform transition ${
+          visibility === "public" ? "translate-x-6" : "translate-x-0"
+        }`}
+      />
+    </button>
+  </div>
+
+  {/* Close Friends Toggle */}
+  <div className="flex items-center justify-between">
+    <div className="flex flex-col">
+      <span className="text-sm text-[#262626]">Close Friends</span>
+      <span className="text-xs text-gray-500">
+        Only close friends can view
+      </span>
+    </div>
+
+    <button
+      onClick={() => setVisibility("close_friends")}
+      className={`w-12 h-6 flex items-center rounded-full p-1 transition ${
+        visibility === "close_friends" ? "bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF]" : "bg-gray-300"
+      }`}
+    >
+      <div
+        className={`bg-white w-4 h-4 rounded-full shadow-md transform transition ${
+          visibility === "close_friends" ? "translate-x-6" : "translate-x-0"
+        }`}
+      />
+    </button>
+  </div>
+
+</div>
 
       {/* Allow Comments Toggle */}
       <div className="flex items-center justify-between">
@@ -1248,7 +1280,7 @@ maxLength={50}
               {/* Submit button */}
               <button
                 onClick={handleLocationSubmit}
-                className="w-full py-2.5 bg-[#0095f6] hover:bg-[#1877f2] text-white rounded-lg text-sm font-semibold transition"
+                className="w-full py-2.5 bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF] text-white rounded-lg text-sm font-semibold transition"
               >
                 Add Location
               </button>

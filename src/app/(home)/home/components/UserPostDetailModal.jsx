@@ -8,6 +8,7 @@ import { toggleLike } from "@/app/user/homefeed";
 import { getPostShareCount, addBookmark, checkBookmark, getCollections, createCollection, addToCollection } from "@/app/user/share";
 import SharePopup from "@/app/(home)/home/components/sharepopup";
 import ComposeEmojiPicker from "./Composeemojipicker";
+import { MoreHorizontal } from "lucide-react";
 
 // Helper function to format relative time
 function formatRelativeTime(dateString) {
@@ -58,6 +59,10 @@ export default function UserPostDetailModal({
   
   const commentInputRef = useRef(null);
   const isLikedRef = useRef(false);
+
+  const [activeCommentMenu, setActiveCommentMenu] = useState(null);
+  const [editingComment, setEditingComment] = useState(null);
+  const [editText, setEditText] = useState("");
 
   // Fetch like status from API
   const fetchLikeStatus = async (contentId, contentType = "post") => {
@@ -115,6 +120,26 @@ export default function UserPostDetailModal({
         console.log("Share count error:", err);
         setShareCount(0);
       }
+
+      // Fetch comments from API
+    postService.getPostComments(postId, 50)
+  .then((res) => {
+    console.log("RAW COMMENTS API:", res);
+
+    const comments =
+      res?.data?.data?.comments ||   // axios wrapped
+      res?.data?.comments ||         // direct
+      res?.comments ||               // fallback
+      [];
+
+    setPostData(prev => ({
+      ...prev,
+      comments: Array.isArray(comments) ? comments : []
+    }));
+  })
+  .catch(err => {
+    console.log("Comments fetch error:", err);
+  });
     }
   }, [post]);
 
@@ -183,6 +208,7 @@ export default function UserPostDetailModal({
           id: Date.now().toString(),
           text: commentText.trim(),
           author: {
+            user_id: currentUser?._id,
             full_name: currentUser?.full_name || "You",
             username: currentUser?.username || "you",
             profile_image_url: currentUser?.profile_image_url || currentUser?.profile_photos?.[0]?.url || ""
@@ -217,6 +243,7 @@ export default function UserPostDetailModal({
           id: Date.now().toString(),
           text: commentText.trim(),
           author: {
+            user_id: currentUser?._id,
             full_name: currentUser?.full_name || "You",
             username: currentUser?.username || "you",
             profile_image_url: currentUser?.profile_image_url || currentUser?.profile_photos?.[0]?.url || ""
@@ -245,6 +272,67 @@ export default function UserPostDetailModal({
     }
   };
 
+  const handleDeleteComment = async (commentId) => {
+  try {
+    await postService.deleteComment(commentId);
+
+    setPostData(prev => ({
+      ...prev,
+      comments: prev.comments.filter(
+        c => (c.comment_id || c.id) !== commentId
+      ),
+      comments_count: Math.max(0, (prev.comments_count || 1) - 1)
+    }));
+
+    setActiveCommentMenu(null);
+  } catch (err) {
+    console.log("Delete failed:", err);
+  }
+};
+
+const handleUpdateComment = async (commentId) => {
+  if (!editText.trim()) return;
+
+  try {
+    await postService.updateComment(commentId, editText.trim());
+
+    setPostData(prev => ({
+      ...prev,
+      comments: (prev.comments || []).map(c =>
+        (c.comment_id === commentId || c.id === commentId)
+          ? { ...c, text: editText.trim(), edited_at: new Date().toISOString() }
+          : c
+      )
+    }));
+
+    setEditingComment(null);
+    setActiveCommentMenu(null);
+  } catch (err) {
+    console.log("Update failed:", err);
+  }
+};
+
+const handleDeleteReply = async (commentId, replyId) => {
+  try {
+    await postService.deleteComment(replyId);
+
+    setPostData(prev => ({
+      ...prev,
+      comments: prev.comments.map(c => {
+        if ((c.comment_id || c.id) === commentId) {
+          return {
+            ...c,
+            replies: c.replies.filter(r => r.id !== replyId),
+            replies_count: Math.max(0, (c.replies_count || 1) - 1)
+          };
+        }
+        return c;
+      })
+    }));
+  } catch (err) {
+    console.log("Reply delete failed:", err);
+  }
+};
   // Handle share
   const handleShare = () => {
     setShareOpen(true);
@@ -337,6 +425,7 @@ export default function UserPostDetailModal({
                 )}
 
                 {/* COMMENTS LIST */}
+                {console.log("Rendering comments:", postData.comments) || null}
                 {postData.comments && postData.comments.map((comment, i) => {
                   const username =
                     comment.author?.username ||
@@ -348,44 +437,180 @@ export default function UserPostDetailModal({
                   const userPhoto = comment.author?.profile_image_url || comment.user?.profile_image_url || "/loginAvatars/profile.png";
                   const time = formatRelativeTime(comment.created_at);
 
-                  return (
-                    <div key={comment.comment_id || comment.id || i} className="flex gap-3">
-                      <img src={userPhoto} alt={username} className="w-8 h-8 rounded-full object-cover flex-shrink-0"/>
+                  const commentAuthorId = String(comment.author?.user_id || comment.author?._id || '');
+                  const currentUserId = String(currentUser?.user_id || currentUser?._id || '');
+                  const isOwnComment = commentAuthorId === currentUserId && commentAuthorId !== '';
 
-                      <div className="flex-1">
-                        <div>
-                          <span className="font-semibold mr-2">{username}</span>
-                          <span>{comment.text}</span>
-                        </div>
+                 return (
+ <div
+  key={comment.comment_id || comment.id || i}
+  className="flex gap-3 relative group w-full hover:bg-gray-50 px-2 py-1 rounded"
+>
+    
+    <img
+      src={userPhoto}
+      alt={username}
+      className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+    />
 
-                        <div className="text-xs text-gray-400 flex gap-3 mt-1 items-center">
-                          <span>{time}</span>
-                          <button onClick={() => handleReplyClick(comment)} className="font-semibold hover:text-purple-400">Reply</button>
-                        </div>
+<div className="flex-1">
 
-                        {/* Replies */}
-                        {comment.replies && comment.replies.length > 0 && (
-                          <div className="ml-4 mt-2 space-y-2 border-l-2 border-gray-200 dark:border-gray-600 pl-3">
-                            {comment.replies.map((reply, idx) => (
-                              <div key={idx} className="flex gap-2">
-                                <img 
-                                  src={reply.author?.profile_image_url || "/loginAvatars/profile.png"} 
-                                  alt="" 
-                                  className="w-6 h-6 rounded-full object-cover"
-                                />
-                                <div>
-                                  <span className="font-semibold text-sm mr-1">
-                                    {reply.author?.username || reply.author?.full_name || 'user'}
-                                  </span>
-                                  <span className="text-sm">{reply.text}</span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
+  {/* TOP ROW */}
+  <div className="flex justify-between items-start w-full group">
+
+    {/* LEFT SIDE */}
+    <div>
+      <span className="font-semibold mr-2">{username}</span>
+      <span>{comment.text}</span>
+    </div>
+
+    {/* RIGHT SIDE (3 DOT) */}
+    {isOwnComment && (
+      <div className="relative">
+        <button
+          onClick={() =>
+            setActiveCommentMenu(prev =>
+              prev === (comment.comment_id || comment.id)
+                ? null
+                : (comment.comment_id || comment.id)
+            )
+          }
+          className="p-1 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-all duration-200"
+        >
+          <MoreHorizontal size={16} />
+        </button>
+
+        {activeCommentMenu === (comment.comment_id || comment.id) && (
+          <div className="absolute right-0 top-6 z-10 rounded-lg shadow-lg border bg-white border-gray-200 min-w-[120px]">
+            <button
+              onClick={() => {
+                setEditingComment(comment.comment_id || comment.id);
+                setEditText(comment.text);
+                setActiveCommentMenu(null);
+              }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-900"
+            >
+              Update
+            </button>
+
+            <button
+              onClick={() =>
+                handleDeleteComment(comment.comment_id || comment.id)
+              }
+              className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100"
+            >
+              Delete
+            </button>
+
+            <button
+              onClick={() => setActiveCommentMenu(null)}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-600"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+
+  {/* TIME + REPLY */}
+  <div className="text-xs text-gray-400 flex justify-between items-center mt-1">
+
+    {/* LEFT */}
+    <div className="flex gap-3 items-center">
+      <span>{time}</span>
+      <button
+        onClick={() => handleReplyClick(comment)}
+        className="font-semibold hover:text-purple-400"
+      >
+        Reply
+      </button>
+    </div>
+
+    {/* RIGHT (3 DOT ALSO HERE FOR PERFECT ALIGN) */}
+    {isOwnComment && (
+      <div className="relative group">
+        <button
+          onClick={() =>
+            setActiveCommentMenu(prev =>
+              prev === (comment.comment_id || comment.id)
+                ? null
+                : (comment.comment_id || comment.id)
+            )
+          }
+          className="p-1 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-all duration-200"
+        >
+          <MoreHorizontal size={16} />
+        </button>
+      </div>
+    )}
+  </div>
+
+  {/* EDIT COMMENT */}
+  {editingComment === (comment.comment_id || comment.id) && (
+    <div className="flex gap-2 mt-2">
+      <input
+        value={editText}
+        onChange={(e) => setEditText(e.target.value)}
+        className="flex-1 outline-none border rounded px-2 py-1 bg-gray-100 border-gray-300"
+      />
+      <button
+        onClick={() => handleUpdateComment(comment.comment_id || comment.id)}
+        className="text-purple-500 font-semibold text-sm"
+      >
+        Save
+      </button>
+      <button
+        onClick={() => setEditingComment(null)}
+        className="text-gray-400 text-sm"
+      >
+        Cancel
+      </button>
+    </div>
+  )}
+
+  {/* REPLIES */}
+  {comment.replies && comment.replies.length > 0 && (
+    <div className="ml-4 mt-2 space-y-2 border-l-2 border-gray-200 pl-3">
+      {comment.replies.map((reply, idx) => (
+        <div key={idx} className="flex justify-between items-start">
+
+          <div className="flex gap-2">
+            <img
+              src={reply.author?.profile_image_url || "/loginAvatars/profile.png"}
+              className="w-6 h-6 rounded-full object-cover"
+            />
+            <div>
+              <span className="font-semibold text-sm mr-1">
+                {reply.author?.username || reply.author?.full_name || "user"}
+              </span>
+              <span className="text-sm">{reply.text}</span>
+            </div>
+          </div>
+
+          {(reply.author?.user_id === currentUser?._id) && (
+            <button
+              onClick={() =>
+                handleDeleteReply(
+                  comment.comment_id || comment.id,
+                  reply.id
+                )
+              }
+              className="text-red-400 text-xs"
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
+
+  </div>
+);
                 })}
               </div>
 

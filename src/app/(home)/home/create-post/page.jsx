@@ -86,6 +86,24 @@ function CreatePostContent() {
   const [hideLikes, setHideLikes] = useState(false);
   const [noComments, setNoComments] = useState(false);
 
+  // Toggle button component
+const ToggleButton = ({ state, onChange }) => {
+  return (
+    <button
+      onClick={onChange}
+      className={`w-11 h-6 flex items-center rounded-full p-[2px] transition duration-300 ${
+        state ? "bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF]" : "bg-gray-300"
+      }`}
+    >
+      <div
+        className={`w-5 h-5 bg-white rounded-full shadow-md transform transition duration-300 ${
+          state ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+};
+
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -608,7 +626,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center">
       <div
         className={`bg-white  rounded-xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
-          isWide ? "w-[940px] h-[520px]" : "w-[520px] h-[480px]"
+          isWide ? "w-[800px] h-[520px]" : "w-[520px] h-[480px]"
         }`}
       >
         {/* ── HEADER ── */}
@@ -696,7 +714,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
               <p className="text-[#262626] text-[18px] font-light">Drag photos and videos here</p>
               <button
                 onClick={handleAddMoreFiles}
-                className="bg-[#0095f6] hover:bg-[#1877f2] text-white text-sm font-semibold px-5 py-2 rounded-lg transition"
+                className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF] text-white text-sm font-semibold px-5 py-2 rounded-lg transition"
               >
                 Select from computer
               </button>
@@ -709,7 +727,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
               {/* Image area */}
               <div className="flex-1 bg-gray-100 p-3 relative flex items-center justify-center overflow-hidden">
                 {/* Aspect ratio overlay popup */}
-                <div className="absolute bottom-14 left-3 z-20 bg-black/90 rounded-xl p-3 flex gap-4">
+                <div className="absolute bottom-3 left-3 z-20 bg-black/90 rounded-xl p-1 flex gap-2">
                   {["1:1", "4:5", "16:9"].map((r) => (
                     <button
                       key={r}
@@ -791,18 +809,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
                 <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between z-10">
                   {/* Image counter and thumbnails */}
                   <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => {
-                        // Toggle aspect ratio popup visibility
-                        const popup = document.getElementById('aspect-popup');
-                        if (popup) popup.classList.toggle('hidden');
-                      }} 
-                      className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-black/80 transition"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                        <rect x="3" y="5" width="18" height="14" rx="2"/>
-                      </svg>
-                    </button>
+                   
                     
                     {/* Thumbnail strip */}
                     {files.length > 1 && (
@@ -845,7 +852,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
                           setFiles(newFiles);
                           setCurrentIndex(Math.min(currentIndex, newFiles.length - 1));
                         }}
-                        className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-red-500 transition"
+                        className="bg-gradient-to-r from-pink-500 to-orange-500 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-red-500 transition"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <polyline points="3,6 5,6 21,6" />
@@ -854,13 +861,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
                       </button>
                     )}
                     
-                    {/* Multi-select indicator */}
-                    <button className="bg-black/60 rounded-full w-9 h-9 flex items-center justify-center text-white hover:bg-black/80 transition">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="2" y="7" width="10" height="10" rx="1.5"/>
-                        <rect x="12" y="5" width="10" height="14" rx="1.5"/>
-                      </svg>
-                    </button>
+                  
                   </div>
                 </div>
               </div>
@@ -1113,13 +1114,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
                     )}
                   </div>
                 )}
-                {/* Tag people tooltip */}
-                <div className="absolute top-4 left-4">
-                  <div className="bg-black/80 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-2">
-                    <Users size={14} />
-                    {fileType === "video" ? "Tag people" : "Click photo to tag people"}
-                  </div>
-                </div>
+               
               </div>
 
               {/* Right panel */}
@@ -1140,19 +1135,19 @@ const [currentIndex, setCurrentIndex] = useState(0);
 
                 {/* Caption */}
                 <div className="px-4 py-3 border-b border-gray-100">
-                  <textarea
-                    value={caption}
-                    onChange={(e) => setCaption(e.target.value)}
-                    placeholder="Write a caption..."
-                    maxLength={2200}
-                    className="w-full resize-none text-sm outline-none placeholder:text-gray-400 min-h-[100px]"
-                  />
-                  <div className="flex items-center justify-between mt-2">
-                    <button className="text-gray-400 hover:text-gray-600 transition">
-                      <Smile size={20} />
-                    </button>
-                    <span className="text-xs text-gray-400">{caption.length}/2,200</span>
-                  </div>
+               <textarea
+  value={caption}
+  onChange={(e) => setCaption(e.target.value)}
+  placeholder="Write a caption..."
+  maxLength={600}
+  className="w-full resize-none text-sm outline-none placeholder:text-gray-400 min-h-[10px]"
+/>
+<div className="flex items-center justify-between mt-2">
+  <button className="text-gray-400 hover:text-gray-600 transition">
+    <Smile size={20} />
+  </button>
+  <span className="text-xs text-gray-400">{caption.length}/600</span>
+</div>
                 </div>
 
                 {/* Add location */}
@@ -1181,19 +1176,6 @@ const [currentIndex, setCurrentIndex] = useState(0);
                     </>
                   )}
                 </div>
-
-                {/* Add collaborators */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50">
-                  <span className="text-sm text-[#262626]">Add collaborators</span>
-                  <Users size={18} className="text-gray-500" />
-                </div>
-
-                {/* Accessibility */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50">
-                  <span className="text-sm text-[#262626]">Accessibility</span>
-                  <ChevronDown size={18} className="text-gray-500" />
-                </div>
-
                 {/* Advanced settings */}
                 <div className="border-b border-gray-100">
                   <button
@@ -1206,38 +1188,40 @@ const [currentIndex, setCurrentIndex] = useState(0);
 
                   {advancedOpen && (
                     <div className="px-4 pb-4 space-y-4">
-                      {/* Hide likes */}
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-[#262626]">Hide like and view counts on this post</span>
-                          <button
-                            onClick={() => setHideLikes(!hideLikes)}
-                            className={`w-12 h-6 rounded-full relative transition-colors flex-shrink-0 ml-3 ${hideLikes ? "bg-[#0095f6]" : "bg-gray-300"}`}
-                          >
-                            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${hideLikes ? "translate-x-6" : "translate-x-0.5"}`} />
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
-                          Only you will see the total number of likes and views on this post. You can change this later by going to the ··· menu at the top of the post. To hide like counts on other people&apos;s posts, go to your account settings.{" "}
-                          <a href="#" className="text-[#0095f6]">Learn more</a>
-                        </p>
-                      </div>
+                    {/* Allow Comments Toggle */}
+{/* Allow Comments Toggle */}
+<div className="flex items-center justify-between">
+  <div className="flex flex-col">
+    <span className="text-sm text-[#262626]">Allow comments</span>
+    <span className="text-xs text-gray-500">
+      {!noComments
+        ? "People can comment on your post"
+        : "No one can comment on your post"}
+    </span>
+  </div>
+  <ToggleButton
+    state={!noComments}
+    onChange={() => setNoComments(prev => !prev)}
+  />
+</div>
 
-                      {/* Turn off commenting */}
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-[#262626]">Turn off commenting</span>
-                          <button
-                            onClick={() => setNoComments(!noComments)}
-                            className={`w-12 h-6 rounded-full relative transition-colors flex-shrink-0 ml-3 ${noComments ? "bg-[#0095f6]" : "bg-gray-300"}`}
-                          >
-                            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${noComments ? "translate-x-6" : "translate-x-0.5"}`} />
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1.5">
-                          You can change this later by going to the ··· menu at the top of your post.
-                        </p>
-                      </div>
+{/* Allow Shares Toggle */}
+<div className="flex items-center justify-between">
+  <div className="flex flex-col">
+    <span className="text-sm text-[#262626]">Allow shares</span>
+    <span className="text-xs text-gray-500">
+      {!hideLikes
+        ? "People can share your post"
+        : "No one can share your post"}
+    </span>
+  </div>
+  <ToggleButton
+    state={!hideLikes}
+    onChange={() => setHideLikes(prev => !prev)}
+  />
+</div>
+
+
                     </div>
                   )}
                 </div>
@@ -1314,7 +1298,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
               {/* Submit button */}
               <button
                 onClick={handleLocationSubmit}
-                className="w-full py-2.5 bg-[#0095f6] hover:bg-[#1877f2] text-white rounded-lg text-sm font-semibold transition"
+                className="w-full py-2.5 bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF] text-white rounded-lg text-sm font-semibold transition"
               >
                 Add Location
               </button>
