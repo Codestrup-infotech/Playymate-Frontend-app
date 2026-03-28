@@ -9,6 +9,7 @@ import { getPostShareCount, addBookmark, checkBookmark, getCollections, createCo
 import SharePopup from "@/app/(home)/home/components/sharepopup";
 import ComposeEmojiPicker from "./Composeemojipicker";
 import { MoreHorizontal } from "lucide-react";
+import ThreeDotButton from "./ThreeDotButton";
 
 // Helper function to format relative time
 function formatRelativeTime(dateString) {
@@ -437,26 +438,35 @@ const handleUpdateReply = async (commentId, replyId) => {
                   }
                 };
                 return (
-                <div className="flex items-center gap-3 p-4 border-b cursor-pointer" onClick={handleAuthorClick}>
-                <img
-                  src={postData.author?.profile_image_url || post.author?.profile_image_url || "/loginAvatars/profile.png"}
-                  className="w-10 h-10 rounded-full object-cover"
-                  alt="Author"
-                />
-                <div>
-                  <p className="font-semibold text-gray-900">
-                    {(postData.author?.username || postData.author?.full_name || post.author?.username || post.author?.full_name) || 'Unknown User'}
-                  </p>
-                  {(postData.content?.location || post.content?.location) && (
-                    <p className="text-xs text-gray-400">
-                      {typeof (postData.content?.location || post.content?.location) === 'string'
-                        ? (postData.content?.location || post.content?.location)
-                        : (postData.content?.location?.display_text || post.content?.location?.display_text || postData.content?.location?.city || post.content?.location?.city || '')}
-                    </p>
-                  )}
+                <div className="flex items-center justify-between p-4 border-b">
+                  {/* Author Info - Clickable */}
+                  <div className="flex items-center gap-3 cursor-pointer" onClick={handleAuthorClick}>
+                    <img
+                      src={postData.author?.profile_image_url || post.author?.profile_image_url || "/loginAvatars/profile.png"}
+                      className="w-10 h-10 rounded-full object-cover"
+                      alt="Author"
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-900">
+                        {(postData.author?.username || postData.author?.full_name || post.author?.username || post.author?.full_name) || 'Unknown User'}
+                      </p>
+                      {(postData.content?.location || post.content?.location) && (
+                        <p className="text-xs text-gray-400">
+                          {typeof (postData.content?.location || post.content?.location) === 'string'
+                            ? (postData.content?.location || post.content?.location)
+                            : (postData.content?.location?.display_text || post.content?.location?.display_text || postData.content?.location?.city || post.content?.location?.city || '')}
+                        </p>
+                      )}
+                    </div>
+                    {(postData.author?.is_verified || post.author?.is_verified) && <CheckCircle size={16} className="text-blue-400"/>}
+                  </div>
+                  {/* Three Dot Button for Report - Separate click area */}
+                  <ThreeDotButton 
+                    targetId={postData.post_id || postData._id || post?.post_id || post?._id} 
+                    targetType={postData.content_type || post?.content_type || 'post'}
+                    userId={authorId}
+                  />
                 </div>
-                {(postData.author?.is_verified || post.author?.is_verified) && <CheckCircle size={16} className="text-blue-400"/>}
-              </div>
                 )})()}
 
               {/* COMMENTS */}

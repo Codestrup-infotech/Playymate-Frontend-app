@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Lock, Users, HelpCircle, VolumeX, FileWarning } from "lucide-react";
+import { User, Lock, Users, HelpCircle, VolumeX, FileWarning, Trash2 } from "lucide-react";
 
 export default function SettingsLayout({ children }) {
   const pathname = usePathname();
@@ -32,6 +32,11 @@ export default function SettingsLayout({ children }) {
       name: "Withdraw Report",
       path: "/home/settings/withdraw-report",
       icon: <FileWarning size={20} />,
+    },
+    {
+      name: "Delete My Account",
+      path: "/home/settings/delete-my-account",
+      icon: <Trash2 size={20} className="text-red-500" />,
     },
     {
       name: "Help",
