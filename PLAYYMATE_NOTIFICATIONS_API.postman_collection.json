@@ -1,0 +1,1209 @@
+{
+  "info": {
+    "name": "Playymate Notifications API",
+    "description": "Complete notification system testing with sequential flow and dynamic variables",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "otherUserId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notificationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fcmToken",
+      "value": "test_fcm_token_12345",
+      "type": "string"
+    },
+    {
+      "key": "postId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reelId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conversationId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Authentication",
+      "item": [
+        {
+          "name": "Login User A (Test User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('authToken', jsonData.data?.token || jsonData.token);",
+                  "    pm.collectionVariables.set('userId', jsonData.data?.user?._id || jsonData.user?._id || pm.collectionVariables.get('userId'));",
+                  "    pm.environment.set('authToken', pm.collectionVariables.get('authToken'));",
+                  "}",
+                  "console.log('Auth Token:', pm.collectionVariables.get('authToken'));",
+                  "console.log('User ID:', pm.collectionVariables.get('userId'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"+919999999999\",\n    \"otp\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login User B (Other User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('otherUserId', jsonData.data?.user?._id || jsonData.user?._id);",
+                  "}",
+                  "console.log('Other User ID:', pm.collectionVariables.get('otherUserId'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"+918888888888\",\n    \"otp\": \"123456\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - FCM Token Management",
+      "item": [
+        {
+          "name": "Register FCM Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    console.log('FCM Token registered successfully');",
+                  "}",
+                  "pm.test('Status code is 200 or 201', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/notifications/fcm-token",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"token\": \"{{fcmToken}}\",\n    \"device_type\": \"android\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get FCM Token Status (via preferences)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Preferences:', JSON.stringify(jsonData.data, null, 2));",
+                  "    if (jsonData.data?.fcm_tokens?.length > 0) {",
+                  "        console.log('FCM Tokens found:', jsonData.data.fcm_tokens.length);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications/preferences",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Deactivate FCM Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('FCM Token deactivated successfully');",
+                  "}",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/notifications/fcm-token",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"token\": \"{{fcmToken}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Notification Preferences",
+      "item": [
+        {
+          "name": "Get Notification Preferences",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Preferences:', JSON.stringify(jsonData.data, null, 2));",
+                  "}",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('Response has notification_types', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('notification_types');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications/preferences",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Update Notification Preferences - Disable Push",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Updated Preferences:', JSON.stringify(jsonData.data, null, 2));",
+                  "}",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/notifications/preferences",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"notification_types\": {\n        \"post_liked\": {\n            \"enabled\": true,\n            \"push\": false\n        },\n        \"comment_on_post\": {\n            \"enabled\": true,\n            \"push\": true\n        }\n    }\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Quiet Hours",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Quiet Hours Updated:', JSON.stringify(jsonData.data.quiet_hours, null, 2));",
+                  "}",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/notifications/preferences",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"quiet_hours\": {\n        \"enabled\": true,\n        \"start_time\": \"22:00\",\n        \"end_time\": \"08:00\"\n    }\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset Preferences to Default",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('Preferences reset to default');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/notifications/preferences",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"notification_types\": {\n        \"post_liked\": {\"enabled\": true, \"push\": true},\n        \"reel_liked\": {\"enabled\": true, \"push\": true},\n        \"comment_on_post\": {\"enabled\": true, \"push\": true},\n        \"comment_on_reel\": {\"enabled\": true, \"push\": true},\n        \"reply_to_comment\": {\"enabled\": true, \"push\": true},\n        \"user_mentioned\": {\"enabled\": true, \"push\": true},\n        \"user_followed\": {\"enabled\": true, \"push\": false},\n        \"story_replied\": {\"enabled\": true, \"push\": true},\n        \"message_received\": {\"enabled\": true, \"push\": true}\n    },\n    \"quiet_hours\": {\n        \"enabled\": false,\n        \"start_time\": \"22:00\",\n        \"end_time\": \"08:00\"\n    }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Trigger Notifications (Generate Test Data)",
+      "item": [
+        {
+          "name": "Follow User (Triggers user_followed notification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    console.log('Follow successful - notification sent to:', pm.collectionVariables.get('otherUserId'));",
+                  "    // Wait a bit for notification to be created",
+                  "    setTimeout(function() {}, 500);",
+                  "}",
+                  "pm.test('Status code is 200 or 201', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/users/{{otherUserId}}/follow",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Like Post (Triggers post_liked notification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    console.log('Like successful - notification sent to post author');",
+                  "    // Store postId if returned",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.data?.post_id) {",
+                  "        pm.collectionVariables.set('postId', jsonData.data.post_id);",
+                  "    }",
+                  "}",
+                  "pm.test('Status code is 200 or 201', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/likes",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"content_id\": \"{{postId}}\",\n    \"content_type\": \"post\",\n    \"reaction\": \"like\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Like Reel (Triggers reel_liked notification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    console.log('Reel like successful');",
+                  "}",
+                  "pm.test('Status code is 200 or 201', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/likes",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"content_id\": \"{{reelId}}\",\n    \"content_type\": \"reel\",\n    \"reaction\": \"love\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Comment on Post (Triggers comment_on_post notification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    console.log('Comment successful - notification sent to post author');",
+                  "}",
+                  "pm.test('Status code is 200 or 201', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/comments/posts/{{postId}}/comments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"post_id\": \"{{postId}}\",\n    \"text\": \"Great post! Thanks for sharing this amazing content with us.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Comment on Reel (Triggers comment_on_reel notification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    console.log('Reel comment successful');",
+                  "}",
+                  "pm.test('Status code is 200 or 201', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/comments/reels/{{reelId}}/comments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"text\": \"Awesome reel! Love this content\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Send Message (Triggers message_received notification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Message sent successfully');",
+                  "    // Store conversationId if returned",
+                  "    if (jsonData.data?.conversation_id) {",
+                  "        pm.collectionVariables.set('conversationId', jsonData.data.conversation_id);",
+                  "    }",
+                  "}",
+                  "pm.test('Status code is 201', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/messages/conversations/{{conversationId}}/messages",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"content\": \"Hey! Check out this amazing notification system we built!\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Read Notifications",
+      "item": [
+        {
+          "name": "Get All Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Notifications count:', jsonData.data?.notifications?.length);",
+                  "    console.log('Has more:', jsonData.data?.has_more);",
+                  "    ",
+                  "    // Store first notification ID for further tests",
+                  "    if (jsonData.data?.notifications?.length > 0) {",
+                  "        pm.collectionVariables.set('notificationId', jsonData.data.notifications[0]._id);",
+                  "        console.log('Stored notificationId:', pm.collectionVariables.get('notificationId'));",
+                  "    }",
+                  "}",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('Response has notifications array', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('notifications');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/notifications?limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Unread Notifications Only",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Unread notifications:', jsonData.data?.notifications?.length);",
+                  "    // Verify all returned are unread",
+                  "    const allUnread = jsonData.data?.notifications?.every(n => !n.is_read);",
+                  "    console.log('All unread:', allUnread);",
+                  "}",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/notifications?unread_only=true&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "unread_only",
+                  "value": "true"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Unread count:', jsonData.data?.unread_count);",
+                  "    pm.environment.set('unreadCount', jsonData.data?.unread_count);",
+                  "}",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('Response has unread_count', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('unread_count');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications/count",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Single Notification by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Notification:', JSON.stringify(jsonData.data, null, 2));",
+                  "    pm.test('Notification type is valid', function() {",
+                  "        const validTypes = ['post_liked', 'reel_liked', 'comment_on_post', 'comment_on_reel', 'reply_to_comment', 'user_mentioned', 'user_followed', 'story_replied', 'message_received'];",
+                  "        pm.expect(validTypes).to.include(jsonData.data.notification_type);",
+                  "    });",
+                  "} else if (pm.response.code === 404) {",
+                  "    console.log('Notification not found - might have been deleted');",
+                  "}",
+                  "pm.test('Status code is 200 or 404', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications/{{notificationId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Mark as Read",
+      "item": [
+        {
+          "name": "Mark Single Notification as Read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Marked as read:', jsonData.data?.is_read);",
+                  "    pm.test('is_read is true', function() {",
+                  "        pm.expect(jsonData.data.is_read).to.be.true;",
+                  "    });",
+                  "}",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/notifications/{{notificationId}}/read",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Updated count:', jsonData.data?.updated_count);",
+                  "}",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/notifications/read-all",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Verify Unread Count is Zero After Mark All Read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Unread count after mark all read:', jsonData.data?.unread_count);",
+                  "    pm.test('Unread count is 0', function() {",
+                  "        pm.expect(jsonData.data.unread_count).to.eql(0);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications/count",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Delete Notifications",
+      "item": [
+        {
+          "name": "Delete Single Notification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('Notification deleted successfully');",
+                  "}",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/notifications/{{notificationId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Clear All Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Cleared count:', jsonData.data?.cleared_count);",
+                  "}",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/notifications/clear-all",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Verify All Notifications Cleared",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Notifications after clear:', jsonData.data?.notifications?.length);",
+                  "    pm.test('Notifications array is empty', function() {",
+                  "        pm.expect(jsonData.data.notifications).to.be.an('array').that.is.empty;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - End-to-End Flow Test",
+      "item": [
+        {
+          "name": "Complete Notification Flow - Register Token -> Create Content -> Like -> Check Notification",
+          "item": [
+            {
+              "name": "1. Register FCM Token",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('FCM Token registered', function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/notifications/fcm-token",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"token\": \"e2e_test_token_123\",\n    \"device_type\": \"android\"\n}"
+                }
+              }
+            },
+            {
+              "name": "2. Get Initial Unread Count",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const jsonData = pm.response.json();",
+                      "    pm.environment.set('initialCount', jsonData.data.unread_count);",
+                      "    console.log('Initial count:', jsonData.data.unread_count);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/notifications/count",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "3. Trigger Like (Creates Notification)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Like successful', function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/likes",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"content_id\": \"{{postId}}\",\n    \"content_type\": \"post\",\n    \"reaction\": \"like\"\n}"
+                }
+              }
+            },
+            {
+              "name": "4. Wait 1 Second for Processing",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "setTimeout(function() {}, 1000);",
+                      "console.log('Waited for notification processing');"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/health",
+                "header": []
+              }
+            },
+            {
+              "name": "5. Get New Unread Count",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const jsonData = pm.response.json();",
+                      "    const initialCount = parseInt(pm.environment.get('initialCount') || '0');",
+                      "    const newCount = jsonData.data.unread_count;",
+                      "    console.log('Initial:', initialCount, 'New:', newCount);",
+                      "    pm.test('Unread count increased', function() {",
+                      "        pm.expect(newCount).to.be.greaterThan(initialCount);",
+                      "    });",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/notifications/count",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "6. Get Latest Notification",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const jsonData = pm.response.json();",
+                      "    const latestNotif = jsonData.data.notifications[0];",
+                      "    console.log('Latest notification type:', latestNotif.notification_type);",
+                      "    pm.test('Latest notification is post_liked', function() {",
+                      "        pm.expect(latestNotif.notification_type).to.eql('post_liked');",
+                      "    });",
+                      "    pm.test('Notification is unread', function() {",
+                      "        pm.expect(latestNotif.is_read).to.be.false;",
+                      "    });",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/notifications?limit=1",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "7. Mark as Read",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Marked as read', function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "url": "{{baseUrl}}/notifications/{{notificationId}}/read",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
