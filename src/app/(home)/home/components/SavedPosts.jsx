@@ -1,37 +1,101 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Bookmark, FolderOpen, Image as ImageIcon, Play, Heart, MessageSquare, X, ChevronRight } from "lucide-react";
 import { getCollections, getBookmarks, removeBookmark, removeFromCollection, deleteCollection } from "@/app/user/share";
 import postService from "@/app/user/post";
 
 export default function SavedPosts({ isDark }) {
   const [collections, setCollections] = useState([]);
+  const [allBookmarks, setAllBookmarks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCollection, setSelectedCollection] = useState(null);
   const [collectionPosts, setCollectionPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
+  const [bookmarkPosts, setBookmarkPosts] = useState([]);
+  const [loadingBookmarkPosts, setLoadingBookmarkPosts] = useState(false);
 
-  // Fetch collections on mount
-  useEffect(() => {
-    fetchCollections();
-  }, []);
-
-  const fetchCollections = async () => {
+  const fetchCollections = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getCollections();
-      console.log("Collections response:", data);
-      setCollections(data?.collections || []);
+      // Fetch both collections and bookmarks in parallel
+      const [collectionsData, bookmarksData] = await Promise.all([
+        getCollections(),
+        getBookmarks(50, null, null)
+      ]);
+      console.log("Collections response:", collectionsData);
+      console.log("Bookmarks response:", bookmarksData);
+      setCollections(collectionsData?.collections || []);
+      // Filter bookmarks that have no collections (these are "All Bookmarks")
+      const bookmarksWithoutCollections = (bookmarksData?.bookmarks || []).filter(
+        (bookmark) => !bookmark.collections || bookmark.collections.length === 0
+      );
+      setAllBookmarks(bookmarksWithoutCollections);
     } catch (err) {
       console.error("Error fetching collections:", err);
       setError(err.message || "Failed to load collections");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Fetch collections on mount
+  useEffect(() => {
+    fetchCollections();
+  }, [fetchCollections]);
+
+  // Refresh collections when feed modal updates them.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handler = () => {
+      fetchCollections();
+    };
+
+    window.addEventListener("playmate:collectionsUpdated", handler);
+    return () => window.removeEventListener("playmate:collectionsUpdated", handler);
+  }, [fetchCollections]);
+
+  // Fetch post details for all bookmarks
+  const fetchBookmarkPosts = useCallback(async () => {
+    if (!allBookmarks || allBookmarks.length === 0) {
+      setBookmarkPosts([]);
+      return;
+    }
+    
+    setLoadingBookmarkPosts(true);
+    try {
+      const posts = [];
+      for (const bookmark of allBookmarks) {
+        try {
+          if (bookmark.content_type === "post") {
+            const postData = await postService.getPost(bookmark.content_id);
+            posts.push({
+              ...postData.data?.data?.post || postData.data?.data || postData.data,
+              bookmark_id: bookmark._id,
+              bookmark_notes: bookmark.notes
+            });
+          }
+        } catch (e) {
+          console.error("Error fetching bookmark post:", e);
+        }
+      }
+      setBookmarkPosts(posts);
+    } catch (err) {
+      console.error("Error fetching bookmark posts:", err);
+    } finally {
+      setLoadingBookmarkPosts(false);
+    }
+  }, [allBookmarks]);
+
+  // Fetch bookmark posts when allBookmarks changes
+  useEffect(() => {
+    if (allBookmarks.length > 0) {
+      fetchBookmarkPosts();
+    }
+  }, [allBookmarks, fetchBookmarkPosts]);
 
   const handleCollectionClick = async (collection) => {
     setSelectedCollection(collection);
@@ -43,7 +107,11 @@ export default function SavedPosts({ isDark }) {
       
       // Filter bookmarks that belong to this collection
       const collectionBookmarks = bookmarks.filter(
-        (bookmark) => bookmark.collection_id === collection._id
+        (bookmark) => 
+          bookmark.collections && 
+          bookmark.collections.some(
+            (col) => col.collection_id === collection._id || col === collection._id
+          )
       );
       
       // Fetch post details for each bookmark
@@ -54,7 +122,7 @@ export default function SavedPosts({ isDark }) {
             const postData = await postService.getPost(bookmark.content_id);
             posts.push({
               ...postData.data?.data?.post || postData.data?.data || postData.data,
-              bookmark_id: bookmark._id,
+              bookmark_id: bookmark._id || bookmark.bookmark_id,
               bookmark_notes: bookmark.notes
             });
           }
@@ -72,24 +140,52 @@ export default function SavedPosts({ isDark }) {
   };
 
   const handleRemoveFromCollection = async (bookmarkId) => {
-    if (!selectedCollection) return;
+    if (!selectedCollection || !bookmarkId) {
+      console.log("[handleRemoveFromCollection] Missing params:", { selectedCollection, bookmarkId });
+      return;
+    }
+    console.log("[handleRemoveFromCollection] Removing bookmark from collection:", {
+      collectionId: selectedCollection._id,
+      bookmarkId,
+      collectionName: selectedCollection.collection_name
+    });
     try {
-      await removeFromCollection(selectedCollection._id);
+      const result = await removeFromCollection(selectedCollection._id, bookmarkId);
+      console.log("[handleRemoveFromCollection] Remove successful:", result);
       // Refresh the collection posts
-      handleCollectionClick(selectedCollection);
+      await handleCollectionClick(selectedCollection);
     } catch (err) {
-      console.error("Error removing from collection:", err);
+      console.error("[handleRemoveFromCollection] Error removing from collection:", err);
+      alert("Failed to remove from collection: " + (err.message || "Unknown error"));
     }
   };
 
   const handleDeleteCollection = async () => {
     if (!selectedCollection) return;
+    console.log("Deleting collection:", selectedCollection._id);
     try {
-      await deleteCollection(selectedCollection._id);
+      const result = await deleteCollection(selectedCollection._id);
+      console.log("Delete collection result:", result);
       setSelectedCollection(null);
       fetchCollections();
     } catch (err) {
       console.error("Error deleting collection:", err);
+      alert("Failed to delete collection: " + (err.message || "Unknown error"));
+    }
+  };
+
+  const handleRemoveFromBookmarks = async (bookmarkId) => {
+    try {
+      await removeBookmark(bookmarkId);
+      // Update local state to remove the bookmark
+      setAllBookmarks((prev) => prev.filter((b) => b._id !== bookmarkId));
+      setBookmarkPosts((prev) => prev.filter((p) => p.bookmark_id !== bookmarkId));
+      // Also update collectionPosts if we're in a collection view
+      setCollectionPosts((prev) => prev.filter((p) => p.bookmark_id !== bookmarkId));
+      // Also refresh collections data
+      fetchCollections();
+    } catch (err) {
+      console.error("Error removing bookmark:", err);
     }
   };
 
@@ -122,6 +218,8 @@ export default function SavedPosts({ isDark }) {
       </div>
     );
   }
+
+
 
   // If a collection is selected, show its posts
   if (selectedCollection) {
@@ -190,6 +288,16 @@ export default function SavedPosts({ isDark }) {
                     <MessageSquare size={20} className="text-gray-400" />
                   </div>
                 )}
+                {/* Delete button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveFromCollection(post.bookmark_id);
+                  }}
+                  className="absolute top-2 right-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center hover:bg-red-500"
+                >
+                  <X size={14} className="text-white" />
+                </button>
                 <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition flex items-center justify-center gap-4">
                   <span className="flex items-center gap-1 text-white text-sm font-medium">
                     <Heart size={16} className={post.is_liked ? "text-red-500" : ""} />
@@ -215,43 +323,116 @@ export default function SavedPosts({ isDark }) {
     );
   }
 
-  // Show collections list
+  // Show collections list and all bookmarks
   return (
     <div>
-      {collections.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {collections.map((collection) => (
-            <div
-              key={collection._id}
-              onClick={() => handleCollectionClick(collection)}
-              className={`rounded-xl p-4 cursor-pointer hover:opacity-90 transition ${
-                isDark ? "bg-[#12122a] border border-white/5" : "bg-white shadow"
-              }`}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                  isDark ? "bg-purple-900/30" : "bg-purple-100"
-                }`}>
-                  <FolderOpen size={24} className="text-purple-500" />
+      {/* Collections Section */}
+      {collections.length > 0 && (
+        <div className="mb-6">
+          <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-gray-800"}`}>
+            Collections
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {collections.map((collection) => (
+              <div
+                key={collection._id}
+                onClick={() => handleCollectionClick(collection)}
+                className={`rounded-xl p-4 cursor-pointer hover:opacity-90 transition ${
+                  isDark ? "bg-[#12122a] border border-white/5" : "bg-white shadow"
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                    isDark ? "bg-purple-900/30" : "bg-purple-100"
+                  }`}>
+                    <FolderOpen size={24} className="text-purple-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`font-medium truncate ${isDark ? "text-white" : "text-gray-800"}`}>
+                      {collection.collection_name}
+                    </h3>
+                    <p className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                      {collection.bookmark_count || 0} posts
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className={`font-medium truncate ${isDark ? "text-white" : "text-gray-800"}`}>
-                    {collection.collection_name}
-                  </h3>
-                  <p className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                    {collection.bookmarks_count || 0} posts
+                {collection.description && (
+                  <p className={`text-sm line-clamp-2 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+                    {collection.description}
                   </p>
-                </div>
+                )}
               </div>
-              {collection.description && (
-                <p className={`text-sm line-clamp-2 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                  {collection.description}
-                </p>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      ) : (
+      )}
+
+      {/* All Bookmarks Section */}
+      {allBookmarks.length > 0 && (
+        <div className="mb-6">
+          <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-gray-800"}`}>
+            All Bookmarks
+          </h3>
+          <p className={`text-sm mb-4 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+            {allBookmarks.length} posts
+          </p>
+          {loadingBookmarkPosts ? (
+            <div className="grid grid-cols-3 gap-1">
+              {[...Array(9)].map((_, i) => (
+                <div key={i} className="aspect-[3/4] bg-gray-800 animate-pulse rounded" />
+              ))}
+            </div>
+          ) : bookmarkPosts.length > 0 ? (
+            <div className="grid grid-cols-3 gap-1">
+              {bookmarkPosts.map((post) => (
+                <div
+                  key={post.bookmark_id}
+                  className="aspect-[3/4] relative bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-80 transition"
+                >
+                  {/* Actual post image/video */}
+                  {post.media && post.media.length > 0 ? (
+                    post.media[0].type === 'video' || post.media[0].url?.endsWith('.mp4') ? (
+                      <div className="absolute inset-0">
+                        <video src={post.media[0].url} className="w-full h-full object-cover" />
+                        <Play className="absolute top-2 left-2 text-white" size={16} fill="white" />
+                      </div>
+                    ) : (
+                      <img 
+                        src={post.media[0].url} 
+                        alt="Post" 
+                        className="w-full h-full object-cover"
+                      />
+                    )
+                  ) : (
+                    <div className={`absolute inset-0 flex items-center justify-center ${
+                      isDark ? "bg-gray-700" : "bg-gray-200"
+                    }`}>
+                      <ImageIcon className={isDark ? "text-gray-500" : "text-gray-400"} size={24} />
+                    </div>
+                  )}
+                  {/* Delete button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveFromBookmarks(post.bookmark_id);
+                    }}
+                    className="absolute top-2 right-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center hover:bg-red-500"
+                  >
+                    <X size={14} className="text-white" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <p className="text-gray-400 text-sm">No bookmarks yet</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Empty state when no collections and no bookmarks */}
+      {collections.length === 0 && allBookmarks.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-16 h-16 rounded-full bg-purple-900/30 flex items-center justify-center mb-4">
             <Bookmark size={28} className="text-purple-400" />

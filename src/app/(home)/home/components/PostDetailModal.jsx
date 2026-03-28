@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { XCircle, CheckCircle, Heart, MessageSquare, Share2, MoreHorizontal, Bookmark } from "lucide-react";
 import postService from "@/app/user/post";
 import { toggleLike } from "@/app/user/homefeed";
-import { getPostShareCount, addBookmark, checkBookmark, getCollections, createCollection, addToCollection } from "@/app/user/share";
+import { getPostShareCount, addBookmark, checkBookmark, getCollections, createCollection, addToCollection, removeBookmark } from "@/app/user/share";
 import SharePopup from "@/app/(home)/home/components/sharepopup";
 
 // ✅ 1. Import the emoji picker
@@ -75,6 +75,7 @@ export default function PostDetailModal({
   const [loadingCollections, setLoadingCollections] = useState(false);
   const [selectedCollection, setSelectedCollection] = useState(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkId, setBookmarkId] = useState(null); // Store the bookmark_id
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [showCreateCollection, setShowCreateCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState("");
@@ -421,19 +422,30 @@ setPostData(prev => ({
   // ----------------------------
 
   const checkBookmarkStatus = async () => {
-    if (!postData?.post_id) return;
+    console.log("=== CHECK BOOKMARK STATUS ===");
+    const contentId = postData?.post_id || postData?._id;
+    console.log("Content ID:", contentId);
+    if (!contentId) return;
     try {
-      const result = await checkBookmark(postData.post_id, "post");
+      console.log("Calling checkBookmark API for:", contentId, "type: post");
+      const result = await checkBookmark(contentId, "post");
+      console.log("Check bookmark result:", result);
       setIsBookmarked(result.bookmarked);
+      setBookmarkId(result.bookmark_id); // Store the bookmark_id
+      console.log("Is bookmarked set to:", result.bookmarked, "bookmark_id:", result.bookmark_id);
     } catch (error) {
       console.error("Failed to check bookmark status:", error);
     }
   };
 
   const fetchCollections = async () => {
+    console.log("=== FETCH COLLECTIONS ===");
     try {
+      console.log("Calling getCollections API...");
       const result = await getCollections();
+      console.log("Collections API response:", result);
       setCollections(result?.collections || []);
+      console.log("Collections set to state:", result?.collections || []);
     } catch (error) {
       console.error("Failed to fetch collections:", error);
       setCollections([]);
@@ -441,72 +453,163 @@ setPostData(prev => ({
   };
 
   const handleBookmarkClick = async () => {
-    if (!postData?.post_id) return;
+    console.log("=== BOOKMARK CLICK HANDLER ===");
+    const contentId = postData?.post_id || postData?._id;
+    console.log("Content ID:", contentId, "Current isBookmarked:", isBookmarked, "bookmarkId:", bookmarkId);
+    
+    if (!contentId) {
+      console.log("No content ID, returning");
+      return;
+    }
+    
     setBookmarkLoading(true);
     try {
-      // First check if already bookmarked
-      const checkResult = await checkBookmark(postData.post_id, "post");
-      
-      // Fetch collections
-      await fetchCollections();
-      
-      if (checkResult.bookmarked) {
-        // Already bookmarked, show collections modal
-        setShowBookmarkModal(true);
+      if (isBookmarked && bookmarkId) {
+        // Already bookmarked - remove the bookmark (toggle off)
+        console.log("Removing bookmark:", bookmarkId);
+        await removeBookmark(bookmarkId);
+        console.log("Bookmark removed successfully");
+        setIsBookmarked(false);
+        setBookmarkId(null);
+        setShowBookmarkModal(false);
       } else {
-        // Not bookmarked yet
-        if (collections.length === 0) {
-          // No collections, prompt to create one
-          setShowCreateCollection(true);
-        } else {
-          // Show existing collections
-          setShowBookmarkModal(true);
-        }
+        // Not bookmarked - create bookmark first
+        console.log("Creating new bookmark for:", contentId);
+        const bookmarkResult = await addBookmark("post", contentId);
+        console.log("Bookmark created:", bookmarkResult);
+        
+        // Store the bookmark_id and turn button black
+        setIsBookmarked(true);
+        setBookmarkId(bookmarkResult._id);
+        console.log("Set bookmark_id:", bookmarkResult._id);
+        
+        // Fetch collections and show popup
+        console.log("Fetching collections...");
+        const collectionsResult = await getCollections();
+        const fetchedCollections = collectionsResult?.collections || [];
+        console.log("Collections fetched:", fetchedCollections);
+        setCollections(fetchedCollections);
+        
+        // Open the collection modal
+        console.log("Opening bookmark modal");
+        setShowBookmarkModal(true);
       }
+      
     } catch (error) {
       console.error("Failed to handle bookmark:", error);
+      // Handle 409 ALREADY_BOOKMARKED error
+      if (error.code === "ALREADY_BOOKMARKED") {
+        console.log("Already bookmarked - fetching bookmark_id");
+        const checkResult = await checkBookmark(contentId, "post");
+        if (checkResult.bookmarked && checkResult.bookmark_id) {
+          setIsBookmarked(true);
+          setBookmarkId(checkResult.bookmark_id);
+        }
+      }
+      // Handle 404 on delete - silently reset
+      if (error.status === 404 && isBookmarked) {
+        setIsBookmarked(false);
+        setBookmarkId(null);
+      }
     } finally {
       setBookmarkLoading(false);
     }
   };
 
   const handleCreateAndSave = async () => {
-    if (!newCollectionName.trim() || !postData?.post_id) return;
+    console.log("=== HANDLE CREATE AND SAVE ===");
+    const contentId = postData?.post_id || postData?._id;
+    console.log("Content ID:", contentId);
+    console.log("Collection name:", newCollectionName);
+    console.log("Current bookmarkId:", bookmarkId);
+    
+    if (!newCollectionName.trim() || !contentId) {
+      console.log("Missing required params");
+      return;
+    }
     try {
       // Create new collection
+      console.log("Creating new collection...");
       const newCollection = await createCollection(newCollectionName.trim(), "", "private");
       console.log("Created collection:", newCollection);
       
-      // Add the post to the new collection
-      const bookmarkResult = await addBookmark("post", postData.post_id);
-      console.log("Created bookmark:", bookmarkResult);
+      // Use bookmarkId from state if available, otherwise check and create
+      let currentBookmarkId = bookmarkId;
+      if (!currentBookmarkId) {
+        console.log("No bookmarkId in state, checking...");
+        const checkResult = await checkBookmark(contentId, "post");
+        console.log("Check result:", checkResult);
+        if (checkResult.bookmarked && checkResult.bookmark_id) {
+          currentBookmarkId = checkResult.bookmark_id;
+        } else {
+          const bookmarkResult = await addBookmark("post", contentId);
+          currentBookmarkId = bookmarkResult._id;
+          setBookmarkId(currentBookmarkId);
+        }
+      }
       
       // Add bookmark to collection
-      await addToCollection(newCollection._id, bookmarkResult._id);
+      console.log("Adding to collection:", newCollection._id, "bookmark:", currentBookmarkId);
+      await addToCollection(newCollection._id, currentBookmarkId);
       console.log("Added to collection:", newCollection._id);
       
+      // Show success
+      alert(`Saved to ${newCollection.collection_name}`);
+      
+      // Refresh collections so profile updates immediately.
+      const collectionsResult = await getCollections();
+      setCollections(collectionsResult?.collections || []);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("playmate:collectionsUpdated"));
+      }
+
       setIsBookmarked(true);
       setShowCreateCollection(false);
       setNewCollectionName("");
       setShowBookmarkModal(false);
+      console.log("=== CREATE AND SAVE COMPLETE ===");
     } catch (error) {
       console.error("Failed to create and save:", error);
     }
   };
 
   const handleSaveToCollection = async (collection) => {
-    if (!postData?.post_id || !collection?._id) return;
+    console.log("=== HANDLE SAVE TO COLLECTION ===");
+    console.log("Collection:", collection);
+    console.log("Collection ID:", collection._id);
+    console.log("Current bookmarkId:", bookmarkId);
+    
+    const contentId = postData?.post_id || postData?._id;
+    console.log("Content ID:", contentId);
+    
+    if (!contentId || !collection?._id || !bookmarkId) {
+      console.log("Missing contentId, collection._id, or bookmarkId");
+      return;
+    }
     try {
-      // Create bookmark first
-      const bookmarkResult = await addBookmark("post", postData.post_id);
+      // Add to collection using the bookmarkId from state
+      console.log("Adding to collection:", collection._id, "bookmark:", bookmarkId);
+      await addToCollection(collection._id, bookmarkId);
+      console.log("Successfully added to collection");
       
-      // Add to collection
-      await addToCollection(collection._id, bookmarkResult._id);
+      // Show success
+      alert(`Saved to ${collection.collection_name}`);
       
-      setIsBookmarked(true);
+      // Refresh collections so profile updates immediately.
+      const collectionsResult = await getCollections();
+      setCollections(collectionsResult?.collections || []);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("playmate:collectionsUpdated"));
+      }
+
       setShowBookmarkModal(false);
+      console.log("=== SAVE COMPLETE ===");
     } catch (error) {
       console.error("Failed to save to collection:", error);
+      // Handle 409 ALREADY_IN_COLLECTION
+      if (error.code === "ALREADY_IN_COLLECTION") {
+        alert("Already saved to this collection");
+      }
     }
   };
 
@@ -820,15 +923,19 @@ setPostData(prev => ({
 
     {/* BOOKMARK */}
     <div className="flex flex-col items-center">
-      <button onClick={handleBookmarkClick} disabled={bookmarkLoading}>
+      <button 
+        onClick={handleBookmarkClick} 
+        disabled={bookmarkLoading}
+        className={`p-2 rounded-full transition-colors ${bookmarkLoading ? 'opacity-50' : 'hover:bg-gray-100'}`}
+      >
         <Bookmark 
           size={24} 
-          className={isBookmarked ? "text-purple-500" : "text-black"}
+          className={isBookmarked ? "text-purple-500" : isDark ? "text-white" : "text-black"}
           fill={isBookmarked ? "#a855f7" : "none"}
         />
       </button>
-      <span className="text-black text-sm font-medium">
-        {isBookmarked ? "Saved" : "Save"}
+      <span className={`text-sm font-medium ${isDark ? "text-white" : "text-black"}`}>
+        {bookmarkLoading ? "Saving..." : isBookmarked ? "Saved" : "Save"}
       </span>
     </div>
 
@@ -923,12 +1030,24 @@ setPostData(prev => ({
                       {collection.collection_name}
                     </p>
                     <p className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                      {collection.bookmarks_count || 0} posts
+                      {collection.bookmark_count || collection.bookmarks_count || 0} posts
                     </p>
                   </div>
                 </button>
               ))}
             </div>
+            
+            {/* Save without collection option */}
+            <button
+              onClick={() => {
+                console.log("Save without collection clicked");
+                setShowBookmarkModal(false);
+                alert("Saved!");
+              }}
+              className={`w-full p-3 mt-3 rounded-lg flex items-center justify-center ${isDark ? "border border-gray-600 text-gray-300" : "border border-gray-300 text-gray-600"}`}
+            >
+              <span>Save without collection</span>
+            </button>
           </>
         )}
       </div>

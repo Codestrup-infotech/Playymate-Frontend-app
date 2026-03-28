@@ -1,118 +1,154 @@
 "use client"
 
-import { ArrowLeft, ArrowRight, Users, Shield, Target } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 export default function RulesRolesPage() {
   return (
-    <div className="min-h-screen bg-black text-white px-4 py-6 pb-24">
-      {/* Header */}
+    <div className="min-h-screen bg-gray-50 text-gray-900 px-5 py-6 pb-28">
+
+      {/* HEADER */}
       <div className="flex items-center gap-3 mb-6">
-        <Link href="/teams/create-team" className="text-white text-xl">
-          ←
+        <Link href="/teams/create-team" className="text-gray-900">
+          <ArrowLeft size={22} />
         </Link>
-        <h1 className="text-xl font-semibold">Rules & Roles</h1>
+        <h1 className="text-xl font-semibold">Create Team</h1>
       </div>
 
-      {/* Progress Steps */}
-      <div className="flex items-center justify-between mb-8 px-2">
-        <div className="flex flex-col items-center">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center text-sm font-medium">1</div>
-          <p className="text-xs mt-1 text-zinc-400">Basic Info</p>
+      {/* STEP BAR */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="h-1 flex-1 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"></div>
+          <div className="h-1 flex-1 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"></div>
+          <div className="h-1 flex-1 rounded-full bg-gray-300"></div>
+          <div className="h-1 flex-1 rounded-full bg-gray-300"></div>
         </div>
-        <div className="flex-1 h-0.5 bg-zinc-800 mx-2"><div className="h-full bg-gradient-to-r from-pink-500 to-orange-400 w-full"></div></div>
-        <div className="flex flex-col items-center">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center text-sm font-medium">2</div>
-          <p className="text-xs mt-1 text-zinc-400">Rules</p>
-        </div>
-        <div className="flex-1 h-0.5 bg-zinc-800 mx-2"><div className="h-full bg-zinc-800 w-1/2"></div></div>
-        <div className="flex flex-col items-center">
-          <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-medium text-zinc-400">3</div>
-          <p className="text-xs mt-1 text-zinc-500">Fee</p>
-        </div>
-        <div className="flex-1 h-0.5 bg-zinc-800 mx-2"></div>
-        <div className="flex flex-col items-center">
-          <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-medium text-zinc-400">4</div>
-          <p className="text-xs mt-1 text-zinc-500">Preview</p>
+
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-400">Basic info</span>
+          <span className="text-pink-500 font-medium">Rules & Roles</span>
+          <span className="text-gray-400">Joining Fee</span>
+          <span className="text-gray-400">Preview</span>
         </div>
       </div>
 
-      {/* Form */}
-      <div className="space-y-6">
-        {/* Team Size */}
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">Team Size</label>
-          <div className="flex items-center gap-4">
-            <button className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xl">-</button>
-            <input 
-              type="number" 
-              defaultValue={11}
-              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white text-center text-xl focus:outline-none focus:border-pink-500"
-            />
-            <button className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xl">+</button>
-          </div>
-          <p className="text-xs text-zinc-500 mt-2">Maximum number of players in the team</p>
-        </div>
+      {/* TEAM SIZE */}
+      <div className="mb-8">
+        <p className="text-sm text-gray-500 mb-2">TEAM SIZE: 15</p>
 
-        {/* Skill Level */}
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">Skill Level</label>
-          <div className="grid grid-cols-3 gap-3">
-            {['Beginner', 'Intermediate', 'Advanced'].map((level) => (
-              <button 
-                key={level}
-                className="p-3 rounded-xl border border-zinc-800 bg-zinc-900 hover:border-pink-500 transition text-sm"
-              >
-                {level}
-              </button>
-            ))}
-          </div>
-        </div>
-                          
-        {/* Age Group */}
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">Age Group</label>
-          <select className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-pink-500">
-            <option value="">Select age group</option>
-            <option value="any">All Ages</option>
-            <option value="u18">Under 18</option>
-            <option value="18-25">18-25</option>
-            <option value="26-35">26-35</option>
-            <option value="36-45">36-45</option>
-            <option value="46+">46+</option>
-          </select>
-        </div>
+        <input
+          type="range"
+          min="5"
+          max="50"
+          defaultValue="15"
+          className="w-full accent-pink-500"
+        />
 
-        {/* Roles */}
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">Team Roles</label>
-          <div className="space-y-3">
-            {[
-              { icon: Shield, label: 'Captain', count: 1 },
-              { icon: Target, label: 'Vice Captain', count: 1 },
-              { icon: Users, label: 'Player', count: 9 }
-            ].map((role) => (
-              <div key={role.label} className="flex items-center justify-between p-4 rounded-xl bg-zinc-900 border border-zinc-800">
-                <div className="flex items-center gap-3">
-                  <role.icon size={20} className="text-zinc-400" />
-                  <span>{role.label}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center">-</button>
-                  <span className="w-8 text-center">{role.count}</span>
-                  <button className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center">+</button>
-                </div>
+        <div className="flex justify-between text-sm text-gray-400 mt-1">
+          <span>5</span>
+          <span>50</span>
+        </div>
+      </div>
+
+      {/* SKILL LEVEL */}
+      <div className="mb-8">
+        <p className="text-sm text-gray-500 mb-3">SKILL LEVEL</p>
+
+        <div className="flex flex-wrap gap-3">
+          {["All Levels", "Beginner", "Intermediate", "Advanced", "Pro"].map((item, i) => (
+            <button
+              key={i}
+              className={`px-5 py-2.5 rounded-full text-sm font-medium ${
+                i === 0
+                  ? "bg-gradient-to-r from-pink-500 to-orange-400 text-white"
+                  : "bg-white border border-gray-300 text-gray-700"
+              }`}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* AGE GROUP */}
+      <div className="mb-8">
+        <p className="text-sm text-gray-500 mb-3">AGE GROUP</p>
+
+        <div className="flex flex-wrap gap-3">
+          {["Under 18", "18+", "25+", "35+", "All Ages"].map((item, i) => (
+            <button
+              key={i}
+              className={`px-5 py-2.5 rounded-full text-sm font-medium ${
+                i === 0
+                  ? "bg-gradient-to-r from-pink-500 to-orange-400 text-white"
+                  : "bg-white border border-gray-300 text-gray-700"
+              }`}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* TEAM ROLES */}
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold mb-4">Team Roles</h2>
+
+        <div className="space-y-4">
+
+          {/* ROLE ITEM */}
+          {[
+            {
+              title: "Co-captain",
+              desc: "Assist in team decisions",
+              active: true,
+            },
+            {
+              title: "Manager",
+              desc: "Handle logistics & scheduling",
+              active: false,
+            },
+            {
+              title: "Coach",
+              desc: "Training & strategy",
+              active: false,
+            },
+          ].map((role, i) => (
+            <div
+              key={i}
+              className="bg-white border border-gray-200 rounded-2xl p-4 flex items-center justify-between shadow-sm"
+            >
+              <div>
+                <p className="font-semibold">{role.title}</p>
+                <p className="text-sm text-gray-500">{role.desc}</p>
               </div>
-            ))}
-          </div>
+
+              {/* TOGGLE (UI ONLY) */}
+              <div
+                className={`w-14 h-8 rounded-full flex items-center p-1 ${
+                  role.active
+                    ? "bg-gradient-to-r from-pink-500 to-orange-400"
+                    : "bg-gray-300"
+                }`}
+              >
+                <div
+                  className={`w-6 h-6 rounded-full bg-white shadow transform transition ${
+                    role.active ? "ml-auto" : ""
+                  }`}
+                ></div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Continue Button */}
-      <div className="fixed bottom-6 left-4 right-4">
-        <Link href="/teams/create-team/joining-fee" className="w-full bg-gradient-to-r from-pink-500 to-orange-400 py-4 rounded-xl font-semibold flex items-center justify-center gap-2">
+      {/* CONTINUE BUTTON */}
+      <div className="fixed bottom-4 inset-x-4 flex justify-center">
+        <Link
+          href="/teams/create-team/joining-fee"
+          className="px-10 py-3 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-base font-semibold text-white flex items-center justify-center shadow-lg"
+        >
           Continue
-          <ArrowRight size={20} />
         </Link>
       </div>
     </div>
