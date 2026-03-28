@@ -164,6 +164,23 @@ api.post("/api/v1/auth/signup/email-password", {
   // Unmute a user
   unmuteUser: (userId) => api.delete(`/users/${userId}/mute`),
 
+  // Get mute status for a specific user (by checking muted users list)
+  getMuteStatus: async (userId) => {
+    // Get all muted users and check if the target user is in the list
+    const response = await api.get('/users/muted', { params: { limit: 100 } });
+    const mutedData = response?.data?.data || response?.data;
+    const mutedUsers = mutedData?.muted_users || [];
+    
+    // Check if the userId matches any muted user
+    const isMuted = mutedUsers.some(mu => 
+      mu.user?._id === userId || 
+      mu.user?.user_id === userId || 
+      mu.user?.username === userId
+    );
+    
+    return { data: { is_muted: isMuted } };
+  },
+
   // Get muted users list
   getMutedUsers: (limit = 20, cursor = null) => 
     api.get('/users/muted', { params: { limit, cursor } }),

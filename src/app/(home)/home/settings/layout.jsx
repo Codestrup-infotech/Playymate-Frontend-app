@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Lock, Users, HelpCircle } from "lucide-react";
+import { User, Lock, Users, HelpCircle, VolumeX, FileWarning } from "lucide-react";
 
 export default function SettingsLayout({ children }) {
   const pathname = usePathname();
@@ -22,6 +22,16 @@ export default function SettingsLayout({ children }) {
       name: "Close Friends",
       path: "/home/settings/close-friends",
       icon: <Users size={20} />,
+    },
+    {
+      name: "Muted Users",
+      path: "/home/settings/muted-user-list",
+      icon: <VolumeX size={20} />,
+    },
+    {
+      name: "Withdraw Report",
+      path: "/home/settings/withdraw-report",
+      icon: <FileWarning size={20} />,
     },
     {
       name: "Help",

@@ -784,7 +784,7 @@ useEffect(() => {
           router.push("/home/profile");
         }}
       >
-        About this account
+        About My Account
       </button>
 
       <button

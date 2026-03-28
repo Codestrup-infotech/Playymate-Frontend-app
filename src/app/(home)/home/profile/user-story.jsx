@@ -8,6 +8,7 @@ import { useTheme } from "@/lib/ThemeContext";
 import { Heart as HeartFilled } from "lucide-react";
 import SharePopup from "@/app/(home)/home/components/sharepopup";
 import { useRouter } from "next/navigation";
+import Report from "@/app/(home)/home/components/Report";
 
 export default function UserStory({ userId, profile, showRing = true }) {
   const { theme } = useTheme();
@@ -62,6 +63,9 @@ export default function UserStory({ userId, profile, showRing = true }) {
 
   // ✅ Popup state
   const [showOptions, setShowOptions] = useState(false);
+
+  // ✅ Report modal state
+  const [showReport, setShowReport] = useState(false);
 
   // ✅ Like state - persist locally for story viewer session
   const [isLiked, setIsLiked] = useState(false);
@@ -705,7 +709,13 @@ useEffect(() => {
           {/* Popup */}
          <div className="relative w-[280px] bg-white rounded-xl overflow-hidden shadow-lg">
             {/* Report */}
-            <button className="flex items-center justify-center gap-2 w-full py-4 text-red-500 border-b">
+            <button 
+              className="flex items-center justify-center gap-2 w-full py-4 text-red-500 border-b"
+              onClick={() => {
+                setShowOptions(false);
+                setShowReport(true);
+              }}
+            >
               <Flag size={18} />
               Report
             </button>
@@ -737,6 +747,14 @@ useEffect(() => {
           </div>
         </div>
       )}
+
+      {/* Report Modal */}
+      <Report
+        isOpen={showReport}
+        onClose={() => setShowReport(false)}
+        targetId={currentStory?.story_id || currentStory?._id || currentStory?.id}
+        targetType="story"
+      />
     </>
   );
 }

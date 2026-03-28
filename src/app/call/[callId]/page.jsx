@@ -86,6 +86,16 @@ export default function CallPage() {
           }
         }
 
+        // 🔥 FALLBACK: Get WebSocket URL from provider_meta in call data
+        // The API returns provider_meta.rtc_ws_url but frontend is looking for provider_config.ws_url
+        let wsUrl = providerConfig?.ws_url;
+        
+        if (!wsUrl && call?.provider_meta?.rtc_ws_url) {
+          // Use provider_meta.rtc_ws_url from the call data
+          wsUrl = call.provider_meta.rtc_ws_url;
+          console.log("Using WebSocket URL from provider_meta:", wsUrl);
+        }
+
         // ✅ Support both AGORA and WEBRTC_SELFHOSTED providers
         const supportedProviders = ["AGORA", "WEBRTC_SELFHOSTED"];
         if (!providerType || !supportedProviders.includes(providerType)) {
@@ -107,8 +117,18 @@ export default function CallPage() {
         }
 
         // WEBRTC_SELFHOSTED - use existing WebRTC logic
-        if (!providerConfig?.ws_url) {
-          throw new Error("Missing ws_url");
+        if (!wsUrl) {
+          throw new Error("Missing WebSocket URL. Need either provider_config.ws_url or call.provider_meta.rtc_ws_url");
+        }
+
+        // 🔥 Append room ID to WebSocket URL if not already included
+        const roomId = call?.room_id || call?.provider_room_id;
+        let wsUrlWithRoom = wsUrl;
+        if (wsUrl && roomId && !wsUrl.includes(roomId)) {
+          // Remove trailing slash if present
+          const baseWsUrl = wsUrl.replace(/\/$/, "");
+          wsUrlWithRoom = `${baseWsUrl}/${roomId}`;
+          console.log("WebSocket URL with room:", wsUrlWithRoom);
         }
 
         // 🔥 2. GET USER MEDIA
@@ -155,7 +175,7 @@ export default function CallPage() {
         };
 
         // 🔥 4. CONNECT WEBSOCKET
-        const ws = new WebSocket(providerConfig.ws_url);
+        const ws = new WebSocket(wsUrlWithRoom);
         wsRef.current = ws;
 
         ws.onopen = async () => {

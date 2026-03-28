@@ -43,6 +43,7 @@ import UserStory from "../user-story.jsx";
 import Highlights from "../../components/highlights.jsx";
 import UserFollowUnfollow from "../../components/UserFollowUnfollow.jsx";
 import SharePopup from "../../components/sharepopup.jsx";
+import Report from "../../components/Report.jsx";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -161,6 +162,9 @@ export default function UserProfilePage() {
   // Options popup state
   const [showOptions, setShowOptions] = useState(false);
 
+  // Report modal state
+  const [showReport, setShowReport] = useState(false);
+
   // Helper function to check if string is a valid MongoDB ObjectId
   const isObjectId = (str) => {
     return /^[0-9a-fA-F]{24}$/.test(str);
@@ -229,6 +233,30 @@ export default function UserProfilePage() {
       console.error("Error unmuting user:", error);
     }
   };
+
+  // Fetch mute status when userId changes
+  useEffect(() => {
+    const fetchMuteStatus = async () => {
+      if (!userId || isOwnProfile) return;
+      
+      try {
+        const response = await userService.getMuteStatus(userId);
+        const muteData = response?.data?.data || response?.data;
+        setIsMuted(muteData?.is_muted === true);
+        console.log("Mute status fetched:", muteData);
+      } catch (error) {
+        console.error("Error fetching mute status:", error);
+        // Fallback to using profile data if available
+        if (profile) {
+          setIsMuted(profile.is_muted === true);
+        }
+      }
+    };
+    
+    if (!isOwnProfile && userId) {
+      fetchMuteStatus();
+    }
+  }, [userId, isOwnProfile, profile]);
 
   // Handle add to close friends
   const handleAddToCloseFriends = async () => {
@@ -820,7 +848,13 @@ export default function UserProfilePage() {
           {/* Popup */}
           <div className="relative w-[280px] bg-white rounded-xl overflow-hidden shadow-lg">
             {/* Report */}
-            <button className="flex items-center justify-center gap-2 w-full py-4 text-red-500 border-b">
+            <button 
+              className="flex items-center justify-center gap-2 w-full py-4 text-red-500 border-b"
+              onClick={() => {
+                setShowOptions(false);
+                setShowReport(true);
+              }}
+            >
               <Flag size={18} />
               Report
             </button>
@@ -847,6 +881,14 @@ export default function UserProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Report Modal */}
+      <Report
+        isOpen={showReport}
+        onClose={() => setShowReport(false)}
+        targetId={profileData?._id || userId}
+        targetType="user"
+      />
     </div>
   );
 }

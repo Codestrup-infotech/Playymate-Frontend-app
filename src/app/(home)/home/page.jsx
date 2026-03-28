@@ -20,6 +20,7 @@ import { Volume2 } from "lucide-react";
 import { useFeedRefresh } from "@/context/FeedRefreshContext";
 import { addBookmark, checkBookmark, removeBookmark, createCollection, getCollections, addToCollection } from "@/app/user/share";
 import CreateCollectionPopup from "./components/CreateCollection";
+import ThreeDotButton from "./components/ThreeDotButton";
 
 /* ─── Small helper components ─── */
 
@@ -90,9 +91,10 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, on
   const isLikedByYou = userAction?.liked_by_you ?? liked;
   const isSavedByYou = userAction?.saved_by_you ?? false;
   const contentType = post.data?.content_type ?? post.content_type ?? 'post';
+  const postId = post?.data?.content_id || post?.data?.post_id || post?.post_id || post?._id || post?.id;
 
   return (
-    <div className={`${cardBg} rounded-xl overflow-hidden shadow-sm transition-colors duration-300`}>
+    <div className={`${cardBg} rounded-xl overflow-hidden shadow-sm transition-colors duration-300 relative`}>
       {/* Author row */}
      <div 
         className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:opacity-80"
@@ -111,6 +113,15 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, on
     </p>
   </div>
 </div>
+
+      {/* Three Dot Button for Report */}
+      <div className="absolute top-3 right-3 z-10">
+        <ThreeDotButton 
+          targetId={postId} 
+          targetType={contentType === 'reel' ? 'reel' : 'post'}
+          userId={author?.user_id || author?._id}
+        />
+      </div>
 
       {/* Media - Instagram-style: maintain original aspect ratio, no stretching */}
      {/* {media.length > 0 && (
