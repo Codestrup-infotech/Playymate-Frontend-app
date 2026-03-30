@@ -8,7 +8,6 @@ import closeFriendsService from "@/app/user/close-friend.jsx";
 export default function CloseFriendsPage() {
   const [users, setUsers] = useState([]);
   const [selected, setSelected] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -133,8 +132,8 @@ setSelected(closeFriendIds);
       } catch (err) {
         console.error(err);
       } finally {
-        setLoading(false);
       }
+
     };
 
     fetchData();
@@ -156,8 +155,18 @@ setSelected(closeFriendIds);
         await closeFriendsService.removeFromCloseFriends(username);
         setSelected(selected.filter(id => id !== userId));
       } else {
-        await closeFriendsService.addToCloseFriends(username);
-        setSelected([...selected, userId]);
+        try {
+          await closeFriendsService.addToCloseFriends(username);
+          setSelected([...selected, userId]);
+        } catch (addErr) {
+          // Handle ALREADY_CLOSE_FRIEND error - remove from close friends instead
+          if (addErr?.response?.data?.error_code === 'ALREADY_CLOSE_FRIEND') {
+            await closeFriendsService.removeFromCloseFriends(username);
+            setSelected(selected.filter(id => id !== userId));
+          } else {
+            throw addErr;
+          }
+        }
       }
     } catch (err) {
       console.error("Error toggling close friend:", err);
@@ -192,37 +201,37 @@ setSelected(closeFriendIds);
   });
 
   return (
-   <div className="w-full max-w-2xl h-full flex flex-col">
-      {/* Header */}
-      <h1 className="text-xl font-semibold mb-2">
-        Close friends
-      </h1>
+    <div className="bg-white  lg:px-20 lg:py-9 h-full flex flex-col">
+      {/* Header - Fixed at top */}
+      <div className="flex-shrink-0">
+        <h1 className="text-xl font-semibold mb-2">
+          Close friends
+        </h1>
 
-      <p className="text-sm text-gray-500 mb-4">
-        We don't send notifications when you edit your close friends list.
-       
-      </p>
+        <p className="text-sm text-gray-500 mb-4">
+          We don't send notifications when you edit your close friends list.
+        </p>
 
-      {/* Search */}
-      <input
-        type="text"
-        placeholder="Search"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="w-full bg-gray-100 rounded-lg px-4 py-2 mb-4 outline-none"
-      />
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="Search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-gray-100 rounded-lg px-4 py-2 mb-4 outline-none"
+        />
+      </div>
 
-      {/* Selected count */}
-      <p className="text-sm text-gray-500 mb-4">
-        {selected.length} close friends selected
-        {saving && <span className="ml-2 inline-flex items-center"><Loader2 size={14} className="animate-spin" /></span>}
-      </p>
+      {/* Selected count - Sticky at top */}
+      <div className="sticky top-0 bg-white py-2 z-10 flex-shrink-0">
+        <p className="text-sm text-gray-500">
+          {selected.length} close friends selected
+          {saving && <span className="ml-2 inline-flex items-center"><Loader2 size={14} className="animate-spin" /></span>}
+        </p>
+      </div>
 
-      {/* User List - All Followers & Following */}
-      {loading ? (
-        <div className="text-center py-8">Loading...</div>
-      ) : (
-       <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+      {/* User list - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
           {sortedUsers.map((user) => {
             const username = user.username;
             const isSelected = selected.includes(user._id);
@@ -277,8 +286,7 @@ setSelected(closeFriendIds);
               No users found
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

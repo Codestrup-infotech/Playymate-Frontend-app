@@ -24,6 +24,7 @@ import {
   setPrimaryPhoto
 } from "@/services/profile.service";
 import { userService } from "@/services/user";
+import DefaultAvatar from "../default-avatar.jsx";
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -207,11 +208,17 @@ export default function EditProfilePage() {
 
             <div className="relative">
               <div className="w-28 h-28 rounded-full p-[3px] bg-gradient-to-tr from-purple-500 to-orange-500">
-                <img
-                  src={profileImage}
-                  alt="profile"
-                  className="w-full h-full rounded-full border-4 border-white dark:border-[#17172b] object-cover"
-                />
+                {profileImage ? (
+                  <img
+                    src={profileImage}
+                    alt="profile"
+                    className="w-full h-full rounded-full border-4 border-white dark:border-[#17172b] object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-full border-4 border-white dark:border-[#17172b] flex items-center justify-center bg-gray-100">
+                    <DefaultAvatar className="w-20 h-20" />
+                  </div>
+                )}
               </div>
 
               <button

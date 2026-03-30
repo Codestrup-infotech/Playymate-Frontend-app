@@ -204,10 +204,10 @@ export default function Fitness({ onBack, onComplete }) {
   const [allQuestions,  setAllQuestions]  = useState({ fitness: [], medical: [] });
   const [answers,       setAnswers]       = useState({});
   const [stepIndex,     setStepIndex]     = useState(0);
-  const [coins,         setCoins]         = useState(0);
-  const [coinsEarned,   setCoinsEarned]   = useState(new Set());
+
   const [loading,       setLoading]       = useState(true);
   const [phase,         setPhase]         = useState("loading");
+  // Note: phase is kept but success action is now direct in submitAnswer
   const [currentCategory, setCurrentCategory] = useState("fitness");
 
   /* =====================================================
@@ -263,15 +263,7 @@ export default function Fitness({ onBack, onComplete }) {
     fetchQuestions();
   }, []);
 
-    useEffect(() => {
-  if (phase === "success") {
-    const timer = setTimeout(() => {
-      onComplete();
-    }, 3000);
 
-    return () => clearTimeout(timer);
-  }
-}, [phase, onComplete]);
 
   /* ─── derived state ─── */
   const visibleSteps = buildVisibleSteps(questions, answers);
@@ -409,15 +401,9 @@ export default function Fitness({ onBack, onComplete }) {
       const data = res.data?.data;
       console.log(`[Fitness.submitAnswer] Success for ${qId}:`, data);
 
-     const coinsFromApi = data?.reward?.pending_coins;
-
-if (coinsFromApi !== undefined) {
-  setCoins(coinsFromApi);
-}
-
-      if (data?.profile_completed) {
+           if (data?.profile_completed) {
         console.log(`[Fitness.submitAnswer] Profile completed! Full response:`, data);
-        setPhase("success");
+        onComplete();
         return;
       }
 
@@ -430,7 +416,7 @@ if (coinsFromApi !== undefined) {
           setStepIndex(0);
           setAnswers({});
         } else {
-          setPhase("success");
+          onComplete();
         }
       }
 
@@ -459,20 +445,20 @@ if (coinsFromApi !== undefined) {
 
 
 
- if (phase === "success") {
+ if (false) { // Removed success render block
 
 
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white text-center px-6">
-      <div className="text-5xl mb-4">🎉</div>
+      <div className="text-5xl mb-4">REMOVED_EMOJI</div>
 
       <h2 className="text-2xl font-bold mb-2">
-        Physical Profile Completed!
+        
       </h2>
 
       <p className="text-gray-400 mb-2 font-Poppins ">
-        You earned  <span className="text-yellow-400">     {Math.floor(coins)}  </span> gold coins
+        You earned  <span className="text-yellow-400">     {0 /* coins removed */}  </span>
       </p>
     </div>
   );

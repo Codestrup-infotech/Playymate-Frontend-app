@@ -38,6 +38,7 @@ import FollowModal from "../components/FollowersFollowing.jsx";
 import Highlights from '../components/highlights.jsx';
 import CoverPhotoUpload from './cover-photo.jsx';
 import AvatarUpload from './avatar-upload.jsx';
+import DefaultAvatar from './default-avatar.jsx';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -603,10 +604,10 @@ export default function ProfilePage() {
                   Edit Profile
                 </button>
 
-                <button className="px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg text-sm flex items-center gap-2">
+                {/* <button className="px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg text-sm flex items-center gap-2">
                   <Share2 size={16} />
                   Share
-                </button>
+                </button> */}
 
                 <button className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg">
                   <Settings size={18} />
@@ -624,13 +625,19 @@ export default function ProfilePage() {
             <div className="flex-shrink-0 relative">
               <div className="w-28 h-28 md:w-36 md:h-36 rounded-[30px] p-[3px] bg-gradient-to-tr from-purple-500 to-orange-500">
                 <div className="relative w-full h-full">
-                  <img
-                    src={avatarUrl || profile_photos?.[0]?.url || profile_image_url || "/loginAvatars/profile.png"}
-                    alt={full_name}
-                    className={`w-full h-full rounded-3xl object-cover border-4 ${
-                      isDark ? "border-[#12122a]" : "border-white"
-                    }`}
-                  />
+                  {avatarUrl || profile_photos?.[0]?.url || profile_image_url ? (
+                    <img
+                      src={avatarUrl || profile_photos?.[0]?.url || profile_image_url}
+                      alt={full_name}
+                      className={`w-full h-full rounded-3xl object-cover border-2 ${
+                        isDark ? "border-[#12122a]" : "border-white"
+                      }`}
+                    />
+                  ) : (
+                    <div className={`w-full h-full rounded-3xl border-2 ${isDark ? "border-[#12122a]" : "border-white"}`}>
+                      <DefaultAvatar className="w-full h-full rounded-3xl" />
+                    </div>
+                  )}
                   {is_own_profile && (
                     <AvatarUpload
                       userId={profile?._id}
@@ -653,14 +660,20 @@ export default function ProfilePage() {
             {/* DETAILS */}
             <div className="flex-1 min-w-0 mt-12">
 
-              <div className="flex flex-wrap items-center gap-2 mb-1 space-x-4">
+              <div className="flex flex-wrap items-center gap-2  space-x-4">
+               <div className="flex flex-col"> 
                 <h2 className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
                   {full_name}
                 </h2>
 
+  <h3 className="text-gray-500 text-sm font-semibold ">
+              {username  || "User"}
+            </h3> </div>
+
                 {verification_badge === "verified" && (
                   <ShieldCheck size={18} className="text-purple-500" />
                 )}
+
 
         </div>
 
@@ -670,7 +683,7 @@ export default function ProfilePage() {
 
               {/* stats */}
              <div
-  className={`flex items-center gap-6 py-2 mt-4  w-fit ${
+  className={`flex items-center gap-6 py-2   w-fit ${
     isDark ? "" : ""
   }`}
 >

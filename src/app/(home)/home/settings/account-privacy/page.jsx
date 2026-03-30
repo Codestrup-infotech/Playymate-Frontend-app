@@ -239,16 +239,16 @@ export default function AccountPrivacyPage() {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="w-full max-w-2xl flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-      </div>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <div className="w-full max-w-2xl flex items-center justify-center py-20">
+  //       <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+  //     </div>
+  //   );
+  // }
 
   return (
-    <div className="h-full pb-10 px-3  overflow-y-auto">
+    <div className="h-full pb-10 pt-10 px-10  overflow-y-auto">
       {/* Header */}
       {/* <h1 className="text-xl font-semibold mb-6">Account privacy</h1> */}
 
@@ -306,7 +306,7 @@ export default function AccountPrivacyPage() {
       </div>
 
       {/* Description */}
-      <div className="text-sm text-gray-500 space-y-4 leading-relaxed">
+      <div className="text-sm text-gray-500 space-y-2 leading-relaxed">
         <p>
           <strong>Public:</strong> Your content is visible to everyone, including
           people who don't follow you.

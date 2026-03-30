@@ -2970,4 +2970,645 @@ if (session.categories_progress?.length) {
  }  
 
 
+/////// notification 
 
+"use client";
+
+import { useEffect, useState } from "react";
+import { useTheme } from "@/lib/ThemeContext";
+import {
+  getAllNotifications,
+  getNotificationsByType,
+  getUnreadNotifications,
+  getUnreadCount,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+  clearAllNotifications,
+} from "@/app/user/notifications";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const PAGE_SIZE = 10;
+
+const TABS = [
+  { key: "all",              label: "All",      emoji: "🔔" },
+  { key: "unread",           label: "Unread",   emoji: "📌" },
+  { key: "post_liked",       label: "Likes",    emoji: "❤️" },
+  { key: "reel_liked",       label: "Reels",    emoji: "🎬" },
+  { key: "comment_on_post",  label: "Comments", emoji: "💬" },
+  { key: "user_followed",    label: "Follows",  emoji: "👥" },
+  { key: "message_received", label: "Messages", emoji: "✉️" },
+];
+
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
+const SvgIcon = ({ path, size = "5", className = "" }) => (
+  <svg className={`w-${size} h-${size} ${className}`} viewBox="0 0 24 24" fill="currentColor">
+    <path d={path} />
+  </svg>
+);
+
+const PATHS = {
+  heart:   "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z",
+  play:    "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z",
+  chat:    "M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z",
+  reply:   "M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z",
+  at:      "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10h5v-2h-5c-4.34 0-8-3.66-8-8s3.66-8 8-8 8 3.66 8 8v1.43c0 .79-.71 1.57-1.5 1.57s-1.5-.78-1.5-1.57V12c0-2.76-2.24-5-5-5s-5 2.24-5 5 2.24 5 5 5c1.38 0 2.64-.56 3.54-1.47.65.89 1.77 1.47 2.96 1.47C19.34 17 21 15.34 21 13.43V12c0-5.52-4.48-10-10-10zm0 13c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z",
+  person:  "M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z",
+  story:   "M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z",
+  mail:    "M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z",
+  phone:   "M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z",
+  video:   "M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z",
+  bell:    "M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z",
+  check:   "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z",
+  trash:   "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
+  checks:  "M18 7l-1.41-1.42-6.35 6.35 1.42 1.41L18 7zm-9 9l-4-4-1.42 1.41L9 18.83l10.6-10.6-1.41-1.41L9 16z",
+  chevL:   "M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z",
+  chevR:   "M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z",
+};
+
+const TYPE_META = {
+  post_liked:         { path: PATHS.heart,  color: "#EF3AFF" },
+  reel_liked:         { path: PATHS.play,   color: "#FF8319" },
+  comment_on_post:    { path: PATHS.chat,   color: "#00D0FF" },
+  comment_on_reel:    { path: PATHS.chat,   color: "#00D0FF" },
+  reply_to_comment:   { path: PATHS.reply,  color: "#F044FF" },
+  user_mentioned:     { path: PATHS.at,     color: "#EF0EFF" },
+  user_followed:      { path: PATHS.person, color: "#EF3AFF" },
+  story_replied:      { path: PATHS.story,  color: "#FF8319" },
+  message_received:   { path: PATHS.mail,   color: "#00D0FF" },
+  incoming_call:      { path: PATHS.phone,  color: "#F044FF" },
+  livestream_started: { path: PATHS.video,  color: "#EF3AFF" },
+  livestream_ended:   { path: PATHS.video,  color: "#FF8319" },
+};
+
+// ─── Avatar ───────────────────────────────────────────────────────────────────
+const Avatar = ({ actor }) => {
+  if (!actor?.profile_image_url) {
+    return (
+      <div
+        className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
+        style={{ background: "linear-gradient(135deg,#EF3AFF,#FF8319)" }}
+      >
+        {actor?.full_name?.charAt(0)?.toUpperCase() || "?"}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={actor.profile_image_url}
+      alt={actor.full_name || "User"}
+      className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover flex-shrink-0"
+    />
+  );
+};
+
+const formatTime = (ds) => {
+  if (!ds) return "";
+  const d = new Date(ds), now = new Date(), diff = now - d;
+  const m = Math.floor(diff / 60000), h = Math.floor(diff / 3600000), dy = Math.floor(diff / 86400000);
+  if (m < 1) return "Just now";
+  if (m < 60) return `${m}m ago`;
+  if (h < 24) return `${h}h ago`;
+  if (dy < 7) return `${dy}d ago`;
+  return d.toLocaleDateString();
+};
+
+// ─── Pagination bar (exactly like the screenshot) ─────────────────────────────
+const PaginationBar = ({ current, total, isDark, perPage, onChange }) => {
+  if (total <= 1) return null;
+
+  const textMain = isDark ? "#f0e8ff" : "#1a0a2e";
+  const textSub  = isDark ? "#8060a0" : "#9070b0";
+  const btnBg    = isDark ? "#1a1428" : "#f3eeff";
+  const btnBord  = isDark ? "#2e2248" : "#ddd0f8";
+  const wrapBg   = isDark ? "#111118" : "#ffffff";
+  const wrapBord = isDark ? "#2e2248" : "#e8d5ff";
+
+  // Smart page list with ellipsis — same logic as the image
+  const buildPages = () => {
+    const pages = [];
+    for (let p = 1; p <= total; p++) {
+      if (p === 1 || p === total || Math.abs(p - current) <= 1) {
+        if (pages.length && pages[pages.length - 1] !== "..." && p - pages[pages.length - 1] > 1) {
+          pages.push("...");
+        }
+        pages.push(p);
+      } else if (pages[pages.length - 1] !== "...") {
+        pages.push("...");
+      }
+    }
+    return pages;
+  };
+
+  return (
+    <div
+      className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 mt-6 px-3 sm:px-5 py-3.5 rounded-2xl"
+      style={{
+        background: wrapBg,
+        border: `1px solid ${wrapBord}`,
+        boxShadow: isDark
+          ? "0 4px 28px #00000060"
+          : "0 4px 28px #b090e020",
+      }}
+    >
+      {/* Previous */}
+      <button
+        onClick={() => onChange(Math.max(1, current - 1))}
+        disabled={current === 1}
+        className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
+        style={{
+          background: btnBg,
+          color: textMain,
+          border: `1px solid ${btnBord}`,
+          fontFamily: "'Sora',sans-serif",
+        }}
+      >
+        <SvgIcon path={PATHS.chevL} size="4" />
+        <span>Previous</span>
+      </button>
+
+      {/* Page numbers */}
+      {buildPages().map((p, i) =>
+        p === "..." ? (
+          <span key={`ellipsis-${i}`} className="text-sm px-1" style={{ color: textSub }}>
+            ···
+          </span>
+        ) : (
+          <button
+            key={`page-${p}`}
+            onClick={() => onChange(p)}
+            className="w-10 h-10 rounded-full text-sm font-bold transition-all duration-200 flex items-center justify-center flex-shrink-0"
+            style={{
+              fontFamily: "'Sora',sans-serif",
+              ...(current === p
+                ? {
+                    background: "linear-gradient(135deg,#7B5FF5,#9c6fff)",
+                    color: "#fff",
+                    boxShadow: "0 0 16px #7B5FF566, 0 2px 8px #7B5FF540",
+                    border: "none",
+                  }
+                : {
+                    background: btnBg,
+                    color: textMain,
+                    border: `1px solid ${btnBord}`,
+                  }),
+            }}
+          >
+            {p}
+          </button>
+        )
+      )}
+
+      {/* Next */}
+      <button
+        onClick={() => onChange(Math.min(total, current + 1))}
+        disabled={current === total}
+        className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
+        style={{
+          background: btnBg,
+          color: textMain,
+          border: `1px solid ${btnBord}`,
+          fontFamily: "'Sora',sans-serif",
+        }}
+      >
+        <span>Next</span>
+        <SvgIcon path={PATHS.chevR} size="4" />
+      </button>
+
+      {/* Results count — right side like the image */}
+      <span
+        className="text-xs sm:text-sm font-medium ml-1"
+        style={{ color: textSub, fontFamily: "'Plus Jakarta Sans',sans-serif" }}
+      >
+        Showing{" "}
+        <span style={{ color: textMain, fontWeight: 700 }}>
+          {(current - 1) * perPage + 1}–{Math.min(current * perPage, /* total items */ current * perPage)}
+        </span>
+        {" "}results
+      </span>
+    </div>
+  );
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+export default function NotificationsPage() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  const [activeTab,     setActiveTab]     = useState("all");
+  const [notifications, setNotifications] = useState([]);
+  const [loading,       setLoading]       = useState(false);
+  const [unreadCount,   setUnreadCount]   = useState(0);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [currentPage,   setCurrentPage]   = useState(1);
+  const [deletingIds,   setDeletingIds]   = useState(new Set());
+
+  // ── Theme tokens ──────────────────────────────────────────────────────────
+  const bg         = isDark ? "#0a0a0f"  : "#f5f0ff";
+  const cardBg     = isDark ? "#111118"  : "#ffffff";
+  const cardUnread = isDark ? "#160f22"  : "#fdf4ff";
+  const borderDef  = isDark ? "#1e1a2e"  : "#e8d5ff";
+  const borderUrd  = isDark ? "#4a1a6a"  : "#cc80ee";
+  const textMain   = isDark ? "#f0e8ff"  : "#1a0a2e";
+  const textSub    = isDark ? "#8060a0"  : "#9070b0";
+  const tabInact   = isDark ? "#1a1428"  : "#ede5ff";
+  const tabInactT  = isDark ? "#8060a0"  : "#7050a0";
+
+  // ── Original logic — untouched ─────────────────────────────────────────────
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await getUnreadCount();
+      setUnreadCount(res?.data?.unread_count || res?.unread_count || res?.data?.notifications_count || 0);
+    } catch {
+      setUnreadCount(notifications.filter(n => !n.is_read).length);
+    }
+  };
+
+  const fetchNotifications = async (type = "all") => {
+    try {
+      setLoading(true);
+      let res;
+      if (type === "all")         res = await getAllNotifications();
+      else if (type === "unread") res = await getUnreadNotifications();
+      else                        res = await getNotificationsByType(type);
+
+      console.log("📢 Notifications API Response:", res);
+      console.log("📢 Notifications Data:", res?.data);
+      console.log("📢 Notifications List:", res?.data?.notifications);
+
+      setNotifications(res?.data?.notifications || []);
+      setCurrentPage(1);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkAsRead = async (id, e) => {
+    e.stopPropagation();
+    try {
+      await markAsRead(id);
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, is_read: true } : n));
+      fetchUnreadCount();
+    } catch (error) {
+      console.error("Error marking as read:", error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      setActionLoading(true);
+      await markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ── FIX: Instant delete — remove from state first, API call in background ──
+  const handleDelete = async (id, e) => {
+    e.stopPropagation();
+    // Immediately remove from UI — no waiting for API
+    setNotifications(prev => {
+      const next = prev.filter(n => n._id !== id);
+      // Adjust page if we removed the last item on current page
+      const newTotal = Math.ceil(next.length / PAGE_SIZE);
+      setCurrentPage(cp => Math.min(cp, Math.max(1, newTotal)));
+      return next;
+    });
+    fetchUnreadCount();
+    // Fire API silently in background
+    try {
+      await deleteNotification(id);
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (!confirm("Are you sure you want to clear all notifications?")) return;
+    try {
+      setActionLoading(true);
+      // Clear UI instantly
+      setNotifications([]);
+      setUnreadCount(0);
+      setCurrentPage(1);
+      await clearAllNotifications();
+    } catch (error) {
+      console.error("Error clearing all:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleNotificationClick = async (item) => {
+    if (!item.is_read) {
+      try {
+        await markAsRead(item._id);
+        setNotifications(prev => prev.map(n => n._id === item._id ? { ...n, is_read: true } : n));
+        fetchUnreadCount();
+      } catch (error) {
+        console.error("Error marking as read:", error);
+      }
+    }
+    console.log("Navigate to:", item.notification_type, item.content_id || item._id);
+  };
+
+  useEffect(() => {
+    fetchNotifications(activeTab);
+    fetchUnreadCount();
+  }, [activeTab]);
+
+  // ── Pagination slice ──────────────────────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(notifications.length / PAGE_SIZE));
+  const sliced = notifications.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const handlePageChange = (p) => {
+    setCurrentPage(p);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  return (
+    <>
+      <div className="np-root min-h-screen" style={{ background: bg, color: textMain }}>
+        <div className="max-w-4xl mx-auto px-3 sm:px-5 py-5 sm:py-8">
+
+          {/* ── HEADER ── */}
+          <div className="flex items-center justify-between mb-5 gap-3">
+            <div className="flex items-center gap-3">
+              <h1 className="sora text-xl sm:text-2xl font-bold tracking-tight" style={{ color: textMain }}>
+                Notifications
+              </h1>
+              {unreadCount > 0 && (
+                <span
+                  className="sora px-3 py-1 rounded-full text-xs font-bold"
+                  style={{
+                    background: "linear-gradient(135deg,#EF3AFF22,#FF831922)",
+                    border: "1px solid #EF3AFF55",
+                    color: "#EF3AFF",
+                  }}
+                >
+                  {unreadCount} unread
+                </span>
+              )}
+            </div>
+
+            {notifications.length > 0 && (
+              <div className="flex gap-2 flex-shrink-0">
+                <button
+                  onClick={handleMarkAllAsRead}
+                  disabled={actionLoading}
+                  className="np-hbtn"
+                  style={{
+                    background: "linear-gradient(135deg,#EF3AFF1a,#00D0FF1a)",
+                    border: "1px solid #EF3AFF44",
+                    color: "#EF3AFF",
+                  }}
+                >
+                  <SvgIcon path={PATHS.checks} size="4" />
+                  <span className="hidden sm:inline">{actionLoading ? "..." : "Read All"}</span>
+                </button>
+                <button
+                  onClick={handleClearAll}
+                  disabled={actionLoading}
+                  className="np-hbtn"
+                  style={{
+                    background: "linear-gradient(135deg,#FF83191a,#FF83191a)",
+                    border: "1px solid #FF831944",
+                    color: "#FF8319",
+                  }}
+                >
+                  <SvgIcon path={PATHS.trash} size="4" />
+                  <span className="hidden sm:inline">{actionLoading ? "..." : "Clear"}</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* ── TABS ── */}
+          <div className="np-tabs flex gap-2 overflow-x-auto mb-5 pb-1">
+            {TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => { setActiveTab(tab.key); setCurrentPage(1); }}
+                className="sora flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-all duration-200"
+                style={
+                  activeTab === tab.key
+                    ? {
+                        background: "linear-gradient(135deg,#EF3AFF,#FF8319)",
+                        color: "#fff",
+                        boxShadow: "0 0 18px #EF3AFF44",
+                        border: "none",
+                      }
+                    : {
+                        background: tabInact,
+                        color: tabInactT,
+                        border: `1px solid ${borderDef}`,
+                      }
+                }
+              >
+                <span className="text-base leading-none">{tab.emoji}</span>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* ── COUNT BAR ── */}
+          {notifications.length > 0 && !loading && (
+            <div className="flex items-center justify-between mb-4 px-1">
+              <p className="text-sm" style={{ color: textSub }}>
+                Showing{" "}
+                <span className="sora font-bold" style={{ color: "#EF3AFF" }}>
+                  {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, notifications.length)}
+                </span>
+                {" "}of{" "}
+                <span className="sora font-bold" style={{ color: textMain }}>{notifications.length}</span>
+              </p>
+              <p className="sora text-xs font-medium" style={{ color: textSub }}>
+                Page {currentPage}/{totalPages}
+              </p>
+            </div>
+          )}
+
+          {/* ── LOADING SKELETONS ── */}
+          {loading && (
+            <div className="space-y-3">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="np-shimmer rounded-2xl"
+                  style={{
+                    height: "96px",
+                    background: cardBg,
+                    border: `1px solid ${borderDef}`,
+                    animationDelay: `${i * 0.1}s`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* ── EMPTY STATE ── */}
+          {!loading && sliced.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <div
+                className="w-24 h-24 rounded-3xl flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg,#EF3AFF18,#FF831918)",
+                  border: "1px solid #EF3AFF33",
+                  boxShadow: "0 0 40px #EF3AFF18",
+                }}
+              >
+                <span style={{ color: "#EF3AFF" }}>
+                  <SvgIcon path={PATHS.bell} size="10" />
+                </span>
+              </div>
+              <p className="sora font-bold text-xl" style={{ color: textMain }}>All caught up!</p>
+              <p className="text-sm" style={{ color: textSub }}>No notifications to show.</p>
+            </div>
+          )}
+
+          {/* ── NOTIFICATION CARDS ── */}
+          {!loading && sliced.length > 0 && (
+            <div className="space-y-3">
+              {sliced.map((item, idx) => {
+                const meta = TYPE_META[item.notification_type] || { path: PATHS.bell, color: "#EF3AFF" };
+                return (
+                  <div
+                    key={item._id}
+                    onClick={() => handleNotificationClick(item)}
+                    className={`np-card rounded-2xl cursor-pointer ${!item.is_read ? "unread" : ""}`}
+                    style={{
+                      background: item.is_read ? cardBg : cardUnread,
+                      border: `1px solid ${item.is_read ? borderDef : borderUrd}`,
+                      animationDelay: `${idx * 0.04}s`,
+                      boxShadow: item.is_read
+                        ? (isDark ? "0 2px 14px #00000040" : "0 2px 14px #c090e018")
+                        : (isDark ? "0 4px 20px #6000a044" : "0 4px 20px #c060e030"),
+                    }}
+                  >
+                    <div className="flex items-start gap-3 sm:gap-4 p-4 sm:p-5">
+                      {/* Avatar */}
+                      <Avatar actor={item.actor_id} />
+
+                      {/* Body */}
+                      <div className="flex-1 min-w-0">
+                        {/* Top row */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className={`text-sm sm:text-base leading-snug ${item.is_read ? "font-medium" : "font-bold"}`}
+                              style={{ color: textMain }}
+                            >
+                              <span style={{ color: meta.color }}>
+                                {item?.actor_id?.full_name || "Someone"}
+                              </span>
+                              {" "}{item?.title || ""}
+                            </p>
+                            {item?.body && (
+                              <p
+                                className="text-xs sm:text-sm mt-1.5 line-clamp-2"
+                                style={{ color: textSub }}
+                              >
+                                {item.body}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Icon + unread dot */}
+                          <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
+                            <div
+                              className="np-icon-ring"
+                              style={{
+                                background: `${meta.color}1a`,
+                                border: `1.5px solid ${meta.color}44`,
+                              }}
+                            >
+                              <span style={{ color: meta.color }}>
+                                <SvgIcon path={meta.path} size="4" />
+                              </span>
+                            </div>
+                            {!item.is_read && <span className="np-dot" />}
+                          </div>
+                        </div>
+
+                        {/* Bottom row */}
+                        <div className="flex items-center justify-between mt-3 gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Type badge */}
+                            <span
+                              className="sora text-xs font-semibold px-2.5 py-1 rounded-full capitalize"
+                              style={{
+                                background: `${meta.color}1a`,
+                                color: meta.color,
+                                border: `1px solid ${meta.color}33`,
+                              }}
+                            >
+                              {item.notification_type?.replace(/_/g, " ")}
+                            </span>
+                            {/* Time */}
+                            <span className="text-xs" style={{ color: textSub }}>
+                              {formatTime(item.created_at)}
+                            </span>
+                          </div>
+
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-1.5">
+                            {!item.is_read && (
+                              <button
+                                onClick={(e) => handleMarkAsRead(item._id, e)}
+                                className="np-icon-btn"
+                                style={{ background: "#EF3AFF1a", color: "#EF3AFF" }}
+                                title="Mark as read"
+                              >
+                                <SvgIcon path={PATHS.check} size="4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => handleDelete(item._id, e)}
+                              className="np-icon-btn"
+                              style={{ background: "#FF83191a", color: "#FF8319" }}
+                              title="Delete"
+                            >
+                              <SvgIcon path={PATHS.trash} size="4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── PAGINATION BAR (image-style) — placed below all notifications ── */}
+          {!loading && notifications.length > PAGE_SIZE && (
+            <PaginationBar
+              current={currentPage}
+              total={totalPages}
+              isDark={isDark}
+              perPage={PAGE_SIZE}
+              onChange={handlePageChange}
+            />
+          )}
+
+          {/* Mobile result count (shown below pagination pill on small screens) */}
+          {!loading && notifications.length > PAGE_SIZE && (
+            <p className="text-center text-xs mt-3 sm:hidden" style={{ color: textSub }}>
+              Showing {(currentPage - 1) * PAGE_SIZE + 1}–
+              {Math.min(currentPage * PAGE_SIZE, notifications.length)} of {notifications.length}
+            </p>
+          )}
+
+        </div>
+      </div>
+    </>
+  );
+}

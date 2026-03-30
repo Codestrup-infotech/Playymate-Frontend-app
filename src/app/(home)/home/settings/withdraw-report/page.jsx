@@ -82,7 +82,7 @@ export default function WithdrawReportPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl lg:px-20 lg:py-10 ">
       <h1 className="text-xl font-semibold mb-6">My Reports</h1>
 
       {error && (

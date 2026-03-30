@@ -44,6 +44,7 @@ import Highlights from "../../components/highlights.jsx";
 import UserFollowUnfollow from "../../components/UserFollowUnfollow.jsx";
 import SharePopup from "../../components/sharepopup.jsx";
 import Report from "../../components/Report.jsx";
+import closeFriendsService from "@/app/user/close-friend.jsx";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -331,7 +332,33 @@ export default function UserProfilePage() {
         
         // Set mute and close friend status from API response
         setIsMuted(data.is_muted === true);
-        setIsCloseFriend(data.is_close_friend === true);
+        
+        // First check is_close_friend from API
+        let isCfFromApi = data.is_close_friend === true;
+        
+        // If not set from API, check against close friends list
+        if (!isCfFromApi) {
+          try {
+            const cfRes = await closeFriendsService.getCloseFriends(100, null);
+            const cfData = cfRes?.data?.data?.members || [];
+            const isInList = cfData.some(cf => cf.username === data.username);
+            isCfFromApi = isInList;
+            console.log("=== CLOSE FRIEND CHECK FROM LIST ===");
+            console.log("Close friends list:", cfData.map(c => c.username));
+            console.log("Current user:", data.username);
+            console.log("Is in close friends list:", isInList);
+            console.log("=====================================");
+          } catch (cfErr) {
+            console.error("Error fetching close friends list:", cfErr);
+          }
+        }
+        
+        setIsCloseFriend(isCfFromApi);
+        
+        console.log("=== CLOSE FRIEND STATUS DEBUG ===");
+        console.log("is_close_friend from API:", data.is_close_friend);
+        console.log("isCloseFriend state set to:", isCfFromApi);
+        console.log("===================================");
         
         // URL Rewrite: If user has username and current URL uses userId, update URL to show username
         if (data.username && userId !== data.username) {

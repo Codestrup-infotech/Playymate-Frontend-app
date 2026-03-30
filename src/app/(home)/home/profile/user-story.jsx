@@ -9,6 +9,7 @@ import { Heart as HeartFilled } from "lucide-react";
 import SharePopup from "@/app/(home)/home/components/sharepopup";
 import { useRouter } from "next/navigation";
 import Report from "@/app/(home)/home/components/Report";
+import DefaultAvatar from "./default-avatar.jsx";
 
 export default function UserStory({ userId, profile, showRing = true }) {
   const { theme } = useTheme();
@@ -410,7 +411,7 @@ useEffect(() => {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                <User size={40} />
+                <DefaultAvatar className="w-20 h-20" />
               </div>
             )}
           </div>

@@ -36,7 +36,16 @@ export default function UserFollowUnfollow({
       }
     } else {
       if (onAddCloseFriend) {
-        await onAddCloseFriend();
+        try {
+          await onAddCloseFriend();
+        } catch (error) {
+          // Handle ALREADY_CLOSE_FRIEND error - toggle to remove
+          if (error?.response?.data?.error_code === 'ALREADY_CLOSE_FRIEND') {
+            if (onRemoveCloseFriend) {
+              await onRemoveCloseFriend();
+            }
+          }
+        }
       }
     }
   };
@@ -100,6 +109,10 @@ export default function UserFollowUnfollow({
             onClick={() => {
               if (onUnfollow) {
                 onUnfollow();
+                // Auto close popup when Unfollow is clicked
+                if (onClose) {
+                  onClose();
+                }
               }
             }}
           >

@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { User, Lock, Users, HelpCircle, VolumeX, FileWarning, Trash2 } from "lucide-react";
+import { useTheme } from "@/lib/ThemeContext";
 
 export default function SettingsLayout({ children }) {
   const pathname = usePathname();
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
 
   const menuItems = [
     {
@@ -47,10 +50,10 @@ export default function SettingsLayout({ children }) {
 
   return (
     
-    <div className="flex max-w-full h-screen fixed bg-white text-black">
+    <div className={`flex max-w-full lg:w-3/4   h-screen fixed ${isDark ? 'bg-[#12122A]' : 'bg-white '} ${isDark ? 'text-white' : 'text-black'}`}>
        
       {/* Sidebar */}
-      <div className="w-72 border-r border-gray-200 p-4 overflow-y-auto flex-shrink-0">
+      <div className={`w-72 ${isDark ? 'border-r border-gray-800' : 'border-r border-gray-200'} p-4 overflow-y-auto flex-shrink-0 ${isDark ? 'bg-[#12122A]' : 'bg-white'}`}>
         <h2 className="text-lg font-semibold mb-6">Settings</h2>
 
         <div className="space-y-1">
@@ -63,8 +66,8 @@ export default function SettingsLayout({ children }) {
                 href={item.path}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                   isActive
-                    ? "bg-gray-200 font-medium"
-                    : "hover:bg-gray-100"
+                    ? isDark ? "bg-gray-800 font-medium" : "bg-gray-200 font-medium"
+                    : isDark ? "hover:bg-gray-900 text-white" : "hover:bg-gray-100 text-black"
                 }`}
               >
                 {item.icon}

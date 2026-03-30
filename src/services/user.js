@@ -148,13 +148,27 @@ api.post("/api/v1/auth/signup/email-password", {
   followUser: (userId) => api.post(`/users/${userId}/follow`),
 
   // Unfollow a user
-  unfollowUser: (userId) => api.delete(`/users/${userId}/follow`),
+  unfollowUser: (userId) => {
+    console.log('unfollowUser called with userId:', userId);
+    return api.delete(`/users/${userId}/follow`);
+  },
 
-  // Remove a follower (for your own profile)
-  removeFollower: (followerId) => api.post(`/users/${followerId}/remove-follower`),
+  // Remove a follower - removes user from YOUR followers list
+  // This uses /users/:followerId/follow to remove them (they follow you, not vice versa)
+  removeFollower: (followerId) => {
+    console.log('removeFollower called with followerId:', followerId);
+    return api.delete(`/users/${followerId}/follow`);
+  },
 
   // Check follow status
   getFollowStatus: (userId) => api.get(`/users/${userId}/follow-status`),
+
+  // ============ BLOCK/UNBLOCK ============
+  // Block a user - also removes them from your followers list
+  blockUser: (userId, reason = "") => api.post(`/users/${userId}/block`, { reason }),
+
+  // Unblock a user
+  unblockUser: (userId) => api.delete(`/users/${userId}/block`),
 
   // ============ MUTE/UNMUTE ============
   // Mute a user

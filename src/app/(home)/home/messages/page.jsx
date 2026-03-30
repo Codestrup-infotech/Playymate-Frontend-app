@@ -1509,6 +1509,7 @@ useEffect(() => {
         onConversationsChange={setConversations}
         onMessageRequestsChange={setMessageRequests}
         myId={myId}
+        conversations={conversations}
       />
 
       {/* ── Chat ─────────────────────────────────────────────────────────── */}
@@ -1755,12 +1756,59 @@ useEffect(() => {
                               console.log("[NewConv] Creating conversation with user:", userId);
                               const conv = await createConversation({ participants: [userId] });
                               console.log("[NewConv] Conversation created:", conv);
+                              
+                              // Ensure the conversation has last_message_at set to current time
+                              // so it appears at the top of the sorted list
+                              let newConversation;
                               if (conv?.data?.conversation) {
-                                setSelectedConv(conv.data.conversation);
-                                setConversations(prev => [conv.data.conversation, ...prev]);
+                                newConversation = {
+                                  _id: conv.data.conversation._id || `temp-${Date.now()}`,
+                                  participants: conv.data.conversation.participants || [],
+                                  group_name: conv.data.conversation.group_name || null,
+                                  is_group: conv.data.conversation.is_group || false,
+                                  pinned_by: conv.data.conversation.pinned_by || [],
+                                  archived_by: conv.data.conversation.archived_by || [],
+                                  unread_counts: conv.data.conversation.unread_counts || {},
+                                  last_message: conv.data.conversation.last_message || null,
+                                  last_message_at: new Date().toISOString(),
+                                  ...conv.data.conversation
+                                };
+                                setSelectedConv(newConversation);
+                                setConversations(prev => [newConversation, ...prev]);
                               } else if (conv?.conversation) {
-                                setSelectedConv(conv.conversation);
-                                setConversations(prev => [conv.conversation, ...prev]);
+                                newConversation = {
+                                  _id: conv.conversation._id || `temp-${Date.now()}`,
+                                  participants: conv.conversation.participants || [],
+                                  group_name: conv.conversation.group_name || null,
+                                  is_group: conv.conversation.is_group || false,
+                                  pinned_by: conv.conversation.pinned_by || [],
+                                  archived_by: conv.conversation.archived_by || [],
+                                  unread_counts: conv.conversation.unread_counts || {},
+                                  last_message: conv.conversation.last_message || null,
+                                  last_message_at: new Date().toISOString(),
+                                  ...conv.conversation
+                                };
+                                setSelectedConv(newConversation);
+                                setConversations(prev => [newConversation, ...prev]);
+                              } else if (conv?.data) {
+                                // Handle case where conversation is directly in data
+                                newConversation = {
+                                  _id: conv.data._id || `temp-${Date.now()}`,
+                                  participants: conv.data.participants || [],
+                                  group_name: conv.data.group_name || null,
+                                  is_group: conv.data.is_group || false,
+                                  pinned_by: conv.data.pinned_by || [],
+                                  archived_by: conv.data.archived_by || [],
+                                  unread_counts: conv.data.unread_counts || {},
+                                  last_message: conv.data.last_message || null,
+                                  last_message_at: new Date().toISOString(),
+                                  ...conv.data
+                                };
+                                setSelectedConv(newConversation);
+                                setConversations(prev => [newConversation, ...prev]);
+                              } else {
+                                // Last resort - create minimal conversation object
+                                console.warn("[NewConv] Unexpected response format:", conv);
                               }
                               setShowNewConv(false);
                               setSearchQuery("");

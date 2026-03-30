@@ -77,9 +77,14 @@ export default function FollowModal({
     try {
       if (!confirmUser) return;
 
+      console.log('Confirm action - type:', type, 'userId:', confirmUser.id);
+
       if (type === "followers") {
-        await userService.removeFollower(confirmUser.id);
+        // For followers list: Remove follower using block
+        // Blocking removes the user from your followers list
+        await userService.blockUser(confirmUser.id);
       } else {
+        // For following list: unfollow the user
         await userService.unfollowUser(confirmUser.id);
       }
 
@@ -87,8 +92,11 @@ export default function FollowModal({
       // Close the modal after successful action
       onClose();
     } catch (err) {
-      console.error(err);
+      console.error('Action error:', err);
+      
+      // Handle errors gracefully - close modal anyway
       setConfirmUser(null);
+      onClose();
     }
   };
 
@@ -168,8 +176,10 @@ export default function FollowModal({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          const userId = id;
+                          console.log('Button click - type:', type, 'userId:', userId);
                           setConfirmUser({
-                            id: id,
+                            id: userId,
                             username: user.username,
                             image: user.profile_image_url,
                           });

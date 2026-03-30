@@ -69,7 +69,7 @@ export default function MutedUsersPage() {
   });
 
   return (
-    <div className="w-full max-w-2xl h-full flex flex-col">
+    <div className="w-full max-w-2xl lg:px-20 lg:py-10 h-full flex flex-col">
       {/* Header */}
       <h1 className="text-xl font-semibold mb-2">
         Muted Users

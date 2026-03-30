@@ -27,7 +27,7 @@ export default function HelpPage() {
   ];
 
   return (
-    <div className="w-full max-w-2xl">
+    <div className="w-full max-w-2xl lg:px-10 lg:py-10">
       
       {/* Header  main */}
       <h1 className="text-xl font-semibold mb-6">

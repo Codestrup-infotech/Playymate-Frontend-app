@@ -180,11 +180,43 @@ export default function MessagesSidebar({
   onConversationsChange = () => {},
   onMessageRequestsChange = () => {},
   myId = "",
+  conversations = [],
 }) {
   const [localConvLoading, setLocalConvLoading] = useState(true);
   const [localConversations, setLocalConversations] = useState([]);
   const [messageRequests, setMessageRequests] = useState([]);
   const [menuOpenConvId, setMenuOpenConvId] = useState(null);
+
+  // Sync with parent conversations when they change
+  // This is the main data source from parent component
+  useEffect(() => {
+    if (conversations && Array.isArray(conversations)) {
+      // Sort and set conversations from parent
+      const myIdLocal = getMyId();
+      const pinnedByMe = (conv) => (conv.pinned_by || []).includes(myIdLocal);
+      
+      const sorted = [...conversations].sort((a, b) => {
+        const aPinned = pinnedByMe(a);
+        const bPinned = pinnedByMe(b);
+        if (aPinned && !bPinned) return -1;
+        if (!aPinned && bPinned) return 1;
+        const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+        const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+        return bTime - aTime;
+      });
+      
+      setLocalConversations(sorted);
+      
+      // Update loading state - parent is handling data
+      setLocalConvLoading(false);
+    } else if (conversations && conversations.length === 0) {
+      // Empty array means parent explicitly set no conversations
+      setLocalConversations([]);
+      setLocalConvLoading(false);
+    }
+    // If conversations is undefined/null, don't change local state
+    // This allows the mount fetch to proceed
+  }, [conversations]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -197,8 +229,14 @@ export default function MessagesSidebar({
     return () => document.removeEventListener('click', handleClickOutside);
   }, [menuOpenConvId]);
 
-  // Fetch conversations on mount
+  // Fetch conversations on mount (only if not provided by parent)
   useEffect(() => {
+    // Skip fetching if parent already provided conversations
+    if (conversations && conversations.length > 0) {
+      setLocalConvLoading(false);
+      return;
+    }
+    
     const fetchConversations = async () => {
       setLocalConvLoading(true);
       try {
@@ -270,11 +308,22 @@ export default function MessagesSidebar({
       } else {
         await pinConversation(conv._id);
       }
-      // Refresh conversations
-      const data = await getConversations({ limit: 50 });
-      let convs = data?.conversations || [];
+      
+      // Update local state with pinned/unpinned conversation
+      const updatedConv = {
+        ...conv,
+        pinned_by: isPinned 
+          ? conv.pinned_by.filter(id => id !== sidebarMyId)
+          : [...(conv.pinned_by || []), sidebarMyId]
+      };
+      
+      const updated = localConversations.map(c => 
+        c._id === conv._id ? updatedConv : c
+      );
+      
+      // Re-sort
       const pinnedByMe = (c) => (c.pinned_by || []).includes(sidebarMyId);
-      convs = [...convs].sort((a, b) => {
+      updated.sort((a, b) => {
         const aPinned = pinnedByMe(a);
         const bPinned = pinnedByMe(b);
         if (aPinned && !bPinned) return -1;
@@ -283,8 +332,9 @@ export default function MessagesSidebar({
         const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
         return bTime - aTime;
       });
-      setLocalConversations(convs);
-      onConversationsChange(convs);
+      
+      setLocalConversations(updated);
+      onConversationsChange(updated);
     } catch (e) {
       console.error("Pin/unpin error:", e.message);
     }
