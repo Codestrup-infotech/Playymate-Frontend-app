@@ -151,17 +151,6 @@ export default function CoverPhotoUpload({
         )}
       </button>
 
-      {/* Delete Button (only show if there's a cover photo) */}
-      {currentCoverPhoto && !isUploading && (
-        <button
-          onClick={handleDeleteCoverPhoto}
-          className="px-3 py-2 bg-red-500/20 hover:bg-red-500/40 backdrop-blur-md text-white rounded-lg text-sm flex items-center gap-2"
-        >
-          <X size={16} />
-          Remove
-        </button>
-      )}
-
       {/* Error message */}
       {error && (
         <p className="text-red-400 text-xs mt-2">{error}</p>

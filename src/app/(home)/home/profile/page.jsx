@@ -23,7 +23,8 @@ import {
   Play,
   Grid,
   Film,
-  Bookmark
+  Bookmark,
+  X
 } from "lucide-react";
 
 
@@ -211,6 +212,22 @@ export default function ProfilePage() {
       profile_image_url: newAvatarUrl,
       profile_photos: [{ url: newAvatarUrl }]
     }));
+  };
+
+  // Handle delete cover photo
+  const handleDeleteCoverPhoto = async () => {
+    if (!coverPhoto || !profile?._id) return;
+
+    try {
+      await userService.deleteCoverPhoto(profile._id);
+      setCoverPhoto(null);
+      setProfile((prev) => ({
+        ...prev,
+        cover_photo: null
+      }));
+    } catch (err) {
+      console.error('Cover photo delete error:', err);
+    }
   };
 
   // Fetch posts when Posts tab is active
@@ -583,9 +600,15 @@ export default function ProfilePage() {
     <div className="absolute inset-0 bg-black/20" />
 
           <div className="absolute top-4 left-6 right-6 flex justify-between items-start">
-            <h1 className="text-white text-2xl font-bold">
-              {username || "User"}
-            </h1>
+            {coverPhoto && (
+              <button
+                onClick={handleDeleteCoverPhoto}
+                className="px-3 py-2 bg-red-500/20 hover:bg-red-500/40 backdrop-blur-md text-white rounded-lg text-sm flex items-center gap-2"
+              >
+                <X size={16} />
+                Remove
+              </button>
+            )}
 
             {is_own_profile && (
               <div className="flex gap-2">

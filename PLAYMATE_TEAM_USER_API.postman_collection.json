@@ -1,0 +1,592 @@
+{
+  "info": {
+    "name": "PLAYMATE Team Module - User API",
+    "description": "Postman collection for testing Team Module User APIs\n\n## Base URL\n{{base_url}}/api/v1\n\n## Authentication\nUse Bearer token authentication: Authorization: Bearer <user_jwt_token>\n\n## Key Features\n\n### Dynamic Categories\nCategories and values are dynamically fetched from the QuestionnaireCategory database. Admin can add new categories without code changes.\n\n### Team Primary Sport\n- **team_primary_sport**: Stored separately from profile_main_type\n- Set when user creates a team with `is_primary_sport: true`\n- User can ONLY create teams for their primary sport\n- Secondary sports can only be joined, not used for team creation\n\n### Eligibility Flow\nUse `GET /api/v1/teams/eligibility` to check:\n- Which categories user can create teams for\n- What is their primary sport\n- KYC status\n- Plan limits\n- Available slot packages\n\n### Team Slot Add-On Packs\nUsers can purchase additional team creation slots beyond their plan limits.\n\n### Team Name Reservation\nUsers can reserve their team name globally by paying coins.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "base_url", "value": "http://localhost:5000", "type": "string"},
+    {"key": "user_token", "value": "", "type": "string"},
+    {"key": "team_id", "value": "", "type": "string"},
+    {"key": "invite_code", "value": "", "type": "string"},
+    {"key": "invite_id", "value": "", "type": "string"},
+    {"key": "package_id", "value": "", "type": "string"},
+    {"key": "reservation_id", "value": "", "type": "string"}
+  ],
+  "item": [
+    {
+      "name": "1. Health Check",
+      "item": [
+        {
+          "name": "Team Module Health",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/health",
+            "description": "Check if the team module is running.\n\n### Screen Flow:\n- **Flutter/Web:** App startup health check → Verifies backend connectivity"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Team Media - Presigned URL",
+      "item": [
+        {
+          "name": "Generate Presigned URL for Logo",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams/media/presign",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purpose\": \"logo\",\n  \"file_name\": \"team-logo.png\",\n  \"mime_type\": \"image/png\"\n}"
+            },
+            "description": "Generate presigned URL for uploading team logo.\n\n### Screen Flow:\n- **Flutter/Web:** User taps \"Upload Logo\" on Team Create/Edit screen → App calls this endpoint → Gets presigned URL → Uploads file directly to Wasabi using the URL → Stores the `key` in team creation/update request"
+          }
+        },
+        {
+          "name": "Generate Presigned URL for Banner",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams/media/presign",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purpose\": \"banner\",\n  \"file_name\": \"team-banner.jpg\",\n  \"mime_type\": \"image/jpeg\"\n}"
+            },
+            "description": "Generate presigned URL for uploading team banner.\n\n### Screen Flow:\n- **Flutter/Web:** User taps \"Upload Banner\" on Team Create/Edit screen → App calls this endpoint → Gets presigned URL → Uploads file directly to Wasabi using the URL → Stores the `key` in team creation/update request"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Eligibility - Check What You Can Create",
+      "item": [
+        {
+          "name": "Check Team Creation Eligibility",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/eligibility",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Returns eligible categories based on user's questionnaire selections and team_primary_sport.\n\n### Response includes:\n- `can_create_team`: boolean - whether user can create any team\n- `primary_sport`: The sport they can create teams for (from team_primary_sport or first sport in interests)\n- `eligible_categories`: Array of categories user can create teams for\n- `dynamic_categories`: true if using database categories\n- `kyc_status`: User's KYC verification status\n- `max_teams_allowed`: Number of teams allowed based on subscription plan\n- `teams_created_count`: How many teams user has created\n- `slot_addons_available`: Whether slot add-on packs are available\n- `available_packages`: Array of available slot packages\n\n### Screen Flow:\n- **Flutter/Web:** User navigates to \"Create Team\" screen → App calls this endpoint → If `can_create_team: false`, shows \"Upgrade Plan\" or \"Buy Extra Slots\" CTA → If `can_create_team: true`, shows team creation form with eligible categories"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Team Creation",
+      "item": [
+        {
+          "name": "Create Team (Primary Sport) - Sets team_primary_sport",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Thunder Strikers\",\n  \"category_type\": \"sports\",\n  \"category_value\": \"cricket\",\n  \"is_primary_sport\": true,\n  \"description\": \"A passionate cricket team for weekend warriors\",\n  \"visibility\": \"public\",\n  \"skill_level\": \"all_levels\",\n  \"age_group\": \"18_plus\",\n  \"max_members\": 15,\n  \"location\": {\"city\": \"Pune\", \"area\": \"Kothrud\"},\n  \"roles_config\": {\"co_captain_enabled\": true, \"manager_enabled\": true, \"coach_enabled\": false},\n  \"membership\": {\n    \"is_paid\": true,\n    \"fee_amount\": 499,\n    \"default_duration_type\": \"YEARLY\",\n    \"allow_duration_choice\": true,\n    \"duration_pricing\": {\n      \"MONTHLY\": {\"amount\": 199},\n      \"QUARTERLY\": {\"amount\": 399},\n      \"YEARLY\": {\"amount\": 499}\n    },\n    \"welcome_bonus_coins\": 50\n  },\n  \"reserve_name\": true,\n  \"name_payment_method\": \"COINS\",\n  \"name_idempotency_key\": \"team_create_thunder_strikers_12345\"\n}"
+            },
+            "description": "### When `is_primary_sport: true` is passed:\n\n1. User's sport is saved to `user.team_primary_sport` (NOT profile_main_type)\n2. User can ONLY create teams for that primary sport\n3. Other sports become 'secondary' - can only JOIN, not create\n\n### Important:\n- The `category_value` must exist in user's questionnaire interests\n- This is stored separately from `profile_main_type` (general profile interest)\n\n### Request Fields:\n| Field | Required | Description |\n|-------|----------|-------------|\n| name | Yes | Team name (max 80 chars) |\n| category_type | Yes | Category type (sports, hobbies, etc.) |\n| category_value | Yes | The specific value (cricket, football, etc.) |\n| is_primary_sport | No | If true, sets as user's team primary sport |\n| visibility | No | public or private (default: public) |\n| skill_level | No | all_levels, beginner, intermediate, advanced, pro |\n| age_group | No | all_ages, under_18, 18_plus, 25_plus, 35_plus |\n| max_members | No | 2-200, default 15 |\n| membership.is_paid | No | default true |\n| membership.fee_amount | No | Membership fee in INR |\n| reserve_name | No | If true, reserves team name globally |\n| name_payment_method | No | COINS or INR (required if reserve_name is true) |\n| name_idempotency_key | No | Idempotency key (required if reserve_name is true) |\n\n### Screen Flow:\n- **Flutter/Web:** User fills team creation form → Taps \"Create Team\" → App calls this endpoint → On success, navigates to Team Profile screen → On error, shows error message"
+          }
+        },
+        {
+          "name": "Create Team (Non-Primary) - No team_primary_sport update",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Weekend Football\",\n  \"category_type\": \"sports\",\n  \"category_value\": \"football\",\n  \"is_primary_sport\": false,\n  \"description\": \"Casual football team\",\n  \"visibility\": \"public\"\n}"
+            },
+            "description": "### When `is_primary_sport` is false or not provided:\n\n1. Does NOT update team_primary_sport\n2. User can still create team for any sport from their interests\n3. First sport from interests becomes default primary\n\n### Note:\nIf user already has a primary sport set in team_primary_sport, they can only create for that sport (unless they pass is_primary_sport: true with a different sport)\n\n### Screen Flow:\n- **Flutter/Web:** User fills team creation form → Taps \"Create Team\" → App calls this endpoint → On success, navigates to Team Profile screen → On error, shows error message"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Team Discovery",
+      "item": [
+        {
+          "name": "List/Discover Teams",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams?category_type=sports&limit=20",
+            "description": "Discover public teams.\n\n### Query Parameters:\n| Parameter | Description |\n|-----------|-------------|\n| category_type | Filter by category (sports, hobbies, etc.) |\n| category_value | Filter by specific value |\n| city | Filter by city |\n| skill_level | Filter by skill level |\n| age_group | Filter by age group |\n| has_capacity | true to show only teams with space |\n| sort | newest or members_count |\n| limit | Number of results (default 20) |\n| cursor | Pagination cursor |\n\n### Screen Flow:\n- **Flutter/Web:** User opens \"Discover Teams\" screen → App calls this endpoint with filters → Displays team cards → User taps team card → Navigates to Team Profile"
+          }
+        },
+        {
+          "name": "Get Team Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}",
+            "description": "Get detailed team profile.\n\n### Screen Flow:\n- **Flutter/Web:** User taps team card from discovery or my teams → App calls this endpoint → Displays team profile with members, settings, and action buttons (Join, Edit, etc.)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. My Teams",
+      "item": [
+        {
+          "name": "Get My Teams (Owned + Member)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/mine",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Get all teams user is part of (owned + member).\n\n### Screen Flow:\n- **Flutter/Web:** User opens \"My Teams\" screen → App calls this endpoint → Displays owned teams and member teams in separate sections"
+          }
+        },
+        {
+          "name": "Get My Created Teams",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/mine/created",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Get teams user owns.\n\n### Screen Flow:\n- **Flutter/Web:** User opens \"My Teams\" → Taps \"Created\" tab → App calls this endpoint → Displays owned teams"
+          }
+        },
+        {
+          "name": "Get My Joined Teams",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/mine/joined",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Get teams user is member of.\n\n### Screen Flow:\n- **Flutter/Web:** User opens \"My Teams\" → Taps \"Joined\" tab → App calls this endpoint → Displays member teams"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Team Update",
+      "item": [
+        {
+          "name": "Update Team",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Thunder Strikers Cricket Club\",\n  \"description\": \"Updated description\",\n  \"skill_level\": \"intermediate\",\n  \"max_members\": 20\n}"
+            },
+            "description": "Update team settings (owner only).\n\n### Screen Flow:\n- **Flutter/Web:** Owner taps \"Edit Team\" → App shows edit form → User updates fields → Taps \"Save\" → App calls this endpoint → On success, refreshes team profile"
+          }
+        },
+        {
+          "name": "Archive Team (Owner Only)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Archive team (soft delete - owner only).\n\n### Screen Flow:\n- **Flutter/Web:** Owner taps \"Archive Team\" → Shows confirmation dialog → User confirms → App calls this endpoint → On success, navigates to My Teams screen"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Membership - Join Team",
+      "item": [
+        {
+          "name": "Preview Membership",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/membership/preview",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Shows membership options, pricing, and user's wallet balances before joining.\n\n### Screen Flow:\n- **Flutter/Web:** User taps \"Join Team\" → App calls this endpoint → Shows membership options with pricing breakdown → User selects duration → Proceeds to payment"
+          }
+        },
+        {
+          "name": "Initiate Membership",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/membership/initiate",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"membership_type\": \"YEARLY\",\n  \"payment_preferences\": {\n    \"use_gold_coins\": true,\n    \"use_diamonds\": true\n  }\n}"
+            },
+            "description": "Initiates the join process. Creates a pending payment transaction.\n\n### Membership Types:\n- MONTHLY\n- QUARTERLY\n- YEARLY\n\n### Screen Flow:\n- **Flutter/Web:** User selects membership duration → Taps \"Join\" → App calls this endpoint → Shows payment breakdown → User confirms → Proceeds to confirm endpoint"
+          }
+        },
+        {
+          "name": "Confirm Membership",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/membership/confirm",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"team_join_{{team_id}}_{{user_id}}_{{timestamp}}\"\n}"
+            },
+            "description": "Confirms the membership and processes payment. Use the idempotency_key from initiate response.\n\n### Screen Flow:\n- **Flutter/Web:** User confirms payment → App calls this endpoint → On success, shows \"Welcome to Team\" screen → On failure, shows error message"
+          }
+        },
+        {
+          "name": "Leave Team",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/membership",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Leaves the team. Owner cannot leave - must archive instead.\n\n### Refund:\n- Diamonds are refunded pro-rata based on remaining membership period\n- Gold coins spent are NOT refunded\n\n### Screen Flow:\n- **Flutter/Web:** User taps \"Leave Team\" → Shows confirmation dialog → User confirms → App calls this endpoint → On success, navigates to My Teams screen"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Members Management",
+      "item": [
+        {
+          "name": "Get Team Members",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/members",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Get list of team members. Only active members can view.\n\n### Screen Flow:\n- **Flutter/Web:** User opens Team Profile → Taps \"Members\" tab → App calls this endpoint → Displays member list with roles"
+          }
+        },
+        {
+          "name": "Get Pending Members (Owner Only)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/members/pending",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Get members who have initiated but not completed payment.\n\n### Screen Flow:\n- **Flutter/Web:** Owner opens Team Profile → Taps \"Pending Members\" → App calls this endpoint → Displays pending members list"
+          }
+        },
+        {
+          "name": "Update Member Role",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/members/{{user_id}}/role",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"co_captain\"\n}"
+            },
+            "description": "Update member role. Owner or co-captain can change roles.\n\n### Roles:\n- owner (cannot be changed)\n- co_captain\n- manager\n- coach\n- member\n\n### Screen Flow:\n- **Flutter/Web:** Owner/co-captain opens member profile → Taps \"Change Role\" → Selects new role → App calls this endpoint → On success, updates member list"
+          }
+        },
+        {
+          "name": "Remove Member",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/members/{{user_id}}",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Remove a member from team. Owner or co-captain can remove members.\n\nRemoved member receives pro-rata diamond refund.\n\n### Screen Flow:\n- **Flutter/Web:** Owner/co-captain opens member profile → Taps \"Remove Member\" → Shows confirmation dialog → User confirms → App calls this endpoint → On success, removes from member list"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Invite System",
+      "item": [
+        {
+          "name": "Create Invite",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/invites",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invite_type\": \"link\"\n}"
+            },
+            "description": "Create an invite link or direct invite for private teams.\n\n### Invite Types:\n- link: Generate shareable invite link\n- direct: Send direct invite to specific user\n- qr: Generate QR code invite\n\n### Screen Flow:\n- **Flutter/Web:** Owner/co-captain taps \"Invite Members\" → Selects invite type → App calls this endpoint → Shows invite link or sends direct invite"
+          }
+        },
+        {
+          "name": "Resolve Invite Code",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/invites/{{invite_code}}",
+            "description": "Resolve an invite code to see team details before accepting.\n\n### Screen Flow:\n- **Flutter/Web:** User receives invite link → Opens link → App calls this endpoint → Shows team details and \"Accept\"/\"Decline\" buttons"
+          }
+        },
+        {
+          "name": "Accept Invite",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams/invites/{{invite_code}}/accept",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Accept an invite to join a team.\n\n### Screen Flow:\n- **Flutter/Web:** User views invite details → Taps \"Accept\" → App calls this endpoint → Redirects to membership preview → User completes payment"
+          }
+        },
+        {
+          "name": "Decline Invite",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams/invites/{{invite_code}}/decline",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Decline an invite.\n\n### Screen Flow:\n- **Flutter/Web:** User views invite details → Taps \"Decline\" → App calls this endpoint → Shows confirmation message"
+          }
+        },
+        {
+          "name": "Revoke Invite (Owner Only)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/invites/{{invite_id}}",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Revoke a pending invite.\n\n### Screen Flow:\n- **Flutter/Web:** Owner opens invite list → Taps \"Revoke\" on an invite → Shows confirmation dialog → User confirms → App calls this endpoint → On success, removes from invite list"
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Payments Dashboard",
+      "item": [
+        {
+          "name": "Get Team Payments (Owner Only)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/payments",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Get payment transactions for a team.\n\n### Screen Flow:\n- **Flutter/Web:** Owner opens Team Settings → Taps \"Payments\" → App calls this endpoint → Displays payment history"
+          }
+        },
+        {
+          "name": "Get Payment Summary (Owner Only)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/payments/summary?period=30",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Get payment summary for a team.\n\n### Screen Flow:\n- **Flutter/Web:** Owner opens Team Settings → Taps \"Payment Summary\" → App calls this endpoint → Displays revenue statistics and trends"
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Team Slot Add-On Packs",
+      "item": [
+        {
+          "name": "List Available Slot Packages",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/slot-packages",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "List available slot packages for purchase.\n\n### Screen Flow:\n- **Flutter/Web:** User reaches team creation limit → App shows \"Buy Extra Slots\" CTA → User taps → App calls this endpoint → Displays available packages"
+          }
+        },
+        {
+          "name": "Get Slot Package Detail",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/slot-packages/{{package_id}}",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Get detailed information about a specific slot package.\n\n### Screen Flow:\n- **Flutter/Web:** User views package list → Taps on a package → App calls this endpoint → Shows package details with pricing"
+          }
+        },
+        {
+          "name": "Initiate Slot Purchase",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams/slots/initiate",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_id\": \"{{package_id}}\",\n  \"idempotency_key\": \"slot_purchase_{{package_id}}_{{user_id}}_{{timestamp}}\"\n}"
+            },
+            "description": "Initiate a slot package purchase.\n\n### Screen Flow:\n- **Flutter/Web:** User selects a package → Taps \"Purchase\" → App calls this endpoint → Shows payment breakdown → User confirms → Proceeds to confirm endpoint"
+          }
+        },
+        {
+          "name": "Confirm Slot Purchase",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams/slots/confirm",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"slot_purchase_{{package_id}}_{{user_id}}_{{timestamp}}\"\n}"
+            },
+            "description": "Confirm slot purchase and process payment.\n\n### Screen Flow:\n- **Flutter/Web:** User confirms payment → App calls this endpoint → On success, shows \"Purchase Successful\" screen → On failure, shows error message"
+          }
+        },
+        {
+          "name": "Get My Slot Purchases",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/slots/mine",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Get user's slot purchase history.\n\n### Screen Flow:\n- **Flutter/Web:** User opens \"My Purchases\" → App calls this endpoint → Displays purchase history"
+          }
+        },
+        {
+          "name": "Get My Slot Balance",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/slots/mine/balance",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Get user's available slot balance.\n\n### Screen Flow:\n- **Flutter/Web:** User opens Team Creation screen → App calls this endpoint → Shows available slots count"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. Team Name Reservation",
+      "item": [
+        {
+          "name": "Check Name Availability",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/name-reservation/check?name=Thunder%20FC",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Check if a team name is available for reservation.\n\n### Screen Flow:\n- **Flutter/Web:** User enters team name → App calls this endpoint → Shows availability status → If unavailable, shows who reserved it"
+          }
+        },
+        {
+          "name": "Get Reservation Pricing",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/name-reservation/pricing",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Get current name reservation pricing.\n\n### Screen Flow:\n- **Flutter/Web:** User views name reservation option → App calls this endpoint → Shows pricing and expiry details"
+          }
+        },
+        {
+          "name": "Initiate Name Reservation",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/name-reservation/initiate",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"name_reservation_{{team_id}}_{{user_id}}_{{timestamp}}\"\n}"
+            },
+            "description": "Initiate name reservation for a team.\n\n### Screen Flow:\n- **Flutter/Web:** Owner taps \"Reserve Name\" → App calls this endpoint → Shows payment breakdown → User confirms → Proceeds to confirm endpoint"
+          }
+        },
+        {
+          "name": "Confirm Name Reservation",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/name-reservation/confirm",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"name_reservation_{{team_id}}_{{user_id}}_{{timestamp}}\"\n}"
+            },
+            "description": "Confirm name reservation and process payment.\n\n### Screen Flow:\n- **Flutter/Web:** User confirms payment → App calls this endpoint → On success, shows \"Name Reserved\" confirmation → On failure, shows error message"
+          }
+        },
+        {
+          "name": "Get Reservation Status",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/name-reservation",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Get current name reservation status for a team.\n\n### Screen Flow:\n- **Flutter/Web:** Owner opens Team Settings → App calls this endpoint → Shows reservation status and expiry date"
+          }
+        },
+        {
+          "name": "Release Reservation",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/name-reservation",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "description": "Release name reservation for a team.\n\n### Screen Flow:\n- **Flutter/Web:** Owner taps \"Release Name\" → Shows confirmation dialog → User confirms → App calls this endpoint → On success, shows confirmation message"
+          }
+        },
+        {
+          "name": "Renew Reservation",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams/{{team_id}}/name-reservation/renew",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"name_reservation_renew_{{team_id}}_{{user_id}}_{{timestamp}}\"\n}"
+            },
+            "description": "Renew name reservation for a team.\n\n### Screen Flow:\n- **Flutter/Web:** Owner taps \"Renew Reservation\" → App calls this endpoint → Shows payment breakdown → User confirms → Proceeds to confirm endpoint"
+          }
+        }
+      ]
+    }
+  ]
+}

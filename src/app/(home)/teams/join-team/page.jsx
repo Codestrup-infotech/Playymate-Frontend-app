@@ -1,17 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { ArrowLeft, MapPin, Users, Share2, Menu, Trophy, Flame, TrendingUp, Star, Dumbbell, CircleDot, Swords, ShoppingBag } from "lucide-react"
 import Link from "next/link"
+import { getTeamProfile, getTeamMembers, discoverTeams } from "@/lib/api/teamApi"
 
 const TABS = ["Overview", "Members", "Activities", "Events"]
-
-const STATS = [
-  { label: "Member", value: 24, icon: Users },
-  { label: "Events", value: 24, icon: Trophy },
-  { label: "Wins", value: 24, icon: Swords },
-  { label: "Badges", value: 24, icon: Star },
-]
 
 const BADGES = [
   { icon: Trophy, label: "First WIN", sub: "Won Your First Prediction", color: "#f97316", bg: "#fff7ed" },
@@ -28,22 +23,140 @@ const ACTIVITY_TEAMS = [
   { label: "Badminton", icon: Star, color: "#10b981" },
 ]
 
-const MEMBERS = ["JS", "MJ", "DW", "CB", "RD", "LM", "AK", "SW", "JH"]
-
-const UPCOMING_EVENTS = [
-  { month: "Feb", day: 15, title: "Weekend Cricket Match", venue: "Central Ground", tag: "4 Sports", tagColor: "#ec4899" },
-  { month: "Feb", day: 21, title: "Practice Session", venue: "Sport Complex", tag: "8 Sports", tagColor: "#f97316" },
-  { month: "Mar", day: 8, title: "Inter Team Tournament", venue: "Stadium", tag: "8 Sports", tagColor: "#8b5cf6" },
-]
-
-const RECENT_ACTIVITY = [
-  "Won against City FC 3-1",
-  "New member joined: Vikram T.",
-  "Training session completed",
+const DEFAULT_STATS = [
+  { label: "Members", value: 0, icon: Users },
+  { label: "Events", value: 0, icon: Trophy },
+  { label: "Wins", value: 0, icon: Swords },
+  { label: "Badges", value: 0, icon: Star },
 ]
 
 export default function JoinTeamPage() {
+  const searchParams = useSearchParams()
+  const teamId = searchParams.get("id")
+  
   const [activeTab, setActiveTab] = useState("Overview")
+  const [teamData, setTeamData] = useState(null)
+  const [teamMembers, setTeamMembers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [discoverTeamsList, setDiscoverTeamsList] = useState([])
+
+  // If no team ID, show discover teams list
+  const isDiscoverMode = !teamId
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (teamId) {
+        // Fetch specific team
+        try {
+          const [team, members] = await Promise.all([
+            getTeamProfile(teamId),
+            getTeamMembers(teamId)
+          ])
+          setTeamData(team)
+          setTeamMembers(members || [])
+        } catch (err) {
+          console.error("Error fetching team:", err)
+          setError("Failed to load team details")
+        }
+      } else {
+        // Fetch discover teams
+        try {
+          const teams = await discoverTeams({ limit: 20 })
+          setDiscoverTeamsList(teams || [])
+        } catch (err) {
+          console.error("Error fetching teams:", err)
+          setError("Failed to load teams")
+        }
+      }
+      setLoading(false)
+    }
+
+    fetchData()
+  }, [teamId])
+
+  const stats = teamData ? [
+    { label: "Members", value: teamData.members_count || teamMembers.length || 0, icon: Users },
+    { label: "Events", value: teamData.events_count || 0, icon: Trophy },
+    { label: "Wins", value: teamData.wins_count || 0, icon: Swords },
+    { label: "Badges", value: teamData.badges_count || 0, icon: Star },
+  ] : DEFAULT_STATS
+
+  const members = teamMembers.slice(0, 9).map(m => m.name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "MB")
+
+  const upcomingEvents = teamData?.upcoming_events || []
+  const recentActivity = teamData?.recent_activity || ["No recent activity"]
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !teamData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center p-6">
+          <p className="text-red-500 mb-4">{error}</p>
+          <Link href="/teams" className="text-pink-500 hover:underline">
+            Back to Teams
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // Discover mode - show list of teams
+  if (isDiscoverMode) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-6">
+            <Link href="/teams" className="text-gray-900">
+              <ArrowLeft size={22} />
+            </Link>
+            <h1 className="text-xl font-semibold">Discover Teams</h1>
+          </div>
+
+          {discoverTeamsList.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No teams found</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {discoverTeamsList.map((team) => (
+                <Link
+                  key={team._id || team.id}
+                  href={`/teams/join-team?id=${team._id || team.id}`}
+                  className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4"
+                >
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center text-white font-bold">
+                    {team.logo ? (
+                      <img src={team.logo} alt={team.name} className="w-full h-full rounded-xl object-cover" />
+                    ) : (
+                      team.name?.charAt(0)?.toUpperCase() || "T"
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">{team.name}</h3>
+                    <p className="text-sm text-gray-500">{team.category_value || team.sport}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">{team.members_count || 0} members</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -110,7 +223,6 @@ export default function JoinTeamPage() {
           z-index: 10;
         }
 
-        /* On mobile: left-col and right-col stack naturally */
         .jt-left-col { display: flex; flex-direction: column; gap: 16px; }
         .jt-right-col { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
 
@@ -279,9 +391,6 @@ export default function JoinTeamPage() {
         }
         .jt-join-btn:hover { opacity: 0.9; }
 
-        /* ════════════════════════════════
-           TABLET  ≥ 640px
-        ════════════════════════════════ */
         @media (min-width: 640px) {
           .jt-layout { padding: 0 24px; }
           .jt-cover { height: 240px; }
@@ -297,9 +406,6 @@ export default function JoinTeamPage() {
           .jt-join-fixed { max-width: 640px; }
         }
 
-        /* ════════════════════════════════
-           DESKTOP  ≥ 1024px — two-column
-        ════════════════════════════════ */
         @media (min-width: 1024px) {
           .jt-root { padding-bottom: 0; }
           .jt-cover { height: 280px; }
@@ -309,7 +415,6 @@ export default function JoinTeamPage() {
             margin: 0 auto;
           }
 
-          /* two-column grid */
           .jt-layout {
             max-width: 1200px;
             margin: -60px auto 0;
@@ -320,7 +425,6 @@ export default function JoinTeamPage() {
             align-items: start;
           }
 
-          /* Left col: sticky sidebar */
           .jt-left-col {
             grid-column: 1;
             position: sticky;
@@ -328,20 +432,17 @@ export default function JoinTeamPage() {
             gap: 20px;
           }
 
-          /* Right col */
           .jt-right-col {
             grid-column: 2;
             margin-top: 0;
             gap: 18px;
           }
 
-          /* Larger avatar */
           .jt-avatar-ring { width: 88px; height: 88px; }
           .jt-avatar-inner { font-size: 36px; }
           .jt-avatar-wrap { margin-top: -36px; }
           .jt-avatar-badge { width: 24px; height: 24px; font-size: 10px; }
 
-          /* Badges: 2-col grid instead of scroll */
           .jt-badges-scroll {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -350,32 +451,25 @@ export default function JoinTeamPage() {
           }
           .jt-badge-card { min-width: unset; }
 
-          /* Teams: wrap instead of scroll */
           .jt-teams-scroll {
             flex-wrap: wrap;
             overflow-x: unset;
             gap: 14px;
           }
 
-          /* Tabs */
           .jt-tab-btn { font-size: 13px; padding: 10px 4px; }
 
-          /* Events 2-col on desktop */
           .jt-events-desktop-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 12px;
           }
 
-          /* Hide fixed mobile button, show static desktop button */
           .jt-join-fixed { display: none !important; }
           .jt-join-static { display: block; margin-top: 4px; }
           .jt-join-btn { font-size: 16px; padding: 18px 0; }
         }
 
-        /* ════════════════════════════════
-           WIDE  ≥ 1280px
-        ════════════════════════════════ */
         @media (min-width: 1280px) {
           .jt-layout {
             grid-template-columns: 400px 1fr;
@@ -397,11 +491,12 @@ export default function JoinTeamPage() {
               <ArrowLeft size={18} color="#fff" />
             </Link>
             <div style={{ display: "flex", gap: 10 }}>
-              {[Share2, Menu].map((Icon, i) => (
-                <div key={i} className="jt-icon-btn">
-                  <Icon size={18} color="#fff" />
-                </div>
-              ))}
+              <div className="jt-icon-btn">
+                <Share2 size={18} color="#fff" />
+              </div>
+              <div className="jt-icon-btn">
+                <Menu size={18} color="#fff" />
+              </div>
             </div>
           </div>
         </div>
@@ -417,23 +512,37 @@ export default function JoinTeamPage() {
               <div className="jt-avatar-row">
                 <div className="jt-avatar-wrap">
                   <div className="jt-avatar-ring">
-                    <div className="jt-avatar-inner">👩</div>
+                    <div className="jt-avatar-inner">
+                      {teamData?.logo ? (
+                        <img src={teamData.logo} alt={teamData.name} className="w-full h-full object-cover" />
+                      ) : (
+                        teamData?.name?.charAt(0)?.toUpperCase() || "T"
+                      )}
+                    </div>
                   </div>
-                  <div className="jt-avatar-badge">🔥4</div>
+                  {teamData?.level && (
+                    <div className="jt-avatar-badge">🔥{teamData.level}</div>
+                  )}
                 </div>
-                <span className="jt-sport-badge">Cricket</span>
+                <span className="jt-sport-badge">
+                  {teamData?.category_value || teamData?.sport || "Sports"}
+                </span>
               </div>
               <div style={{ marginTop: 8 }}>
                 <h2 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: 0, letterSpacing: -0.3 }}>
-                  Lorem ipsum
+                  {teamData?.name || "Team Name"}
                 </h2>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
-                  <MapPin size={12} color="#ec4899" />
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>Pune, Maharashtra</span>
-                </div>
+                {teamData?.location && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
+                    <MapPin size={12} color="#ec4899" />
+                    <span style={{ fontSize: 12, color: "#6b7280" }}>
+                      {teamData.location.city}{teamData.location.area ? `, ${teamData.location.area}` : ""}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="jt-stats-grid">
-                {STATS.map(({ label, value }) => (
+                {stats.map(({ label, value }) => (
                   <div key={label} className="jt-stat-item">
                     <p className="jt-stat-val">{value}</p>
                     <p className="jt-stat-lbl">{label}</p>
@@ -443,35 +552,39 @@ export default function JoinTeamPage() {
             </div>
 
             {/* BADGES */}
-            <div>
-              <h3 className="jt-section-title">Badges</h3>
-              <div className="jt-badges-scroll">
-                {BADGES.map(({ icon: Icon, label, sub, color, bg }) => (
-                  <div key={label} className="jt-badge-card">
-                    <div className="jt-badge-icon-wrap" style={{ background: bg }}>
-                      <Icon size={20} color={color} />
+            {teamData?.badges?.length > 0 && (
+              <div>
+                <h3 className="jt-section-title">Badges</h3>
+                <div className="jt-badges-scroll">
+                  {teamData.badges.map(({ icon: Icon, label, sub, color, bg }) => (
+                    <div key={label} className="jt-badge-card">
+                      <div className="jt-badge-icon-wrap" style={{ background: bg }}>
+                        <Icon size={20} color={color} />
+                      </div>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: "#111827", margin: 0 }}>{label}</p>
+                      <p style={{ fontSize: 10, color: "#9ca3af", margin: "2px 0 0", lineHeight: 1.3 }}>{sub}</p>
                     </div>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: "#111827", margin: 0 }}>{label}</p>
-                    <p style={{ fontSize: 10, color: "#9ca3af", margin: "2px 0 0", lineHeight: 1.3 }}>{sub}</p>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* ACTIVITY TEAMS */}
-            <div>
-              <h3 className="jt-section-title">Activity Teams</h3>
-              <div className="jt-teams-scroll">
-                {ACTIVITY_TEAMS.map(({ label, icon: Icon, color }) => (
-                  <div key={label} className="jt-team-item">
-                    <div className="jt-team-icon-wrap">
-                      <Icon size={24} color={color} />
+            {teamData?.related_teams?.length > 0 && (
+              <div>
+                <h3 className="jt-section-title">Related Teams</h3>
+                <div className="jt-teams-scroll">
+                  {teamData.related_teams.map(({ label, icon: Icon, color }) => (
+                    <div key={label} className="jt-team-item">
+                      <div className="jt-team-icon-wrap">
+                        <Icon size={24} color={color} />
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 600, color }}>{label}</span>
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 600, color }}>{label}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
           </div>
           {/* END LEFT COLUMN */}
@@ -499,8 +612,7 @@ export default function JoinTeamPage() {
                   <h3 className="jt-section-title">About</h3>
                   <div className="jt-card">
                     <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.6, margin: 0 }}>
-                      A passionate cricket team focused on practice sessions, friendly matches, and local
-                      tournaments. We play, train, and grow together as a squad.
+                      {teamData?.description || "No description available"}
                     </p>
                   </div>
                 </div>
@@ -509,7 +621,7 @@ export default function JoinTeamPage() {
                   <h3 className="jt-section-title">Members</h3>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <div style={{ display: "flex" }}>
-                      {MEMBERS.slice(0, 4).map((initials, i) => (
+                      {members.slice(0, 4).map((initials, i) => (
                         <div key={i} style={{
                           width: 38, height: 38, borderRadius: "50%",
                           background: `linear-gradient(135deg, hsl(${i * 40 + 10},80%,60%), hsl(${i * 40 + 50},80%,55%))`,
@@ -521,20 +633,22 @@ export default function JoinTeamPage() {
                         }}>{initials}</div>
                       ))}
                     </div>
-                    <div style={{
-                      width: 38, height: 38, borderRadius: "50%",
-                      background: "#f3f4f6", border: "2.5px solid #f8f9fc", marginLeft: -10,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 12, fontWeight: 700, color: "#374151",
-                    }}>21</div>
+                    {teamMembers.length > 4 && (
+                      <div style={{
+                        width: 38, height: 38, borderRadius: "50%",
+                        background: "#f3f4f6", border: "2.5px solid #f8f9fc", marginLeft: -10,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 12, fontWeight: 700, color: "#374151",
+                      }}>{teamMembers.length - 4}</div>
+                    )}
                   </div>
                 </div>
 
                 <div className="jt-card">
-                  {RECENT_ACTIVITY.map((item, i) => (
+                  {recentActivity.map((item, i) => (
                     <div key={i} style={{
                       display: "flex", alignItems: "center", gap: 10, padding: "5px 0",
-                      borderBottom: i < RECENT_ACTIVITY.length - 1 ? "1px solid #f9fafb" : "none",
+                      borderBottom: i < recentActivity.length - 1 ? "1px solid #f9fafb" : "none",
                     }}>
                       <div style={{
                         width: 6, height: 6, borderRadius: "50%",
@@ -546,58 +660,62 @@ export default function JoinTeamPage() {
                   ))}
                 </div>
 
-                <div>
-                  <h3 className="jt-section-title">Upcoming Events</h3>
-                  <div className="jt-events-desktop-grid" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {UPCOMING_EVENTS.map((event, i) => (
-                      <div key={i} className="jt-event-card">
-                        <div style={{
-                          minWidth: 46, height: 52, borderRadius: 12,
-                          background: `linear-gradient(135deg, ${event.tagColor}22, ${event.tagColor}44)`,
-                          display: "flex", flexDirection: "column",
-                          alignItems: "center", justifyContent: "center",
-                          border: `1px solid ${event.tagColor}33`,
-                          flexShrink: 0,
-                        }}>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: event.tagColor, textTransform: "uppercase" }}>
-                            {event.month}
-                          </span>
-                          <span style={{ fontSize: 20, fontWeight: 800, color: event.tagColor, lineHeight: 1.1 }}>
-                            {event.day}
-                          </span>
+                {upcomingEvents.length > 0 && (
+                  <div>
+                    <h3 className="jt-section-title">Upcoming Events</h3>
+                    <div className="jt-events-desktop-grid" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {upcomingEvents.map((event, i) => (
+                        <div key={i} className="jt-event-card">
+                          <div style={{
+                            minWidth: 46, height: 52, borderRadius: 12,
+                            background: `linear-gradient(135deg, #ec489922, #f9731644)`,
+                            display: "flex", flexDirection: "column",
+                            alignItems: "center", justifyContent: "center",
+                            flexShrink: 0,
+                          }}>
+                            <span style={{ fontSize: 9, fontWeight: 700, color: "#ec4899", textTransform: "uppercase" }}>
+                              {new Date(event.date).toLocaleString('default', { month: 'short' })}
+                            </span>
+                            <span style={{ fontSize: 20, fontWeight: 800, color: "#ec4899", lineHeight: 1.1 }}>
+                              {new Date(event.date).getDate()}
+                            </span>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0 }}>{event.title}</p>
+                            {event.venue && (
+                              <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0", display: "flex", alignItems: "center", gap: 3 }}>
+                                <MapPin size={10} color="#9ca3af" />{event.venue}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0 }}>{event.title}</p>
-                          <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0", display: "flex", alignItems: "center", gap: 3 }}>
-                            <MapPin size={10} color="#9ca3af" />{event.venue}
-                          </p>
-                        </div>
-                        <span style={{
-                          padding: "3px 10px", borderRadius: 20,
-                          background: `${event.tagColor}15`, color: event.tagColor,
-                          fontSize: 10, fontWeight: 700, flexShrink: 0,
-                        }}>{event.tag}</span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
 
             {/* ── MEMBERS TAB ── */}
             {activeTab === "Members" && (
               <div className="jt-card">
-                <h3 className="jt-section-title">Team Members (9)</h3>
+                <h3 className="jt-section-title">Team Members ({teamMembers.length})</h3>
                 <div className="jt-members-flex">
-                  {MEMBERS.map((initials, i) => (
-                    <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                  {teamMembers.map((member, i) => (
+                    <div key={member._id || member.id || i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                       <div style={{
                         width: 46, height: 46, borderRadius: "50%",
                         background: `linear-gradient(135deg, hsl(${i * 40 + 10},80%,60%), hsl(${i * 40 + 50},80%,55%))`,
                         display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: 13, fontWeight: 700, color: "#fff",
-                      }}>{initials}</div>
-                      <span style={{ fontSize: 10, color: "#6b7280" }}>{initials}</span>
+                      }}>
+                        {member.avatar ? (
+                          <img src={member.avatar} alt={member.name} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          member.name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "MB"
+                        )}
+                      </div>
+                      <span style={{ fontSize: 10, color: "#6b7280" }}>{member.name?.split(" ")[0] || "Member"}</span>
                     </div>
                   ))}
                 </div>
@@ -608,10 +726,10 @@ export default function JoinTeamPage() {
             {activeTab === "Activities" && (
               <div className="jt-card">
                 <h3 className="jt-section-title">Recent Activities</h3>
-                {RECENT_ACTIVITY.map((item, i) => (
+                {recentActivity.map((item, i) => (
                   <div key={i} style={{
                     display: "flex", alignItems: "center", gap: 12, padding: "10px 0",
-                    borderBottom: i < RECENT_ACTIVITY.length - 1 ? "1px solid #f3f4f6" : "none",
+                    borderBottom: i < recentActivity.length - 1 ? "1px solid #f3f4f6" : "none",
                   }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: 10,
@@ -629,7 +747,7 @@ export default function JoinTeamPage() {
             {/* ── EVENTS TAB ── */}
             {activeTab === "Events" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {UPCOMING_EVENTS.map((event, i) => (
+                {upcomingEvents.length > 0 ? upcomingEvents.map((event, i) => (
                   <div key={i} style={{
                     background: "#fff", borderRadius: 16, padding: 14,
                     display: "flex", alignItems: "center", gap: 14,
@@ -638,34 +756,40 @@ export default function JoinTeamPage() {
                   }}>
                     <div style={{
                       minWidth: 52, height: 60, borderRadius: 14,
-                      background: `linear-gradient(135deg, ${event.tagColor}, ${event.tagColor}bb)`,
+                      background: `linear-gradient(135deg, #ec4899, #f97316bb)`,
                       display: "flex", flexDirection: "column",
                       alignItems: "center", justifyContent: "center", flexShrink: 0,
                     }}>
                       <span style={{ fontSize: 9, fontWeight: 700, color: "#fff", textTransform: "uppercase" }}>
-                        {event.month}
+                        {new Date(event.date).toLocaleString('default', { month: 'short' })}
                       </span>
-                      <span style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1.1 }}>{event.day}</span>
+                      <span style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1.1 }}>
+                        {new Date(event.date).getDate()}
+                      </span>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: 0 }}>{event.title}</p>
-                      <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}>
-                        <MapPin size={11} color="#9ca3af" />{event.venue}
-                      </p>
+                      {event.venue && (
+                        <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}>
+                          <MapPin size={11} color="#9ca3af" />{event.venue}
+                        </p>
+                      )}
                     </div>
-                    <span style={{
-                      padding: "4px 12px", borderRadius: 20,
-                      background: `${event.tagColor}18`, color: event.tagColor,
-                      fontSize: 11, fontWeight: 700,
-                    }}>{event.tag}</span>
                   </div>
-                ))}
+                )) : (
+                  <div className="jt-card text-center py-8">
+                    <p className="text-gray-500">No upcoming events</p>
+                  </div>
+                )}
               </div>
             )}
 
             {/* JOIN BUTTON — static, desktop only */}
             <div className="jt-join-static">
-              <Link href="/teams/join-team/onboarding" className="jt-join-btn">
+              <Link 
+                href={`/teams/join-team/onboarding?teamId=${teamId}`} 
+                className="jt-join-btn"
+              >
                 Join Team
               </Link>
             </div>
@@ -678,7 +802,10 @@ export default function JoinTeamPage() {
 
         {/* JOIN BUTTON — fixed, mobile only */}
         <div className="jt-join-fixed">
-          <Link href="/teams/join-team/onboarding" className="jt-join-btn">
+          <Link 
+            href={`/teams/join-team/onboarding?teamId=${teamId}`} 
+            className="jt-join-btn"
+          >
             Join Team
           </Link>
         </div>
