@@ -18,6 +18,8 @@ function formatRelativeTime(dateString) {
   const date = new Date(dateString);
   const now = new Date();
   const diffInSeconds = Math.floor((now - date) / 1000);
+
+ 
   
   if (diffInSeconds < 60) {
     return "now";
@@ -61,7 +63,7 @@ export default function PostDetailModal({
   const [editingComment, setEditingComment] = useState(null);
   const [editText, setEditText] = useState("");
   const [showEditMenu, setShowEditMenu] = useState(false);
-
+const [currentIndex, setCurrentIndex] = useState(0);
   
   
 
@@ -104,6 +106,7 @@ export default function PostDetailModal({
 
 useEffect(() => {
   if (selectedPost) {
+    setCurrentIndex(0);
     const postId = selectedPost.post_id || selectedPost._id;
     const contentType = selectedPost.content_type || "post";
 
@@ -668,7 +671,7 @@ setPostData(prev => ({
 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
 
-      <div className={`relative w-full max-w-6xl h-[90vh] rounded-2xl overflow-hidden flex flex-col md:flex-row ${isDark ? "bg-[#1a1a2e]" : "bg-white"}`}>
+      <div className={`relative w-full max-w-5xl h-[90vh]  overflow-hidden flex flex-col md:flex-row ${isDark ? "bg-[#1a1a2e]" : "bg-white"}`}>
 
         {/* CLOSE BUTTON */}
         <button
@@ -727,16 +730,65 @@ setPostData(prev => ({
         <>
 
         {/* MEDIA */}
-        <div className="w-full md:w-1/2 bg-black flex items-center justify-center">
-          {postData.media && postData.media.length > 0 ? (
-            postData.media[0].type === "video" ?
-            <video src={postData.media[0].url} controls className="max-h-full max-w-full object-contain"/>
-            :
-            <img src={postData.media[0].url} className="max-h-full max-w-full object-contain"/>
-          ) : (
-            <p className="text-gray-400">No media</p>
-          )}
-        </div>
+       <div className="w-full md:w-1/2 bg-black flex items-center justify-center relative">
+
+  {postData.media && postData.media.length > 0 ? (
+
+    <>
+      {/* CURRENT MEDIA */}
+      {postData.media[currentIndex].type === "video" ? (
+        <video
+          src={postData.media[currentIndex].url}
+          controls
+          className="max-h-full max-w-full object-contain"
+        />
+      ) : (
+        <img
+          src={postData.media[currentIndex].url}
+          className="max-h-full max-w-full object-contain"
+        />
+      )}
+
+      {/* LEFT ARROW */}
+      {currentIndex > 0 && (
+        <button
+          onClick={() => setCurrentIndex(prev => prev - 1)}
+          className="absolute flex justify-center items-center  left-3 h-8 w-8 text-4xl  top-1/2 -translate-y-1/2 bg-[#cacaca]/30 text-white p-2 rounded-full"
+        >
+          ‹
+        </button>
+      )}
+
+      {/* RIGHT ARROW */}
+      {currentIndex < postData.media.length - 1 && (
+        <button
+          onClick={() => setCurrentIndex(prev => prev + 1)}
+          className="absolute flex justify-center items-center  right-3 top-1/2 -translate-y-1/2 h-8 w-8 text-4xl bg-black/50 text-white p-2 rounded-full"
+        >
+          ›
+        </button>
+      )}
+
+      {/* DOT INDICATOR */}
+     {postData.media.length > 1 && (
+  <div className="absolute bottom-3 flex gap-2">
+    {postData.media.map((_, index) => (
+      <div
+        key={index}
+        onClick={() => setCurrentIndex(index)}
+        className={`w-2 h-2 rounded-full cursor-pointer ${
+          index === currentIndex ? "bg-white" : "bg-gray-400"
+        }`}
+      />
+    ))}
+  </div>
+)}
+    </>
+
+  ) : (
+    <p className="text-gray-400">No media</p>
+  )}
+</div>
 
         {/* RIGHT PANEL */}
         <div className="w-full md:w-1/2 flex flex-col">

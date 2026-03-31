@@ -513,7 +513,7 @@ export default function UserProfilePage() {
               <img 
                 src={profileData.cover_photo} 
                 alt="Cover" 
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover rounded-xl "
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-l from-[#FF8319] to-[#EF3AFF]" />

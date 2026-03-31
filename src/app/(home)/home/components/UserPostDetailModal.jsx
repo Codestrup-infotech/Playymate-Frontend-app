@@ -65,6 +65,8 @@ export default function UserPostDetailModal({
   const [editingComment, setEditingComment] = useState(null);
   const [editText, setEditText] = useState("");
 
+  const [currentIndex, setCurrentIndex] = useState(0);
+
   // Fetch like status from API
   const fetchLikeStatus = async (contentId, contentType = "post") => {
     try {
@@ -85,6 +87,7 @@ export default function UserPostDetailModal({
 
   useEffect(() => {
     if (post) {
+       setCurrentIndex(0); // ✅ ADD THIS
       const postId = post.post_id || post._id || post.id;
       const contentType = post.content_type || "post";
 
@@ -412,16 +415,64 @@ const handleUpdateReply = async (commentId, replyId) => {
         ) : postData ? (
           <>
             {/* MEDIA */}
-            <div className="w-full md:w-1/2 bg-black flex items-center justify-center">
-              {postData.media && postData.media.length > 0 ? (
-                postData.media[0].type === "video" ?
-                <video src={postData.media[0].url} controls className="max-h-full max-w-full object-contain"/>
-                :
-                <img src={postData.media[0].url} className="max-h-full max-w-full object-contain" alt="Post media"/>
-              ) : (
-                <p className="text-gray-400">No media</p>
-              )}
-            </div>
+           <div className="w-full md:w-1/2 bg-black flex items-center justify-center relative">
+
+  {postData.media && postData.media.length > 0 ? (
+    <>
+      {/* CURRENT MEDIA */}
+      {postData.media[currentIndex].type === "video" ? (
+        <video
+          src={postData.media[currentIndex].url}
+          controls
+          className="max-h-full max-w-full object-contain"
+        />
+      ) : (
+        <img
+          src={postData.media[currentIndex].url}
+          className="max-h-full max-w-full object-contain"
+          alt="Post media"
+        />
+      )}
+
+      {/* LEFT ARROW */}
+      {postData.media.length > 1 && currentIndex > 0 && (
+        <button
+          onClick={() => setCurrentIndex(prev => prev - 1)}
+          className="absolute flex justify-center items-center left-3 top-1/2 -translate-y-1/2 h-8 w-8 text-4xl  bg-[#cacaca]/30 text-white p-2 rounded-full"
+        >
+          ‹
+        </button>
+      )}
+
+      {/* RIGHT ARROW */}
+      {postData.media.length > 1 && currentIndex < postData.media.length - 1 && (
+        <button
+          onClick={() => setCurrentIndex(prev => prev + 1)}
+          className="absolute flex justify-center items-center right-3 top-1/2 -translate-y-1/2 h-8 w-8 text-4xl bg-black/50 text-white p-2 rounded-full"
+        >
+          ›
+        </button>
+      )}
+
+      {/* DOT INDICATOR (ONLY IF MULTIPLE) */}
+      {postData.media.length > 1 && (
+        <div className="absolute bottom-3 flex gap-2">
+          {postData.media.map((_, index) => (
+            <div
+              key={index}
+              onClick={() => setCurrentIndex(index)}
+              className={`w-2 h-2 rounded-full cursor-pointer ${
+                index === currentIndex ? "bg-white" : "bg-gray-400"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  ) : (
+    <p className="text-gray-400">No media</p>
+  )}
+</div>
 
             {/* RIGHT PANEL */}
             <div className="w-full md:w-1/2 flex flex-col">

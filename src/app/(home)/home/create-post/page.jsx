@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, Suspense } from "react";
-import { X, ArrowLeft, MapPin, Users, ChevronDown, ChevronUp, Smile, Plus, Minus, Loader2 } from "lucide-react";
+import { X, ArrowLeft, MapPin, Smile, Plus, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import postService from "@/app/user/post";
 import { userService } from "@/services/user";
@@ -27,8 +27,6 @@ function CreatePostContent() {
 
   const [step, setStep] = useState("upload");
   const [file, setFile] = useState(null);
-  const [fileType, setFileType] = useState(null); // "image" | "video"
-  const [videoUrl, setVideoUrl] = useState(null);
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -37,7 +35,7 @@ function CreatePostContent() {
   const [isLoadingPost, setIsLoadingPost] = useState(false);
 
   // Crop state
- const [cropAspect, setCropAspect] = useState("4:5");
+  const [cropAspect, setCropAspect] = useState("4:5");
 
   // Edit state
   const [editTab, setEditTab] = useState("Filters");
@@ -76,10 +74,6 @@ function CreatePostContent() {
     }));
   };
 
-  // Video edit
-  const [soundOn, setSoundOn] = useState(true);
-  const [selectedCoverIdx, setSelectedCoverIdx] = useState(0);
-
   // Share state
   const [caption, setCaption] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -87,22 +81,22 @@ function CreatePostContent() {
   const [noComments, setNoComments] = useState(false);
 
   // Toggle button component
-const ToggleButton = ({ state, onChange }) => {
-  return (
-    <button
-      onClick={onChange}
-      className={`w-11 h-6 flex items-center rounded-full p-[2px] transition duration-300 ${
-        state ? "bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF]" : "bg-gray-300"
-      }`}
-    >
-      <div
-        className={`w-5 h-5 bg-white rounded-full shadow-md transform transition duration-300 ${
-          state ? "translate-x-5" : "translate-x-0"
+  const ToggleButton = ({ state, onChange }) => {
+    return (
+      <button
+        onClick={onChange}
+        className={`w-11 h-6 flex items-center rounded-full p-[2px] transition duration-300 ${
+          state ? "bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF]" : "bg-gray-300"
         }`}
-      />
-    </button>
-  );
-};
+      >
+        <div
+          className={`w-5 h-5 bg-white rounded-full shadow-md transform transition duration-300 ${
+            state ? "translate-x-5" : "translate-x-0"
+          }`}
+        />
+      </button>
+    );
+  };
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
@@ -117,15 +111,12 @@ const ToggleButton = ({ state, onChange }) => {
 
   const [showAspectLabel, setShowAspectLabel] = useState(false);
 
-
   // User info
   const [userInfo, setUserInfo] = useState(null);
 
-
   const [files, setFiles] = useState([]); // multiple images
-const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  
   useEffect(() => {
     // Fetch user info
     const fetchUserInfo = async () => {
@@ -169,16 +160,15 @@ const [currentIndex, setCurrentIndex] = useState(0);
             // Load media if available
             if (postData.media && postData.media.length > 0) {
               const media = postData.media[0];
-              if (media.type === 'video') {
-                setFileType('video');
-                setVideoUrl(media.url);
+              if (media.type === 'image') {
                 setFile(media.url);
-              } else {
-                setFileType('image');
-                setFile(media.url);
+                // Convert to file-like object for compatibility
+                setFiles([{
+                  url: media.url,
+                  type: "image"
+                }]);
+                setStep('share');
               }
-              // Set step to share since we already have the media
-              setStep('share');
             }
           }
         } catch (error) {
@@ -331,12 +321,17 @@ const [currentIndex, setCurrentIndex] = useState(0);
     const selectedFiles = Array.from(e.target.files);
     if (!selectedFiles.length) return;
 
-    // Check if any selected file is a video
-    const hasVideo = selectedFiles.some((file) => file.type.startsWith("video/"));
+    // Only accept images - filter out any videos
+    const imageFiles = selectedFiles.filter((file) => file.type.startsWith("image/"));
+    
+    if (imageFiles.length === 0) {
+      alert("Please select image files only");
+      return;
+    }
 
-    const newFiles = selectedFiles.map((file) => ({
+    const newFiles = imageFiles.map((file) => ({
       url: URL.createObjectURL(file),
-      type: file.type.startsWith("video/") ? "video" : "image",
+      type: "image",
     }));
 
     setFiles((prev) => {
@@ -344,14 +339,6 @@ const [currentIndex, setCurrentIndex] = useState(0);
       setCurrentIndex(updatedFiles.length - 1); // show latest on top
       return updatedFiles;
     });
-    
-    // Set fileType - if any video is selected, set as video; otherwise image
-    if (hasVideo) {
-      setFileType("video");
-      setVideoUrl(newFiles.find((f) => f.type === "video")?.url);
-    } else {
-      setFileType("image");
-    }
     
     setStep("crop");
     
@@ -363,15 +350,18 @@ const [currentIndex, setCurrentIndex] = useState(0);
     e.preventDefault();
     const dropped = e.dataTransfer.files[0];
     if (!dropped) return;
-    const isVideo = dropped.type.startsWith("video/");
-    setFileType(isVideo ? "video" : "image");
-    if (isVideo) {
-      setVideoUrl(URL.createObjectURL(dropped));
-      setFile(null);
-    } else {
-      setFile(URL.createObjectURL(dropped));
-      setVideoUrl(null);
+    
+    // Only accept images
+    if (!dropped.type.startsWith("image/")) {
+      alert("Please select image files only");
+      return;
     }
+    
+    setFile(URL.createObjectURL(dropped));
+    setFiles([{
+      url: URL.createObjectURL(dropped),
+      type: "image"
+    }]);
     setStep("crop");
   }, []);
 
@@ -397,7 +387,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
 
       // Check if we're using existing media (editing mode with no new files)
       const isExistingMedia = isEditing && existingPost?.media && existingPost.media.length > 0 && 
-        files.length === 0 && !file && !videoUrl;
+        files.length === 0 && !file;
       
       // Check if there are new files to upload (images from files array)
       const hasNewFiles = files.length > 0 && files[0]?.url?.startsWith('blob:');
@@ -474,8 +464,8 @@ const [currentIndex, setCurrentIndex] = useState(0);
         for (let i = 0; i < files.length; i++) {
           const item = files[i];
           let fileToUpload = item.url;
-          const fileName = item.type === 'video' ? `video_${Date.now()}_${i}.mp4` : `image_${Date.now()}_${i}.jpg`;
-          const mimeType = item.type === 'video' ? 'video/mp4' : 'image/jpeg';
+          const fileName = `image_${Date.now()}_${i}.jpg`;
+          const mimeType = 'image/jpeg';
           
           // Get image filter and adjustments for this specific image
           const imageFilter = getImageFilter(i);
@@ -498,7 +488,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
           const presignResponse = await postService.presignMediaUpload({
             filename: fileName,
             mimeType: mimeType,
-            type: item.type
+            type: 'image'
           });
           
           const { upload_url, file_url, key } = presignResponse.data.data;
@@ -513,18 +503,16 @@ const [currentIndex, setCurrentIndex] = useState(0);
           let width = 1920;
           let height = 1080;
           
-          if (item.type === 'image') {
-            const img = new Image();
-            await new Promise((resolve) => {
-              img.onload = resolve;
-              img.src = fileToUpload;
-            });
-            width = img.width;
-            height = img.height;
-          }
+          const img = new Image();
+          await new Promise((resolve) => {
+            img.onload = resolve;
+            img.src = fileToUpload;
+          });
+          width = img.width;
+          height = img.height;
           
           mediaData.push({
-            type: item.type,
+            type: 'image',
             url: file_url,
             thumbnail_url: null,
             duration: null,
@@ -534,13 +522,13 @@ const [currentIndex, setCurrentIndex] = useState(0);
           
           setUploadProgress(80 + (i * 15 / totalFiles));
         }
-      } else if (file || videoUrl) {
-        // Single file upload (legacy support for video or single image)
+      } else if (file) {
+        // Single file upload (legacy support for single image)
         setUploadProgress(20);
         
-        let fileToUpload = file || videoUrl;
-        const fileName = file ? `image_${Date.now()}.jpg` : `video_${Date.now()}.mp4`;
-        const mimeType = file ? "image/jpeg" : "video/mp4";
+        let fileToUpload = file;
+        const fileName = `image_${Date.now()}.jpg`;
+        const mimeType = "image/jpeg";
         
         // Get filter and adjustments for single image (using index 0)
         const imageFilter = getImageFilter(0);
@@ -561,7 +549,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
         const presignResponse = await postService.presignMediaUpload({
           filename: fileName,
           mimeType: mimeType,
-          type: fileType
+          type: 'image'
         });
         
         const { upload_url, file_url, key } = presignResponse.data.data;
@@ -578,18 +566,16 @@ const [currentIndex, setCurrentIndex] = useState(0);
         let width = 1920;
         let height = 1080;
         
-        if (fileType === "image") {
-          const img = new Image();
-          await new Promise((resolve) => {
-            img.onload = resolve;
-            img.src = fileToUpload;
-          });
-          width = img.width;
-          height = img.height;
-        }
+        const img = new Image();
+        await new Promise((resolve) => {
+          img.onload = resolve;
+          img.src = fileToUpload;
+        });
+        width = img.width;
+        height = img.height;
         
         mediaData = [{
-          type: fileType,
+          type: 'image',
           url: file_url,
           thumbnail_url: null,
           duration: null,
@@ -604,7 +590,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
           const item = files[i];
           
           mediaData.push({
-            type: item.type,
+            type: 'image',
             url: item.url,
             width: item.width || 1920,
             height: item.height || 1080,
@@ -687,22 +673,6 @@ const [currentIndex, setCurrentIndex] = useState(0);
     }
   };
 
-  const mediaEl = fileType === "video" ? (
-    <video src={videoUrl} className="max-h-full max-w-full object-contain" autoPlay loop muted={!soundOn} />
-  ) : (
-  <div
-  style={getAspectRatioStyle()}
-  className="relative bg-black overflow-hidden"
->
-  <img
-   src={files[currentIndex]?.url}
-    style={getImageStyle(currentIndex)}
-    className="absolute w-full h-full object-cover"
-    alt="preview"
-  />
-</div>
-  );
-
   // Determine modal size
   const isWide = step !== "upload";
 
@@ -725,7 +695,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
               {step === "upload" && (isEditing ? "Edit post" : "Create new post")}
               {step === "crop" && "Crop"}
               {step === "edit" && "Edit"}
-              {step === "share" && (fileType === "video" ? (isEditing ? "Edit reel" : "New reel") : (isEditing ? "Edit post" : "Create new post"))}
+              {step === "share" && (isEditing ? "Edit post" : "Create new post")}
             </h2>
           </div>
 
@@ -773,7 +743,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
             type="file"
             ref={fileInput}
             className="hidden"
-            accept="image/*,video/*"
+            accept="image/*"
             multiple
             onChange={handleFile}
           />
@@ -795,7 +765,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
                   <polygon points="56,42 80,55 56,68" fill="#262626"/>
                 </svg>
               </div>
-              <p className="text-[#262626] text-[18px] font-light">Drag photos and videos here</p>
+              <p className="text-[#262626] text-[18px] font-light">Drag photos here</p>
               <button
                 onClick={handleAddMoreFiles}
                 className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF] text-white text-sm font-semibold px-5 py-2 rounded-lg transition"
@@ -815,10 +785,10 @@ const [currentIndex, setCurrentIndex] = useState(0);
                   {["1:1", "4:5", "16:9"].map((r) => (
                     <button
                       key={r}
-                 onClick={() => {
-  setCropAspect(r);
-  setShowAspectLabel(true);
-}}
+                      onClick={() => {
+                        setCropAspect(r);
+                        setShowAspectLabel(true);
+                      }}
                       className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition ${
                         cropAspect === r ? "bg-white/30" : "hover:bg-white/10"
                       }`}
@@ -944,7 +914,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
                         </svg>
                       </button>
                     )}
-                    
+                   
                   
                   </div>
                 </div>
@@ -953,7 +923,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
           )}
 
           {/* EDIT — Image */}
-          {step === "edit" && fileType === "image" && (
+          {step === "edit" && (
             <div className="flex w-full h-full ">
               <div className="flex-1 bg-white p-3 relative flex items-center justify-center overflow-hidden ">
                 {/* Navigation arrows */}
@@ -1025,7 +995,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
                         >
                           <div className="w-full aspect-square overflow-hidden rounded-md bg-gray-100">
                             <img
-                             src={files[currentIndex]?.url}
+                              src={files[currentIndex]?.url}
                               style={f.style}
                               className="w-full h-full object-cover"
                               alt={f.name}
@@ -1066,138 +1036,52 @@ const [currentIndex, setCurrentIndex] = useState(0);
             </div>
           )}
 
-          {/* EDIT — Video */}
-          {step === "edit" && fileType === "video" && (
-            <div className="flex w-full h-full">
-              <div className="flex-1 bg-black flex items-center justify-center overflow-hidden">
-                <div style={getAspectRatioStyle()} className="flex items-center justify-center bg-gray-900 max-w-full max-h-full">
-                  <video
-                    src={videoUrl}
-                    className="max-h-full max-w-full object-contain"
-                    autoPlay
-                    loop
-                    muted={!soundOn}
-                  />
-                </div>
-              </div>
-
-              <div className="w-[340px] border-l border-gray-200 overflow-y-auto p-5 space-y-6">
-                {/* Cover photo */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="font-semibold text-sm text-[#262626]">Cover photo</span>
-                    <button className="text-[#0095f6] text-sm font-semibold">Select from computer</button>
-                  </div>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {[0, 1, 2, 3, 4].map((i) => (
-                      <button
-                        key={i}
-                        onClick={() => setSelectedCoverIdx(i)}
-                        className={`flex-shrink-0 w-[70px] h-[70px] rounded-md overflow-hidden bg-gray-200 border-2 transition ${
-                          selectedCoverIdx === i ? "border-[#0095f6]" : "border-transparent"
-                        }`}
-                      >
-                        <div className="w-full h-full bg-gradient-to-br from-orange-300 to-blue-500 flex items-center justify-center text-white font-bold">
-                          {39 + i * 17}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Trim */}
-                <div>
-                  <span className="font-semibold text-sm text-[#262626] block mb-3">Trim</span>
-                  <div className="flex gap-1.5 overflow-x-auto pb-1">
-                    {[0, 1, 2, 3, 4].map((i) => (
-                      <div key={i} className="flex-shrink-0 w-[70px] h-[54px] rounded bg-gray-200 overflow-hidden">
-                        <div className="w-full h-full bg-gradient-to-br from-orange-200 to-blue-400 flex items-center justify-center text-gray-700 font-semibold text-xs">
-                          {39 + i * 17}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {/* Timeline */}
-                  <div className="flex items-center mt-2">
-                    <div className="flex-1 h-1.5 bg-gray-200 rounded-full relative">
-                      <div className="absolute left-0 right-0 h-full bg-gray-400 rounded-full" />
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-400 mt-1">
-                    <span>0s</span>
-                    <span>3s</span>
-                    <span>6s</span>
-                  </div>
-                </div>
-
-                {/* Sound on */}
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-sm text-[#262626]">Sound on</span>
-                  <button
-                    onClick={() => setSoundOn(!soundOn)}
-                    className={`w-12 h-6 rounded-full relative transition-colors ${soundOn ? "bg-[#0095f6]" : "bg-gray-300"}`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                        soundOn ? "translate-x-6" : "translate-x-0.5"
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* SHARE */}
           {step === "share" && (
             <div className="flex w-full h-full">
               {/* Media preview */}
               <div className="flex-1 bg-white p-3 relative flex items-center justify-center overflow-hidden">
-                {fileType === "video" ? (
-                  <video src={videoUrl} className="max-h-full max-w-full object-contain" autoPlay loop muted />
-                ) : (
-                  <div className="relative w-full h-full flex items-center justify-center">
-                    {/* Multiple images carousel */}
-                    {files.length > 1 ? (
-                      <>
-                        <img 
-                          src={files[currentIndex]?.url} 
-                          style={getImageStyle(currentIndex)} 
-                          className="max-h-full max-w-full object-contain" 
-                          alt="share" 
-                        />
-                        {/* Left arrow */}
-                        {currentIndex > 0 && (
-                          <button
-                            onClick={() => setCurrentIndex((prev) => prev - 1)}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="15,18 9,12 15,6" />
-                            </svg>
-                          </button>
-                        )}
-                        {/* Right arrow */}
-                        {currentIndex < files.length - 1 && (
-                          <button
-                            onClick={() => setCurrentIndex((prev) => prev + 1)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="9,18 15,12 9,6" />
-                            </svg>
-                          </button>
-                        )}
-                        {/* Image counter */}
-                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1">
-                          <span>{currentIndex + 1}</span>/<span>{files.length}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <img src={files[currentIndex]?.url} style={getImageStyle(currentIndex)} className="max-h-full max-w-full object-contain" alt="share" />
-                    )}
-                  </div>
-                )}
+                <div className="relative w-full h-full flex items-center justify-center">
+                  {/* Multiple images carousel */}
+                  {files.length > 1 ? (
+                    <>
+                      <img 
+                        src={files[currentIndex]?.url} 
+                        style={getImageStyle(currentIndex)} 
+                        className="max-h-full max-w-full object-contain" 
+                        alt="share" 
+                      />
+                      {/* Left arrow */}
+                      {currentIndex > 0 && (
+                        <button
+                          onClick={() => setCurrentIndex((prev) => prev - 1)}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="15,18 9,12 15,6" />
+                          </svg>
+                        </button>
+                      )}
+                      {/* Right arrow */}
+                      {currentIndex < files.length - 1 && (
+                        <button
+                          onClick={() => setCurrentIndex((prev) => prev + 1)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="9,18 15,12 9,6" />
+                          </svg>
+                        </button>
+                      )}
+                      {/* Image counter */}
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1">
+                        <span>{currentIndex + 1}</span>/<span>{files.length}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <img src={files[currentIndex]?.url} style={getImageStyle(currentIndex)} className="max-h-full max-w-full object-contain" alt="share" />
+                  )}
+                </div>
                
               </div>
 
@@ -1220,18 +1104,18 @@ const [currentIndex, setCurrentIndex] = useState(0);
                 {/* Caption */}
                 <div className="px-4 py-3 border-b border-gray-100">
                <textarea
-  value={caption}
-  onChange={(e) => setCaption(e.target.value)}
-  placeholder="Write a caption..."
-  maxLength={600}
-  className="w-full resize-none text-sm outline-none placeholder:text-gray-400 min-h-[10px]"
-/>
-<div className="flex items-center justify-between mt-2">
-  <button className="text-gray-400 hover:text-gray-600 transition">
-    <Smile size={20} />
-  </button>
-  <span className="text-xs text-gray-400">{caption.length}/600</span>
-</div>
+                 value={caption}
+                 onChange={(e) => setCaption(e.target.value)}
+                 placeholder="Write a caption..."
+                 maxLength={600}
+                 className="w-full resize-none text-sm outline-none placeholder:text-gray-400 min-h-[10px]"
+               />
+               <div className="flex items-center justify-between mt-2">
+                 <button className="text-gray-400 hover:text-gray-600 transition">
+                   <Smile size={20} />
+                 </button>
+                 <span className="text-xs text-gray-400">{caption.length}/600</span>
+               </div>
                 </div>
 
                 {/* Add location */}
@@ -1267,43 +1151,41 @@ const [currentIndex, setCurrentIndex] = useState(0);
                     className="flex items-center justify-between w-full px-4 py-3 hover:bg-gray-50"
                   >
                     <span className="text-sm font-semibold text-[#262626]">Advanced settings</span>
-                    {advancedOpen ? <ChevronUp size={18} className="text-gray-500" /> : <ChevronDown size={18} className="text-gray-500" />}
                   </button>
 
                   {advancedOpen && (
                     <div className="px-4 pb-4 space-y-4">
                     {/* Allow Comments Toggle */}
-{/* Allow Comments Toggle */}
-<div className="flex items-center justify-between">
-  <div className="flex flex-col">
-    <span className="text-sm text-[#262626]">Allow comments</span>
-    <span className="text-xs text-gray-500">
-      {!noComments
-        ? "People can comment on your post"
-        : "No one can comment on your post"}
-    </span>
-  </div>
-  <ToggleButton
-    state={!noComments}
-    onChange={() => setNoComments(prev => !prev)}
-  />
-</div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-sm text-[#262626]">Allow comments</span>
+                        <span className="text-xs text-gray-500">
+                          {!noComments
+                            ? "People can comment on your post"
+                            : "No one can comment on your post"}
+                        </span>
+                      </div>
+                      <ToggleButton
+                        state={!noComments}
+                        onChange={() => setNoComments(prev => !prev)}
+                      />
+                    </div>
 
-{/* Allow Shares Toggle */}
-<div className="flex items-center justify-between">
-  <div className="flex flex-col">
-    <span className="text-sm text-[#262626]">Allow shares</span>
-    <span className="text-xs text-gray-500">
-      {!hideLikes
-        ? "People can share your post"
-        : "No one can share your post"}
-    </span>
-  </div>
-  <ToggleButton
-    state={!hideLikes}
-    onChange={() => setHideLikes(prev => !prev)}
-  />
-</div>
+                    {/* Allow Shares Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-sm text-[#262626]">Allow shares</span>
+                        <span className="text-xs text-gray-500">
+                          {!hideLikes
+                            ? "People can share your post"
+                            : "No one can share your post"}
+                        </span>
+                      </div>
+                      <ToggleButton
+                        state={!hideLikes}
+                        onChange={() => setHideLikes(prev => !prev)}
+                      />
+                    </div>
 
 
                     </div>
