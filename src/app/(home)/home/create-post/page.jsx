@@ -402,6 +402,60 @@ const [currentIndex, setCurrentIndex] = useState(0);
       // Check if there are new files to upload (images from files array)
       const hasNewFiles = files.length > 0 && files[0]?.url?.startsWith('blob:');
       
+      // Apply filter to image using canvas before upload - bakes filter into the image
+      const applyFilterToImage = async (imageUrl, filter, adjustments) => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            // Create canvas
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            
+            // Set canvas size to image size
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            // Filter map matching the UI filters
+            const FILTER_MAP = {
+              Normal: "",
+              Clarendon: "contrast(1.2) saturate(1.35)",
+              Gingham: "brightness(1.05) hue-rotate(-10deg)",
+              Moon: "grayscale(1) contrast(1.1) brightness(1.1)",
+              Lark: "contrast(0.9) brightness(1.1) saturate(1.1)",
+              Reyes: "sepia(0.22) brightness(1.1) contrast(0.85) saturate(0.75)",
+              Juno: "saturate(1.4) contrast(1.1)",
+              Slumber: "saturate(0.66) brightness(1.05)"
+            };
+            
+            // Calculate adjustment values
+            const b = 1 + (adjustments?.Brightness || 0) / 100;
+            const c = 1 + (adjustments?.Contrast || 0) / 100;
+            const s = 1 + (adjustments?.Saturation || 0) / 100;
+            const fade = 1 - Math.max(0, adjustments?.Fade || 0) / 200;
+            
+            // Combine all filters
+            const filterString = `brightness(${b}) contrast(${c}) saturate(${s}) opacity(${fade}) ${FILTER_MAP[filter] || ""}`;
+            
+            // Apply filter
+            ctx.filter = filterString;
+            
+            // Draw image onto canvas
+            ctx.drawImage(img, 0, 0);
+            
+            // Convert to blob
+            canvas.toBlob((blob) => {
+              resolve(blob);
+            }, "image/jpeg", 0.95);
+          };
+          img.onerror = () => {
+            // If image fails to load, return null
+            resolve(null);
+          };
+          img.src = imageUrl;
+        });
+      };
+      
       if (isExistingMedia) {
         // Keep existing media data
         mediaData = existingPost.media.map(m => ({
@@ -419,9 +473,24 @@ const [currentIndex, setCurrentIndex] = useState(0);
         
         for (let i = 0; i < files.length; i++) {
           const item = files[i];
-          const fileToUpload = item.url;
+          let fileToUpload = item.url;
           const fileName = item.type === 'video' ? `video_${Date.now()}_${i}.mp4` : `image_${Date.now()}_${i}.jpg`;
           const mimeType = item.type === 'video' ? 'video/mp4' : 'image/jpeg';
+          
+          // Get image filter and adjustments for this specific image
+          const imageFilter = getImageFilter(i);
+          const imageAdjustments = getImageAdjustments(i);
+          
+          // If it's an image and has filter/adjustments, apply them before uploading
+          if (item.type === 'image' && (imageFilter !== "Normal" || Object.values(imageAdjustments).some(v => v !== 0))) {
+            console.log("[CreatePost] Applying filter to image before upload...", i, imageFilter);
+            const filteredBlob = await applyFilterToImage(fileToUpload, imageFilter, imageAdjustments);
+            
+            if (filteredBlob) {
+              fileToUpload = URL.createObjectURL(filteredBlob);
+              console.log("[CreatePost] Filter applied for image", i);
+            }
+          }
           
           // Get presigned URL
           setUploadProgress(20 + (i * 30 / totalFiles));
@@ -469,9 +538,24 @@ const [currentIndex, setCurrentIndex] = useState(0);
         // Single file upload (legacy support for video or single image)
         setUploadProgress(20);
         
-        const fileToUpload = file || videoUrl;
+        let fileToUpload = file || videoUrl;
         const fileName = file ? `image_${Date.now()}.jpg` : `video_${Date.now()}.mp4`;
         const mimeType = file ? "image/jpeg" : "video/mp4";
+        
+        // Get filter and adjustments for single image (using index 0)
+        const imageFilter = getImageFilter(0);
+        const imageAdjustments = getImageAdjustments(0);
+        
+        // If it's an image and has filter/adjustments, apply them before uploading
+        if (file && (imageFilter !== "Normal" || Object.values(imageAdjustments).some(v => v !== 0))) {
+          console.log("[CreatePost] Applying filter to single image before upload...", imageFilter);
+          const filteredBlob = await applyFilterToImage(file, imageFilter, imageAdjustments);
+          
+          if (filteredBlob) {
+            fileToUpload = URL.createObjectURL(filteredBlob);
+            console.log("[CreatePost] Filter applied for single image");
+          }
+        }
         
         // Get presigned URL
         const presignResponse = await postService.presignMediaUpload({
@@ -498,7 +582,7 @@ const [currentIndex, setCurrentIndex] = useState(0);
           const img = new Image();
           await new Promise((resolve) => {
             img.onload = resolve;
-            img.src = file;
+            img.src = fileToUpload;
           });
           width = img.width;
           height = img.height;
