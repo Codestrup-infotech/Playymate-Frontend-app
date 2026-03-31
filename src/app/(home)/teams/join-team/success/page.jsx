@@ -8,7 +8,7 @@ import { getTeamProfile } from "@/lib/api/teamApi"
 
 export default function SuccessPage() {
   const searchParams = useSearchParams()
-  const teamId = searchParams.get("teamId")
+  const teamId = searchParams?.get?.("teamId") || null
 
   const [teamData, setTeamData] = useState(null)
   const [loading, setLoading] = useState(true)

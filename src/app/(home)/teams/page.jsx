@@ -236,7 +236,7 @@ export default function TeamsPage() {
             {teamsData.owned.map((team) => (
               <Link
                 key={team._id || team.id}
-                href={`/teams/join-team/${toSlug(team.name)}`}
+                href={`/teams/join-team/${team._id || team.id}`}
                 className={`rounded-2xl p-4 flex items-center gap-4 border ${cardBg} shadow-sm`}
               >
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"}`}>
@@ -263,7 +263,7 @@ export default function TeamsPage() {
             {teamsData.joined.map((team) => (
               <Link
                 key={team._id || team.id}
-                href={`/teams/join-team/${toSlug(team.name)}`}
+                href={`/teams/${team._id || team.id}`}
                 className={`rounded-2xl p-4 flex items-center gap-4 border ${cardBg} shadow-sm`}
               >
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"}`}>

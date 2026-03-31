@@ -14,7 +14,7 @@ const PAYMENT_METHODS = [
 
 export default function PaymentPage() {
   const searchParams = useSearchParams()
-  const teamId = searchParams.get("teamId")
+  const teamId = searchParams?.get?.("teamId") || null
 
   const [teamData, setTeamData] = useState(null)
   const [selectedPayment, setSelectedPayment] = useState("card")
@@ -116,12 +116,12 @@ export default function PaymentPage() {
 
       {/* HEADER */}
       <div className="flex items-center gap-3 mb-6">
-        <Link href={`/teams/join-team/onboarding?teamId=${teamId}`} className="text-white text-xl">
+        <Link href={`/teams/join-team/${teamId}`} className="text-white text-xl">
           ←
         </Link>
         <h1 className="text-xl font-semibold">Payment</h1>
       </div>
-
+   
       {/* STEP BAR */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
