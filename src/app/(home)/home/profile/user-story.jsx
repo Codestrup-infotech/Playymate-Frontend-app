@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import Report from "@/app/(home)/home/components/Report";
 import DefaultAvatar from "./default-avatar.jsx";
 
-export default function UserStory({ userId, profile, showRing = true }) {
+export default function UserStory({ userId, profile, showRing = true, initialStoryId, initialStory, showUserProfile = true }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const router = useRouter();
@@ -106,6 +106,70 @@ export default function UserStory({ userId, profile, showRing = true }) {
     
     checkStories();
   }, [userId]);
+
+  // Handle initialStory - when story data is passed directly (for shared stories)
+  useEffect(() => {
+    if (initialStory) {
+      console.log('[UserStory] Using initialStory directly:', initialStory);
+      setStories([initialStory]);
+      setHasStories(true);
+      setStoryIndex(0);
+      setShowStoryViewer(true);
+      setProgress(0);
+      setIsPaused(false);
+    }
+  }, [initialStory]);
+
+  // Handle initialStoryId - open specific story when provided
+  useEffect(() => {
+    if (initialStoryId && userId && !initialStory) {
+      const openSpecificStory = async () => {
+        console.log('[UserStory] Opening specific story:', initialStoryId);
+        try {
+          const response = await userService.getUserStories(userId);
+          const storiesData = response?.data?.data || response?.data;
+          
+          let allStories = [];
+          if (storiesData?.active_stories) {
+            allStories = Array.isArray(storiesData.active_stories) ? storiesData.active_stories : [storiesData.active_stories];
+          }
+          if (storiesData?.archived_stories) {
+            const archived = Array.isArray(storiesData.archived_stories) ? storiesData.archived_stories : [storiesData.archived_stories];
+            allStories = [...allStories, ...archived];
+          }
+          
+          // Find the story with matching ID
+          const targetStory = allStories.find(s => 
+            s.story_id === initialStoryId || 
+            s._id === initialStoryId ||
+            s.id === initialStoryId
+          );
+          
+          if (targetStory) {
+            const storyIndex = allStories.findIndex(s => 
+              s.story_id === initialStoryId || 
+              s._id === initialStoryId ||
+              s.id === initialStoryId
+            );
+            
+            setStories(allStories);
+            setHasStories(true);
+            setStoryIndex(storyIndex >= 0 ? storyIndex : 0);
+            setShowStoryViewer(true);
+            setProgress(0);
+            setIsPaused(false);
+            console.log('[UserStory] Found story at index:', storyIndex);
+          } else {
+            console.log('[UserStory] Story not found in user stories');
+          }
+        } catch (err) {
+          console.error('[UserStory] Error fetching specific story:', err);
+        }
+      };
+      
+      openSpecificStory();
+    }
+  }, [initialStoryId, userId, initialStory]);
 
   // Fetch stories and open viewer
   const handleProfilePhotoClick = async () => {
@@ -496,10 +560,12 @@ useEffect(() => {
             <div className="absolute top-4 left-4 right-4 flex items-center justify-between text-white">
               <button
                 onClick={() => {
-                  console.log('[UserStory] Navigate to user profile from top bar:', userId);
-                  router.push(`/home/profile/${userId}`);
+                  if (showUserProfile) {
+                    console.log('[UserStory] Navigate to user profile from top bar:', userId);
+                    router.push(`/home/profile/${userId}`);
+                  }
                 }}
-                className="flex items-center gap-3"
+                className={`flex items-center gap-3 ${showUserProfile ? 'cursor-pointer' : 'cursor-default'}`}
               >
                 <img
                   src={profile.profile_image_url || "/default-avatar.png"}
@@ -724,10 +790,15 @@ useEffect(() => {
             {/* About this account */}
             <button 
               onClick={() => {
-                console.log('[UserStory] Navigate to user profile:', userId);
-                setShowOptions(false);
-                setIsPaused(false);
-                router.push(`/home/profile/${userId}`);
+                if (showUserProfile) {
+                  console.log('[UserStory] Navigate to user profile:', userId);
+                  setShowOptions(false);
+                  setIsPaused(false);
+                  router.push(`/home/profile/${userId}`);
+                } else {
+                  setShowOptions(false);
+                  setIsPaused(false);
+                }
               }}
               className="flex items-center justify-center gap-2 w-full py-4 border-b"
             >

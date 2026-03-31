@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import ComposeEmojiPicker from "../components/Composeemojipicker";
 import UserPostDetailModal from "../components/UserPostDetailModal";
-import { getPostById } from "@/app/user/homefeed";
+import { getPostById, getStoryPreview } from "@/app/user/homefeed";
+import UserStory from "../profile/user-story";
 import postService from "@/app/user/post";
 import CallNow from "../components/CallNow";
 
 import { io } from "socket.io-client";
-import { Phone, Video } from "lucide-react";
+import { Phone, Video, X } from "lucide-react";
 import {
   getMessages,
   sendMessage,
@@ -167,7 +168,7 @@ function EmojiPicker({ onPick }) {
 
 // ─── Message Bubble ────────────────────────────────────────────────────────────
 
-function Bubble({ msg, myId, profileMap, messageRequests = [], onReply, onEdit, onDelete, onReact, onForward, onOpenPostDetail }) {
+function Bubble({ msg, myId, profileMap, messageRequests = [], onReply, onEdit, onDelete, onReact, onForward, onOpenPostDetail, onOpenStory }) {
   const [hover, setHover] = useState(false);
 
   // Find shared content from message requests if this is a message request
@@ -355,6 +356,7 @@ function Bubble({ msg, myId, profileMap, messageRequests = [], onReply, onEdit, 
  const isSharedContent =
   msg.content_type === "post" ||
   msg.content_type === "reel" ||
+  msg.content_type === "story" ||
   msg.signed_urls?.media?.length > 0 ||
   sharedContent?.preview_url;
   const [picker, setPicker] = useState(false);
@@ -463,11 +465,108 @@ function Bubble({ msg, myId, profileMap, messageRequests = [], onReply, onEdit, 
   : msg.content || (msg.content_type ? "Shared a post" : "")
 }
 
+            {/* Handle story content_type - display story preview or open directly */}
+            {msg.content_type === "story" && !msg.is_deleted && (
+              <div className="mt-2">
+                {/* If we have story data in sharedContent, render clickable preview */}
+                {sharedContent && (sharedContent.preview_url || sharedContent.media_url) ? (
+                  <div 
+                    className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50 max-w-xs cursor-pointer hover:opacity-90"
+                    onClick={() => {
+                      console.log('[Bubble] Click on story content');
+                      if (onOpenStory && sharedContent?.content_id) {
+                        const storyId = sharedContent.content_id.replace(/^story_/, '');
+                        onOpenStory(storyId);
+                      }
+                    }}
+                  >
+                    {sharedContent.preview_url && (
+                      <img src={sharedContent.preview_url} alt="Story" className="w-full h-40 object-cover" />
+                    )}
+                    {sharedContent.media_url && !sharedContent.preview_url && (
+                      <img src={sharedContent.media_url} alt="Story" className="w-full h-40 object-cover" />
+                    )}
+                    <div className="p-2 bg-white">
+                      <span className="text-xs text-gray-500">📖 View Story</span>
+                    </div>
+                  </div>
+                ) : (
+                  /* If no sharedContent but content_type is story, try to get story ID from message */
+                  <div 
+                    className="border border-pink-200 rounded-lg p-3 bg-pink-50 max-w-xs cursor-pointer hover:bg-pink-100"
+                    onClick={() => {
+                      console.log('[Bubble] Click on story message, msg:', msg);
+                      // Try to get story ID from various possible fields
+                      const storyId = msg.story_id || msg.content_id || msg.media_id || msg._id;
+                      if (onOpenStory && storyId) {
+                        const cleanStoryId = storyId.replace(/^story_/, '');
+                        onOpenStory(cleanStoryId);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-pink-200 flex items-center justify-center">
+                        <span className="text-sm">📖</span>
+                      </div>
+                      <span className="text-sm text-pink-600 font-medium">View Story</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Display shared content from message requests (preview_url) or sessionStorage */}
-            {console.log('[Bubble] Rendering sharedContent:', sharedContent) || !msg.is_deleted && sharedContent && (sharedContent.preview_url || sharedContent.media_url || (sharedContent.signed_urls && sharedContent.signed_urls.media)) && (
+            {console.log('[Bubble] Rendering sharedContent:', sharedContent) || !msg.is_deleted && sharedContent && (sharedContent.preview_url || sharedContent.media_url || sharedContent.content_type === 'story' || (sharedContent.signed_urls && sharedContent.signed_urls.media)) && (
               <div 
                 className="mt-2 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 max-w-xs cursor-pointer hover:opacity-90"
                 onClick={() => {
+                  // Debug log the sharedContent
+                  console.log('[Bubble] Click on shared content');
+                  console.log('[Bubble] sharedContent:', sharedContent);
+                  console.log('[Bubble] sharedContent.content_type:', sharedContent?.content_type);
+                  console.log('[Bubble] sharedContent.content_id:', sharedContent?.content_id);
+                  console.log('[Bubble] onOpenStory:', onOpenStory);
+                  
+                  // Check if this is a shared story (check both content_type and content_id prefix)
+                  const isStory = sharedContent?.content_type === 'story' || sharedContent?.content_id?.startsWith('story_');
+                  console.log('[Bubble] Is story:', isStory);
+                  
+                  if (isStory && onOpenStory && sharedContent?.content_id) {
+                    // Extract story ID (remove 'story_' prefix if present)
+                    const storyId = sharedContent.content_id.replace(/^story_/, '');
+                    console.log('[Bubble] Opening story:', storyId);
+                    onOpenStory(storyId);
+                    return;
+                    
+                    // Get author info from sharedContent
+                    let authorInfo = null;
+                    if (sharedContent.author) {
+                      authorInfo = {
+                        _id: sharedContent.author.user_id || sharedContent.author._id,
+                        username: sharedContent.author.username || sharedContent.author.full_name || '',
+                        full_name: sharedContent.author.full_name || sharedContent.author.username || '',
+                        profile_image_url: sharedContent.author.profile_image_url || sharedContent.author.avatar || null,
+                        is_verified: sharedContent.author.is_verified || false
+                      };
+                    } else if (msg.sender_id && typeof msg.sender_id === 'object') {
+                      // Fallback to message sender as story author
+                      authorInfo = {
+                        _id: msg.sender_id._id || msg.sender_id.id || msg.sender_id.user_id,
+                        username: msg.sender_id.username || msg.sender_id.handle || msg.sender_id.full_name || '',
+                        full_name: msg.sender_id.full_name || msg.sender_id.username || '',
+                        profile_image_url: msg.sender_id.profile_image_url || msg.sender_id.avatar || null,
+                        is_verified: msg.sender_id.is_verified || false
+                      };
+                    }
+                    
+                    console.log('[Bubble] Calling onOpenStory with storyId:', storyId);
+                    onOpenStory(storyId);
+                    return;
+                  } else {
+                    console.log('[Bubble] Not a story or onOpenStory is null, checking post/reel');
+                  }
+                  
+                  // Otherwise, handle as post/reel
                   if (onOpenPostDetail && sharedContent.content_id) {
                     // Get the media URL - check multiple sources
                     let mediaUrl = sharedContent.media_url || sharedContent.preview_url;
@@ -862,6 +961,37 @@ export default function MessagesPage() {
   // Post modal state
   const [selectedPost, setSelectedPost] = useState(null);
   const [showPostModal, setShowPostModal] = useState(false);
+
+  // Story viewer state for shared stories
+  const [selectedStory, setSelectedStory] = useState(null);
+  const [showStoryViewer, setShowStoryViewer] = useState(false);
+
+  // Handle opening story from shared content in messages
+  // Fetch story from API and display using UserStory component
+  const handleOpenStory = async (storyId) => {
+    console.log('[handleOpenStory] Opening story:', storyId);
+    
+    try {
+      // Prepend "story_" to the storyId as required by the API
+      const fullStoryId = storyId.startsWith('story_') ? storyId : `story_${storyId}`;
+      console.log('[handleOpenStory] Full story ID:', fullStoryId);
+      
+      const storyPreview = await getStoryPreview(fullStoryId);
+      console.log('[handleOpenStory] API response:', storyPreview);
+      
+      if (storyPreview) {
+        setSelectedStory(storyPreview);
+        setShowStoryViewer(true);
+      }
+    } catch (error) {
+      console.error('[handleOpenStory] Error:', error);
+    }
+  };
+
+  const handleCloseStoryViewer = () => {
+    setShowStoryViewer(false);
+    setSelectedStory(null);
+  };
 
   // Incoming call state
   const [incomingCall, setIncomingCall] = useState(null);
@@ -1603,6 +1733,7 @@ useEffect(() => {
         onReact={handleReact}
         onForward={handleForward}
         onOpenPostDetail={handleOpenPostDetail}
+        onOpenStory={handleOpenStory}
       />
     </div>
   );
@@ -1915,6 +2046,22 @@ useEffect(() => {
           post={selectedPost}
           isLoading={false}
           onClose={handleClosePostDetail}
+        />
+      )}
+
+      {/* Story Viewer Modal for shared stories - using UserStory component */}
+      {showStoryViewer && selectedStory && (
+        <UserStory 
+          userId={selectedStory.author?._id}
+          profile={{
+            _id: selectedStory.author?._id,
+            full_name: selectedStory.author?.full_name,
+            username: selectedStory.author?.username,
+            profile_image_url: selectedStory.author?.profile_image_url
+          }}
+          showRing={false}
+          initialStory={selectedStory}
+          showUserProfile={false}
         />
       )}
 
