@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Check, Wallet, Trophy, Calendar, ShieldCheck, Zap } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { getTeamProfile, previewMembership } from "@/lib/api/teamApi"
 
-export default function JoinPaymentPage() {
+function OnboardingContent() {
   // Call useSearchParams at top level - it works in client components
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -322,5 +322,25 @@ export default function JoinPaymentPage() {
       </div>
 
     </div>
+  )
+}
+
+// Wrapper component with Suspense boundary for useSearchParams
+export default function JoinPaymentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="flex flex-col items-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full mb-4"
+          />
+          <p className="text-slate-500 font-medium animate-pulse">Preparing your membership...</p>
+        </div>
+      </div>
+    }>
+      <OnboardingContent />
+    </Suspense>
   )
 }

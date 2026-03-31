@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useSearchParams, useParams } from "next/navigation"
 import { ArrowLeft, MapPin, Users, Share2, Menu, Trophy, Flame, TrendingUp, Star, Dumbbell, CircleDot, Swords, ShoppingBag } from "lucide-react"
 import Link from "next/link"
@@ -41,7 +41,7 @@ const fromSlug = (slug) => {
   return slug.replace(/-/g, " ")
 }
 
-export default function JoinTeamPage() {
+function JoinTeamContent() {
   const searchParams = useSearchParams()
   const params = useParams()
   
@@ -872,5 +872,21 @@ export default function JoinTeamPage() {
 
       </div>
     </>
+  )
+}
+
+// Wrapper component with Suspense boundary for useSearchParams
+export default function JoinTeamPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading...</p>
+        </div>
+      </div>
+    }>
+      <JoinTeamContent />
+    </Suspense>
   )
 }

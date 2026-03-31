@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { ArrowLeft, CreditCard, Smartphone, Wallet } from "lucide-react"
 import Link from "next/link"
@@ -12,7 +12,7 @@ const PAYMENT_METHODS = [
   { id: "wallet", label: "Wallet", sub: "Pay from your wallet balance", icon: Wallet },
 ]
 
-export default function PaymentPage() {
+function PaymentContent() {
   const searchParams = useSearchParams()
   const teamId = searchParams?.get?.("teamId") || null
 
@@ -215,5 +215,21 @@ export default function PaymentPage() {
         </button>
       </div>
     </div>
+  )
+}
+
+// Wrapper component with Suspense boundary for useSearchParams
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-zinc-400">Loading...</p>
+        </div>
+      </div>
+    }>
+      <PaymentContent />
+    </Suspense>
   )
 }

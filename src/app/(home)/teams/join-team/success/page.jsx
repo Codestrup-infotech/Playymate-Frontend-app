@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { CheckCircle, Trophy, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { getTeamProfile } from "@/lib/api/teamApi"
 
-export default function SuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams()
   const teamId = searchParams?.get?.("teamId") || null
 
@@ -112,5 +112,21 @@ export default function SuccessPage() {
         </Link>
       </div>
     </div>
+  )
+}
+
+// Wrapper component with Suspense boundary for useSearchParams
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-zinc-400">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   )
 }
