@@ -190,7 +190,7 @@ export default function JoinTeamPage() {
               {discoverTeamsList.map((team) => (
                 <Link
                   key={team._id || team.id}
-                  href={`/teams/join-team/${toSlug(team.name)}`}
+                  href={`/teams/join-team/${team._id || team.id}`}
                   className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4"
                 >
                   <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center text-white font-bold">
