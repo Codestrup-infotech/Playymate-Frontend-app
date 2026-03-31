@@ -14,7 +14,7 @@ import {
   MapPin
 } from "lucide-react";
 
-import { getMyStory, deleteStory, getStoryViewers } from "@/app/user/homefeed";
+import { getMyStory, deleteStory, getStoryViewers, getStoryById } from "@/app/user/homefeed";
 import { useRouter } from "next/navigation";
 
 /**
@@ -125,40 +125,88 @@ export default function OwnStoryViewerModal( {
   // Fetch story viewers
   const fetchStoryViewers = async () => {
     const storyId = currentStory?.story_id || currentStory?._id;
+    console.log("[fetchStoryViewers] === START ===");
     console.log("[fetchStoryViewers] Story ID:", storyId);
+    console.log("[fetchStoryViewers] currentStory:", JSON.stringify(currentStory, null, 2));
     if (!storyId) return;
     
     setIsLoadingSeenBy(true);
     try {
       const viewers = await getStoryViewers(storyId, 50);
-      console.log("[fetchStoryViewers] Raw API response:", viewers);
-      console.log("[fetchStoryViewers] Type:", typeof viewers, "IsArray:", Array.isArray(viewers));
+      
+      // EXACT CONSOLE LOG FOR DEBUGGING
+      console.log("===========================================");
+      console.log("[SEEN BY API RESPONSE]");
+      console.log("Type:", typeof viewers);
+      console.log("IsArray:", Array.isArray(viewers));
+      console.log("IsNull:", viewers === null);
+      console.log("IsUndefined:", viewers === undefined);
+      console.log("Full Response:", JSON.stringify(viewers, null, 2));
+      console.log("Keys:", viewers ? Object.keys(viewers) : "N/A");
+      console.log("===========================================");
       
       // Handle different response structures the API might return
       let viewersList = [];
       
       if (!viewers) {
+        console.log("[fetchStoryViewers] viewers is null/undefined - setting empty list");
         viewersList = [];
       } else if (Array.isArray(viewers)) {
-        // Direct array response: [{ user_id, username, profile_picture, viewed_at }]
+        console.log("[fetchStoryViewers] viewers is an array with length:", viewers.length);
+        console.log("[fetchStoryViewers] First item:", viewers[0]);
         viewersList = viewers;
       } else if (typeof viewers === 'object') {
+        console.log("[fetchStoryViewers] viewers is an object with keys:", Object.keys(viewers));
+        
         // Check various possible response formats
         if (viewers.data && Array.isArray(viewers.data)) {
+          console.log("[fetchStoryViewers] Found .data array with length:", viewers.data.length);
           viewersList = viewers.data;
         } else if (viewers.viewers && Array.isArray(viewers.viewers)) {
+          console.log("[fetchStoryViewers] Found .viewers array with length:", viewers.viewers.length);
           viewersList = viewers.viewers;
         } else if (viewers.users && Array.isArray(viewers.users)) {
+          console.log("[fetchStoryViewers] Found .users array with length:", viewers.users.length);
           viewersList = viewers.users;
         } else if (viewers.results && Array.isArray(viewers.results)) {
+          console.log("[fetchStoryViewers] Found .results array with length:", viewers.results.length);
           viewersList = viewers.results;
+        } else if (viewers.count !== undefined) {
+          // Object with count property - use it to override viewer_count
+          console.log("[fetchStoryViewers] Found .count:", viewers.count);
+          console.log("[fetchStoryViewers] Found .list:", viewers.list);
+          // Update the story's viewer_count if we got a valid count
+          if (viewers.count > 0 && currentStory) {
+            setInternalStories(prev => prev.map(s => 
+              s.story_id === storyId || s._id === storyId 
+                ? { ...s, viewer_count: viewers.count } 
+                : s
+            ));
+          }
+          viewersList = viewers.list || [];
         } else {
           // Single viewer object
+          console.log("[fetchStoryViewers] Treating as single viewer object:", viewers);
           viewersList = [viewers];
         }
+      } else {
+        console.log("[fetchStoryViewers] Unexpected viewers type:", typeof viewers);
       }
       
-      console.log("[fetchStoryViewers] Processed viewers:", viewersList);
+      console.log("[fetchStoryViewers] Final viewersList length:", viewersList.length);
+      console.log("[fetchStoryViewers] Final viewersList:", JSON.stringify(viewersList, null, 2));
+      console.log("[fetchStoryViewers] === END ===");
+      
+      // If we got a valid count from viewers list, update the viewer_count
+      if (viewersList.length > 0 && currentStory) {
+        console.log("[fetchStoryViewers] Updating viewer_count to:", viewersList.length);
+        setInternalStories(prev => prev.map(s => 
+          s.story_id === storyId || s._id === storyId 
+            ? { ...s, viewer_count: viewersList.length } 
+            : s
+        ));
+      }
+      
       setSeenByUsers(viewersList || []);
     } catch (err) {
       console.log("[fetchStoryViewers] Error:", err.message);
@@ -169,10 +217,34 @@ export default function OwnStoryViewerModal( {
   };
 
   // Handle seen by click
-  const handleSeenByClick = () => {
+  const handleSeenByClick = async () => {
     setShowSeenBy(true);
     if (seenByUsers.length === 0) {
-      fetchStoryViewers();
+      await fetchStoryViewers();
+    }
+    
+    // Also try to fetch fresh story data to get updated viewer_count
+    const storyId = currentStory?.story_id || currentStory?._id;
+    if (storyId) {
+      try {
+        const storyDetails = await getStoryById(storyId);
+        console.log("[handleSeenByClick] Fresh story details:", storyDetails);
+        if (storyDetails?.viewer_count !== undefined) {
+          // Update viewer_count from fresh data
+          if (isControlled && controlledStories) {
+            // For controlled mode, we can't directly update - parent should handle it
+            console.log("[handleSeenByClick] Controlled mode - parent should update viewer_count");
+          } else {
+            setInternalStories(prev => prev.map(s => 
+              s.story_id === storyId || s._id === storyId 
+                ? { ...s, viewer_count: storyDetails.viewer_count } 
+                : s
+            ));
+          }
+        }
+      } catch (err) {
+        console.log("[handleSeenByClick] Error fetching story details:", err.message);
+      }
     }
   };
 

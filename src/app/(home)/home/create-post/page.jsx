@@ -134,8 +134,8 @@ const [currentIndex, setCurrentIndex] = useState(0);
         const data = response?.data?.data || response?.data;
         if (data) {
           setUserInfo({
-            username: data.username || data.full_name || 'user',
-            profileImage: data.profile_image_url
+            username: data.full_name || data.username || 'User',
+            profileImage: data.profile_photos?.[0]?.url || data.profile_image_url
           });
         }
       } catch (error) {

@@ -42,13 +42,13 @@ export default function JoiningFeePage() {
   // Form state for membership
   const [formData, setFormData] = useState({
     is_paid: true,
-    fee_amount: 0,
+    fee_amount: "",
     default_duration_type: "YEARLY",
     allow_duration_choice: true,
     duration_pricing: {
-      MONTHLY: { amount: 0 },
-      QUARTERLY: { amount: 0 },
-      YEARLY: { amount: 0 },
+      MONTHLY: { amount: "" },
+      QUARTERLY: { amount: "" },
+      YEARLY: { amount: "" },
     },
     welcome_bonus_coins: 0,
     use_gold_coins: false,
@@ -61,22 +61,55 @@ export default function JoiningFeePage() {
     if (typeof window !== "undefined") {
       const stored = sessionStorage.getItem("createTeamData")
       if (stored) {
-        setTeamData(JSON.parse(stored))
+        const parsed = JSON.parse(stored)
+        setTeamData(parsed)
+        // Also load membership data if exists
+        if (parsed.membership) {
+          setFormData(prev => ({
+            ...prev,
+            is_paid: parsed.membership.is_paid ?? true,
+            fee_amount: parsed.membership.fee_amount?.toString() ?? "",
+            default_duration_type: parsed.membership.default_duration_type ?? "YEARLY",
+            allow_duration_choice: parsed.membership.allow_duration_choice ?? true,
+            duration_pricing: {
+              MONTHLY: { amount: parsed.membership.duration_pricing?.MONTHLY?.amount?.toString() ?? "" },
+              QUARTERLY: { amount: parsed.membership.duration_pricing?.QUARTERLY?.amount?.toString() ?? "" },
+              YEARLY: { amount: parsed.membership.duration_pricing?.YEARLY?.amount?.toString() ?? "" },
+            },
+            welcome_bonus_coins: parsed.membership.welcome_bonus_coins ?? 0,
+          }))
+        }
+        // Also load payment preferences if exists
+        if (parsed.payment_preferences) {
+          setFormData(prev => ({
+            ...prev,
+            use_gold_coins: parsed.payment_preferences.use_gold_coins ?? false,
+            use_diamonds: parsed.payment_preferences.use_diamonds ?? true,
+            host_earnings: parsed.host_earnings ?? "wallet",
+          }))
+        }
       }
     }
   }, [])
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    // Convert string values to numbers for submission
+    const feeAmount = formData.fee_amount === "" ? 0 : parseFloat(formData.fee_amount)
+    const durationPricing = {
+      MONTHLY: { amount: formData.duration_pricing.MONTHLY.amount === "" ? 0 : parseFloat(formData.duration_pricing.MONTHLY.amount) },
+      QUARTERLY: { amount: formData.duration_pricing.QUARTERLY.amount === "" ? 0 : parseFloat(formData.duration_pricing.QUARTERLY.amount) },
+      YEARLY: { amount: formData.duration_pricing.YEARLY.amount === "" ? 0 : parseFloat(formData.duration_pricing.YEARLY.amount) },
+    }
     // Combine all data
     const fullTeamData = {
       ...teamData,
       membership: {
         is_paid: formData.is_paid,
-        fee_amount: formData.fee_amount,
+        fee_amount: feeAmount,
         default_duration_type: formData.default_duration_type,
         allow_duration_choice: formData.allow_duration_choice,
-        duration_pricing: formData.duration_pricing,
+        duration_pricing: durationPricing,
         welcome_bonus_coins: formData.welcome_bonus_coins,
       },
       payment_preferences: {
@@ -92,7 +125,7 @@ export default function JoiningFeePage() {
   }
 
   return (
-    <div className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-28`}>
+    <div className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10`}>
 
       {/* HEADER */}
       <div className="flex items-center gap-3 mb-6">
@@ -149,8 +182,8 @@ export default function JoiningFeePage() {
               <input
                 type="number"
                 value={formData.fee_amount}
-                onChange={(e) => setFormData(prev => ({ ...prev, fee_amount: parseFloat(e.target.value) || 0 }))}
-                min="0"
+                onChange={(e) => setFormData(prev => ({ ...prev, fee_amount: e.target.value }))}
+                placeholder="Enter fee amount"
                 className={`w-full ${cardBg} border ${borderColor} rounded-2xl px-4 py-4 ${textColor} placeholder-gray-400 focus:outline-none focus:border-pink-500 shadow-sm`}
               />
             </div>
@@ -165,12 +198,12 @@ export default function JoiningFeePage() {
                     <span className="w-20 text-sm text-gray-500">{duration.label}</span>
                     <input
                       type="number"
-                      value={formData.duration_pricing[duration.value]?.amount || 0}
+                      value={formData.duration_pricing[duration.value]?.amount || ""}
                       onChange={(e) => setFormData(prev => ({
                         ...prev,
                         duration_pricing: {
                           ...prev.duration_pricing,
-                          [duration.value]: { amount: parseFloat(e.target.value) || 0 }
+                          [duration.value]: { amount: e.target.value }
                         }
                       }))}
                       min="0"
@@ -223,7 +256,7 @@ export default function JoiningFeePage() {
         )}
 
         {/* CONTINUE BUTTON */}
-        <div className="fixed bottom-4 inset-x-4 flex justify-center">
+        <div className=" bottom-4 pt-6 inset-x-4 flex justify-center">
           <button
             type="submit"
             className="px-10 py-3 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-base font-semibold text-white flex items-center justify-center shadow-lg"

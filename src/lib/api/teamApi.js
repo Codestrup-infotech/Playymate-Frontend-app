@@ -185,7 +185,21 @@ export async function getMyTeams() {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    return await response.json();
+    const json = await response.json();
+    // Handle nested data structure: { data: { owned: [], member: [] } }
+    if (json.data) {
+      return {
+        owned: json.data.owned || [],
+        joined: json.data.member || [],
+        invites: json.data.invites || []
+      };
+    }
+    // Handle flat structure: { owned: [], member: [] }
+    return {
+      owned: json.owned || [],
+      joined: json.member || [],
+      invites: json.invites || []
+    };
   } catch (error) {
     console.error("Error getting my teams:", error);
     throw error;
@@ -251,11 +265,27 @@ export async function createTeam(teamData) {
       body: JSON.stringify(teamData),
     });
     
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // Log the response status and any error details
+    console.log("Create team response status:", response.status);
+    
+    // Try to get response body even for error responses
+    const responseBody = await response.json().catch(() => ({}));
+    console.log("Create team response body:", responseBody);
+    
+    // Log validation errors if present
+    if (responseBody.data?.errors) {
+      console.log("Validation errors:", responseBody.data.errors);
     }
     
-    return await response.json();
+    if (!response.ok) {
+      // Include the response body message in the error
+      const errorMessage = responseBody.data?.errors 
+        ? responseBody.data.errors.map(e => e.message || e).join(', ')
+        : responseBody.message || responseBody.error || `HTTP error! status: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+    
+    return responseBody;
   } catch (error) {
     console.error("Error creating team:", error);
     throw error;
@@ -881,6 +911,32 @@ export async function getMyNameReservations() {
     return await response.json();
   } catch (error) {
     console.error("Error getting my name reservations:", error);
+    throw error;
+  }
+}
+
+/**
+ * Search teams by name (for slug lookup)
+ * GET /api/v1/teams?search=name
+ * @param {string} name - Team name to search for
+ */
+export async function searchTeamsByName(name) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams?search=${encodeURIComponent(name)}`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    // Handle both { data: [...] } and [...] response formats
+    const teams = data.data || data;
+    return Array.isArray(teams) ? teams : [];
+  } catch (error) {
+    console.error("Error searching teams:", error);
     throw error;
   }
 }

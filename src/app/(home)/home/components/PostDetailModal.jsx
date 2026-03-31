@@ -114,9 +114,13 @@ useEffect(() => {
       selectedPost.is_liked === "true" ||
       selectedPost.user_action?.liked_by_you === true;
 
+    // Preserve author info - don't let API overwrite it
+    const authorInfo = selectedPost.author || {};
+
     const normalizedPost = {
       ...selectedPost,
-      is_liked: existingIsLiked
+      is_liked: existingIsLiked,
+      author: authorInfo
     };
 
     setPostData(normalizedPost);
@@ -128,7 +132,7 @@ useEffect(() => {
         // Only update if API returns a clear true/false (not null)
         if (apiLiked !== null) {
           setPostData(prev =>
-            prev ? { ...prev, is_liked: !!apiLiked } : prev
+            prev ? { ...prev, is_liked: !!apiLiked, author: prev.author } : prev
           );
           isLikedRef.current = !!apiLiked;
         }
@@ -304,7 +308,8 @@ setPostData(prev => ({
 
   const handleReplyClick = (comment) => {
     setReplyToComment(comment);
-    setCommentText(`@${comment.author?.username || comment.user?.username || 'user'} `);
+    const commentUsername = comment.author?.full_name || comment.user?.full_name || comment.author?.user?.full_name || comment.user?.user?.full_name || comment.author?.username || comment.user?.username || 'User';
+    setCommentText(`@${commentUsername} `);
     commentInputRef.current?.focus(); // ✅ focus input on reply
   };
 
@@ -739,12 +744,12 @@ setPostData(prev => ({
           {/* AUTHOR */}
           <div className="flex items-center gap-3 p-4 border-b">
             <img
-              src={postData.author?.profile_image_url || "/loginAvatars/profile.png"}
+              src={postData.author?.profile_image_url || postData.author?.user?.avatar || "/loginAvatars/profile.png"}
               className="w-10 h-10 rounded-full object-cover"
             />
             <div>
               <p className={`font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
-                {postData.author?.username || postData.author?.full_name}
+                {postData.author?.full_name || postData.author?.username || postData.author?.user?.full_name || postData.author?.user?.username || "User"}
               </p>
               {postData.content?.location && (
                 <p className="text-xs text-gray-400">
@@ -764,7 +769,7 @@ setPostData(prev => ({
             {postData.content?.text && (
               <div className="flex gap-2">
                 <span className="font-semibold">
-                  {postData.author?.username || postData.author?.full_name || 'user'}
+                  {postData.author?.full_name || postData.author?.username || postData.author?.user?.full_name || postData.author?.user?.username || 'User'}
                 </span>
                 <span>{postData.content.text}</span>
               </div>
@@ -774,13 +779,15 @@ setPostData(prev => ({
             {postData.comments && postData.comments.map((comment, i) => {
 
               const username =
-                comment.author?.username ||
-                comment.user?.username ||
                 comment.author?.full_name ||
                 comment.user?.full_name ||
-                "user";
+                comment.author?.user?.full_name ||
+                comment.user?.user?.full_name ||
+                comment.author?.username ||
+                comment.user?.username ||
+                "User";
 
-              const userPhoto = comment.author?.profile_image_url || comment.user?.profile_image_url || "/loginAvatars/profile.png";
+              const userPhoto = comment.author?.profile_image_url || comment.user?.profile_image_url || comment.author?.user?.avatar || comment.user?.user?.avatar || "/loginAvatars/profile.png";
               const time = formatRelativeTime(comment.created_at);
               const commentId = comment.comment_id || comment.id;
               const isMenuOpen = openMenuId === commentId;
@@ -859,13 +866,13 @@ setPostData(prev => ({
                         {comment.replies.map((reply, idx) => (
                           <div key={reply.comment_id || reply.id || idx} className="flex gap-2">
                             <img
-                              src={reply.author?.profile_image_url || reply.user?.profile_image_url || "/loginAvatars/profile.png"}
-                              alt={reply.author?.username || 'user'}
+                              src={reply.author?.profile_image_url || reply.user?.profile_image_url || reply.author?.user?.avatar || reply.user?.user?.avatar || "/loginAvatars/profile.png"}
+                              alt={reply.author?.full_name || reply.user?.full_name || reply.author?.username || 'User'}
                               className="w-6 h-6 rounded-full object-cover flex-shrink-0"
                             />
                             <div>
                               <span className="font-semibold text-sm mr-2">
-                                {reply.author?.username || reply.user?.username || reply.author?.full_name || 'user'}
+                                {reply.author?.full_name || reply.user?.full_name || reply.author?.user?.full_name || reply.user?.user?.full_name || reply.author?.username || reply.user?.username || 'User'}
                               </span>
                               <span className="text-sm">{reply.text}</span>
                               <p className="text-xs text-gray-400 mt-0.5">{formatRelativeTime(reply.created_at)}</p>
@@ -1062,7 +1069,7 @@ setPostData(prev => ({
             {replyToComment && (
               <div className="flex items-center justify-between bg-pink-50 border border-pink-200 rounded-lg px-3 py-1.5 mb-2">
                 <p className="text-xs text-pink-600 truncate">
-                  ↩ Replying to <span className="font-semibold">@{replyToComment.author?.username || replyToComment.user?.username || 'user'}</span>
+                  ↩ Replying to <span className="font-semibold">@{replyToComment.author?.full_name || replyToComment.user?.full_name || replyToComment.author?.user?.full_name || replyToComment.user?.user?.full_name || replyToComment.author?.username || replyToComment.user?.username || 'User'}</span>
                 </p>
                 <button onClick={() => { setReplyToComment(null); setCommentText(""); }} className="ml-2 text-pink-400 hover:text-pink-600 flex-shrink-0 text-lg leading-none">×</button>
               </div>

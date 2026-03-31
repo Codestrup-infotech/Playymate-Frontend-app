@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useParams } from "next/navigation"
 import { ArrowLeft, MapPin, Users, Share2, Menu, Trophy, Flame, TrendingUp, Star, Dumbbell, CircleDot, Swords, ShoppingBag } from "lucide-react"
 import Link from "next/link"
-import { getTeamProfile, getTeamMembers, discoverTeams } from "@/lib/api/teamApi"
+import { getTeamProfile, getTeamMembers, discoverTeams, searchTeamsByName } from "@/lib/api/teamApi"
 
 const TABS = ["Overview", "Members", "Activities", "Events"]
 
@@ -30,9 +30,27 @@ const DEFAULT_STATS = [
   { label: "Badges", value: 0, icon: Star },
 ]
 
+// Helper functions to convert between team name and URL slug
+const toSlug = (name) => {
+  if (!name) return ""
+  return name.toLowerCase().replace(/\s+/g, "-")
+}
+
+const fromSlug = (slug) => {
+  if (!slug) return ""
+  return slug.replace(/-/g, " ")
+}
+
 export default function JoinTeamPage() {
   const searchParams = useSearchParams()
-  const teamId = searchParams.get("id")
+  const params = useParams()
+  
+  // Support both query param (?id=xxx) and slug (/teams/join-team/team-slug)
+  const teamIdFromQuery = searchParams.get("id")
+  const teamSlug = params?.slug
+  
+  // Determine the team identifier (prefer slug if available, fallback to id query param)
+  const teamId = teamSlug || teamIdFromQuery
   
   const [activeTab, setActiveTab] = useState("Overview")
   const [teamData, setTeamData] = useState(null)
@@ -47,14 +65,48 @@ export default function JoinTeamPage() {
   useEffect(() => {
     const fetchData = async () => {
       if (teamId) {
-        // Fetch specific team
+        // Fetch specific team - check if teamId is a slug (contains no MongoDB ObjectId pattern)
+        const isSlug = !/^[0-9a-fA-F]{24}$/.test(teamId)
+        
         try {
-          const [team, members] = await Promise.all([
-            getTeamProfile(teamId),
-            getTeamMembers(teamId)
-          ])
-          setTeamData(team)
-          setTeamMembers(members || [])
+          let teamData
+          let membersArray
+          
+          if (isSlug) {
+            // teamId is a slug - search by name to get the team
+            const searchResults = await searchTeamsByName(fromSlug(teamId))
+            const matchedTeam = searchResults.find(t => toSlug(t.name) === teamId)
+            
+            if (!matchedTeam) {
+              setError("Team not found")
+              setLoading(false)
+              return
+            }
+            
+            // Get the actual team ID
+            const actualTeamId = matchedTeam._id || matchedTeam.id
+            const [team, members] = await Promise.all([
+              getTeamProfile(actualTeamId),
+              getTeamMembers(actualTeamId)
+            ])
+            membersArray = Array.isArray(members) 
+              ? members 
+              : members?.data || members?.members || []
+            teamData = team?.data || team
+          } else {
+            // teamId is an ObjectId - use directly
+            const [team, members] = await Promise.all([
+              getTeamProfile(teamId),
+              getTeamMembers(teamId)
+            ])
+            membersArray = Array.isArray(members) 
+              ? members 
+              : members?.data || members?.members || []
+            teamData = team?.data || team
+          }
+          
+          setTeamData(teamData)
+          setTeamMembers(membersArray)
         } catch (err) {
           console.error("Error fetching team:", err)
           setError("Failed to load team details")
@@ -63,7 +115,11 @@ export default function JoinTeamPage() {
         // Fetch discover teams
         try {
           const teams = await discoverTeams({ limit: 20 })
-          setDiscoverTeamsList(teams || [])
+          // Handle both direct array and { data: [...] } response formats
+          const teamsArray = Array.isArray(teams) 
+            ? teams 
+            : teams?.data || []
+          setDiscoverTeamsList(teamsArray)
         } catch (err) {
           console.error("Error fetching teams:", err)
           setError("Failed to load teams")
@@ -75,17 +131,19 @@ export default function JoinTeamPage() {
     fetchData()
   }, [teamId])
 
-  const stats = teamData ? [
-    { label: "Members", value: teamData.members_count || teamMembers.length || 0, icon: Users },
-    { label: "Events", value: teamData.events_count || 0, icon: Trophy },
-    { label: "Wins", value: teamData.wins_count || 0, icon: Swords },
-    { label: "Badges", value: teamData.badges_count || 0, icon: Star },
+  // Handle both direct array and { data: [...] } response formats for teamData
+  const normalizedTeamData = teamData?.data || teamData
+  const stats = normalizedTeamData ? [
+    { label: "Members", value: normalizedTeamData.members_count || teamMembers.length || 0, icon: Users },
+    { label: "Events", value: normalizedTeamData.events_count || 0, icon: Trophy },
+    { label: "Wins", value: normalizedTeamData.wins_count || 0, icon: Swords },
+    { label: "Badges", value: normalizedTeamData.badges_count || 0, icon: Star },
   ] : DEFAULT_STATS
 
-  const members = teamMembers.slice(0, 9).map(m => m.name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "MB")
+  const members = (Array.isArray(teamMembers) ? teamMembers : []).slice(0, 9).map(m => m.name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "MB")
 
-  const upcomingEvents = teamData?.upcoming_events || []
-  const recentActivity = teamData?.recent_activity || ["No recent activity"]
+  const upcomingEvents = normalizedTeamData?.upcoming_events || []
+  const recentActivity = (Array.isArray(normalizedTeamData?.recent_activity) ? normalizedTeamData.recent_activity : ["No recent activity"])
 
   if (loading) {
     return (
@@ -132,7 +190,7 @@ export default function JoinTeamPage() {
               {discoverTeamsList.map((team) => (
                 <Link
                   key={team._id || team.id}
-                  href={`/teams/join-team?id=${team._id || team.id}`}
+                  href={`/teams/join-team/${toSlug(team.name)}`}
                   className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4"
                 >
                   <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center text-white font-bold">
@@ -536,7 +594,9 @@ export default function JoinTeamPage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
                     <MapPin size={12} color="#ec4899" />
                     <span style={{ fontSize: 12, color: "#6b7280" }}>
-                      {teamData.location.city}{teamData.location.area ? `, ${teamData.location.area}` : ""}
+                      {typeof teamData.location === 'string' 
+                        ? teamData.location 
+                        : `${teamData.location.city || ''}${teamData.location.area ? `, ${teamData.location.area}` : ''}`}
                     </span>
                   </div>
                 )}

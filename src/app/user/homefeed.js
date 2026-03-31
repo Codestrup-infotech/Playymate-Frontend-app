@@ -660,10 +660,25 @@ export const getStoryViewers = async (storyId, limit = 20) => {
   const params = new URLSearchParams();
   params.append("limit", limit);
 
+  console.log("[getStoryViewers] === START ===");
+  console.log("[getStoryViewers] Calling:", `${API_BASE}/stories/${storyId}/viewers?${params.toString()}`);
+  
   const res = await axios.get(`${API_BASE}/stories/${storyId}/viewers?${params.toString()}`, {
     headers: getAuthHeaders(),
   });
-  return res.data.data;
+  
+  // Handle different response formats
+  const responseData = res.data;
+  console.log("[getStoryViewers] Full response status:", res.status);
+  console.log("[getStoryViewers] Full response:", JSON.stringify(responseData, null, 2));
+  console.log("[getStoryViewers] Response keys:", responseData ? Object.keys(responseData) : "N/A");
+  console.log("[getStoryViewers] === END ===");
+  
+  // If the response has data property, use it
+  if (responseData.data) {
+    return responseData.data;
+  }
+  return responseData;
 };
 
 /**

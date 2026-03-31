@@ -1,0 +1,426 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { 
+  Users, 
+  Plus, 
+  Trophy, 
+  Calendar, 
+  UserPlus, 
+  ArrowLeft, 
+  MoreVertical,
+  Trash2,
+  Shield,
+  CheckCircle,
+  Clock,
+  X
+} from "lucide-react";
+import { useTheme } from "@/lib/ThemeContext";
+import { getMyTeams, getMyCreatedTeams, getMyJoinedTeams, archiveTeam } from "@/lib/api/teamApi";
+
+export default function MyTeamPage() {
+  const router = useRouter();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  const pageBg = isDark ? "bg-black text-white" : "bg-gray-50 text-gray-900";
+  const cardBg = isDark ? "bg-[#12121c] border-[#2a2a45]" : "bg-white border-gray-200";
+  const actBg = isDark ? "bg-[#12121c] border-[#2a2a45] hover:bg-[#1c1c2e]" : "bg-white border-gray-200 hover:bg-gray-50";
+  const mutedText = isDark ? "text-zinc-400" : "text-gray-500";
+
+  // State for team data
+  const [teamsData, setTeamsData] = useState({
+    owned: [],
+    joined: [],
+    invites: [],
+    loading: true,
+    error: null,
+  });
+
+  // Active tab state
+  const [activeTab, setActiveTab] = useState("owned");
+
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Fetch teams data on mount
+  useEffect(() => {
+    const fetchTeamsData = async () => {
+      try {
+        const response = await getMyTeams();
+        
+        setTeamsData({
+          owned: response.owned || [],
+          joined: response.joined || [],
+          invites: response.invites || [],
+          loading: false,
+          error: null,
+        });
+      } catch (error) {
+        console.error("Error fetching teams:", error);
+        setTeamsData({
+          owned: [],
+          joined: [],
+          invites: [],
+          loading: false,
+          error: "Failed to load teams",
+        });
+      }
+    };
+
+    fetchTeamsData();
+  }, []);
+
+  // Handle delete team
+  const handleDeleteTeam = async () => {
+    if (!teamToDelete) return;
+
+    setDeleting(true);
+    try {
+      await archiveTeam(teamToDelete._id || teamToDelete.id);
+      
+      // Remove the deleted team from the owned list
+      setTeamsData(prev => ({
+        ...prev,
+        owned: prev.owned.filter(team => (team._id || team.id) !== (teamToDelete._id || teamToDelete.id))
+      }));
+      
+      setShowDeleteModal(false);
+      setTeamToDelete(null);
+    } catch (error) {
+      console.error("Error deleting team:", error);
+      alert("Failed to delete team. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Open delete modal
+  const openDeleteModal = (team, e) => {
+    e.stopPropagation();
+    setTeamToDelete(team);
+    setShowDeleteModal(true);
+  };
+
+  // Get teams based on active tab
+  const getCurrentTeams = () => {
+    switch (activeTab) {
+      case "owned":
+        return teamsData.owned;
+      case "member":
+        return teamsData.joined;
+      case "invites":
+        return teamsData.invites;
+      default:
+        return [];
+    }
+  };
+
+  const currentTeams = getCurrentTeams();
+
+  // Render team card
+  const renderTeamCard = (team, isOwned = false) => {
+    const teamId = team._id || team.id;
+    const teamName = team.name;
+    
+    // Helper to convert team name to URL slug
+    const toSlug = (name) => {
+      if (!name) return ""
+      return name.toLowerCase().replace(/\s+/g, "-")
+    }
+    
+    return (
+      <div
+        key={teamId}
+        className={`flex items-center gap-4 border rounded-2xl p-4 ${cardBg} shadow-sm cursor-pointer hover:opacity-90 transition`}
+        onClick={() => router.push(`/teams/join-team/${toSlug(teamName)}`)}
+      >
+        {/* Avatar */}
+        <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"} overflow-hidden`}>
+          {team.logo ? (
+            <img src={team.logo} alt={team.name} className="w-full h-full object-cover" />
+          ) : (
+            <Users size={24} className={mutedText} />
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold text-lg truncate">{team.name}</h2>
+            
+            {isOwned && (
+              <span className="bg-green-900/30 text-green-400 text-xs px-2 py-1 rounded-full flex-shrink-0">
+                Owner
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
+            {team.category_value || team.sport ? (
+              <span className="bg-purple-600/20 text-purple-400 px-2 py-[2px] rounded-full text-xs">
+                {team.category_value || team.sport}
+              </span>
+            ) : null}
+
+            <span className="flex items-center gap-1">
+              <Users size={12} />
+              {team.members_count || team.member_count || team.members?.length || 0} members
+            </span>
+
+            {team.is_active !== false && (
+              <span className="text-green-400 flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                Active
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        {isOwned && (
+          <button
+            onClick={(e) => openDeleteModal(team, e)}
+            className={`p-2 rounded-full ${isDark ? "hover:bg-red-900/30 text-red-400" : "hover:bg-red-50 text-red-500"} transition`}
+          >
+            <Trash2 size={18} />
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  // Render invite card
+  const renderInviteCard = (invite) => {
+    const teamId = invite.team?._id || invite.team?.id || invite._id || invite.id;
+    
+    return (
+      <div
+        key={teamId}
+        className={`flex items-center gap-4 border rounded-2xl p-4 ${cardBg} shadow-sm`}
+      >
+        {/* Avatar */}
+        <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"} overflow-hidden`}>
+          {invite.team?.logo ? (
+            <img src={invite.team.logo} alt={invite.team.name} className="w-full h-full object-cover" />
+          ) : (
+            <Users size={24} className={mutedText} />
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold text-lg truncate">{invite.team?.name || invite.name}</h2>
+          </div>
+
+          <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
+            <span className="flex items-center gap-1">
+              <Shield size={12} />
+              {invite.role || "Member"} role
+            </span>
+            
+            <span className="flex items-center gap-1 text-yellow-400">
+              <Clock size={12} />
+              Pending
+            </span>
+          </div>
+        </div>
+
+        {/* Accept/Decline Actions */}
+        <div className="flex gap-2">
+          <button
+            className="p-2 rounded-full bg-green-600/20 text-green-400 hover:bg-green-600/30 transition"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Handle accept invite
+              console.log("Accept invite:", invite);
+            }}
+          >
+            <CheckCircle size={18} />
+          </button>
+          <button
+            className="p-2 rounded-full bg-red-600/20 text-red-400 hover:bg-red-600/30 transition"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Handle decline invite
+              console.log("Decline invite:", invite);
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  if (teamsData.loading) {
+    return (
+      <div className={`min-h-screen ${pageBg} flex items-center justify-center`}>
+        <div className="w-8 h-8 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`min-h-screen ${pageBg} px-5 py-6`}>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={() => router.back()}
+          className={`p-2 rounded-full ${isDark ? "bg-[#1a1a2e]" : "bg-gray-100"}`}
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="text-xl font-semibold tracking-tight">My Teams</h1>
+      </div>
+
+      {/* Create Team Button */}
+      <Link
+        href="/teams/create-team"
+        className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-orange-500 flex items-center justify-center gap-2 text-white font-semibold mb-5"
+      >
+        <Plus size={20} />
+        Create Team
+      </Link>
+
+      {/* Tabs */}
+      <div className="flex bg-[#1a1a1a] dark:bg-[#1a1a1a] bg-gray-200 rounded-full p-1 mb-5">
+        {[
+          { key: "owned", label: "Owned", count: teamsData.owned.length },
+          { key: "member", label: "Member", count: teamsData.joined.length },
+          { key: "invites", label: "Invites", count: teamsData.invites.length }
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-1 py-2 rounded-full text-sm font-medium capitalize transition ${
+              activeTab === tab.key
+                ? "bg-gradient-to-r from-pink-500 to-orange-500 text-white"
+                : isDark ? "text-gray-400" : "text-gray-600"
+            }`}
+          >
+            {tab.label}
+            {tab.count > 0 && (
+              <span className={`ml-2 ${activeTab === tab.key ? "bg-white/20" : isDark ? "bg-zinc-700" : "bg-gray-300"} text-xs px-2 py-[2px] rounded-full`}>
+                {tab.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Team List */}
+      {teamsData.error ? (
+        <div className={`text-center py-8 ${mutedText}`}>
+          <p>{teamsData.error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 text-pink-500 hover:underline"
+          >
+            Retry
+          </button>
+        </div>
+      ) : currentTeams.length === 0 ? (
+        <div className="text-center py-12">
+          <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${isDark ? "bg-[#1a1a2e]" : "bg-gray-100"}`}>
+            <Users size={32} className={mutedText} />
+          </div>
+          <h3 className="font-semibold text-lg mb-2">
+            {activeTab === "owned" && "No Teams Owned"}
+            {activeTab === "member" && "No Team Memberships"}
+            {activeTab === "invites" && "No Pending Invites"}
+          </h3>
+          <p className={`text-sm ${mutedText} mb-4`}>
+            {activeTab === "owned" && "Create your first team to get started"}
+            {activeTab === "member" && "Join a team to see it here"}
+            {activeTab === "invites" && "Team invitations will appear here"}
+          </p>
+          
+          {activeTab === "owned" && (
+            <Link
+              href="/teams/create-team"
+              className="inline-flex items-center gap-2 text-pink-500 font-medium"
+            >
+              <Plus size={18} />
+              Create Team
+            </Link>
+          )}
+          
+          {activeTab === "member" && (
+            <Link
+              href="/teams/join-team"
+              className="inline-flex items-center gap-2 text-pink-500 font-medium"
+            >
+              <UserPlus size={18} />
+              Find Teams
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {activeTab === "invites" 
+            ? currentTeams.map(renderInviteCard)
+            : currentTeams.map((team) => renderTeamCard(team, activeTab === "owned"))
+          }
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${isDark ? 'bg-[#1a1a2e]' : 'bg-white'} rounded-2xl p-6 max-w-sm w-full`}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <Trash2 size={24} className="text-red-500" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Delete Team</h2>
+                <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <p className={`mb-6 ${isDark ? 'text-zinc-300' : 'text-gray-600'}`}>
+              Are you sure you want to delete <strong>{teamToDelete?.name}</strong>? 
+              All team members will be removed and this action cannot be reversed.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setTeamToDelete(null);
+                }}
+                disabled={deleting}
+                className={`flex-1 px-4 py-2 rounded-full border ${isDark ? 'border-zinc-700' : 'border-gray-300'} disabled:opacity-50`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteTeam}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-full font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

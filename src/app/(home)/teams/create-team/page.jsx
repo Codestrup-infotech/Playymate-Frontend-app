@@ -626,7 +626,7 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
           </div>
 
           {/* CONTINUE BUTTON */}
-          <div className="fixed bottom-4 inset-x-4 flex justify-center">
+          <div className=" bottom-4 inset-x-4 flex justify-center">
             <button
               type="submit"
               className="px-8 py-2.5 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-sm font-medium text-white flex items-center justify-center shadow-md"

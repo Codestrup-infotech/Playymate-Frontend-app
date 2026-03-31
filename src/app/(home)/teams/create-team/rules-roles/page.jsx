@@ -80,7 +80,20 @@ export default function RulesRolesPage() {
     if (typeof window !== "undefined") {
       const stored = sessionStorage.getItem("createTeamData")
       if (stored) {
-        setBasicInfo(JSON.parse(stored))
+        const parsed = JSON.parse(stored)
+        setBasicInfo(parsed)
+        // Also load form data from sessionStorage
+        setFormData(prev => ({
+          ...prev,
+          max_members: parsed.max_members || 15,
+          skill_level: parsed.skill_level || "all_levels",
+          age_group: parsed.age_group || "all_ages",
+          roles_config: parsed.roles_config || {
+            co_captain_enabled: true,
+            manager_enabled: false,
+            coach_enabled: false,
+          },
+        }))
       }
     }
   }, [])
@@ -109,7 +122,7 @@ export default function RulesRolesPage() {
   }
 
   return (
-    <div className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-28`}>
+    <div className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10`}>
 
       {/* HEADER */}
       <div className="flex items-center gap-3 mb-6">
@@ -240,7 +253,7 @@ export default function RulesRolesPage() {
         </div>
 
         {/* CONTINUE BUTTON */}
-        <div className="fixed bottom-4 inset-x-4 flex justify-center">
+        <div className=" pt-10 inset-x-4 flex justify-center">
           <button
             type="submit"
             className="px-10 py-3 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-base font-semibold text-white flex items-center justify-center shadow-lg"

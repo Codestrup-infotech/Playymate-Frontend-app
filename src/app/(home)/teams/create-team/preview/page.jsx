@@ -8,6 +8,12 @@ import { motion } from "framer-motion"
 import { useTheme } from "@/lib/ThemeContext"
 import { createTeam } from "@/lib/api/teamApi"
 
+// Helper function to convert team name to URL slug
+const toSlug = (name) => {
+  if (!name) return ""
+  return name.toLowerCase().replace(/\s+/g, "-")
+}
+
 export default function Page() {
   const router = useRouter()
   const { theme } = useTheme()
@@ -67,11 +73,14 @@ export default function Page() {
 
       const response = await createTeam(apiPayload)
       
+      // Console log the response to see the result
+      console.log("Create team response:", response)
+      
       // Clear session storage after successful creation
       sessionStorage.removeItem("createTeamData")
       
-      // Navigate to the created team
-      router.push(`/teams/join-team?id=${response._id || response.id}`)
+      // Navigate to the created team using the slug format
+      router.push(`/teams/join-team/${toSlug(response.name)}`)
     } catch (err) {
       console.error("Error creating team:", err)
       setError(err.message || "Failed to create team. Please try again.")
@@ -114,7 +123,7 @@ export default function Page() {
 
   return (
     <motion.div
-      className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-28 font-sans`}
+      className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10 font-Poppins `}
       initial="hidden"
       animate="visible"
       variants={containerVariants}
@@ -265,7 +274,7 @@ export default function Page() {
 
       {/* CREATE BUTTON */}
       <motion.div
-        className="fixed bottom-6 inset-x-5 flex justify-center z-50"
+        className=" mt-10 inset-x-5 flex justify-center z-50"
         initial={{ y: 100 }}
         animate={{ y: 0 }}
         transition={{ delay: 0.5, type: "spring", stiffness: 120 }}
@@ -279,7 +288,7 @@ export default function Page() {
           whileTap={{ scale: 0.95 }}
           onClick={handleCreateTeam}
           disabled={loading}
-          className="w-full max-w-md py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-2xl text-lg font-bold text-white flex items-center justify-center shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full max-w-md py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-lg font-bold text-white flex items-center justify-center shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Creating..." : "Create Team"}
         </motion.button>

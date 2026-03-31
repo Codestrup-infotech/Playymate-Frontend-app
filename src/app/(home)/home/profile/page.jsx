@@ -374,6 +374,15 @@ export default function ProfilePage() {
       // Get the post data - handle different response structures
       let postData = response.data?.data?.post || response.data?.data || response.data || post;
       
+      // Preserve the author info from original post - API may not return it
+      const originalAuthor = post.author || {};
+      if (!postData.author || (!postData.author.username && !postData.author.full_name)) {
+        postData.author = {
+          ...postData.author,
+          ...originalAuthor
+        };
+      }
+      
       // Preserve the is_liked from original post if not in API response
      postData.is_liked =
   post.is_liked === true ||

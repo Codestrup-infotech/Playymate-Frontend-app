@@ -7,6 +7,12 @@ import { useRouter } from "next/navigation"
 import { useTheme } from "@/lib/ThemeContext"
 import { getMyTeams, checkEligibility } from "@/lib/api/teamApi"
 
+// Helper function to convert team name to URL slug
+const toSlug = (name) => {
+  if (!name) return ""
+  return name.toLowerCase().replace(/\s+/g, "-")
+}
+
 export default function TeamsPage() {
   const router = useRouter()
   const { theme } = useTheme()
@@ -59,8 +65,8 @@ export default function TeamsPage() {
         ])
         
         setTeamsData({
-          owned: teamsResponse.owned || teamsResponse.created || [],
-          joined: teamsResponse.joined || [],
+          owned: teamsResponse.owned || [],
+          joined: teamsResponse.member || teamsResponse.joined || [],
           loading: false,
           error: null,
         })
@@ -179,7 +185,10 @@ export default function TeamsPage() {
           {eligibility.teams_created_count > 0 ? eligibility.teams_created_count : ownedCount} OWNED <span className="mx-2">•</span> {joinedCount} MEMBER
         </p>
 
-        <button className="mt-6 bg-white/20 hover:bg-white/30 backdrop-blur-md transition px-5 py-3 rounded-xl font-medium flex items-center gap-2 text-white">
+        <button
+          onClick={() => router.push('/teams/my-team')}
+          className="mt-6 bg-white/20 hover:bg-white/30 backdrop-blur-md transition px-5 py-3 rounded-xl font-medium flex items-center gap-2 text-white"
+        >
           View Teams
           <ArrowRight size={18} />
         </button>
@@ -227,7 +236,7 @@ export default function TeamsPage() {
             {teamsData.owned.map((team) => (
               <Link
                 key={team._id || team.id}
-                href={`/teams/join-team?id=${team._id || team.id}`}
+                href={`/teams/join-team/${toSlug(team.name)}`}
                 className={`rounded-2xl p-4 flex items-center gap-4 border ${cardBg} shadow-sm`}
               >
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"}`}>
@@ -254,7 +263,7 @@ export default function TeamsPage() {
             {teamsData.joined.map((team) => (
               <Link
                 key={team._id || team.id}
-                href={`/teams/join-team?id=${team._id || team.id}`}
+                href={`/teams/join-team/${toSlug(team.name)}`}
                 className={`rounded-2xl p-4 flex items-center gap-4 border ${cardBg} shadow-sm`}
               >
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"}`}>
