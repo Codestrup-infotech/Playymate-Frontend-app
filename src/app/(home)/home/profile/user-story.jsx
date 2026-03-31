@@ -413,7 +413,7 @@ useEffect(() => {
       
       // Step 2: Send the reply message to the conversation
       const messageResponse = await sendMessage(conversationId, {
-        message: replyText.trim()
+        content: replyText.trim()
       });
       
       console.log('[UserStory] Message sent:', messageResponse);
