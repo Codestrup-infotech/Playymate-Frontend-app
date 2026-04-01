@@ -3,15 +3,13 @@
 import { Suspense, useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Check, Wallet, Trophy, Calendar, ShieldCheck, Zap } from "lucide-react"
+import { ArrowLeft, Check, Wallet, Trophy, Calendar, ShieldCheck, Zap, Sparkles } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { getTeamProfile, previewMembership } from "@/lib/api/teamApi"
 
 function OnboardingContent() {
-  // Call useSearchParams at top level - it works in client components
   const searchParams = useSearchParams()
   const router = useRouter()
-  // Safely get teamId with optional chaining
   const teamId = searchParams?.get?.("teamId") || null
 
   const [teamData, setTeamData] = useState(null)
@@ -27,7 +25,6 @@ function OnboardingContent() {
         setLoading(false)
         return
       }
-
       try {
         const [team, membership] = await Promise.all([
           getTeamProfile(teamId),
@@ -35,7 +32,6 @@ function OnboardingContent() {
         ])
         setTeamData(team)
         setMembershipData(membership)
-        // Default select the first option
         if (membership?.options?.length > 0) {
           setSelectedOption(membership.options[0].type)
         }
@@ -45,11 +41,9 @@ function OnboardingContent() {
       }
       setLoading(false)
     }
-
     fetchData()
   }, [teamId])
 
-  // Store teamId in session for payment page
   useEffect(() => {
     if (teamId) {
       sessionStorage.setItem("pendingTeamId", teamId)
@@ -99,7 +93,7 @@ function OnboardingContent() {
   const currentPrice = membershipOptions.find(o => o.type === selectedOption)?.price || teamData?.membership?.fee_amount || 0
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
 
       {/* COVER & HEADER */}
       <div className="relative h-64 w-full overflow-hidden">
@@ -109,7 +103,6 @@ function OnboardingContent() {
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-transparent" />
-
         <div className="absolute top-6 left-6 z-10">
           <button
             onClick={() => router.back()}
@@ -210,7 +203,7 @@ function OnboardingContent() {
                 </div>
               </section>
             )}
-                            
+
             {/* WALLET BALANCES */}
             {(walletBalances.gold_coins > 0 || walletBalances.diamonds > 0) && (
               <section>
@@ -242,38 +235,75 @@ function OnboardingContent() {
               </section>
             )}
 
-            <div className="bg-gray-200 rounded-2xl overflow-hidden border border-gray-300">
+            {/* ─── REDESIGNED: SELECT MEMBERSHIP ─── */}
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest">Select Membership</h3>
+              </div>
 
-  {/* SPORT */}
-  <div className="flex justify-between items-center px-4 py-4">
-    <span className="text-black-400 text-sm">Sport</span>
-    <span className="text-gray-800 text-sm font-semibold">
-      {teamData?.sport || "Cricket"}
-    </span>
+              <div className="space-y-2.5">
+
+                {/* Monthly */}
+                <div className="group flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 hover:border-violet-300 hover:bg-violet-50/40 cursor-pointer transition-all duration-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm group-hover:border-violet-200 transition-colors">
+                      <Calendar size={14} className="text-slate-500 group-hover:text-violet-500 transition-colors" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800 leading-tight">Monthly</p>
+                      <p className="text-[11px] text-slate-400 leading-tight">Full access to team features</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-base font-bold text-slate-800">₹99</span>
+                    <p className="text-[10px] text-slate-400">/mo</p>
+                  </div>
+                </div>
+
+                {/* Quarterly */}
+                <div className="group flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 hover:border-violet-300 hover:bg-violet-50/40 cursor-pointer transition-all duration-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm group-hover:border-violet-200 transition-colors">
+                      <Zap size={14} className="text-slate-500 group-hover:text-violet-500 transition-colors" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800 leading-tight">Quarterly</p>
+                      <p className="text-[11px] text-slate-400 leading-tight">Full access to team features</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-base font-bold text-slate-800">₹249</span>
+                    <p className="text-[10px] text-slate-400">/3 mo</p>
+                  </div>
+                </div>
+
+                {/* Yearly — Best Value */}
+<div className="relative flex items-center justify-between px-4 py-3 rounded-xl bg-gradient-to-r from-pink-500 via-orange-400 to-orange-500 cursor-pointer shadow-md shadow-pink-300/60 hover:shadow-pink-400/70 hover:from-pink-600 hover:via-orange-500 hover:to-orange-600 transition-all duration-200">
+  
+  {/* Badge */}
+  <span className="absolute -top-2.5 right-4 bg-white/20 backdrop-blur text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full shadow-sm">
+    Best Value
+  </span>
+
+  <div className="flex items-center gap-3">
+    <div className="w-8 h-8 rounded-lg bg-white/15 border border-white/20 flex items-center justify-center">
+      <Sparkles size={14} className="text-white" />
+    </div>
+    <div>
+      <p className="text-sm font-semibold text-white leading-tight">Yearly</p>
+      <p className="text-[11px] text-white/80 leading-tight">Full access to team features</p>
+    </div>
   </div>
 
-  <div className="border-t border-gray-300" />
-
-  {/* JOIN FEE */}
-  <div className="flex justify-between items-center px-4 py-4">
-    <span className="text-black-400 text-sm">Join Fee</span>
-    <span className="text-gray-800 text-sm font-semibold">
-      ₹{teamData?.membership?.fee_amount || 499}
-    </span>
+  <div className="text-right">
+    <span className="text-base font-bold text-white">₹499</span>
+    <p className="text-[10px] text-white/70">/yr</p>
   </div>
-
-  <div className="border-t border-gray-300" />
-
-  {/* DURATION */}
-  <div className="flex justify-between items-center px-4 py-4">
-    <span className="text-black-400 text-sm">Duration</span>
-    <span className="text-black-800 text-sm font-semibold">
-      {teamData?.membership?.duration || "Monthly"}
-    </span>
-  </div>
-
 </div>
 
+              </div>
+            </section>
+            {/* ─── END REDESIGNED SECTION ─── */}
 
             {/* BENEFITS */}
             <section>
@@ -305,14 +335,14 @@ function OnboardingContent() {
       </div>
 
       {/* FOOTER ACTION */}
-      <div className=" bottom-0 inset-x-0 p-6 bg-white/80 backdrop-blur-xl border-t border-slate-100 z-30">
+      <div className="bottom-0 inset-x-0 p-6 bg-white/80 backdrop-blur-xl border-t border-slate-100 z-30">
         <div className="max-w-xl mx-auto flex items-center justify-between gap-4">
           <div className="hidden sm:block">
             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Total to pay</p>
             <p className="text-2xl font-black text-slate-900">₹{currentPrice}</p>
           </div>
           <Link
-            href={`/teams/join-team/payment?teamId=${teamId}&option=${selectedOption}`}
+            href={`/teams/join-team/payment-2?teamId=${teamId}&option=${selectedOption}`}
             className="flex-1 sm:flex-none px-10 py-4 bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 rounded-2xl text-sm font-black text-white flex items-center justify-center shadow-lg shadow-pink-200 transition-all active:scale-95 uppercase tracking-wider"
           >
             Continue to Payment
@@ -325,7 +355,6 @@ function OnboardingContent() {
   )
 }
 
-// Wrapper component with Suspense boundary for useSearchParams
 export default function JoinPaymentPage() {
   return (
     <Suspense fallback={
