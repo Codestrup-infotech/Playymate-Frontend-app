@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   ArrowLeft, Search, Contact, Link2, QrCode,
@@ -13,8 +13,116 @@ import {
   sendInvite,
   getRecentActivity,
 } from "@/lib/api/teamApi";
+import { getFollowing, getFollowers } from "@/services/user";
 
-export default function InvitePlayers({ teamId: teamIdProp }) {
+// ─── Get Current User ID ──────────────────────────────────────────────────────
+
+function getMyId() {
+  if (typeof window === "undefined") return "";
+  const token =
+    sessionStorage.getItem("access_token") ||
+    sessionStorage.getItem("accessToken") ||
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("accessToken") ||
+    "";
+  if (!token) return "";
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.sub || payload.id || payload._id || payload.userId || "";
+  } catch {
+    return "";
+  }
+}
+
+// ─── User Card Component ───────────────────────────────────────────────────────
+
+function UserCard({ user, isDark, inputBg, card, border, sub, muted, invitedIds, inviting, handleInvite, getInitials }) {
+  const uid       = user._id || user.id;
+  const isInvited = invitedIds.has(uid);
+  const isSending = inviting === uid;
+  const sport     = user.sport || user.category || "";
+  const mutual    = user.mutual_friends ?? user.mutual ?? 0;
+  const rating    = user.rating ?? user.score ?? null;
+
+  return (
+    <div
+      className={`${card} border ${border} rounded-2xl px-3 py-3 flex items-center gap-3`}
+    >
+      {/* Avatar */}
+      <div
+        className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold"
+        style={{
+          background: isDark ? "#1e1e35" : "#eef0f8",
+          color: "#f43f8a",
+          border: isDark ? "1.5px solid #2a2a45" : "1.5px solid #e0e4ef",
+        }}
+      >
+        {user.avatar ? (
+          <img
+            src={user.avatar}
+            alt={user.name}
+            className="w-full h-full object-cover rounded-xl"
+          />
+        ) : (
+          getInitials(user.name || user.user_name)
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-[14px] truncate">
+          {user.name || user.user_name || "Unknown"}
+        </p>
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
+          {sport && (
+            <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-pink-500/15 text-pink-400">
+              {sport}
+            </span>
+          )}
+          {mutual > 0 && (
+            <span className={`text-[11px] font-medium ${sub}`}>
+              {mutual} mutual
+            </span>
+          )}
+          {rating !== null && (
+            <span className={`flex items-center gap-0.5 text-[11px] font-semibold ${sub}`}>
+              <Star size={10} className="text-yellow-400 fill-yellow-400" />
+              {Number(rating).toFixed(1)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Invite button */}
+      <button
+        onClick={() => !isInvited && handleInvite(uid)}
+        disabled={isInvited || isSending}
+        className="flex-shrink-0 px-4 py-2 rounded-xl text-[13px] font-bold text-white transition-all disabled:opacity-70"
+        style={{
+          background: isInvited
+            ? "rgba(34,197,94,0.2)"
+            : "linear-gradient(135deg,#f43f8a,#f97316)",
+          color: isInvited ? "#22c55e" : "#fff",
+          minWidth: 68,
+        }}
+      >
+        {isSending ? (
+          <span className="flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+          </span>
+        ) : isInvited ? (
+          <span className="flex items-center gap-1">
+            <Check size={13} /> Sent
+          </span>
+        ) : (
+          "Invite"
+        )}
+      </button>
+    </div>
+  );
+}
+
+export default function InvitePlayers({ teamId: teamIdProp, onClose }) {
   const router = useRouter();
   const params = useParams();
   const { theme } = useTheme();
@@ -31,6 +139,40 @@ export default function InvitePlayers({ teamId: teamIdProp }) {
   const [loadingRecent, setLoadingRecent] = useState(true);
   const [invitedIds, setInvitedIds]       = useState(new Set());
   const [inviting, setInviting]           = useState(null); // userId being invited
+  const [myFollowing, setMyFollowing]    = useState([]);
+  const [myFollowers, setMyFollowers]    = useState([]);
+  const [loadingConnections, setLoadingConnections] = useState(true);
+
+  // ── Load my followers and following ──
+  const myId = useMemo(() => getMyId(), []);
+
+  useEffect(() => {
+    if (!myId) return;
+
+    // Fetch followers and following
+    (async () => {
+      try {
+        setLoadingConnections(true);
+        
+        // Fetch both in parallel
+        const [followersRes, followingRes] = await Promise.all([
+          getFollowers(myId, 50),
+          getFollowing(myId, 50)
+        ]);
+        
+        // Extract users from response
+        const followersData = followersRes?.data?.followers || followersRes?.data || [];
+        const followingData = followingRes?.data?.following || followingRes?.data || [];
+        
+        setMyFollowers(Array.isArray(followersData) ? followersData : []);
+        setMyFollowing(Array.isArray(followingData) ? followingData : []);
+      } catch (err) {
+        console.error("Error fetching connections:", err);
+      } finally {
+        setLoadingConnections(false);
+      }
+    })();
+  }, [myId]);
 
   // ── Load invite link + recent activity ──
   useEffect(() => {
@@ -62,15 +204,51 @@ export default function InvitePlayers({ teamId: teamIdProp }) {
     })();
   }, [teamId]);
 
-  // ── Search debounce ──
+  // ── Search debounce with prioritization ──
   useEffect(() => {
-    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    if (!searchQuery.trim()) { 
+      setSearchResults([]); 
+      return; 
+    }
     const t = setTimeout(async () => {
       try {
         setSearching(true);
         const res  = await searchUsers(teamId, searchQuery);
         const data = res.data || res;
-        setSearchResults(Array.isArray(data) ? data : []);
+        const allResults = Array.isArray(data) ? data : [];
+        
+        // Create a Set of following IDs for quick lookup
+        const followingIds = new Set(
+          myFollowing.map(u => u._id || u.user_id || u.id).filter(Boolean)
+        );
+        
+        // Sort: prioritize exact match in following, then other results
+        const sortedResults = [...allResults].sort((a, b) => {
+          const aId = a._id || a.id;
+          const bId = b._id || b.id;
+          const aInFollowing = followingIds.has(aId);
+          const bInFollowing = followingIds.has(bId);
+          
+          // Exact username match gets highest priority
+          const aExactMatch = (a.user_name || a.username || "").toLowerCase() === searchQuery.toLowerCase();
+          const bExactMatch = (b.user_name || b.username || "").toLowerCase() === searchQuery.toLowerCase();
+          
+          // If one is exact match and in following, prioritize
+          if (aExactMatch && aInFollowing && !bExactMatch) return -1;
+          if (bExactMatch && bInFollowing && !aExactMatch) return 1;
+          
+          // Then prioritize exact match
+          if (aExactMatch && !bExactMatch) return -1;
+          if (bExactMatch && !aExactMatch) return 1;
+          
+          // Then prioritize following
+          if (aInFollowing && !bInFollowing) return -1;
+          if (bInFollowing && !aInFollowing) return 1;
+          
+          return 0;
+        });
+        
+        setSearchResults(sortedResults);
       } catch {
         setSearchResults([]);
       } finally {
@@ -78,7 +256,7 @@ export default function InvitePlayers({ teamId: teamIdProp }) {
       }
     }, 400);
     return () => clearTimeout(t);
-  }, [searchQuery, teamId]);
+  }, [searchQuery, teamId, myFollowing]);
 
   // ── Copy link ──
   const copyLink = () => {
@@ -105,6 +283,27 @@ export default function InvitePlayers({ teamId: teamIdProp }) {
     name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "?";
 
   const displayList = searchQuery.trim() ? searchResults : recentUsers;
+  
+  // Separate following and other users for display
+  const { following: displayFollowing, others: displayOthers } = useMemo(() => {
+    const followingIds = new Set(
+      myFollowing.map(u => u._id || u.user_id || u.id).filter(Boolean)
+    );
+    
+    const following = [];
+    const others = [];
+    
+    displayList.forEach(user => {
+      const uid = user._id || user.id;
+      if (followingIds.has(uid)) {
+        following.push(user);
+      } else {
+        others.push(user);
+      }
+    });
+    
+    return { following, others };
+  }, [displayList, myFollowing]);
 
   // ── Theme ──
   const bg       = isDark ? "bg-[#0a0a14]"    : "bg-gray-50";
@@ -196,120 +395,114 @@ export default function InvitePlayers({ teamId: teamIdProp }) {
 
         {/* ── Recent / Search Results ── */}
         <div>
-          <p className={`text-[15px] font-bold mb-3`}>
-            {searchQuery.trim() ? "Search Results" : "Recent Activity"}
-          </p>
-
-          {loadingRecent && !searchQuery ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className={`${card} border ${border} rounded-2xl p-3 flex items-center gap-3 animate-pulse`}>
-                  <div className={`w-11 h-11 rounded-xl ${inputBg}`} />
-                  <div className="flex-1 space-y-2">
-                    <div className={`h-3 w-28 rounded ${inputBg}`} />
-                    <div className={`h-2.5 w-20 rounded ${inputBg}`} />
+          {searchQuery.trim() ? (
+            <>
+              {/* Show following first in search results */}
+              {displayFollowing.length > 0 && (
+                <div className="mb-4">
+                  <p className={`text-xs font-semibold uppercase tracking-widest ${muted} mb-2`}>
+                    Your Following
+                  </p>
+                  <div className="space-y-2.5">
+                    {displayFollowing.map((user) => (
+                      <UserCard 
+                        key={user._id || user.id} 
+                        user={user}
+                        isDark={isDark}
+                        inputBg={inputBg}
+                        card={card}
+                        border={border}
+                        sub={sub}
+                        muted={muted}
+                        invitedIds={invitedIds}
+                        inviting={inviting}
+                        handleInvite={handleInvite}
+                        getInitials={getInitials}
+                      />
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : displayList.length === 0 ? (
-            <div className="text-center py-10">
-              <div className={`w-14 h-14 rounded-2xl ${inputBg} flex items-center justify-center mx-auto mb-3`}>
-                <Users size={24} className={muted} />
-              </div>
-              <p className={`text-sm ${sub}`}>
-                {searchQuery.trim() ? "No users found" : "No recent activity"}
-              </p>
-            </div>
+              )}
+              
+              {/* Show other users */}
+              {displayOthers.length > 0 && (
+                <div>
+                  <p className={`text-xs font-semibold uppercase tracking-widest ${muted} mb-2`}>
+                    Other Users
+                  </p>
+                  <div className="space-y-2.5">
+                    {displayOthers.map((user) => (
+                      <UserCard 
+                        key={user._id || user.id} 
+                        user={user}
+                        isDark={isDark}
+                        inputBg={inputBg}
+                        card={card}
+                        border={border}
+                        sub={sub}
+                        muted={muted}
+                        invitedIds={invitedIds}
+                        inviting={inviting}
+                        handleInvite={handleInvite}
+                        getInitials={getInitials}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {displayFollowing.length === 0 && displayOthers.length === 0 && (
+                <div className="text-center py-10">
+                  <div className={`w-14 h-14 rounded-2xl ${inputBg} flex items-center justify-center mx-auto mb-3`}>
+                    <Users size={24} className={muted} />
+                  </div>
+                  <p className={`text-sm ${sub}`}>No users found</p>
+                </div>
+              )}
+            </>
           ) : (
-            <div className="space-y-2.5">
-              {displayList.map((user) => {
-                const uid       = user._id || user.id;
-                const isInvited = invitedIds.has(uid);
-                const isSending = inviting === uid;
-                const sport     = user.sport || user.category || "";
-                const mutual    = user.mutual_friends ?? user.mutual ?? 0;
-                const rating    = user.rating ?? user.score ?? null;
-
-                return (
-                  <div
-                    key={uid}
-                    className={`${card} border ${border} rounded-2xl px-3 py-3 flex items-center gap-3`}
-                  >
-                    {/* Avatar */}
-                    <div
-                      className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold"
-                      style={{
-                        background: isDark ? "#1e1e35" : "#eef0f8",
-                        color: "#f43f8a",
-                        border: isDark ? "1.5px solid #2a2a45" : "1.5px solid #e0e4ef",
-                      }}
-                    >
-                      {user.avatar ? (
-                        <img
-                          src={user.avatar}
-                          alt={user.name}
-                          className="w-full h-full object-cover rounded-xl"
-                        />
-                      ) : (
-                        getInitials(user.name || user.user_name)
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[14px] truncate">
-                        {user.name || user.user_name || "Unknown"}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        {sport && (
-                          <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-pink-500/15 text-pink-400">
-                            {sport}
-                          </span>
-                        )}
-                        {mutual > 0 && (
-                          <span className={`text-[11px] font-medium ${sub}`}>
-                            {mutual} mutual
-                          </span>
-                        )}
-                        {rating !== null && (
-                          <span className={`flex items-center gap-0.5 text-[11px] font-semibold ${sub}`}>
-                            <Star size={10} className="text-yellow-400 fill-yellow-400" />
-                            {Number(rating).toFixed(1)}
-                          </span>
-                        )}
+            <>
+              {/* Show recent users with following indicator */}
+              {loadingRecent ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className={`${card} border ${border} rounded-2xl p-3 flex items-center gap-3 animate-pulse`}>
+                      <div className={`w-11 h-11 rounded-xl ${inputBg}`} />
+                      <div className="flex-1 space-y-2">
+                        <div className={`h-3 w-28 rounded ${inputBg}`} />
+                        <div className={`h-2.5 w-20 rounded ${inputBg}`} />
                       </div>
                     </div>
-
-                    {/* Invite button */}
-                    <button
-                      onClick={() => !isInvited && handleInvite(uid)}
-                      disabled={isInvited || isSending}
-                      className="flex-shrink-0 px-4 py-2 rounded-xl text-[13px] font-bold text-white transition-all disabled:opacity-70"
-                      style={{
-                        background: isInvited
-                          ? "rgba(34,197,94,0.2)"
-                          : "linear-gradient(135deg,#f43f8a,#f97316)",
-                        color: isInvited ? "#22c55e" : "#fff",
-                        minWidth: 68,
-                      }}
-                    >
-                      {isSending ? (
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
-                        </span>
-                      ) : isInvited ? (
-                        <span className="flex items-center gap-1">
-                          <Check size={13} /> Sent
-                        </span>
-                      ) : (
-                        "Invite"
-                      )}
-                    </button>
+                  ))}
+                </div>
+              ) : displayList.length === 0 ? (
+                <div className="text-center py-10">
+                  <div className={`w-14 h-14 rounded-2xl ${inputBg} flex items-center justify-center mx-auto mb-3`}>
+                    <Users size={24} className={muted} />
                   </div>
-                );
-              })}
-            </div>
+                  <p className={`text-sm ${sub}`}>No recent activity</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {displayList.map((user) => (
+                    <UserCard 
+                      key={user._id || user.id} 
+                      user={user}
+                      isDark={isDark}
+                      inputBg={inputBg}
+                      card={card}
+                      border={border}
+                      sub={sub}
+                      muted={muted}
+                      invitedIds={invitedIds}
+                      inviting={inviting}
+                      handleInvite={handleInvite}
+                      getInitials={getInitials}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
