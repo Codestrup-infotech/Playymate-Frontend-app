@@ -1,13 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Check, Globe, Users, Lock } from "lucide-react";
-import { userService } from "@/services/user";
+import { Loader2, Check, Globe, Users, Lock, Shield } from "lucide-react";
+import { userService, getAccountPrivacy, updateAccountPrivacy } from "@/services/user";
 
 const VISIBILITY_OPTIONS = [
   { value: "public", label: "Public", icon: Globe, description: "Anyone can see" },
   { value: "friends_only", label: "Friends Only", icon: Users, description: "Only followers can see" },
   { value: "private", label: "Private", icon: Lock, description: "Only you can see" },
+];
+
+// Account privacy options (Public/Private toggle)
+const ACCOUNT_PRIVACY_OPTIONS = [
+  { value: false, label: "Public", icon: Globe, description: "Anyone can follow" },
+  { value: true, label: "Private", icon: Shield, description: "Approval required" },
 ];
 
 export default function AccountPrivacyPage() {
@@ -19,6 +25,8 @@ export default function AccountPrivacyPage() {
     performance_visibility: "public",
     social_visibility: "public",
   });
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [privateLoading, setPrivateLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [savingField, setSavingField] = useState(null);
 
@@ -59,9 +67,25 @@ export default function AccountPrivacyPage() {
                 social_visibility: innerPrivacy.social_visibility || "public",
               });
             }
-          } catch (privacyErr) {
-            console.log('Privacy settings not found, using defaults');
-            console.log('Privacy error:', privacyErr);
+          } catch (accountPrivacyErr) {
+            console.log('Account privacy settings not found, using defaults');
+            console.log('Account privacy error:', accountPrivacyErr);
+          }
+
+          // Fetch account privacy (is_private)
+          try {
+            const accountPrivacyRes = await getAccountPrivacy();
+            console.log('=== GET /users/me/privacy/account RESPONSE ===');
+            console.log('Full response:', accountPrivacyRes);
+            console.log('Response data:', accountPrivacyRes?.data);
+            const accountData = accountPrivacyRes?.data?.data || accountPrivacyRes?.data;
+            console.log('Account privacy data:', accountData);
+            if (accountData) {
+              setIsPrivate(accountData.is_private || false);
+            }
+          } catch (apErr) {
+            console.log('Account privacy not found, using defaults');
+            console.log('Account privacy error:', apErr);
           }
         }
       } catch (err) {
@@ -139,6 +163,42 @@ export default function AccountPrivacyPage() {
 
   const getSelectedIndex = (field) => {
     return VISIBILITY_OPTIONS.findIndex((o) => o.value === privacySettings[field]);
+  };
+
+  const handleAccountPrivacyChange = async (value) => {
+    if (saving) return;
+
+    const oldValue = isPrivate;
+    setIsPrivate(value);
+    setPrivateLoading(true);
+    setMessage({ type: "", text: "" });
+
+    try {
+      console.log('=== PATCH /users/me/privacy/account REQUEST ===');
+      console.log('Request payload:', { is_private: value });
+
+      const updateRes = await updateAccountPrivacy(value);
+
+      console.log('=== PATCH /users/me/privacy/account RESPONSE ===');
+      console.log('Full response:', updateRes);
+      console.log('Response data:', updateRes?.data);
+
+      setMessage({ type: "success", text: `Account privacy updated successfully!` });
+
+      setTimeout(() => setMessage({ type: "", text: "" }), 2000);
+    } catch (err) {
+      console.error('=== ERROR UPDATING ACCOUNT PRIVACY ===');
+      console.error('Error:', err);
+
+      setIsPrivate(oldValue);
+      setMessage({ type: "error", text: "Failed to update account privacy" });
+    } finally {
+      setPrivateLoading(false);
+    }
+  };
+
+  const getAccountPrivacyIndex = () => {
+    return ACCOUNT_PRIVACY_OPTIONS.findIndex((o) => o.value === isPrivate);
   };
 
   const renderToggleGroup = (field) => {
@@ -239,6 +299,87 @@ export default function AccountPrivacyPage() {
     );
   };
 
+  const renderAccountPrivacyToggle = () => {
+    const selectedIndex = getAccountPrivacyIndex();
+    const isSavingThis = privateLoading;
+
+    // Pill left position and width based on selectedIndex (2 equal slots)
+    const pillStyles = [
+      { left: "4px", width: "calc(50% - 6px)" },
+      { left: "calc(50% - 2px)", width: "calc(50% - 6px)" },
+    ];
+
+    return (
+      <div className="w-full overflow-x-auto flex xl:justify-center lg:justify-center scrollbar-hide">
+        <div className="relative flex items-center bg-gray-100 rounded-full px-1.5 py-0.5 min-w-[280px]">
+          {/* Sliding gradient pill */}
+          <div
+            className="absolute top-1 bottom-1 rounded-full transition-all duration-350 ease-in-out"
+            style={{
+              background: "linear-gradient(to right, #EF3AFF, #FF8319)",
+              boxShadow: "0 4px 14px rgba(239,58,255,0.4)",
+              left: pillStyles[selectedIndex].left,
+              width: pillStyles[selectedIndex].width,
+              transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+              transitionDuration: "350ms",
+            }}
+          />
+
+          {ACCOUNT_PRIVACY_OPTIONS.map((option, index) => {
+            const isSelected = isPrivate === option.value;
+            const Icon = option.icon;
+
+            return (
+              <button
+                key={String(option.value)}
+                onClick={() => handleAccountPrivacyChange(option.value)}
+                disabled={privateLoading}
+                className={`relative z-10 flex items-center justify-center gap-2 px-4 min-w-[130px] py-2 rounded-full transition-none ${
+                  privateLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                }`}
+              >
+                {/* White circle with icon */}
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{
+                    background: isSelected ? "#ffffff" : "#e0e0e0",
+                    transition: "background 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                  }}
+                >
+                  {isSavingThis && isSelected ? (
+                    <Loader2
+                      className="w-5 h-5 animate-spin"
+                      style={{ color: "#4fa8e8" }}
+                    />
+                  ) : (
+                    <Icon
+                      className="w-5 h-5"
+                      style={{
+                        color: isSelected ? "#4fa8e8" : "#9ca3af",
+                        transition: "color 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* Label */}
+                <span
+                  className="text-xs font-medium leading-none"
+                  style={{
+                    color: isSelected ? "#ffffff" : "#6b7280",
+                    transition: "color 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                  }}
+                >
+                  {option.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   // if (loading) {
   //   return (
   //     <div className="w-full max-w-2xl flex items-center justify-center py-20">
@@ -277,6 +418,19 @@ export default function AccountPrivacyPage() {
           </div>
         </div>
         {renderToggleGroup("profile_visibility")}
+
+        {/* Account Privacy - Public/Private Account */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base font-semibold">Account Privacy</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Control who can follow you
+              </p>
+            </div>
+          </div>
+          {renderAccountPrivacyToggle()}
+        </div>
       </div>
 
       {/* Performance Visibility Section */}

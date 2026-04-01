@@ -5,7 +5,7 @@ import { Users, Plus, Trophy, Calendar, UserPlus, ArrowRight } from "lucide-reac
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/lib/ThemeContext"
-import { getMyTeams, checkEligibility } from "@/lib/api/teamApi"
+import { getMyTeams, checkEligibility, initiateSlotPurchase, confirmSlotPurchase, getCoinBalance } from "@/lib/api/teamApi"
 
 // Helper function to convert team name to URL slug
 const toSlug = (name) => {
@@ -53,6 +53,81 @@ export default function TeamsPage() {
 
   // Show limit exceeded modal
   const [showLimitModal, setShowLimitModal] = useState(false)
+
+  // Slot purchase state
+  const [selectedPackage, setSelectedPackage] = useState(null)
+  const [purchasing, setPurchasing] = useState(false)
+  const [purchaseError, setPurchaseError] = useState(null)
+
+  // Coin balance state
+  const [coinBalance, setCoinBalance] = useState({ gold_coins: { balance: 0, max_usable_amount: 0 }, diamond_coins: { balance: 0 } })
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [useGoldCoins, setUseGoldCoins] = useState(false)
+
+  // Handle slot package purchase
+  const handlePurchaseSlot = async () => {
+    if (!selectedPackage) {
+      setPurchaseError("Please select a package")
+      return
+    }
+
+    setPurchasing(true)
+    setPurchaseError(null)
+
+    try {
+      const idempotencyKey = `slot_purchase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      
+      // Initiate the purchase with use_gold_coins option
+      const initiateResponse = await initiateSlotPurchase({
+        package_id: selectedPackage._id,
+        idempotency_key: idempotencyKey,
+        use_gold_coins: useGoldCoins
+      })
+
+      if (initiateResponse.status === 'success' || initiateResponse.data) {
+        // Confirm the purchase
+        const confirmResponse = await confirmSlotPurchase({
+          idempotency_key: idempotencyKey
+        })
+
+        if (confirmResponse.status === 'success') {
+          // Close modals and refresh eligibility
+          setShowPaymentModal(false)
+          setShowLimitModal(false)
+          setSelectedPackage(null)
+          setUseGoldCoins(false)
+          
+          // Refresh eligibility to get updated slot balance
+          const updatedEligibility = await checkEligibility()
+          setEligibility(prev => ({
+            ...prev,
+            purchased_slots_total: updatedEligibility.purchased_slots_total || 0,
+            purchased_slots_remaining: updatedEligibility.purchased_slots_remaining || 0,
+            can_create_team: updatedEligibility.can_create_team || false
+          }))
+
+          // If user can now create team, navigate to create page
+          if (updatedEligibility.can_create_team) {
+            router.push("/teams/create-team")
+          }
+        } else {
+          setPurchaseError(confirmResponse.message || "Purchase failed")
+        }
+      } else {
+        setPurchaseError(initiateResponse.message || "Purchase initiation failed. You may not have enough coins.")
+      }
+    } catch (error) {
+      console.error("Error purchasing slot:", error)
+      // Check for specific error messages
+      if (error.message.includes('402') || error.message.includes('Payment Required') || error.message.includes('Insufficient')) {
+        setPurchaseError("Insufficient coins to purchase this package. Buy Diamonds - Click Here")
+      } else {
+        setPurchaseError(error.message || "Failed to purchase slot package")
+      }
+    } finally {
+      setPurchasing(false)
+    }
+  }
 
   // Fetch teams data on mount
   useEffect(() => {
@@ -141,6 +216,16 @@ export default function TeamsPage() {
 
       // KYC verified but can't create team - show limit modal
       if (!eligibilityData.can_create_team) {
+        // Fetch coin balance when showing limit modal
+        try {
+          const balance = await getCoinBalance()
+          setCoinBalance({
+            gold_coins: balance.gold_coins || { balance: 0, max_usable_amount: 0 },
+            diamond_coins: balance.diamond_coins || { balance: 0 }
+          })
+        } catch (err) {
+          console.error('Error fetching coin balance:', err)
+        }
         setShowLimitModal(true)
         return
       }
@@ -169,7 +254,7 @@ export default function TeamsPage() {
       </div>
 
       {/* GRADIENT CARD */}
-      <div className="rounded-[28px] p-6 mb-6 bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400 shadow-xl">
+      <div className="rounded-[28px] p-6 mb-6 bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] shadow-xl">
         <p className="text-xs tracking-[0.2em] text-white/80">YOUR TEAMS</p>
         
         {teamsData.loading ? (
@@ -187,7 +272,7 @@ export default function TeamsPage() {
 
         <button
           onClick={() => router.push('/teams/my-team')}
-          className="mt-6 bg-white/20 hover:bg-white/30 backdrop-blur-md transition px-5 py-3 rounded-xl font-medium flex items-center gap-2 text-white"
+          className="mt-6 bg-[#A9198099]  hover:bg-[#e907a999] backdrop-blur-md transition px-5 py-3 rounded-xl font-medium flex items-center gap-2 text-white"
         >
           View Teams
           <ArrowRight size={18} />
@@ -342,6 +427,21 @@ export default function TeamsPage() {
               You have reached your team creation limit ({eligibility.teams_created_count}/{eligibility.max_teams_allowed}).
             </p>
             
+            {/* User's Coin Balance */}
+            <div className={`text-sm mb-4 p-3 rounded-xl ${isDark ? 'bg-[#252542]' : 'bg-gray-100'}`}>
+              <p className="font-medium mb-2">Your Coin Balance</p>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-400">🪙</span>
+                  <span>{coinBalance.gold_coins?.balance || 0} Gold Coins</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-blue-400">💎</span>
+                  <span>{coinBalance.diamond_coins?.balance || 0} Diamonds</span>
+                </div>
+              </div>
+            </div>
+            
             {/* Purchased Slots Info */}
             {eligibility.purchased_slots_total > 0 && (
               <div className={`text-sm mb-4 p-3 rounded-xl ${isDark ? 'bg-[#252542]' : 'bg-gray-100'}`}>
@@ -359,7 +459,12 @@ export default function TeamsPage() {
                   {eligibility.available_packages.map((pkg) => (
                     <div
                       key={pkg._id}
-                      className={`p-3 rounded-xl border ${isDark ? 'border-[#2a2a45] bg-[#1c1c2e]' : 'border-gray-200 bg-gray-50'} ${pkg.is_popular ? 'ring-2 ring-pink-500' : ''}`}
+                      onClick={() => {
+                        setSelectedPackage(pkg)
+                        // Show payment modal when package is selected
+                        setShowPaymentModal(true)
+                      }}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all ${isDark ? 'border-[#2a2a45] bg-[#1c1c2e]' : 'border-gray-200 bg-gray-50'} ${selectedPackage?._id === pkg._id ? 'ring-2 ring-pink-500 border-pink-500' : ''} ${pkg.is_popular ? 'ring-2 ring-pink-500' : ''}`}
                     >
                       <div className="flex justify-between items-start">
                         <div>
@@ -372,11 +477,11 @@ export default function TeamsPage() {
                             )}
                           </p>
                           <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                            {pkg.slots_granted} slots • {pkg.slots_expiry.type === 'NEVER' ? 'Never expires' : `Expires in ${pkg.slots_expiry.value} days`}
+                            {pkg.slots_granted} slots • {pkg.slots_expiry?.type === 'NEVER' ? 'Never expires' : `Expires in ${pkg.slots_expiry?.value || 0} days`}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className={`text-xs ${isDark ? 'text-zinc-500' : 'text-yellow-600 '}`}>
+                          <p className={`text-xs font-medium ${isDark ? 'text-zinc-500' : 'text-yellow-600 '}`}>
                             {pkg.price_coins} coins
                           </p>
                         </div>
@@ -384,6 +489,36 @@ export default function TeamsPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Purchase Button (Direct) */}
+                {selectedPackage && !showPaymentModal && (
+                  <button
+                    onClick={handlePurchaseSlot}
+                    disabled={purchasing}
+                    className={`w-full mt-4 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2
+                      ${purchasing 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-gradient-to-r from-pink-500 to-orange-400 text-white hover:opacity-90'
+                      }`}
+                  >
+                    {purchasing ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        Processing...
+                      </>
+                    ) : (
+                      <>Purchase {selectedPackage.slots_granted} Slots for {selectedPackage.price_coins} coins</>
+                    )}
+                  </button>
+                )}
+
+                {/* Error Message */}
+                {purchaseError && (
+                  <p className="text-red-500 text-sm mt-2 text-center">{purchaseError}</p>
+                )}
               </div>
             )}
 
@@ -404,6 +539,108 @@ export default function TeamsPage() {
                 className="flex-1 px-4 py-2 bg-gradient-to-r from-pink-500 to-orange-400 text-white rounded-full font-medium"
               >
                 Upgrade Plan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENT CONFIRMATION MODAL */}
+      {showPaymentModal && selectedPackage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${isDark ? 'bg-[#1a1a2e]' : 'bg-white'} rounded-2xl p-6 max-w-sm w-full`}>
+            <h2 className="text-xl font-bold mb-4">Confirm Purchase</h2>
+            
+            {/* Package Details */}
+            <div className={`p-4 rounded-xl mb-4 ${isDark ? 'bg-[#252542]' : 'bg-gray-100'}`}>
+              <p className="font-medium">{selectedPackage.name}</p>
+              <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                {selectedPackage.slots_granted} slots for {selectedPackage.price_coins} coins
+              </p>
+            </div>
+
+            {/* Use Gold Coins Toggle */}
+            <div className={`flex items-center justify-between p-3 rounded-xl mb-4 ${isDark ? 'bg-[#252542]' : 'bg-gray-100'}`}>
+              <div className="flex items-center gap-2">
+                <span className="text-yellow-400">🪙</span>
+                <span className={`text-sm ${isDark ? 'text-white' : 'text-gray-700'}`}>Use Gold Coins</span>
+                <span className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>(Max {coinBalance.gold_coins?.max_usable_amount || 0})</span>
+              </div>
+              <button
+                onClick={() => setUseGoldCoins(!useGoldCoins)}
+                className={`w-10 h-5 flex items-center rounded-full p-1 transition ${
+                  useGoldCoins ? "bg-yellow-400" : "bg-gray-400"
+                }`}
+              >
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition ${
+                    useGoldCoins ? "translate-x-5" : ""
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Payment Breakdown */}
+            <div className={`p-4 rounded-xl mb-4 ${isDark ? 'bg-[#252542]' : 'bg-gray-100'}`}>
+              <p className={`text-sm font-medium mb-2 ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>Payment Breakdown</p>
+              <div className="space-y-1 text-sm">
+                {useGoldCoins && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className={isDark ? 'text-zinc-400' : 'text-gray-500'}>Gold Coins (10%)</span>
+                      <span className="text-yellow-400">-{Math.min(coinBalance.gold_coins?.max_usable_amount || 0, selectedPackage.price_coins * 0.1)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={isDark ? 'text-zinc-400' : 'text-gray-500'}>Diamonds</span>
+                      <span className="text-blue-400">{selectedPackage.price_coins - Math.min(coinBalance.gold_coins?.max_usable_amount || 0, selectedPackage.price_coins * 0.1)}</span>
+                    </div>
+                  </>
+                )}
+                {!useGoldCoins && (
+                  <div className="flex justify-between">
+                    <span className={isDark ? 'text-zinc-400' : 'text-gray-500'}>Diamonds Required</span>
+                    <span className="text-blue-400">{selectedPackage.price_coins}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {purchaseError && (
+              <div className="mb-4">
+                <p className="text-red-500 text-sm text-center mb-2">{purchaseError}</p>
+                {purchaseError.includes('Insufficient') && (
+                  <button
+                    onClick={() => {
+                      setShowPaymentModal(false)
+                      router.push('/wallet/diamond-store')
+                    }}
+                    className="w-full py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium text-sm"
+                  >
+                    Buy Diamonds - Click Here
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false)
+                  setSelectedPackage(null)
+                  setPurchaseError(null)
+                }}
+                className={`flex-1 px-4 py-2 rounded-full border ${isDark ? 'border-zinc-700' : 'border-gray-300'}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePurchaseSlot}
+                disabled={purchasing}
+                className={`flex-1 px-4 py-2 bg-gradient-to-r from-pink-500 to-orange-400 text-white rounded-full font-medium disabled:opacity-50`}
+              >
+                {purchasing ? 'Processing...' : 'Confirm & Pay'}
               </button>
             </div>
           </div>

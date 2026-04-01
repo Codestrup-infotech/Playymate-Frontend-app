@@ -284,6 +284,14 @@ api.post("/api/v1/auth/signup/email-password", {
   // Update privacy settings (uses PATCH as per API doc)
   updatePrivacy: (userId, privacyData) => 
     api.patch(`/users/${userId}/privacy`, privacyData),
+
+  // ============ ACCOUNT PRIVACY (is_private) ============
+  // Get account privacy (public/private account)
+  getAccountPrivacy: () => api.get('/users/me/privacy/account'),
+
+  // Update account privacy (toggle public/private)
+  updateAccountPrivacy: (isPrivate) => 
+    api.patch('/users/me/privacy/account', { is_private: isPrivate }),
 };
 
 // Direct exports for commonly used functions
@@ -293,5 +301,7 @@ export const getFollowers = (userId, limit, cursor) => userService.getFollowers(
 export const getFollowing = (userId, limit, cursor) => userService.getFollowing(userId, limit, cursor);
 export const followUser = (userId) => userService.followUser(userId);
 export const unfollowUser = (userId) => userService.unfollowUser(userId);
+export const getAccountPrivacy = () => userService.getAccountPrivacy();
+export const updateAccountPrivacy = (isPrivate) => userService.updateAccountPrivacy(isPrivate);
 
 export default userService;

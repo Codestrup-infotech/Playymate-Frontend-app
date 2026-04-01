@@ -350,7 +350,7 @@ export default function Sidebar() {
     { name: "Create",       icon: <PlusSquare size={22} />,   path: "/home/create-post", isCreatePost: true },
   ];
 
-  const activeColor = "bg-gradient-to-r from-purple-600 to-orange-500  text-white";
+  const activeColor = "bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  text-white";
   const inactiveColor = isDark
     ? "text-gray-300 hover:bg-gray-800"
     : "text-gray-700 hover:bg-gray-200";
@@ -362,7 +362,7 @@ export default function Sidebar() {
         onMouseEnter={() => setIsHover(true)}
         onMouseLeave={() => { setIsHover(false); }}
         className={`fixed left-0 top-0 h-screen
-          ${isHover ? "w-[240px]" : "w-[72px]"}
+          ${isHover ? "w-[220px]" : "w-[72px]"}
           transition-all duration-300 ease-in-out
           z-50 overflow-visible flex flex-col
           ${isDark ? "bg-[#121226]" : "bg-gray-100"}
@@ -438,7 +438,7 @@ export default function Sidebar() {
                 key={item.name}
                 href={item.path}
                 onClick={item.onClick}
-                className={`flex items-center gap-4 px-3 py-3 rounded-lg transition-all duration-300
+                className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-300
                   ${pathname === item.path ? activeColor : inactiveColor}`}
               >
                 <div className="min-w-[22px] flex justify-center">{item.icon}</div>

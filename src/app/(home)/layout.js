@@ -36,7 +36,7 @@ function AppLayoutInner({ children }) {
 
       {/* Main Content Area */}
       <div
-        className="desktop-main flex flex-col flex-1 mt-[25px] transition-all duration-300 ease-in-out"
+        className="desktop-main flex flex-col flex-1 pt-10 transition-all duration-300 ease-in-out"
         style={{ marginLeft: sidebarOpen ? "250px" : "72px" }}
       >
         {/* Scrollable Content — extra bottom padding on mobile for bottom nav */}
