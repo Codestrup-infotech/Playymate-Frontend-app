@@ -137,7 +137,7 @@ export default function MyTeamPage() {
       <div
         key={teamId}
         className={`flex items-center gap-4 border rounded-2xl p-4 ${cardBg} shadow-sm cursor-pointer hover:opacity-90 transition`}
-        onClick={() => router.push(`/teams/join-team/${toSlug(teamName)}`)}
+        onClick={() => router.push(`/teams/my-team/${teamId}`)}
       >
         {/* Avatar */}
         <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"} overflow-hidden`}>

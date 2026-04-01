@@ -169,7 +169,7 @@ export default function TeamsPage() {
       </div>
 
       {/* GRADIENT CARD */}
-      <div className="rounded-[28px] p-6 mb-6 bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400 shadow-xl">
+      <div className="rounded-[28px] p-6 mb-6 bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] shadow-xl">
         <p className="text-xs tracking-[0.2em] text-white/80">YOUR TEAMS</p>
         
         {teamsData.loading ? (
@@ -187,7 +187,7 @@ export default function TeamsPage() {
 
         <button
           onClick={() => router.push('/teams/my-team')}
-          className="mt-6 bg-white/20 hover:bg-white/30 backdrop-blur-md transition px-5 py-3 rounded-xl font-medium flex items-center gap-2 text-white"
+          className="mt-6 bg-[#A9198099]  hover:bg-[#e907a999] backdrop-blur-md transition px-5 py-3 rounded-xl font-medium flex items-center gap-2 text-white"
         >
           View Teams
           <ArrowRight size={18} />

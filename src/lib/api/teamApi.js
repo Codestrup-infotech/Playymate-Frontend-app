@@ -915,6 +915,83 @@ export async function getMyNameReservations() {
   }
 }
 
+// ==================== User Search & Invite ====================
+
+/**
+ * Search users to invite to a team
+ * GET /api/v1/teams/:teamId/invites/search?query=username
+ * @param {string} teamId - Team ID
+ * @param {string} query - Search query (username)
+ */
+export async function searchUsers(teamId, query) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/invites/search?query=${encodeURIComponent(query)}`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error searching users:", error);
+    throw error;
+  }
+}
+
+/**
+ * Send direct invite to a user
+ * POST /api/v1/teams/:teamId/invites
+ * @param {string} teamId - Team ID
+ * @param {Object} data - { invite_type: 'direct', invited_user_id: string }
+ */
+export async function sendInvite(teamId, data) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/invites`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({
+        invite_type: "direct",
+        invited_user_id: data.user_id,
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error sending invite:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get recent activity/suggested users for a team
+ * GET /api/v1/teams/:teamId/invites/suggestions
+ * @param {string} teamId - Team ID
+ */
+export async function getRecentActivity(teamId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/invites/suggestions`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting recent activity:", error);
+    throw error;
+  }
+}
+
 /**
  * Search teams by name (for slug lookup)
  * GET /api/v1/teams?search=name
@@ -977,4 +1054,7 @@ export default {
   checkNameAvailability,
   reserveName,
   getMyNameReservations,
+  searchUsers,
+  sendInvite,
+  getRecentActivity,
 };
