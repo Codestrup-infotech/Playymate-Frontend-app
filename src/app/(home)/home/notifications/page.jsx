@@ -213,7 +213,7 @@ export default function NotificationsPage() {
           <button
             onClick={handleMarkAllAsRead}
             disabled={actionLoading}
-            className="text-sm text-pink-500 hover:text-pink-600 font-medium"
+            className="text-sm text-pink-500  hover:text-pink-600 font-medium"
           >
             {actionLoading ? "Marking..." : "Mark all as read"}
           </button>
@@ -245,21 +245,21 @@ export default function NotificationsPage() {
           <div
             key={item._id}
             onClick={() => handleNotificationClick(item)}
-            className="flex items-start gap-3"
+            className={`flex items-start gap-3 p-3 rounded-xl ${item.is_read ? "bg-inherit" : "bg-slate-100"}`}
           >
             <ActorAvatar 
               actor={item?.actor_id} 
               onClick={() => item?.actor_id?._id && handleUserClick(item.actor_id._id)}
             />
 
-            <div className="flex-1 border-b border-gray-100  pb-3">
+            <div className="flex-1 pb-3">
               {/* FOR FOLLOWS: Title + Time + Follow Back button on same line */}
               {item.notification_type === "user_followed" ? (
                 <div>
                   <div className="flex justify-between items-start">
                     <p className="text-sm">
                       <span 
-                        className="font-semibold cursor-pointer hover:text-pink-500"
+                        className="font-semibold cursor-pointer  hover:text-pink-500"
                         onClick={(e) => {
                           e.stopPropagation();
                           item?.actor_id?._id && handleUserClick(item.actor_id._id);
@@ -295,7 +295,7 @@ export default function NotificationsPage() {
                   <div className="flex  items-start">
                     <p className="text-sm pr-4">
                       <span 
-                        className="font-semibold cursor-pointer hover:text-pink-500"
+                        className="font-semibold cursor-pointer text-red-400 hover:text-pink-500"
                         onClick={(e) => {
                           e.stopPropagation();
                           item?.actor_id?._id && handleUserClick(item.actor_id._id);
@@ -309,7 +309,7 @@ export default function NotificationsPage() {
                       {formatTime(item.created_at)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     {item.body}
                   </p>
                 </div>

@@ -18,7 +18,7 @@ import { performLogout } from "@/services/logout";
 
 // ─── More Menu Popup ──────────────────────────────────────────────────────────
 
-function MoreMenuPopup({ isOpen, onClose, anchorRef, isDark, onLogout, onTheme, theme }) {
+function MoreMenuPopup({ isOpen, onClose, anchorRef, isDark, onLogout, onTheme, theme, unreadNotificationCount }) {
   const popupRef = useRef(null);
 
   // Close on outside click
@@ -191,6 +191,11 @@ function MoreMenuPopup({ isOpen, onClose, anchorRef, isDark, onLogout, onTheme, 
                   <>
                     <span style={iconStyle}>{item.icon}</span>
                     <span style={{ flex: 1 }}>{item.label}</span>
+                    {item.label === "Notifications" && unreadNotificationCount > 0 && (
+                      <span className="bg-orange-500 text-white h-5 w-5 rounded-full flex items-center justify-center text-xs font-semibold">
+                        {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                      </span>
+                    )}
                     {!isLogout && !isTheme && (
                       <ChevronRight size={14} style={{ opacity: 0.3 }} />
                     )}
@@ -253,13 +258,33 @@ export default function Sidebar() {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const { triggerRefresh } = useFeedRefresh();
+  const { getUnreadCount } = require("@/app/user/notifications");
 
   const isDark = theme === "dark";
   const [isHover, setIsHover] = useState(false);
   const [openCreateMenu, setOpenCreateMenu] = useState(false);
   const [openMoreMenu, setOpenMoreMenu] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const createMenuRef = useRef(null);
   const moreButtonRef = useRef(null);
+
+  // Fetch unread notification count on mount
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await getUnreadCount();
+        setUnreadNotificationCount(
+          res?.data?.unread_count ||
+          res?.unread_count ||
+          res?.data?.notifications_count ||
+          0
+        );
+      } catch (error) {
+        console.error("Error fetching unread notification count:", error);
+      }
+    };
+    fetchUnreadCount();
+  }, []);
 
   // Close create menu on Escape
   useEffect(() => {
@@ -319,13 +344,13 @@ export default function Sidebar() {
     { name: "Wallet",       icon: <Wallet size={22} />,       path: "/wallet" },
     { name: "Subscription", icon: <Zap size={22} />,          path: "/home/subscription" },
     { name: "Profile",      icon: <User size={22} />,         path: "/home/profile" },
-    { name: "Notifications",icon: <Bell size={22} />,  path: "/home/notifications" },
+    { name: "Notifications",icon: <Bell size={22} />,  path: "/home/notifications", showBadge: true },
 
     // Create — opens submenu
     { name: "Create",       icon: <PlusSquare size={22} />,   path: "/home/create-post", isCreatePost: true },
   ];
 
-  const activeColor = "bg-gradient-to-r from-purple-600 to-orange-500 text-white";
+  const activeColor = "bg-gradient-to-r from-purple-600 to-orange-500  text-white";
   const inactiveColor = isDark
     ? "text-gray-300 hover:bg-gray-800"
     : "text-gray-700 hover:bg-gray-200";
@@ -421,6 +446,11 @@ export default function Sidebar() {
                   ${isHover ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
                   {item.name}
                 </span>
+                {item.showBadge && unreadNotificationCount > 0 && (
+                  <span className="bg-white  hover:bg-white hover:text-black text-black h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ml-auto">
+                    {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -456,6 +486,7 @@ export default function Sidebar() {
         onLogout={handleLogout}
         onTheme={toggleTheme}
         theme={theme}
+        unreadNotificationCount={unreadNotificationCount}
       />
     </>
   );
