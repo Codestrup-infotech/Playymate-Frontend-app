@@ -765,11 +765,15 @@ export async function initiateSlotPurchase(data) {
       body: JSON.stringify(data),
     });
     
+    // Try to get response body for error handling
+    const responseBody = await response.json().catch(() => ({}));
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorMessage = responseBody.message || responseBody.error || `Payment failed (${response.status})`;
+      throw new Error(errorMessage);
     }
     
-    return await response.json();
+    return responseBody;
   } catch (error) {
     console.error("Error initiating slot purchase:", error);
     throw error;

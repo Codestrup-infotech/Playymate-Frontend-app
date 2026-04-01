@@ -5,7 +5,7 @@ import { Users, Plus, Trophy, Calendar, UserPlus, ArrowRight } from "lucide-reac
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/lib/ThemeContext"
-import { getMyTeams, checkEligibility } from "@/lib/api/teamApi"
+import { getMyTeams, checkEligibility, initiateSlotPurchase, confirmSlotPurchase } from "@/lib/api/teamApi"
 
 // Helper function to convert team name to URL slug
 const toSlug = (name) => {
@@ -53,6 +53,74 @@ export default function TeamsPage() {
 
   // Show limit exceeded modal
   const [showLimitModal, setShowLimitModal] = useState(false)
+
+  // Slot purchase state
+  const [selectedPackage, setSelectedPackage] = useState(null)
+  const [purchasing, setPurchasing] = useState(false)
+  const [purchaseError, setPurchaseError] = useState(null)
+
+  // Handle slot package purchase
+  const handlePurchaseSlot = async () => {
+    if (!selectedPackage) {
+      setPurchaseError("Please select a package")
+      return
+    }
+
+    setPurchasing(true)
+    setPurchaseError(null)
+
+    try {
+      const idempotencyKey = `slot_purchase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      
+      // Initiate the purchase
+      const initiateResponse = await initiateSlotPurchase({
+        package_id: selectedPackage._id,
+        idempotency_key: idempotencyKey,
+        use_gold_coins: false
+      })
+
+      if (initiateResponse.status === 'success' || initiateResponse.data) {
+        // Confirm the purchase
+        const confirmResponse = await confirmSlotPurchase({
+          idempotency_key: idempotencyKey
+        })
+
+        if (confirmResponse.status === 'success') {
+          // Close modal and refresh eligibility
+          setShowLimitModal(false)
+          setSelectedPackage(null)
+          
+          // Refresh eligibility to get updated slot balance
+          const updatedEligibility = await checkEligibility()
+          setEligibility(prev => ({
+            ...prev,
+            purchased_slots_total: updatedEligibility.purchased_slots_total || 0,
+            purchased_slots_remaining: updatedEligibility.purchased_slots_remaining || 0,
+            can_create_team: updatedEligibility.can_create_team || false
+          }))
+
+          // If user can now create team, navigate to create page
+          if (updatedEligibility.can_create_team) {
+            router.push("/teams/create-team")
+          }
+        } else {
+          setPurchaseError(confirmResponse.message || "Purchase failed")
+        }
+      } else {
+        setPurchaseError(initiateResponse.message || "Purchase initiation failed. You may not have enough coins.")
+      }
+    } catch (error) {
+      console.error("Error purchasing slot:", error)
+      // Check for specific error messages
+      if (error.message.includes('402') || error.message.includes('Payment Required')) {
+        setPurchaseError("Insufficient coins. Please purchase more coins to continue.")
+      } else {
+        setPurchaseError(error.message || "Failed to purchase slot package")
+      }
+    } finally {
+      setPurchasing(false)
+    }
+  }
 
   // Fetch teams data on mount
   useEffect(() => {
@@ -359,7 +427,8 @@ export default function TeamsPage() {
                   {eligibility.available_packages.map((pkg) => (
                     <div
                       key={pkg._id}
-                      className={`p-3 rounded-xl border ${isDark ? 'border-[#2a2a45] bg-[#1c1c2e]' : 'border-gray-200 bg-gray-50'} ${pkg.is_popular ? 'ring-2 ring-pink-500' : ''}`}
+                      onClick={() => setSelectedPackage(pkg)}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all ${isDark ? 'border-[#2a2a45] bg-[#1c1c2e]' : 'border-gray-200 bg-gray-50'} ${selectedPackage?._id === pkg._id ? 'ring-2 ring-pink-500 border-pink-500' : ''} ${pkg.is_popular ? 'ring-2 ring-pink-500' : ''}`}
                     >
                       <div className="flex justify-between items-start">
                         <div>
@@ -372,11 +441,11 @@ export default function TeamsPage() {
                             )}
                           </p>
                           <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                            {pkg.slots_granted} slots • {pkg.slots_expiry.type === 'NEVER' ? 'Never expires' : `Expires in ${pkg.slots_expiry.value} days`}
+                            {pkg.slots_granted} slots • {pkg.slots_expiry?.type === 'NEVER' ? 'Never expires' : `Expires in ${pkg.slots_expiry?.value || 0} days`}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className={`text-xs ${isDark ? 'text-zinc-500' : 'text-yellow-600 '}`}>
+                          <p className={`text-xs font-medium ${isDark ? 'text-zinc-500' : 'text-yellow-600 '}`}>
                             {pkg.price_coins} coins
                           </p>
                         </div>
@@ -384,6 +453,36 @@ export default function TeamsPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Purchase Button */}
+                {selectedPackage && (
+                  <button
+                    onClick={handlePurchaseSlot}
+                    disabled={purchasing}
+                    className={`w-full mt-4 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2
+                      ${purchasing 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-gradient-to-r from-pink-500 to-orange-400 text-white hover:opacity-90'
+                      }`}
+                  >
+                    {purchasing ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        Processing...
+                      </>
+                    ) : (
+                      <>Purchase {selectedPackage.slots_granted} Slots for {selectedPackage.price_coins} coins</>
+                    )}
+                  </button>
+                )}
+
+                {/* Error Message */}
+                {purchaseError && (
+                  <p className="text-red-500 text-sm mt-2 text-center">{purchaseError}</p>
+                )}
               </div>
             )}
 
