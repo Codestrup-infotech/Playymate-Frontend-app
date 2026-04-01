@@ -848,6 +848,29 @@ export async function getMySlotBalance() {
   }
 }
 
+/**
+ * Get user's coin balance for slot purchase
+ * GET /api/v1/teams/slots/coin-balance
+ */
+export async function getCoinBalance() {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/slots/coin-balance`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const json = await response.json();
+    return json.data || json;
+  } catch (error) {
+    console.error("Error getting coin balance:", error);
+    throw error;
+  }
+}
+
 // ==================== Team Name Reservation ====================
 
 /**
