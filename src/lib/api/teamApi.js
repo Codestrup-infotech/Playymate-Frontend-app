@@ -593,13 +593,19 @@ export async function resolveInviteCode(inviteCode) {
  */
 export async function acceptInvite(inviteCode) {
   try {
+    console.log("acceptInvite: Sending request for code:", inviteCode);
+    
     const response = await fetch(`${API_BASE}/api/v1/teams/invites/${inviteCode}/accept`, {
       method: "POST",
       headers: getHeaders(),
     });
     
+    console.log("acceptInvite response status:", response.status);
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      console.log("acceptInvite error response:", errorData);
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
     
     return await response.json();

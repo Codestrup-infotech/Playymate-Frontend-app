@@ -6,10 +6,6 @@ import { Users, Trophy, Calendar } from "lucide-react";
 export default function TeamInvitationCard({ team }) {
   const router = useRouter();
 
-  const handleAccept = () => {
-    // you can call API here before redirect if needed
-    router.push(`/teams/join-team/${team?.id}`);
-  };
 
   return (
     <div className="w-full max-w-2xl mx-auto p-3 sm:p-6">
@@ -82,13 +78,7 @@ export default function TeamInvitationCard({ team }) {
             </div>
           </div>
 
-          {/* Accept Button */}
-          <button
-            onClick={handleAccept}
-            className="mt-6 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2.5 rounded-xl transition"
-          >
-            Accept Invitation
-          </button>
+         
         </div>
       </div>
     </div>

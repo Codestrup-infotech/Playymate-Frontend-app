@@ -234,21 +234,27 @@ export default function MyTeamPage() {
     const team = invite.team;
     const inviteCode = invite.invite_code;
     const isLoading = inviteActionLoading === inviteCode;
+    const isAccepted = invite.status === "accepted";
 
     const handleViewDetails = () => {
-      router.push(`/teams/my-team/invite/${inviteCode}`);
+      router.push(`/teams/my-team/join-invite-team/${inviteCode}`);
     };
 
     const handleAccept = async () => {
       setInviteActionLoading(inviteCode);
       try {
-        await acceptInvite(inviteCode);
+        console.log("handleAccept called with inviteCode:", inviteCode);
+        const response = await acceptInvite(inviteCode);
+        console.log("Accept invite response:", response);
         setInvitesData(prev => ({
           ...prev,
-          invites: prev.invites.filter(i => i.invite_code !== inviteCode)
+          invites: prev.invites.map(i => 
+            i.invite_code === inviteCode ? { ...i, status: "accepted" } : i
+          )
         }));
       } catch (error) {
         console.error("Error accepting invite:", error);
+        alert(error.message || "Failed to accept invitation. Please try again.");
       } finally {
         setInviteActionLoading(null);
       }
@@ -295,36 +301,47 @@ export default function MyTeamPage() {
               {invite.invite_type || "direct"} invite
             </span>
             
-            <span className="flex items-center gap-1 text-yellow-400">
+            <span className={`flex items-center gap-1 ${isAccepted ? "text-green-400" : "text-yellow-400"}`}>
               <Clock size={12} />
-              Pending
+              {isAccepted ? "Accepted" : "Pending"}
             </span>
           </div>
         </div>
 
-        {/* Accept/Decline Actions */}
+        {/* Actions - Show Join Now if accepted, otherwise show Accept/Decline */}
         <div className="flex gap-2">
-          <button
-            className="p-2 rounded-full bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition"
-            onClick={handleViewDetails}
-            title="View Details"
-          >
-            <Users size={18} />
-          </button>
-          <button
-            className="p-2 rounded-full bg-green-600/20 text-green-400 hover:bg-green-600/30 transition disabled:opacity-50"
-            onClick={handleAccept}
-            disabled={isLoading}
-          >
-            <CheckCircle size={18} />
-          </button>
-          <button
-            className="p-2 rounded-full bg-red-600/20 text-red-400 hover:bg-red-600/30 transition disabled:opacity-50"
-            onClick={handleDecline}
-            disabled={isLoading}
-          >
-            <X size={18} />
-          </button>
+          {isAccepted ? (
+            <button
+              className="px-4 py-2 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-medium text-sm hover:opacity-90 transition"
+              onClick={() => router.push(`/teams/join-team/onboarding?teamId=${team?._id || team?.id}`)}
+            >
+              Join Now
+            </button>
+          ) : (
+            <>
+              <button
+                className="p-2 rounded-full bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition"
+                onClick={handleViewDetails}
+                title="View Details"
+              >
+                <Users size={18} />
+              </button>
+              <button
+                className="p-2 rounded-full bg-green-600/20 text-green-400 hover:bg-green-600/30 transition disabled:opacity-50"
+                onClick={handleAccept}
+                disabled={isLoading}
+              >
+                <CheckCircle size={18} />
+              </button>
+              <button
+                className="p-2 rounded-full bg-red-600/20 text-red-400 hover:bg-red-600/30 transition disabled:opacity-50"
+                onClick={handleDecline}
+                disabled={isLoading}
+              >
+                <X size={18} />
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
