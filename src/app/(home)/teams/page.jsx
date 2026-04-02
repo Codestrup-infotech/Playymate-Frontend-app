@@ -316,6 +316,8 @@ export default function TeamsPage() {
       {/* MY TEAMS SECTION */}
       {teamsData.owned.length > 0 && (
         <>
+        <div className="flex w-full space-x-7 "> 
+          <div className=" flex flex-col  w-1/2 ">
           <h2 className="text-xl font-semibold mb-4 tracking-tight">Teams You Own</h2>
           <div className="space-y-4 mb-8">
             {teamsData.owned.map((team) => (
@@ -337,38 +339,41 @@ export default function TeamsPage() {
                 </div>
               </Link>
             ))}
-          </div>
-        </>
-      )}
-
-      {teamsData.joined.length > 0 && (
-        <>
-          <h2 className="text-xl font-semibold mb-4 tracking-tight">Teams You're a Member Of</h2>
+          </div> 
+           </div>
+           <div className=" flex flex-col w-1/2  "> 
+          <h2 className="text-xl font-semibold mb-4 tracking-tight">Teams You Joined</h2>
           <div className="space-y-4 mb-8">
-            {teamsData.joined.map((team) => (
-              <Link
-                key={team._id || team.id}
-                href={`/teams/${team._id || team.id}`}
-                className={`rounded-2xl p-4 flex items-center gap-4 border ${cardBg} shadow-sm`}
-              >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"}`}>
-                  {team.logo ? (
-                    <img src={team.logo} alt={team.name} className="w-full h-full rounded-xl object-cover" />
-                  ) : (
-                    <Users size={22} className={mutedText} />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-[15px]">{team.name}</p>
-                  <p className={`text-sm ${mutedText}`}>{team.category_value || team.sport}</p>
-                </div>
-              </Link>
-            ))}
+            {teamsData.joined.length > 0 ? (
+              teamsData.joined.map((team) => (
+                <Link
+                  key={team._id || team.id}
+                  href={`/teams/${team._id || team.id}`}
+                  className={`rounded-2xl p-4 flex items-center gap-4 border ${cardBg} shadow-sm`}
+                >
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"}`}>
+                    {team.logo ? (
+                      <img src={team.logo} alt={team.name} className="w-full h-full rounded-xl object-cover" />
+                    ) : (
+                      <Users size={22} className={mutedText} />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-[15px]">{team.name}</p>
+                    <p className={`text-sm ${mutedText}`}>{team.category_value || team.sport}</p>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <p className={`text-sm ${mutedText}`}>No teams joined yet</p>
+            )}
           </div>
+          </div>
+       </div>
         </>
       )}
 
-      {/* RECENT ACTIVITY */}
+       {/* RECENT ACTIVITY */}
       <h2 className="text-xl font-semibold mb-4 tracking-tight">Recent Activity</h2>
 
       <div className="space-y-4">

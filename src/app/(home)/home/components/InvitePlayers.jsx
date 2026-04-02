@@ -194,9 +194,18 @@ export default function InvitePlayers({ teamId: teamIdProp, onClose }) {
       try {
         const res  = await createInvite(teamId, { invite_type: "link" });
         const data = res.data || res;
-        if (data.link) setInviteLink(data.link);
+        // Handle both 'link', 'invite_link', and 'invite_code' response formats
+        const link = data.link || data.invite_link || data.invite_code || "";
+        if (link) {
+          // If it's just a code, construct the full URL
+          if (!link.startsWith('http')) {
+            setInviteLink(`https://playymate.app/join/${link}`);
+          } else {
+            setInviteLink(link);
+          }
+        }
       } catch {
-        setInviteLink(`playymate.app/join/${teamId}`);
+        setInviteLink(`https://playymate.app/join/${teamId}`);
       }
     })();
 
@@ -288,9 +297,16 @@ export default function InvitePlayers({ teamId: teamIdProp, onClose }) {
   const handleInvite = async (userId) => {
     setInviting(userId);
     try {
-      await sendInvite(teamId, { user_id: userId });
+      const res = await sendInvite(teamId, { invited_user_ids: [userId] });
+      const data = res.data || res;
+      // If the API returns an invite link, show it to the user
+      if (data.invite_link || data.invite_code) {
+        const link = data.invite_link || `https://playymate.app/join/${data.invite_code}`;
+        setInviteLink(link);
+      }
       setInvitedIds(prev => new Set([...prev, userId]));
-    } catch {
+    } catch (err) {
+      console.error("Failed to send invite:", err);
       alert("Failed to send invite");
     } finally {
       setInviting(null);

@@ -972,7 +972,7 @@ export async function searchUsers(teamId, query) {
  * Send direct invite to a user
  * POST /api/v1/teams/:teamId/invites
  * @param {string} teamId - Team ID
- * @param {Object} data - { invite_type: 'direct', invited_user_id: string }
+ * @param {Object} data - { invite_type: 'direct', invited_user_ids: string[] }
  */
 export async function sendInvite(teamId, data) {
   try {
@@ -981,7 +981,9 @@ export async function sendInvite(teamId, data) {
       headers: getHeaders(),
       body: JSON.stringify({
         invite_type: "direct",
-        invited_user_id: data.user_id,
+        invited_user_ids: Array.isArray(data.invited_user_ids) 
+          ? data.invited_user_ids 
+          : [data.invited_user_ids || data.user_id],
       }),
     });
     
@@ -1015,6 +1017,55 @@ export async function getRecentActivity(teamId) {
     return await response.json();
   } catch (error) {
     console.error("Error getting recent activity:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get team invites (owner only)
+ * GET /api/v1/teams/:teamId/invites
+ * @param {string} teamId - Team ID
+ */
+export async function getTeamInvites(teamId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/invites`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting team invites:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get my team invites (invitations sent to me)
+ * GET /api/v1/teams/invites/mine
+ */
+export async function getMyInvites() {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/invites/mine`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const json = await response.json();
+    return {
+      invites: json.data?.invites || [],
+      count: json.data?.count || 0
+    };
+  } catch (error) {
+    console.error("Error getting my invites:", error);
     throw error;
   }
 }
@@ -1084,4 +1135,6 @@ export default {
   searchUsers,
   sendInvite,
   getRecentActivity,
+  getTeamInvites,
+  getMyInvites,
 };
