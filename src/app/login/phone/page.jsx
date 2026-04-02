@@ -23,6 +23,17 @@ export default function PhoneLogin() {
 
   const inputsRef = useRef([]);
 
+
+
+//   useEffect(() => {
+//   const script = document.createElement("script");
+//   script.src = "https://cdn.jsdelivr.net/npm/eruda";
+//   script.onload = () => {
+//     window.eruda.init();
+//   };
+//   document.body.appendChild(script);
+// }, []);
+
   /*
   ==============================
   Fetch Login Screen Config

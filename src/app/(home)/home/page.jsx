@@ -760,7 +760,7 @@ function HomePageContent() {
 
   return (
     <>
-    <div className="flex items-start gap-8 px-14 max-w-[1200px] mx-auto w-full">
+    <div className="flex items-start gap-8 lg:px-14 px-3 max-w-[1200px] mx-auto w-full">
 
         {/* ── Feed Column ── */}
         <div className="flex-1 max-w-[470px] space-y-6">
