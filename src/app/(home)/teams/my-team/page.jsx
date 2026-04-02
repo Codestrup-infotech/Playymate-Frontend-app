@@ -235,6 +235,10 @@ export default function MyTeamPage() {
     const inviteCode = invite.invite_code;
     const isLoading = inviteActionLoading === inviteCode;
 
+    const handleViewDetails = () => {
+      router.push(`/teams/my-team/invite/${inviteCode}`);
+    };
+
     const handleAccept = async () => {
       setInviteActionLoading(inviteCode);
       try {
@@ -300,6 +304,13 @@ export default function MyTeamPage() {
 
         {/* Accept/Decline Actions */}
         <div className="flex gap-2">
+          <button
+            className="p-2 rounded-full bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition"
+            onClick={handleViewDetails}
+            title="View Details"
+          >
+            <Users size={18} />
+          </button>
           <button
             className="p-2 rounded-full bg-green-600/20 text-green-400 hover:bg-green-600/30 transition disabled:opacity-50"
             onClick={handleAccept}
