@@ -254,7 +254,20 @@ export default function MyTeamPage() {
         }));
       } catch (error) {
         console.error("Error accepting invite:", error);
-        alert(error.message || "Failed to accept invitation. Please try again.");
+        console.log("Error message:", error.message);
+        // If already a member, update status and show Join Now
+        const errorMsg = error.message || "";
+        if (errorMsg.includes("already a member") || errorMsg.includes("TEAM_ALREADY_MEMBER")) {
+          console.log("User is already a member, updating status to accepted");
+          setInvitesData(prev => ({
+            ...prev,
+            invites: prev.invites.map(i => 
+              i.invite_code === inviteCode ? { ...i, status: "accepted" } : i
+            )
+          }));
+        } else {
+          alert(error.message || "Failed to accept invitation. Please try again.");
+        }
       } finally {
         setInviteActionLoading(null);
       }

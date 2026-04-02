@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/lib/ThemeContext";
-import { resolveInviteCode, acceptInvite, declineInvite, getMyInvites } from "@/lib/api/teamApi";
+import { resolveInviteCode, acceptInvite, declineInvite, getMyInvites, getTeamProfile } from "@/lib/api/teamApi";
 
 const SKILL_LEVELS = {
   beginner: "Beginner",
@@ -118,17 +118,58 @@ export default function InviteDetailsPage() {
       if (!inviteCode) return;
       
       try {
+        console.log("=== FETCHING INVITE DETAILS ===");
+        console.log("inviteCode:", inviteCode);
+        
         const response = await resolveInviteCode(inviteCode);
+        console.log("resolveInviteCode response:", response);
+        console.log("Full response data:", response.data);
         setInviteData(response.data);
         
+        // First check from resolveInviteCode response
+        console.log("Checking already_member from resolveInviteCode:");
+        console.log("- data.is_member:", response.data?.is_member);
+        console.log("- data.already_member:", response.data?.already_member);
+        
+        if (response.data?.is_member === true || response.data?.already_member === true) {
+          console.log("✅ User is already a member (from resolveInviteCode) - showing Join Now");
+          setIsAccepted(true);
+          
+        } else if (response.data?.team_id) {
+          // If not detected in resolveInviteCode, check via getTeamProfile
+          console.log("Checking team membership via getTeamProfile for teamId:", response.data.team_id);
+          try {
+            const teamProfile = await getTeamProfile(response.data.team_id);
+            console.log("getTeamProfile response:", teamProfile);
+            console.log("teamProfile.is_member:", teamProfile?.is_member);
+            if (teamProfile?.is_member === true) {
+              console.log("✅ User is already a member (from getTeamProfile) - showing Join Now");
+              setIsAccepted(true);
+            }
+          } catch (teamErr) {
+            console.log("Could not check team membership:", teamErr);
+          }
+        } else {
+          console.log("❌ NOT a member - showing Accept button");
+        }
+        
+        // Also check invite status from getMyInvites
+        console.log("Checking invite status from getMyInvites...");
         const invitesResponse = await getMyInvites();
+        console.log("getMyInvites response:", invitesResponse);
         const myInvites = invitesResponse.invites || [];
+        
         const alreadyAccepted = myInvites.some(
           inv => inv.invite_code === inviteCode && inv.status === "accepted"
         );
+        console.log("alreadyAccepted from invites:", alreadyAccepted);
+        
         if (alreadyAccepted) {
+          console.log("✅ Invite status is accepted - showing Join Now");
           setIsAccepted(true);
         }
+        
+        console.log("=== FINAL isAccepted STATE ===");
       } catch (err) {
         console.error("Error fetching invite details:", err);
         setError("Failed to load invitation details");
@@ -149,7 +190,13 @@ export default function InviteDetailsPage() {
       setIsAccepted(true);
     } catch (error) {
       console.error("Error accepting invite:", error);
-      alert(error.message || "Failed to accept invitation. Please try again.");
+      const errorMsg = error.message || "";
+      // If already a member, show Join Now button
+      if (errorMsg.includes("already a member") || errorMsg.includes("TEAM_ALREADY_MEMBER")) {
+        setIsAccepted(true);
+      } else {
+        alert(error.message || "Failed to accept invitation. Please try again.");
+      }
     } finally {
       setActionLoading(false);
     }
