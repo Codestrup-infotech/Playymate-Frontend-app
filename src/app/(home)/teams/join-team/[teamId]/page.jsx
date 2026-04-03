@@ -19,9 +19,9 @@ import {
   Calendar
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { useTheme } from "@/lib/ThemeContext"
 import { getTeamProfile } from "@/lib/api/teamApi"
 
-// Skill level display mapping
 const SKILL_LEVELS = {
   beginner: "Beginner",
   intermediate: "Intermediate",
@@ -30,119 +30,32 @@ const SKILL_LEVELS = {
   professional: "Professional"
 }
 
-// Membership duration mapping
 const DURATION_LABELS = {
   MONTHLY: "Monthly",
   QUARTERLY: "Quarterly",
   YEARLY: "Yearly"
 }
 
-// Loading skeleton component
-function TeamProfileSkeleton() {
-  return (
-    <div className="p-3 sm:p-4 md:p-6 bg-slate-50 min-h-screen">
-      <div className="flex items-center gap-3 mb-6 pt-4 max-w-2xl mx-auto">
-        <div className="w-10 h-10 rounded-full bg-slate-200 animate-pulse shrink-0"></div>
-        <div className="h-6 bg-slate-200 rounded w-32 animate-pulse"></div>
-      </div>
-      <div className="max-w-2xl mx-auto">
-        <div className="h-40 sm:h-48 rounded-2xl sm:rounded-3xl bg-slate-200 animate-pulse mb-4"></div>
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm mb-4 border border-slate-100 -mt-12 sm:-mt-16 relative z-10">
-          <div className="flex items-end gap-4">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-slate-200 animate-pulse shrink-0"></div>
-            <div className="flex-1 pb-2">
-              <div className="h-7 sm:h-8 bg-slate-200 rounded w-1/2 animate-pulse mb-2"></div>
-              <div className="h-4 bg-slate-200 rounded w-1/3 animate-pulse"></div>
-            </div>
-          </div>
-        </div>
-        <div className="space-y-3 sm:space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-100">
-              <div className="h-4 bg-slate-200 rounded w-1/4 animate-pulse mb-3"></div>
-              <div className="h-3 bg-slate-200 rounded w-3/4 animate-pulse"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Error state component
-function TeamProfileError({ message, onBack }) {
-  return (
-    <div className="p-4 sm:p-6 flex items-center justify-center min-h-screen bg-slate-50">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 max-w-xs sm:max-w-sm w-full text-center shadow-xl border border-slate-100 mx-4"
-      >
-        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5 sm:mb-6">
-          <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10 text-red-500" />
-        </div>
-        <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3 text-slate-900">Team Not Found</h2>
-        <p className="text-slate-500 mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base">
-          {message || "The team you're looking for doesn't exist or has been removed."}
-        </p>
-        <button
-          onClick={onBack}
-          className="w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-lg shadow-pink-500/20 active:scale-95 transition-transform text-sm sm:text-base"
-        >
-          Go Back
-        </button>
-      </motion.div>
-    </div>
-  )
-}
-
-// Empty state component
-function TeamProfileEmpty() {
-  const router = useRouter()
-  return (
-    <div className="p-4 sm:p-6 flex items-center justify-center min-h-screen bg-slate-50">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 max-w-xs sm:max-w-sm w-full text-center shadow-xl border border-slate-100 mx-4"
-      >
-        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-5 sm:mb-6">
-          <Users className="w-8 h-8 sm:w-10 sm:h-10 text-slate-400" />
-        </div>
-        <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3 text-slate-900">No Team Data</h2>
-        <p className="text-slate-500 mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base">
-          Unable to load team information. Please try again later.
-        </p>
-        <button
-          onClick={() => router.push('/teams')}
-          className="w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-lg shadow-pink-500/20 active:scale-95 transition-transform text-sm sm:text-base"
-        >
-          Back to Teams
-        </button>
-      </motion.div>
-    </div>
-  )
-}
-
 export default function TeamProfilePage() {
   const params = useParams()
   const router = useRouter()
+  const { theme } = useTheme()
+  const isDark = theme === "dark"
 
   const teamId = params?.teamId
 
-  // State management
   const [team, setTeam] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Theme styles - explicitly light theme
-  const pageBg = "bg-[#F8FAFC] text-slate-900"
-  const cardBg = "bg-white border-slate-200/60"
-  const mutedText = "text-slate-500"
-  const borderColor = "border-slate-200/60"
-  const mutedBg = "bg-slate-100"
+  // Theme styles - matching joining-fee page
+  const pageBg = isDark ? "bg-black" : "bg-gray-50"
+  const textColor = isDark ? "text-white" : "text-gray-900"
+  const cardBg = isDark ? "bg-[#1a1a2e]" : "bg-white"
+  const mutedText = isDark ? "text-zinc-400" : "text-gray-500"
+  const borderColor = isDark ? "border-[#2a2a45]" : "border-gray-100"
+  const mutedBg = isDark ? "bg-gray-800" : "bg-gray-100"
 
-  // Fetch team data on mount
   useEffect(() => {
     const fetchTeamData = async () => {
       if (!teamId) {
@@ -175,9 +88,7 @@ export default function TeamProfilePage() {
     fetchTeamData()
   }, [teamId])
 
-  // Handle back navigation - try router.back() first, fallback to window.history, then Link
   const handleBack = () => {
-    // Try router.back() first
     if (router?.back) {
       try {
         router.back()
@@ -186,20 +97,96 @@ export default function TeamProfilePage() {
         console.warn("router.back() failed, falling back:", e)
       }
     }
-    // Fallback to browser history API
     if (window.history.length > 1) {
       window.history.back()
     } else {
-      // No history, use window.location to navigate
       window.location.href = '/teams'
     }
   }
 
-  if (loading) return <TeamProfileSkeleton />
-  if (error && !team) return <TeamProfileError message={error} onBack={handleBack} />
-  if (!team) return <TeamProfileEmpty />
+  if (loading) {
+    return (
+      <div className={`p-3 sm:p-4 md:p-6 ${pageBg} min-h-screen`}>
+        <div className="flex items-center gap-3 mb-6 pt-4 max-w-2xl mx-auto">
+          <div className={`w-10 h-10 rounded-full ${mutedBg} animate-pulse shrink-0`}></div>
+          <div className={`h-6 ${mutedBg} rounded w-32 animate-pulse`}></div>
+        </div>
+        <div className="max-w-2xl mx-auto">
+          <div className={`h-40 sm:h-48 rounded-2xl sm:rounded-3xl ${mutedBg} animate-pulse mb-4`}></div>
+          <div className={`${cardBg} rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm mb-4 border ${borderColor} -mt-12 sm:-mt-16 relative z-10`}>
+            <div className="flex items-end gap-4">
+              <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl ${mutedBg} animate-pulse shrink-0`}></div>
+              <div className="flex-1 pb-2">
+                <div className={`h-7 sm:h-8 ${mutedBg} rounded w-1/2 animate-pulse mb-2`}></div>
+                <div className={`h-4 ${mutedBg} rounded w-1/3 animate-pulse`}></div>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-3 sm:space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className={`${cardBg} rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm border ${borderColor}`}>
+                <div className={`h-4 ${mutedBg} rounded w-1/4 animate-pulse mb-3`}></div>
+                <div className={`h-3 ${mutedBg} rounded w-3/4 animate-pulse`}></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-  // Normalize team data
+  if (error && !team) {
+    return (
+      <div className={`p-4 sm:p-6 flex items-center justify-center min-h-screen ${pageBg}`}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className={`${cardBg} rounded-2xl sm:rounded-3xl p-6 sm:p-8 max-w-xs sm:max-w-sm w-full text-center shadow-xl border ${borderColor} mx-4`}
+        >
+          <div className={`w-16 h-16 sm:w-20 sm:h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5 sm:mb-6`}>
+            <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10 text-red-500" />
+          </div>
+          <h2 className={`text-xl sm:text-2xl  mb-2 sm:mb-3 ${textColor}`}>Team Not Found</h2>
+          <p className={`${mutedText} mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base`}>
+            The team you're looking for doesn't exist or has been removed.
+          </p>
+          <button
+            onClick={handleBack}
+            className="w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-lg shadow-pink-500/20 active:scale-95 transition-transform text-sm sm:text-base"
+          >
+            Go Back
+          </button>
+        </motion.div>
+      </div>
+    )
+  }
+
+  if (!team) {
+    return (
+      <div className={`p-4 sm:p-6 flex items-center justify-center min-h-screen ${pageBg}`}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className={`${cardBg} rounded-2xl sm:rounded-3xl p-6 sm:p-8 max-w-xs sm:max-w-sm w-full text-center shadow-xl border ${borderColor} mx-4`}
+        >
+          <div className={`w-16 h-16 sm:w-20 sm:h-20 ${mutedBg} rounded-full flex items-center justify-center mx-auto mb-5 sm:mb-6`}>
+            <Users className={`w-8 h-8 sm:w-10 sm:h-10 ${mutedText}`} />
+          </div>
+          <h2 className={`text-xl sm:text-2xl  mb-2 sm:mb-3 ${textColor}`}>No Team Data</h2>
+          <p className={`${mutedText} mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base`}>
+            Unable to load team information. Please try again later.
+          </p>
+          <button
+            onClick={() => router.push('/teams')}
+            className="w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-lg shadow-pink-500/20 active:scale-95 transition-transform text-sm sm:text-base"
+          >
+            Back to Teams
+          </button>
+        </motion.div>
+      </div>
+    )
+  }
+
   const teamData = team
   const location = teamData.location || {}
   const membership = teamData.membership
@@ -239,32 +226,32 @@ export default function TeamProfilePage() {
   }
 
   return (
-    <div className={`min-h-screen ${pageBg} pb-10 font-sans selection:bg-pink-500/10`}>
+    <div className={`min-h-screen ${pageBg} pb-10  selection:bg-pink-500/10`}>
 
-      {/* ── Sticky Header ── */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-slate-200/60 px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+      {/* Sticky Header */}
+      <header className={`sticky top-0 z-50 backdrop-blur-xl ${isDark ? "bg-black/80" : "bg-white/80"} border-b ${borderColor} px-3 sm:px-4 md:px-6 py-3 sm:py-4`}>
         <div className="flex items-center justify-between max-w-2xl mx-auto">
           <div className="flex items-center gap-3 sm:gap-4">
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleBack}
-              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${mutedBg} flex items-center justify-center border border-slate-200/40 text-slate-600 shrink-0`}
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${mutedBg} flex items-center justify-center border ${borderColor} ${mutedText} shrink-0`}
             >
               <ArrowLeft size={18} />
             </motion.button>
-            <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900">Team Profile</h1>
+            <h1 className="text-xl tracking-tight text-gray-900">Team Profile</h1>
           </div>
           <div className="flex items-center gap-2">
             <motion.button
               whileTap={{ scale: 0.9 }}
-              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${mutedBg} flex items-center justify-center border border-slate-200/40 text-slate-600`}
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${mutedBg} flex items-center justify-center border ${borderColor} ${mutedText}`}
             >
               <Share2 size={16} />
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.9 }}
-              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${mutedBg} flex items-center justify-center border border-slate-200/40 text-slate-600`}
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${mutedBg} flex items-center justify-center border ${borderColor} ${mutedText}`}
             >
               <MoreVertical size={16} />
             </motion.button>
@@ -272,7 +259,7 @@ export default function TeamProfilePage() {
         </div>
       </header>
 
-      {/* ── Main Content ── */}
+      {/* Main Content */}
       <motion.main
         variants={containerVariants}
         initial="hidden"
@@ -297,7 +284,7 @@ export default function TeamProfilePage() {
         {/* Profile Card */}
         <motion.div
           variants={itemVariants}
-          className={`${cardBg} rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-slate-200/50 mb-4 sm:mb-6 border ${borderColor} -mt-12 sm:-mt-16 md:-mt-20 relative z-10`}
+          className={`${cardBg} rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-xl mb-4 sm:mb-6 border ${borderColor} -mt-12 sm:-mt-16 md:-mt-20 relative z-10`}
         >
           <div className="flex flex-col items-center text-center">
 
@@ -306,7 +293,7 @@ export default function TeamProfilePage() {
               whileHover={{ rotate: 5, scale: 1.05 }}
               className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-pink-500 to-orange-400 p-1 shadow-2xl -mt-12 sm:-mt-16 mb-3 sm:mb-4"
             >
-              <div className="w-full h-full rounded-xl sm:rounded-2xl bg-white flex items-center justify-center overflow-hidden border-4 border-white">
+              <div className={`w-full h-full rounded-xl sm:rounded-2xl ${cardBg} flex items-center justify-center overflow-hidden border-4 border-white`}>
                 {teamData.logo ? (
                   <img
                     src={teamData.logo}
@@ -321,49 +308,49 @@ export default function TeamProfilePage() {
               </div>
             </motion.div>
 
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter mb-1 text-slate-900 px-2">
+            <h1 className={`text-2xl sm:text-3xl font-black tracking-tighter mb-1 ${textColor} px-2`}>
               {teamData.name}
             </h1>
             <div className="flex items-center gap-2 mb-4 sm:mb-6 flex-wrap justify-center">
               <span className="text-xs sm:text-sm font-semibold text-pink-500">
                 @{teamData.name?.toLowerCase().replace(/\s+/g, '_')}
               </span>
-              <span className="w-1 h-1 rounded-full bg-slate-300" />
+              <span className="w-1 h-1 rounded-full bg-gray-300" />
               <span className={`text-xs sm:text-sm ${mutedText}`}>{location.city || "Global"}</span>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full">
-              <div className="bg-slate-50 border border-slate-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center">
+              <div className={`${mutedBg} border ${borderColor} rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center`}>
                 <Users className="w-4 h-4 sm:w-5 sm:h-5 text-pink-500 mb-1 sm:mb-2" />
-                <p className="text-base sm:text-lg font-black text-slate-900 leading-none">{teamData.member_count || members.length || 0}</p>
-                <p className="text-[9px] sm:text-[10px] uppercase tracking-widest font-bold text-slate-400 mt-1">Members</p>
+                <p className={`text-base sm:text-lg font-black ${textColor} leading-none`}>{teamData.member_count || members.length || 0}</p>
+                <p className="text-[9px] sm:text-[10px] uppercase tracking-widest  text-gray-400 mt-1">Members</p>
               </div>
-              <div className="bg-slate-50 border border-slate-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center">
+              <div className={`${mutedBg} border ${borderColor} rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center`}>
                 <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 mb-1 sm:mb-2" />
-                <p className="text-base sm:text-lg font-black text-slate-900 leading-none">{skillLevelDisplay.split(' ')[0]}</p>
-                <p className="text-[9px] sm:text-[10px] uppercase tracking-widest font-bold text-slate-400 mt-1">Skill</p>
+                <p className={`text-base sm:text-lg font-black ${textColor} leading-none`}>{skillLevelDisplay.split(' ')[0]}</p>
+                <p className="text-[9px] sm:text-[10px] uppercase tracking-widest  text-gray-400 mt-1">Skill</p>
               </div>
-              <div className="bg-slate-50 border border-slate-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center">
+              <div className={`${mutedBg} border ${borderColor} rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center`}>
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 mb-1 sm:mb-2" />
-                <p className="text-base sm:text-lg font-black text-slate-900 leading-none">{teamData.max_members || 0}</p>
-                <p className="text-[9px] sm:text-[10px] uppercase tracking-widest font-bold text-slate-400 mt-1">Capacity</p>
+                <p className={`text-base sm:text-lg font-black ${textColor} leading-none`}>{teamData.max_members || 0}</p>
+                <p className="text-[9px] sm:text-[10px] uppercase tracking-widest  text-gray-400 mt-1">Capacity</p>
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* ── Info Sections ── */}
+        {/* Info Sections */}
         <div className="space-y-3 sm:space-y-4">
 
           {/* About */}
           {teamData.description && (
             <motion.div variants={itemVariants} className={`${cardBg} rounded-2xl sm:rounded-3xl p-4 sm:p-6 border ${borderColor} shadow-sm`}>
-              <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-400 mb-3 sm:mb-4 flex items-center gap-2">
+              <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-400 mb-3 sm:mb-4 flex items-center gap-2">
                 <Star className="w-3 h-3 sm:w-4 sm:h-4 text-pink-500" />
                 About Team
               </h3>
-              <p className="text-slate-600 text-xs sm:text-sm leading-relaxed font-medium">
+              <p className={`${mutedText} text-xs sm:text-sm leading-relaxed font-medium`}>
                 {teamData.description}
               </p>
             </motion.div>
@@ -376,8 +363,8 @@ export default function TeamProfilePage() {
                 <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-pink-500" />
               </div>
               <div>
-                <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400">Primary Location</h3>
-                <p className="font-bold text-sm sm:text-base text-slate-900">{locationString}</p>
+                <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-400">Primary Location</h3>
+                <p className={` text-sm sm:text-base ${textColor}`}>{locationString}</p>
               </div>
             </div>
           </motion.div>
@@ -388,7 +375,7 @@ export default function TeamProfilePage() {
               variants={itemVariants}
               className="relative overflow-hidden rounded-2xl sm:rounded-[2rem] p-1 bg-gradient-to-br from-yellow-400/30 via-orange-400/30 to-pink-400/30"
             >
-              <div className="bg-white rounded-xl sm:rounded-[1.9rem] p-4 sm:p-6">
+              <div className={`${cardBg} rounded-xl sm:rounded-[1.9rem] p-4 sm:p-6`}>
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h3 className="font-black uppercase tracking-widest text-orange-600 flex items-center gap-2 text-xs sm:text-sm">
                     <Coins className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -403,21 +390,21 @@ export default function TeamProfilePage() {
                   {membership.duration_pricing && Object.entries(membership.duration_pricing).map(([duration, pricing]) => (
                     <div
                       key={duration}
-                      className="flex justify-between items-center p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-100"
+                      className={`flex justify-between items-center p-3 sm:p-4 rounded-xl sm:rounded-2xl ${mutedBg} border ${borderColor}`}
                     >
-                      <span className="font-bold text-slate-600 text-sm sm:text-base">{DURATION_LABELS[duration] || duration}</span>
-                      <span className="text-lg sm:text-xl font-black text-slate-900">
+                      <span className={` text-sm sm:text-base ${mutedText}`}>{DURATION_LABELS[duration] || duration}</span>
+                      <span className={`text-lg sm:text-xl font-black ${textColor}`}>
                         {formatPrice(pricing?.amount)}
                       </span>
                     </div>
                   ))}
 
                   {!membership.duration_pricing && membership.fee_amount && (
-                    <div className="flex justify-between items-center p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-100">
-                      <span className="font-bold text-slate-600 text-sm sm:text-base">
+                    <div className={`flex justify-between items-center p-3 sm:p-4 rounded-xl sm:rounded-2xl ${mutedBg} border ${borderColor}`}>
+                      <span className={` text-sm sm:text-base ${mutedText}`}>
                         {DURATION_LABELS[membership.default_duration_type] || "Membership"}
                       </span>
-                      <span className="text-lg sm:text-xl font-black text-slate-900">
+                      <span className={`text-lg sm:text-xl font-black ${textColor}`}>
                         {formatPrice(membership.fee_amount)}
                       </span>
                     </div>
@@ -432,7 +419,7 @@ export default function TeamProfilePage() {
                     </div>
                   )}
                   {membership.gold_coin_discount_pct > 0 && (
-                    <div className="flex items-center gap-2 sm:gap-3 text-xs font-bold text-pink-600 bg-pink-50 p-2.5 sm:p-3 rounded-xl border border-pink-100">
+                    <div className="flex items-center gap-2 sm:gap-3 text-xs text-pink-600 bg-pink-50 p-2.5 sm:p-3 rounded-xl border border-pink-100">
                       <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                       <span>{membership.gold_coin_discount_pct}% DISCOUNT WITH GOLD COINS</span>
                     </div>
@@ -445,25 +432,25 @@ export default function TeamProfilePage() {
           {/* Roles */}
           {(rolesConfig.co_captain_enabled || rolesConfig.manager_enabled || rolesConfig.coach_enabled) && (
             <motion.div variants={itemVariants} className={`${cardBg} rounded-2xl sm:rounded-3xl p-4 sm:p-6 border ${borderColor} shadow-sm`}>
-              <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-400 mb-3 sm:mb-4 flex items-center gap-2">
+              <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-400 mb-3 sm:mb-4 flex items-center gap-2">
                 <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-purple-500" />
                 Available Roles
               </h3>
               <div className="flex flex-wrap gap-2">
                 {rolesConfig.co_captain_enabled && (
-                  <div className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-slate-700">
+                  <div className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl ${mutedBg} border ${borderColor} flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold ${mutedText}`}>
                     <CheckCircle className="w-3 h-3 text-green-500 shrink-0" />
                     Co-Captain
                   </div>
                 )}
                 {rolesConfig.manager_enabled && (
-                  <div className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-slate-700">
+                  <div className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl ${mutedBg} border ${borderColor} flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold ${mutedText}`}>
                     <CheckCircle className="w-3 h-3 text-green-500 shrink-0" />
                     Manager
                   </div>
                 )}
                 {rolesConfig.coach_enabled && (
-                  <div className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-slate-700">
+                  <div className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl ${mutedBg} border ${borderColor} flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold ${mutedText}`}>
                     <CheckCircle className="w-3 h-3 text-green-500 shrink-0" />
                     Coach
                   </div>
@@ -476,11 +463,11 @@ export default function TeamProfilePage() {
           {members.length > 0 && (
             <motion.div variants={itemVariants} className={`${cardBg} rounded-2xl sm:rounded-3xl p-4 sm:p-6 border ${borderColor} shadow-sm`}>
               <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
                   <Users className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
                   Squad Members
                 </h3>
-                <span className="text-[9px] sm:text-[10px] font-black bg-slate-100 px-2 py-1 rounded-md text-slate-500 uppercase tracking-widest">
+                <span className={`text-[9px] sm:text-[10px] font-black ${mutedBg} px-2 py-1 rounded-md ${mutedText} uppercase tracking-widest`}>
                   {members.length} Total
                 </span>
               </div>
@@ -489,8 +476,8 @@ export default function TeamProfilePage() {
                 {members.slice(0, 5).map((member, index) => (
                   <div key={member._id || index} className="flex items-center gap-3 sm:gap-4 group">
                     <div className="relative shrink-0">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-100 p-0.5 group-hover:bg-gradient-to-br group-hover:from-pink-500 group-hover:to-orange-400 transition-all duration-300">
-                        <div className="w-full h-full rounded-[0.6rem] sm:rounded-[0.9rem] bg-white flex items-center justify-center overflow-hidden">
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${mutedBg} p-0.5 group-hover:bg-gradient-to-br group-hover:from-pink-500 group-hover:to-orange-400 transition-all duration-300`}>
+                        <div className={`w-full h-full rounded-[0.6rem] sm:rounded-[0.9rem] ${cardBg} flex items-center justify-center overflow-hidden`}>
                           {member.user?.profile_image_url ? (
                             <img
                               src={member.user.profile_image_url}
@@ -498,7 +485,7 @@ export default function TeamProfilePage() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <span className="text-xs font-black text-slate-400">
+                            <span className="text-xs font-black text-gray-400">
                               {member.user?.full_name?.charAt(0)?.toUpperCase() || "M"}
                             </span>
                           )}
@@ -511,12 +498,12 @@ export default function TeamProfilePage() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-xs sm:text-sm text-slate-900 truncate">{member.user?.full_name}</p>
-                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400">{member.role}</p>
+                      <p className={` text-xs sm:text-sm ${textColor} truncate`}>{member.user?.full_name}</p>
+                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-400">{member.role}</p>
                     </div>
                     <motion.button
                       whileTap={{ scale: 0.9 }}
-                      className="p-1.5 sm:p-2 rounded-lg bg-slate-50 border border-slate-100 text-slate-400 shrink-0"
+                      className={`p-1.5 sm:p-2 rounded-lg ${mutedBg} border ${borderColor} ${mutedText} shrink-0`}
                     >
                       <MoreVertical size={13} />
                     </motion.button>
@@ -524,7 +511,7 @@ export default function TeamProfilePage() {
                 ))}
 
                 {members.length > 5 && (
-                  <button className="w-full py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-100 text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all">
+                  <button className={`w-full py-2.5 sm:py-3 rounded-xl sm:rounded-2xl ${mutedBg} border ${borderColor} text-[10px] sm:text-xs font-black uppercase tracking-widest ${mutedText} hover:${textColor} hover:${mutedBg} transition-all`}>
                     View All {members.length} Members
                   </button>
                 )}
@@ -535,7 +522,7 @@ export default function TeamProfilePage() {
 
         {/* Footer */}
         <motion.div variants={itemVariants} className="mt-6 sm:mt-8 mb-4 text-center">
-          <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+          <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
             Established {teamData.created_at
               ? new Date(teamData.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'long' })
               : 'Recently'}
@@ -544,7 +531,7 @@ export default function TeamProfilePage() {
 
       </motion.main>
 
-      {/* ── Fixed Bottom CTA ── */}
+      {/* Fixed Bottom CTA */}
       <AnimatePresence>
         {!teamData.is_member && (
           <motion.div
@@ -570,4 +557,3 @@ export default function TeamProfilePage() {
     </div>
   )
 }
-

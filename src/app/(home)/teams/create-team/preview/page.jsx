@@ -136,7 +136,7 @@ export default function Page() {
         >
           <ArrowLeft size={22} />
         </Link>
-        <h1 className="text-xl font-bold tracking-tight">Create Team</h1>
+        <h1 className="text-xl tracking-tight">Create Team</h1>
       </motion.div>
 
       {/* STEP BAR */}
@@ -188,7 +188,7 @@ export default function Page() {
           </motion.div>
 
           <div>
-            <h2 className="text-2xl font-bold">{teamData?.name || "Team Name"}</h2>
+            <h2 className="text-2xl">{teamData?.name || "Team Name"}</h2>
             <div className="flex gap-2 mt-2">
               <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-600">
                 {teamData?.category_value || "Sport"}
@@ -206,7 +206,7 @@ export default function Page() {
         variants={itemVariants}
         className={`${cardBg} border ${borderColor} rounded-3xl p-6 shadow-sm mb-6`}
       >
-        <h3 className="text-lg font-bold mb-5 flex items-center gap-2">
+        <h3 className="text-lg  mb-5 flex items-center gap-2">
           <Check size={20} className="text-pink-500" />
           Summary
         </h3>

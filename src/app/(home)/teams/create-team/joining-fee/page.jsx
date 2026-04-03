@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/lib/ThemeContext"
+import { motion } from "framer-motion"
 
 const MEMBERSHIP_DURATIONS = [
   { value: "MONTHLY", label: "Monthly" },
@@ -124,24 +125,72 @@ export default function JoiningFeePage() {
     router.push("/teams/create-team/preview")
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  }
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+      },
+    },
+  }
+
   return (
-    <div className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10`}>
+    <motion.div
+      className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10 font-Poppins`}
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
 
       {/* HEADER */}
-      <div className="flex items-center gap-3 mb-6">
+      <motion.div variants={itemVariants} className="flex items-center gap-3 mb-6">
         <Link href="/teams/create-team/rules-roles" className={textColor}>
           <ArrowLeft size={22} />
         </Link>
         <h1 className="text-xl font-semibold">Create Team</h1>
-      </div>
+      </motion.div>
 
       {/* STEP BAR */}
-      <div className="mb-8">
+      <motion.div variants={itemVariants} className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="h-1 flex-1 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full"></div>
-          <div className="h-1 flex-1 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full"></div>
-          <div className="h-1 flex-1 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full"></div>
-          <div className="h-1 flex-1 bg-gray-300 rounded-full"></div>
+          <motion.div 
+            className="h-1 flex-1 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          />
+          <motion.div 
+            className="h-1 flex-1 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          />
+          <motion.div 
+            className="h-1 flex-1 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+          />
+          <motion.div 
+            className="h-1 flex-1 bg-gray-300 rounded-full"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+          />
         </div>
 
         <div className="flex justify-between text-sm">
@@ -150,11 +199,15 @@ export default function JoiningFeePage() {
           <span className="text-pink-500 font-medium">Joining Fee</span>
           <span className="text-gray-400">Preview</span>
         </div>
-      </div>
+      </motion.div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* ENABLE JOINING FEE */}
-        <div className={`${cardBg} border ${borderColor} rounded-2xl p-5 flex items-center justify-between shadow-sm`}>
+        <motion.div 
+          variants={itemVariants}
+          whileHover={{ scale: 1.02 }}
+          className={`${cardBg} border ${borderColor} rounded-2xl p-5 flex items-center justify-between shadow-sm`}
+        >
           <div>
             <h3 className="font-semibold text-lg">Enable Joining Fee</h3>
             <p className="text-sm text-gray-500">Charge players to join your team</p>
@@ -172,12 +225,12 @@ export default function JoiningFeePage() {
               <div className={`w-6 h-6 bg-white rounded-full shadow transition-transform duration-300 ${formData.is_paid ? "translate-x-0" : "ml-auto"}`}></div>
             </div>
           </label>
-        </div>
+        </motion.div>
 
         {formData.is_paid && (
           <>
             {/* FEE AMOUNT */}
-            <div className="mb-6">
+            <motion.div variants={itemVariants} className="mb-6">
               <p className="text-sm text-gray-500 mb-2">FEE AMOUNT (₹)</p>
               <input
                 type="number"
@@ -186,10 +239,10 @@ export default function JoiningFeePage() {
                 placeholder="Enter fee amount"
                 className={`w-full ${cardBg} border ${borderColor} rounded-2xl px-4 py-4 ${textColor} placeholder-gray-400 focus:outline-none focus:border-pink-500 shadow-sm`}
               />
-            </div>
+            </motion.div>
 
             {/* DURATION PRICING */}
-            <div className="mb-6">
+            <motion.div variants={itemVariants} className="mb-6">
               <p className="text-sm text-gray-500 mb-3">DURATION PRICING</p>
               
               <div className="space-y-3">
@@ -213,10 +266,14 @@ export default function JoiningFeePage() {
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
 
             {/* GOLD COIN DISCOUNT */}
-            <div className={`${cardBg} border ${borderColor} rounded-2xl p-5 shadow-sm mb-6`}>
+            <motion.div 
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              className={`${cardBg} border ${borderColor} rounded-2xl p-5 shadow-sm mb-6 group cursor-pointer`}
+            >
               <h3 className="font-semibold mb-1">Gold Coin Discount</h3>
               <p className="text-sm text-gray-500 mb-4">Allow Discount Via Gold Coins</p>
 
@@ -229,10 +286,14 @@ export default function JoiningFeePage() {
                 />
                 <span className="text-sm text-gray-500">Enable gold coin payments</span>
               </div>
-            </div>
+            </motion.div>
 
             {/* DIAMOND PAYMENT */}
-            <div className={`${cardBg} border ${borderColor} rounded-2xl p-5 flex items-center justify-between shadow-sm mb-6`}>
+            <motion.div 
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              className={`${cardBg} border ${borderColor} rounded-2xl p-5 flex items-center justify-between shadow-sm mb-6`}
+            >
               <div>
                 <h3 className="font-semibold">Diamond Coin Payment</h3>
                 <p className="text-sm text-gray-500">Full Payment Via Diamond Coins</p>
@@ -251,20 +312,31 @@ export default function JoiningFeePage() {
                   </div>
                 </label>
               </div>
-            </div>
+            </motion.div>
           </>
         )}
 
         {/* CONTINUE BUTTON */}
-        <div className=" bottom-4 pt-6 inset-x-4 flex justify-center">
-          <button
+        <motion.div 
+          className="bottom-4 pt-6 inset-x-4 flex justify-center"
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          transition={{ delay: 0.5, type: "spring", stiffness: 120 }}
+        >
+          <motion.button
+            whileHover={{
+              scale: 1.05,
+              boxShadow:
+                "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+            }}
+            whileTap={{ scale: 0.95 }}
             type="submit"
             className="px-10 py-3 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-base font-semibold text-white flex items-center justify-center shadow-lg"
           >
             Continue
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       </form>
-    </div>
+    </motion.div>
   )
 }
