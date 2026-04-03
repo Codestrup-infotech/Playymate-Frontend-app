@@ -61,37 +61,78 @@ export default function Page() {
       }
 
       // Restore File objects from base64
-      if (savedBannerFile) {
-        const fileData = sessionStorage.getItem("teamBannerFileData")
-        if (fileData) {
-          const [, mimeType, base64] = fileData.split(",")
-          const byteCharacters = atob(base64)
-          const byteNumbers = new Array(byteCharacters.length)
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i)
-          }
-          const byteArray = new Uint8Array(byteNumbers)
-          const blob = new Blob([byteArray], { type: mimeType })
-          const file = new File([blob], savedBannerFile, { type: mimeType })
-          setBannerFile(file)
-        }
+    // ✅ Banner File Restore (ERROR-FREE)
+if (savedBannerFile) {
+  const fileData = sessionStorage.getItem("teamBannerFileData")
+  if (fileData) {
+    try {
+      const parts = fileData.split(",")
+
+      const mimeMatch = parts[0]?.match(/:(.*?);/)
+      const mimeType = mimeMatch ? mimeMatch[1] : "image/png"
+
+      const base64String = parts.length > 1 ? parts[1] : parts[0]
+
+      // ✅ Clean + normalize base64 (fix for atob error)
+      const cleanedBase64 = base64String
+        .replace(/\s/g, "")
+        .replace(/-/g, "+")
+        .replace(/_/g, "/")
+
+      const byteCharacters = atob(cleanedBase64)
+      const byteNumbers = new Array(byteCharacters.length)
+
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
       }
 
-      if (savedProfileFile) {
-        const fileData = sessionStorage.getItem("teamProfileFileData")
-        if (fileData) {
-          const [, mimeType, base64] = fileData.split(",")
-          const byteCharacters = atob(base64)
-          const byteNumbers = new Array(byteCharacters.length)
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i)
-          }
-          const byteArray = new Uint8Array(byteNumbers)
-          const blob = new Blob([byteArray], { type: mimeType })
-          const file = new File([blob], savedProfileFile, { type: mimeType })
-          setProfileFile(file)
-        }
+      const byteArray = new Uint8Array(byteNumbers)
+      const blob = new Blob([byteArray], { type: mimeType })
+      const file = new File([blob], savedBannerFile, { type: mimeType })
+
+      setBannerFile(file)
+    } catch (err) {
+      console.error("Banner decode error:", err)
+    }
+  }
+}
+
+
+// ✅ Profile File Restore (ERROR-FREE)
+if (savedProfileFile) {
+  const fileData = sessionStorage.getItem("teamProfileFileData")
+  if (fileData) {
+    try {
+      const parts = fileData.split(",")
+
+      const mimeMatch = parts[0]?.match(/:(.*?);/)
+      const mimeType = mimeMatch ? mimeMatch[1] : "image/png"
+
+      const base64String = parts.length > 1 ? parts[1] : parts[0]
+
+      // ✅ Clean + normalize base64 (fix for atob error)
+      const cleanedBase64 = base64String
+        .replace(/\s/g, "")
+        .replace(/-/g, "+")
+        .replace(/_/g, "/")
+
+      const byteCharacters = atob(cleanedBase64)
+      const byteNumbers = new Array(byteCharacters.length)
+
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
       }
+
+      const byteArray = new Uint8Array(byteNumbers)
+      const blob = new Blob([byteArray], { type: mimeType })
+      const file = new File([blob], savedProfileFile, { type: mimeType })
+
+      setProfileFile(file)
+    } catch (err) {
+      console.error("Profile decode error:", err)
+    }
+  }
+}
     }
   }, [])
 
@@ -104,31 +145,41 @@ export default function Page() {
     })
   }
 
-  const handleBannerUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const url = URL.createObjectURL(file)
-    setBannerImage(url)
-    setBannerFile(file)
-    sessionStorage.setItem("teamBannerImage", url)
-    sessionStorage.setItem("teamBannerFile", file.name)
+ const handleBannerUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
 
-    const base64 = await fileToBase64(file)
-    sessionStorage.setItem("teamBannerFileData", base64)
-  }
+  // ✅ convert to base64 (persistent)
+  const base64 = await fileToBase64(file)
+
+  // ✅ set preview image (no blob URL)
+  setBannerImage(base64)
+
+  // ✅ keep file for API upload
+  setBannerFile(file)
+
+  // ✅ store in sessionStorage
+  sessionStorage.setItem("teamBannerFileData", base64)
+  sessionStorage.setItem("teamBannerFile", file.name)
+}
 
   const handleProfileUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const url = URL.createObjectURL(file)
-    setProfileImage(url)
-    setProfileFile(file)
-    sessionStorage.setItem("teamProfileImage", url)
-    sessionStorage.setItem("teamProfileFile", file.name)
+  const file = e.target.files?.[0]
+  if (!file) return
 
-    const base64 = await fileToBase64(file)
-    sessionStorage.setItem("teamProfileFileData", base64)
-  }
+  // ✅ convert to base64 (persistent)
+  const base64 = await fileToBase64(file)
+
+  // ✅ set preview image (no blob URL)
+  setProfileImage(base64)
+
+  // ✅ keep file for API upload
+  setProfileFile(file)
+
+  // ✅ store in sessionStorage (only required data)
+  sessionStorage.setItem("teamProfileFileData", base64)
+  sessionStorage.setItem("teamProfileFile", file.name)
+}
 
   const handleCreateTeam = async () => {
     if (!agreedToTerms) {
@@ -181,9 +232,18 @@ export default function Page() {
       }
 
       // Prepare the API payload
+      const categoryType = teamData.category_type?.trim() || "sports"
+      
+      console.log("Creating team with:", {
+        name: teamData.name,
+        category_type: categoryType,
+        category_value: teamData.category_value,
+        fullTeamData: teamData
+      })
+      
       const apiPayload = {
         name: teamData.name,
-        category_type: teamData.category_type || "sports",
+        category_type: categoryType,
         category_value: teamData.category_value,
         visibility: teamData.visibility || "public",
         description: teamData.description,
@@ -222,7 +282,7 @@ export default function Page() {
       sessionStorage.removeItem("teamProfileFileData")
 
       // Navigate to the created team using the slug format
-      router.push(`/teams/join-team/${toSlug(response.name)}`)
+      router.push(`/teams/my-team/${toSlug(response.name)}`)
     } catch (err) {
       console.error("Error creating team:", err)
       setError(err.message || "Failed to create team. Please try again.")
@@ -336,30 +396,35 @@ export default function Page() {
           onChange={handleProfileUpload}
         />
 
-        {/* BANNER SECTION */}
-        <div
-          className="relative w-full h-36 cursor-pointer group"
-          onClick={() => bannerInputRef.current?.click()}
-        >
-          {/* Banner: image or default gradient */}
-          {bannerImage ? (
-            <img
-              src={bannerImage}
-              alt="Team Banner"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]" />
-          )}
+       {/* BANNER SECTION */}
+<div
+  className="relative w-full h-36 cursor-pointer group"
+  onClick={() => bannerInputRef.current?.click()}
+>
+  {/* Banner: image with fallback */}
+  {bannerImage ? (
+    <img
+      src={bannerImage}
+      alt="Team Banner"
+      className="w-full h-full object-cover"
+      onError={(e) => {
+        e.currentTarget.style.display = "none"
+        e.currentTarget.parentElement.style.background =
+          "linear-gradient(to right, #EF3AFF, #FF8319)"
+      }}
+    />
+  ) : (
+    <div className="w-full h-full bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]" />
+  )}
 
-          {/* Banner overlay on hover */}
-          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-1">
-            <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
-              <Camera size={20} className="text-white" />
-            </div>
-            <span className="text-white text-xs font-semibold">Upload Banner</span>
-          </div>
-        </div>
+  {/* Banner overlay */}
+  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-1">
+    <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
+      <Camera size={20} className="text-white" />
+    </div>
+    <span className="text-white text-xs font-semibold">Upload Banner</span>
+  </div>
+</div>
 
         {/* PROFILE IMAGE + TEAM INFO ROW */}
         <div className="flex items-end gap-4 px-5 pb-5 -mt-8 relative">
@@ -368,19 +433,40 @@ export default function Page() {
             className="relative cursor-pointer group/profile shrink-0"
             onClick={() => profileInputRef.current?.click()}
           >
-            <div className="w-16 h-16 rounded-2xl border-4 border-white dark:border-[#1a1a2e] overflow-hidden shadow-lg">
-              {profileImage ? (
-                <img
-                  src={profileImage}
-                  alt="Team Profile"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center text-2xl font-black text-white">
-                  {teamInitial}
-                </div>
-              )}
-            </div>
+          <div
+  className="relative cursor-pointer group/profile shrink-0"
+  onClick={() => profileInputRef.current?.click()}
+>
+  <div className="w-36 h-36   rounded-2xl border-2 border-white dark:border-[#1a1a2e] overflow-hidden shadow-lg bg-gray-200 flex items-center justify-center">
+    
+    {profileImage ? (
+      <img
+        src={profileImage}
+        alt="Team Profile"
+        className="w-full h-full object-cover"
+        onError={(e) => {
+          e.currentTarget.style.display = "none"
+        }}
+      />
+    ) : null}
+
+    {/* ✅ Default SVG always present behind image */}
+   <svg
+  xmlns="http://www.w3.org/2000/svg"
+  className="w-10 h-10 text-gray-500"
+  viewBox="0 0 24 24"
+  fill="currentColor"
+>
+  <path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5z" />
+  <path d="M12 14c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5z" />
+</svg>
+  </div>
+
+  {/* Camera overlay */}
+  <div className="absolute inset-0 rounded-2xl bg-black/40 opacity-0 group-hover/profile:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+    <Camera size={18} className="text-white" />
+  </div>
+</div>
 
             {/* Camera icon overlay on hover */}
             <div className="absolute inset-0 rounded-2xl bg-black/40 opacity-0 group-hover/profile:opacity-100 transition-opacity duration-200 flex items-center justify-center">
@@ -389,13 +475,13 @@ export default function Page() {
           </div>
 
           {/* Team name + badges */}
-          <div className="pb-1">
-            <h2 className="text-xl font-bold">{teamData?.name || "Team Name"}</h2>
-            <div className="flex gap-2 mt-1.5">
-              <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-600">
+          <div className="lg:pb-5 lg:px-5">
+            <h2 className="text-2xl  font-Poppins font-bold ">{teamData?.name || "Team Name"}</h2>
+            <div className="flex gap-2 mt-3">
+              <span className="px-3 py-1 rounded-full text-[13px] font-bold uppercase tracking-wider bg-green-100 text-green-600">
                 {teamData?.category_value || "Sport"}
               </span>
-              <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-600">
+              <span className="px-3 py-1 rounded-full text-[12px] font-bold uppercase tracking-wider bg-blue-100 text-black  ">
                 {teamData?.visibility === "private" ? "Private" : "Public"}
               </span>
             </div>
