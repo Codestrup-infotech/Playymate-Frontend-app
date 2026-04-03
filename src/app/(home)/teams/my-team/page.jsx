@@ -18,7 +18,7 @@ import {
   X
 } from "lucide-react";
 import { useTheme } from "@/lib/ThemeContext";
-import { getMyTeams, getMyCreatedTeams, getMyJoinedTeams, archiveTeam, getMyInvites, acceptInvite, declineInvite } from "@/lib/api/teamApi";
+import { getMyTeams, getMyCreatedTeams, getMyJoinedTeams, getMyArchivedTeams, archiveTeam, getMyInvites, acceptInvite, declineInvite } from "@/lib/api/teamApi";
 
 export default function MyTeamPage() {
   const router = useRouter();
@@ -36,6 +36,13 @@ export default function MyTeamPage() {
     joined: [],
     invites: [],
     loading: true,
+    error: null,
+  });
+
+  // Archived teams state
+  const [archivedData, setArchivedData] = useState({
+    archived: [],
+    loading: false,
     error: null,
   });
 
@@ -108,6 +115,31 @@ export default function MyTeamPage() {
       };
       fetchInvites();
     }
+  }, [activeTab, invitesData, archivedData]);
+
+  // Fetch archived teams when switching to archived tab
+  useEffect(() => {
+    if (activeTab === "archived" && archivedData.archived.length === 0 && !archivedData.loading) {
+      const fetchArchived = async () => {
+        setArchivedData(prev => ({ ...prev, loading: true }));
+        try {
+          const response = await getMyArchivedTeams();
+          setArchivedData({
+            archived: response.archived || response || [],
+            loading: false,
+            error: null,
+          });
+        } catch (error) {
+          console.error("Error fetching archived teams:", error);
+          setArchivedData({
+            archived: [],
+            loading: false,
+            error: "Failed to load archived teams",
+          });
+        }
+      };
+      fetchArchived();
+    }
   }, [activeTab]);
 
   // Handle delete team
@@ -116,13 +148,24 @@ export default function MyTeamPage() {
 
     setDeleting(true);
     try {
-      await archiveTeam(teamToDelete._id || teamToDelete.id);
+      const response = await archiveTeam(teamToDelete._id || teamToDelete.id);
+      console.log("Archive team response:", response);
       
       // Remove the deleted team from the owned list
       setTeamsData(prev => ({
         ...prev,
         owned: prev.owned.filter(team => (team._id || team.id) !== (teamToDelete._id || teamToDelete.id))
       }));
+      
+      // Refresh archived teams if we're on that tab
+      if (activeTab === "archived") {
+        const archivedResponse = await getMyArchivedTeams();
+        setArchivedData({
+          archived: archivedResponse.archived || archivedResponse || [],
+          loading: false,
+          error: null,
+        });
+      }
       
       setShowDeleteModal(false);
       setTeamToDelete(null);
@@ -143,16 +186,30 @@ export default function MyTeamPage() {
 
   // Get teams based on active tab
   const getCurrentTeams = () => {
+    let teams = [];
     switch (activeTab) {
       case "owned":
-        return teamsData.owned;
+        teams = teamsData.owned;
+        break;
       case "member":
-        return teamsData.joined;
+        teams = teamsData.joined;
+        break;
       case "invites":
-        return invitesData.invites;
+        teams = invitesData.invites;
+        break;
+      case "archived":
+        teams = archivedData.archived;
+        break;
       default:
         return [];
     }
+
+    // Sort by created_at descending (newest first)
+    return teams.slice().sort((a, b) => {
+      const dateA = new Date(a.created_at || a.createdAt || 0);
+      const dateB = new Date(b.created_at || b.createdAt || 0);
+      return dateB - dateA;
+    });
   };
 
   const currentTeams = getCurrentTeams();
@@ -161,6 +218,7 @@ export default function MyTeamPage() {
   const renderTeamCard = (team, isOwned = false) => {
     const teamId = team._id || team.id;
     const teamName = team.name;
+    const isArchived = activeTab === "archived";
     
     // Helper to convert team name to URL slug
     const toSlug = (name) => {
@@ -171,13 +229,13 @@ export default function MyTeamPage() {
     return (
       <div
         key={teamId}
-        className={`flex items-center gap-4 border rounded-2xl p-4 ${cardBg} shadow-sm cursor-pointer hover:opacity-90 transition`}
-        onClick={() => router.push(`/teams/my-team/${teamId}`)}
+        className={`flex items-center gap-4 border rounded-2xl p-4 ${cardBg} shadow-sm ${!isArchived ? 'cursor-pointer hover:opacity-90 transition' : 'opacity-75'}`}
+        onClick={() => !isArchived && router.push(`/teams/my-team/${teamId}`)}
       >
         {/* Avatar */}
         <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"} overflow-hidden`}>
-          {team.logo ? (
-            <img src={team.logo} alt={team.name} className="w-full h-full object-cover" />
+          {team.logo_url || team.logo ? (
+            <img src={team.logo_url || team.logo} alt={team.name} className="w-full h-full object-cover" />
           ) : (
             <Users size={24} className={mutedText} />
           )}
@@ -207,17 +265,23 @@ export default function MyTeamPage() {
               {team.members_count || team.member_count || team.members?.length || 0} members
             </span>
 
-            {team.is_active !== false && (
+            {team.is_active !== false && !isArchived && (
               <span className="text-green-400 flex items-center gap-1">
                 <span className="w-2 h-2 bg-green-400 rounded-full"></span>
                 Active
+              </span>
+            )}
+            {isArchived && (
+              <span className="text-red-400 flex items-center gap-1 text-xs">
+                <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                Archived
               </span>
             )}
           </div>
         </div>
 
         {/* Actions */}
-        {isOwned && (
+        {isOwned && !isArchived && (
           <button
             onClick={(e) => openDeleteModal(team, e)}
             className={`p-2 rounded-full ${isDark ? "hover:bg-red-900/30 text-red-400" : "hover:bg-red-50 text-red-500"} transition`}
@@ -395,7 +459,8 @@ export default function MyTeamPage() {
         {[
           { key: "owned", label: "Owned", count: teamsData.owned.length },
           { key: "member", label: "Member", count: teamsData.joined.length },
-          { key: "invites", label: "Invites", count: invitesData.invites.length }
+          { key: "invites", label: "Invites", count: invitesData.invites.length },
+          { key: "archived", label: "Archived", count: archivedData.archived.length }
         ].map((tab) => (
           <button
             key={tab.key}
@@ -436,11 +501,13 @@ export default function MyTeamPage() {
             {activeTab === "owned" && "No Teams Owned"}
             {activeTab === "member" && "No Team Memberships"}
             {activeTab === "invites" && "No Pending Invites"}
+            {activeTab === "archived" && "No Archived Teams"}
           </h3>
           <p className={`text-sm ${mutedText} mb-4`}>
             {activeTab === "owned" && "Create your first team to get started"}
             {activeTab === "member" && "Join a team to see it here"}
             {activeTab === "invites" && "Team invitations will appear here"}
+            {activeTab === "archived" && "Teams you delete will appear here"}
           </p>
           
           {activeTab === "owned" && (
@@ -467,7 +534,7 @@ export default function MyTeamPage() {
         <div className="space-y-4">
           {activeTab === "invites" 
             ? currentTeams.map(renderInviteCard)
-            : currentTeams.map((team) => renderTeamCard(team, activeTab === "owned"))
+            : currentTeams.map((team) => renderTeamCard(team, activeTab === "owned" || activeTab === "archived"))
           }
         </div>
       )}

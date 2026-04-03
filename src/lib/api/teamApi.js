@@ -250,6 +250,29 @@ export async function getMyJoinedTeams() {
   }
 }
 
+/**
+ * Get archived teams (teams user owned but archived/deleted)
+ * GET /api/v1/teams/mine/archived
+ */
+export async function getMyArchivedTeams() {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/mine/archived`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const json = await response.json();
+    return json.data || json;
+  } catch (error) {
+    console.error("Error getting my archived teams:", error);
+    throw error;
+  }
+}
+
 // ==================== Team Creation ====================
 
 /**
@@ -1111,6 +1134,7 @@ export default {
   getMyTeams,
   getMyCreatedTeams,
   getMyJoinedTeams,
+  getMyArchivedTeams,
   createTeam,
   updateTeam,
   archiveTeam,

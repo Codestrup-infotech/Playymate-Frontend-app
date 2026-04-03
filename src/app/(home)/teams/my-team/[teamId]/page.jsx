@@ -268,6 +268,24 @@ export default function TeamDetailPage() {
           }}><MoreHorizontal size={18}/></button>
         </div>
 
+        {/* ── Banner ── */}
+        {(team.banner_url || team.banner) && (
+          <div style={{ 
+            width:"100%", 
+            height:140, 
+            borderRadius:22, 
+            marginBottom:24, 
+            overflow:"hidden",
+            background: isDark ? "#1c1c3a" : "#eef0f8",
+          }}>
+            <img 
+              src={team.banner_url || team.banner} 
+              alt="Team Banner" 
+              style={{ width:"100%", height:"100%", objectFit:"cover" }}
+            />
+          </div>
+        )}
+
         {/* ── Team Card ── */}
         <div style={{ background: t.card, border:`1px solid ${t.cardBorder}`, borderRadius:22, padding:32, marginBottom:32, boxShadow: t.shadow }}>
           <div style={{ display:"flex", alignItems:"flex-start", gap:14 }}>
@@ -278,8 +296,8 @@ export default function TeamDetailPage() {
               border:`2px solid ${t.cardBorder}`,
               display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden",
             }}>
-              {team.logo
-                ? <img src={team.logo} alt={team.name} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+              {team.logo_url || team.logo
+                ? <img src={team.logo_url || team.logo} alt={team.name} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
                 : <span style={{ fontSize:22, fontWeight:800, color: t.accent }}>{init(team.name)}</span>
               }
             </div>

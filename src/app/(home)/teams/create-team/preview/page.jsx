@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Check, MapPin, Users, Trophy, Calendar } from "lucide-react"
+import { ArrowLeft, Check, MapPin, Users, Trophy, Calendar, Camera } from "lucide-react"
 import { motion } from "framer-motion"
 import { useTheme } from "@/lib/ThemeContext"
-import { createTeam } from "@/lib/api/teamApi"
+import { createTeam, generatePresignedUrl } from "@/lib/api/teamApi"
 
 // Helper function to convert team name to URL slug
 const toSlug = (name) => {
@@ -30,15 +30,105 @@ export default function Page() {
   const [error, setError] = useState(null)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
 
-  // Load team data from sessionStorage
+  // Image state
+  const [bannerImage, setBannerImage] = useState(null)
+  const [bannerFile, setBannerFile] = useState(null)
+  const [profileImage, setProfileImage] = useState(null)
+  const [profileFile, setProfileFile] = useState(null)
+  const bannerInputRef = useRef(null)
+  const profileInputRef = useRef(null)
+
+  // Load team data and images from sessionStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
+      // Load team data
       const stored = sessionStorage.getItem("createTeamData")
       if (stored) {
         setTeamData(JSON.parse(stored))
       }
+
+      // Load saved images from sessionStorage
+      const savedBanner = sessionStorage.getItem("teamBannerImage")
+      const savedProfile = sessionStorage.getItem("teamProfileImage")
+      const savedBannerFile = sessionStorage.getItem("teamBannerFile")
+      const savedProfileFile = sessionStorage.getItem("teamProfileFile")
+
+      if (savedBanner) {
+        setBannerImage(savedBanner)
+      }
+      if (savedProfile) {
+        setProfileImage(savedProfile)
+      }
+
+      // Restore File objects from base64
+      if (savedBannerFile) {
+        const fileData = sessionStorage.getItem("teamBannerFileData")
+        if (fileData) {
+          const [, mimeType, base64] = fileData.split(",")
+          const byteCharacters = atob(base64)
+          const byteNumbers = new Array(byteCharacters.length)
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i)
+          }
+          const byteArray = new Uint8Array(byteNumbers)
+          const blob = new Blob([byteArray], { type: mimeType })
+          const file = new File([blob], savedBannerFile, { type: mimeType })
+          setBannerFile(file)
+        }
+      }
+
+      if (savedProfileFile) {
+        const fileData = sessionStorage.getItem("teamProfileFileData")
+        if (fileData) {
+          const [, mimeType, base64] = fileData.split(",")
+          const byteCharacters = atob(base64)
+          const byteNumbers = new Array(byteCharacters.length)
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i)
+          }
+          const byteArray = new Uint8Array(byteNumbers)
+          const blob = new Blob([byteArray], { type: mimeType })
+          const file = new File([blob], savedProfileFile, { type: mimeType })
+          setProfileFile(file)
+        }
+      }
     }
   }, [])
+
+  // Helper: Convert File to base64 for sessionStorage
+  const fileToBase64 = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleBannerUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    setBannerImage(url)
+    setBannerFile(file)
+    sessionStorage.setItem("teamBannerImage", url)
+    sessionStorage.setItem("teamBannerFile", file.name)
+
+    const base64 = await fileToBase64(file)
+    sessionStorage.setItem("teamBannerFileData", base64)
+  }
+
+  const handleProfileUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    setProfileImage(url)
+    setProfileFile(file)
+    sessionStorage.setItem("teamProfileImage", url)
+    sessionStorage.setItem("teamProfileFile", file.name)
+
+    const base64 = await fileToBase64(file)
+    sessionStorage.setItem("teamProfileFileData", base64)
+  }
 
   const handleCreateTeam = async () => {
     if (!agreedToTerms) {
@@ -52,6 +142,44 @@ export default function Page() {
     setError(null)
 
     try {
+      // Helper: Upload file to S3 using presigned URL
+      const uploadToS3 = async (file, purpose) => {
+        if (!file) return null
+
+        const fileName = sessionStorage.getItem(`team${purpose}File`) || `${purpose}_${Date.now()}`
+        const mimeType = file.type || "image/png"
+
+        // Get presigned URL from API
+        const { data } = await generatePresignedUrl({
+          purpose,
+          file_name: fileName,
+          mime_type: mimeType,
+        })
+
+        const { presigned_url, key } = data
+
+        // Upload to S3
+        await fetch(presigned_url, {
+          method: "PUT",
+          headers: { "Content-Type": mimeType },
+          body: file,
+        })
+
+        return key
+      }
+
+      // Upload images to S3 if they exist
+      let logoKey = null
+      let bannerKey = null
+
+      if (profileFile) {
+        logoKey = await uploadToS3(profileFile, "logo")
+      }
+
+      if (bannerFile) {
+        bannerKey = await uploadToS3(bannerFile, "banner")
+      }
+
       // Prepare the API payload
       const apiPayload = {
         name: teamData.name,
@@ -66,19 +194,33 @@ export default function Page() {
         is_primary_sport: teamData.is_primary_sport || false,
       }
 
+      // Add logo and banner keys if uploaded
+      if (logoKey) {
+        apiPayload.logo_key = logoKey
+      }
+      if (bannerKey) {
+        apiPayload.banner_key = bannerKey
+      }
+
       // Add membership data if paid
       if (teamData.membership) {
         apiPayload.membership = teamData.membership
       }
 
       const response = await createTeam(apiPayload)
-      
+
       // Console log the response to see the result
       console.log("Create team response:", response)
-      
+
       // Clear session storage after successful creation
       sessionStorage.removeItem("createTeamData")
-      
+      sessionStorage.removeItem("teamBannerImage")
+      sessionStorage.removeItem("teamProfileImage")
+      sessionStorage.removeItem("teamBannerFile")
+      sessionStorage.removeItem("teamProfileFile")
+      sessionStorage.removeItem("teamBannerFileData")
+      sessionStorage.removeItem("teamProfileFileData")
+
       // Navigate to the created team using the slug format
       router.push(`/teams/join-team/${toSlug(response.name)}`)
     } catch (err) {
@@ -113,17 +255,19 @@ export default function Page() {
   }
 
   // Get display values
-  const skillLevelLabel = teamData?.skill_level 
-    ? teamData.skill_level.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+  const skillLevelLabel = teamData?.skill_level
+    ? teamData.skill_level.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
     : "All Levels"
-    
+
   const ageGroupLabel = teamData?.age_group
-    ? teamData.age_group.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+    ? teamData.age_group.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
     : "18+"
+
+  const teamInitial = teamData?.name?.charAt(0)?.toUpperCase() || "T"
 
   return (
     <motion.div
-      className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10 font-Poppins `}
+      className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10 font-Poppins`}
       initial="hidden"
       animate="visible"
       variants={containerVariants}
@@ -163,7 +307,7 @@ export default function Page() {
 
       {/* ERROR MESSAGE */}
       {error && (
-        <motion.div 
+        <motion.div
           variants={itemVariants}
           className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 text-red-600"
         >
@@ -171,25 +315,83 @@ export default function Page() {
         </motion.div>
       )}
 
-      {/* TEAM CARD */}
+      {/* TEAM CARD WITH BANNER + PROFILE UPLOAD */}
       <motion.div
         variants={itemVariants}
-        whileHover={{ scale: 1.02 }}
-        className={`${cardBg} border ${borderColor} rounded-3xl p-6 shadow-sm mb-6 relative overflow-hidden group`}
+        className={`${cardBg} border ${borderColor} rounded-3xl shadow-sm mb-6 overflow-hidden`}
       >
-        <div className="absolute top-0 right-0 w-32 h-32 bg-pink-50 rounded-full -mr-16 -mt-16 group-hover:bg-pink-100 transition-colors duration-500" />
+        {/* Hidden file inputs */}
+        <input
+          ref={bannerInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleBannerUpload}
+        />
+        <input
+          ref={profileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleProfileUpload}
+        />
 
-        <div className="flex items-center gap-5 relative z-10">
-          <motion.div
-            className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center text-2xl font-black text-white shadow-lg"
-            whileHover={{ rotate: 5 }}
+        {/* BANNER SECTION */}
+        <div
+          className="relative w-full h-36 cursor-pointer group"
+          onClick={() => bannerInputRef.current?.click()}
+        >
+          {/* Banner: image or default gradient */}
+          {bannerImage ? (
+            <img
+              src={bannerImage}
+              alt="Team Banner"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]" />
+          )}
+
+          {/* Banner overlay on hover */}
+          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-1">
+            <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
+              <Camera size={20} className="text-white" />
+            </div>
+            <span className="text-white text-xs font-semibold">Upload Banner</span>
+          </div>
+        </div>
+
+        {/* PROFILE IMAGE + TEAM INFO ROW */}
+        <div className="flex items-end gap-4 px-5 pb-5 -mt-8 relative">
+          {/* Profile image / initials avatar */}
+          <div
+            className="relative cursor-pointer group/profile shrink-0"
+            onClick={() => profileInputRef.current?.click()}
           >
-            {teamData?.name?.charAt(0)?.toUpperCase() || "T"}
-          </motion.div>
+            <div className="w-16 h-16 rounded-2xl border-4 border-white dark:border-[#1a1a2e] overflow-hidden shadow-lg">
+              {profileImage ? (
+                <img
+                  src={profileImage}
+                  alt="Team Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center text-2xl font-black text-white">
+                  {teamInitial}
+                </div>
+              )}
+            </div>
 
-          <div>
-            <h2 className="text-2xl font-bold">{teamData?.name || "Team Name"}</h2>
-            <div className="flex gap-2 mt-2">
+            {/* Camera icon overlay on hover */}
+            <div className="absolute inset-0 rounded-2xl bg-black/40 opacity-0 group-hover/profile:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+              <Camera size={18} className="text-white" />
+            </div>
+          </div>
+
+          {/* Team name + badges */}
+          <div className="pb-1">
+            <h2 className="text-xl font-bold">{teamData?.name || "Team Name"}</h2>
+            <div className="flex gap-2 mt-1.5">
               <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-600">
                 {teamData?.category_value || "Sport"}
               </span>
@@ -212,31 +414,31 @@ export default function Page() {
         </h3>
 
         <div className="space-y-4">
-          <SummaryItem 
-            icon={<MapPin size={16} />} 
-            label="Location" 
-            value={teamData?.location || "Not set"} 
+          <SummaryItem
+            icon={<MapPin size={16} />}
+            label="Location"
+            value={teamData?.location || "Not set"}
           />
-          <SummaryItem 
-            icon={<Users size={16} />} 
-            label="Team Size" 
-            value={`${teamData?.max_members || 15} players`} 
+          <SummaryItem
+            icon={<Users size={16} />}
+            label="Team Size"
+            value={`${teamData?.max_members || 15} players`}
           />
-          <SummaryItem 
-            icon={<Trophy size={16} />} 
-            label="Skill Level" 
-            value={skillLevelLabel} 
+          <SummaryItem
+            icon={<Trophy size={16} />}
+            label="Skill Level"
+            value={skillLevelLabel}
           />
-          <SummaryItem 
-            icon={<Calendar size={16} />} 
-            label="Age Group" 
-            value={ageGroupLabel} 
+          <SummaryItem
+            icon={<Calendar size={16} />}
+            label="Age Group"
+            value={ageGroupLabel}
           />
           {teamData?.membership?.is_paid && (
-            <SummaryItem 
-              icon={<Check size={16} />} 
-              label="Joining Fee" 
-              value={`₹${teamData.membership.fee_amount || 0}`} 
+            <SummaryItem
+              icon={<Check size={16} />}
+              label="Joining Fee"
+              value={`₹${teamData.membership.fee_amount || 0}`}
             />
           )}
         </div>
@@ -265,16 +467,14 @@ export default function Page() {
           className="text-sm text-gray-600 leading-relaxed cursor-pointer group-hover:text-gray-900 transition-colors"
         >
           I agree to the{" "}
-          <span className="text-pink-500 font-semibold">
-            terms and conditions
-          </span>{" "}
+          <span className="text-pink-500 font-semibold">terms and conditions</span>{" "}
           of Playymate
         </label>
       </motion.div>
 
       {/* CREATE BUTTON */}
       <motion.div
-        className=" mt-10 inset-x-5 flex justify-center z-50"
+        className="mt-10 inset-x-5 flex justify-center z-50"
         initial={{ y: 100 }}
         animate={{ y: 0 }}
         transition={{ delay: 0.5, type: "spring", stiffness: 120 }}
