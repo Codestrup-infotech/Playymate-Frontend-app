@@ -280,7 +280,7 @@ export default function Page() {
         >
           <ArrowLeft size={22} />
         </Link>
-        <h1 className="text-xl font-bold tracking-tight">Create Team</h1>
+        <h1 className="text-xl tracking-tight">Create Team</h1>
       </motion.div>
 
       {/* STEP BAR */}
@@ -408,7 +408,7 @@ export default function Page() {
         variants={itemVariants}
         className={`${cardBg} border ${borderColor} rounded-3xl p-6 shadow-sm mb-6`}
       >
-        <h3 className="text-lg font-bold mb-5 flex items-center gap-2">
+        <h3 className="text-lg  mb-5 flex items-center gap-2">
           <Check size={20} className="text-pink-500" />
           Summary
         </h3>

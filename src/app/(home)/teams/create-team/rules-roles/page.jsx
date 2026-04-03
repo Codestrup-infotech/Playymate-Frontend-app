@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/lib/ThemeContext"
+import { motion } from "framer-motion"
 
 const SKILL_LEVELS = [
   { value: "all_levels", label: "All Levels" },
@@ -121,25 +122,73 @@ export default function RulesRolesPage() {
     router.push("/teams/create-team/joining-fee")
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  }
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+      },
+    },
+  }
+
   return (
-    <div className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10`}>
+    <motion.div
+      className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10`}
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
 
       {/* HEADER */}
-      <div className="flex items-center gap-3 mb-6">
+      <motion.div variants={itemVariants} className="flex items-center gap-3 mb-6">
         <Link href="/teams/create-team" className={`${textColor} flex items-center gap-2 font-medium`}>
           <ArrowLeft size={22} />
-          <span>Back</span>
+          
         </Link>
         <h1 className="text-xl font-semibold">Create Team</h1>
-      </div>
+      </motion.div>
 
       {/* STEP BAR */}
-      <div className="mb-8">
+      <motion.div variants={itemVariants} className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="h-1 flex-1 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"></div>
-          <div className="h-1 flex-1 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"></div>
-          <div className="h-1 flex-1 rounded-full bg-gray-300"></div>
-          <div className="h-1 flex-1 rounded-full bg-gray-300"></div>
+          <motion.div 
+            className="h-1 flex-1 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          />
+          <motion.div 
+            className="h-1 flex-1 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          />
+          <motion.div 
+            className="h-1 flex-1 rounded-full bg-gray-300"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+          />
+          <motion.div 
+            className="h-1 flex-1 rounded-full bg-gray-300"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+          />
         </div>
 
         <div className="flex justify-between text-sm">
@@ -148,7 +197,7 @@ export default function RulesRolesPage() {
           <span className="text-gray-400">Joining Fee</span>
           <span className="text-gray-400">Preview</span>
         </div>
-      </div>
+      </motion.div>
 
       {/* FORM */}
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -201,7 +250,7 @@ export default function RulesRolesPage() {
 </div>
 
         {/* SKILL LEVEL */}
-        <div>
+        <motion.div variants={itemVariants}>
           <p className="text-sm text-gray-500 mb-3">SKILL LEVEL</p>
 
           <div className="flex flex-wrap gap-3">
@@ -220,10 +269,10 @@ export default function RulesRolesPage() {
               </button>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* AGE GROUP */}
-        <div>
+        <motion.div variants={itemVariants}>
           <p className="text-sm text-gray-500 mb-3">AGE GROUP</p>
 
           <div className="flex flex-wrap gap-3">
@@ -242,10 +291,10 @@ export default function RulesRolesPage() {
               </button>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* TEAM ROLES */}
-        <div>
+        <motion.div variants={itemVariants}>
           <h2 className="text-lg font-semibold mb-4">Team Roles</h2>
 
           <div className="space-y-4">
@@ -278,18 +327,29 @@ export default function RulesRolesPage() {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* CONTINUE BUTTON */}
-        <div className=" pt-10 inset-x-4 flex justify-center">
-          <button
+        <motion.div 
+          className=" pt-10 inset-x-4 flex justify-center"
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          transition={{ delay: 0.5, type: "spring", stiffness: 120 }}
+        >
+          <motion.button
+            whileHover={{
+              scale: 1.05,
+              boxShadow:
+                "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+            }}
+            whileTap={{ scale: 0.95 }}
             type="submit"
             className="px-10 py-3 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-base font-semibold text-white flex items-center justify-center shadow-lg"
           >
             Continue
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       </form>
-    </div>
+    </motion.div>
   )
 }

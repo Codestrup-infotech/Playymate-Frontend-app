@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { useTheme } from "@/lib/ThemeContext"
 import { checkEligibility, discoverTeams } from "@/lib/api/teamApi"
 import { Shield, AlertCircle } from "lucide-react"
+import { motion } from "framer-motion"
 
 export default function CreateTeamPage() {
   const router = useRouter()
@@ -358,43 +359,91 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
     selectedCategory?.can_create === false && 
     selectedCategory?.reason === "secondary_sport_can_only_join"
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  }
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+      },
+    },
+  }
+
   return (
-    <div className={`min-h-screen ${pageBg} ${textColor} px-5 py-6`}>
+    <motion.div
+      className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10 font-Poppins`}
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
 
       {/* HEADER */}
-      <div className="flex items-center gap-3 mb-6">
+      <motion.div variants={itemVariants} className="flex items-center gap-3 mb-6">
         <Link href="/teams" className={textColor}>
           <ArrowLeft size={22} />
         </Link>
-        <h1 className="text-xl font-semibold">Create Team</h1>
-      </div>
+        <h1 className="text-xl font-bold tracking-tight">Create Team</h1>
+      </motion.div>
 
       {/* STEP BAR */}
-      <div className="mb-8">
+      <motion.div variants={itemVariants} className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="h-1 flex-1 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"></div>
-          <div className="h-1 flex-1 rounded-full bg-gray-300"></div>
-          <div className="h-1 flex-1 rounded-full bg-gray-300"></div>
-          <div className="h-1 flex-1 rounded-full bg-gray-300"></div>
+          <motion.div 
+            className="h-1 flex-1 rounded-full bg-gradient-to-r from-pink-500 to-orange-400"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          />
+          <motion.div 
+            className="h-1 flex-1 rounded-full bg-gray-300"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          />
+          <motion.div 
+            className="h-1 flex-1 rounded-full bg-gray-300"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+          />
+          <motion.div 
+            className="h-1 flex-1 rounded-full bg-gray-300"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+          />
         </div>
 
         <div className="flex justify-between text-sm">
           <span className="text-pink-500 font-medium">Basic info</span>
-          <span classNameName="text-gray-400">Rules & Roles</span>
+          <span className="text-gray-400">Rules & Roles</span>
           <span className="text-gray-400">Joining Fee</span>
           <span className="text-gray-400">Preview</span>
         </div>
-      </div>
+      </motion.div>
 
       {/* ELIGIBILITY CHECK */}
       {eligibility.loading ? (
-        <div className="text-center py-8">Loading...</div>
+        <motion.div variants={itemVariants} className="text-center py-8">Loading...</motion.div>
       ) : eligibility.error ? (
-        <div className="text-center py-8 text-red-500">{eligibility.error}</div>
+        <motion.div variants={itemVariants} className="text-center py-8 text-red-500">{eligibility.error}</motion.div>
       ) : !eligibility.can_create_team ? (
         /* KYC NOT VERIFIED - Show Modal */
         eligibility.kyc_status !== "verified" ? (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div variants={itemVariants} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className={`${isDark ? 'bg-[#1a1a2e]' : 'bg-white'} rounded-2xl p-6 max-w-sm w-full text-center`}>
               <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center mx-auto mb-4">
                 <Shield size={32} className="text-yellow-600" />
@@ -418,22 +467,22 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
                 </button>
               </div>
             </div>
-          </div>
+          </motion.div>
         ) : (
           /* KYC VERIFIED BUT LIMIT REACHED */
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
+          <motion.div variants={itemVariants} className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
             <h3 className="text-lg font-semibold text-red-600 mb-2">Team Limit Reached</h3>
             <p className="text-sm text-gray-600">
               You have reached your team limit ({eligibility.teams_created_count}/{eligibility.max_teams_allowed}). Upgrade your plan to create more teams.
             </p>
-          </div>
+          </motion.div>
         )
       ) : (
         /* FORM */
         <form onSubmit={handleSubmit} className="space-y-6">
 
           {/* TEAM NAME */}
-          <div>
+          <motion.div variants={itemVariants}>
             <label className="text-xs tracking-widest text-gray-500 uppercase">Team Name</label>
             <input
               type="text"
@@ -445,10 +494,10 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
               maxLength={80}
               className={`w-full mt-2 ${inputBg} border ${borderColor} rounded-2xl px-4 py-4 ${textColor} placeholder-gray-400 focus:outline-none focus:border-pink-500 shadow-sm`}
             />
-          </div>
+          </motion.div>
 
           {/* CATEGORY TYPE - First selector */}
-          <div>
+          <motion.div variants={itemVariants}>
             <label className="text-xs tracking-widest text-gray-500 uppercase">Category Type</label>
             {categoryTypes.length > 0 ? (
               <select
@@ -474,11 +523,11 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
             ) : (
               <p className="mt-2 text-sm text-gray-500">No eligible categories found</p>
             )}
-          </div>
+          </motion.div>
 
           {/* CATEGORY VALUE - Second selector (Sport Value) */}
           {formData.category_type && (
-            <div>
+            <motion.div variants={itemVariants}>
               <label className="text-xs tracking-widest text-gray-500 uppercase">Sport Value</label>
               {categoryValues.length > 0 ? (
                 <select
@@ -498,12 +547,12 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
               ) : (
                 <p className="mt-2 text-sm text-gray-500">No {formData.category_type} available</p>
               )}
-            </div>
+            </motion.div>
           )}
 
           {/* Secondary Sport Warning */}
           {showSecondarySportWarning && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+            <motion.div variants={itemVariants} className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
               <AlertCircle className="text-amber-600 mt-0.5" size={20} />
               <div>
                 <h4 className="font-medium text-amber-800">Secondary Sport</h4>
@@ -511,11 +560,11 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
                   {selectedCategory?.reason.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
                 </p>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* LOCATION */}
-          <div ref={inputRef}>
+          <motion.div variants={itemVariants} ref={inputRef}>
             <label className="text-xs tracking-widest text-gray-500 uppercase">Location</label>
             <div className="relative mt-2">
               <div className="relative">
@@ -584,10 +633,10 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
 
           {/* TEAM VISIBILITY */}
-          <div className={`${inputBg} border ${borderColor} rounded-2xl p-5 flex items-center justify-between shadow-sm`}>
+          <motion.div variants={itemVariants} className={`${inputBg} border ${borderColor} rounded-2xl p-5 flex items-center justify-between shadow-sm`}>
             <div>
               <h3 className={`font-semibold text-lg ${formData.visibility === "private" ? textColor : "text-black "}`}>
                 {formData.visibility === "private" ? "Private Team" : "Public Team"}
@@ -610,10 +659,10 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
                 <div className={`w-6 h-6 bg-white rounded-full shadow transition-transform duration-300 ${formData.visibility === "private" ? "translate-x-0" : "ml-auto"}`}></div>
               </div>
             </label>
-          </div>
+          </motion.div>
 
           {/* DESCRIPTION */}
-          <div>
+          <motion.div variants={itemVariants}>
             <label className="text-xs tracking-widest text-gray-500 uppercase">Description</label>
             <textarea
               name="description"
@@ -623,19 +672,30 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
               rows={4}
               className={`w-full mt-2 ${inputBg} border ${borderColor} rounded-2xl px-4 py-4 ${textColor} placeholder-gray-400 focus:outline-none focus:border-pink-500 resize-none shadow-sm`}
             />
-          </div>
+          </motion.div>
 
           {/* CONTINUE BUTTON */}
-          <div className=" bottom-4 inset-x-4 flex justify-center">
-            <button
+          <motion.div 
+            className=" bottom-4 inset-x-4 flex justify-center"
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            transition={{ delay: 0.5, type: "spring", stiffness: 120 }}
+          >
+            <motion.button
+              whileHover={{
+                scale: 1.05,
+                boxShadow:
+                  "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+              }}
+              whileTap={{ scale: 0.95 }}
               type="submit"
               className="px-8 py-2.5 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-sm font-medium text-white flex items-center justify-center shadow-md"
             >
               Continue
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
         </form>
       )}
-    </div>
+    </motion.div>
   )
 }
