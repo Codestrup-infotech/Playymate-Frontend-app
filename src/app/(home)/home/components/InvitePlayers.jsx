@@ -2,20 +2,27 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
-import {
-  ArrowLeft, Search, Contact, Link2, QrCode,
-  Copy, Check, Star, Users,
-} from "lucide-react";
 import { useTheme } from "@/lib/ThemeContext";
 import {
   createInvite,
-  searchUsers,
-  sendInvite,
   getRecentActivity,
+  sendInvite,
 } from "@/lib/api/teamApi";
-import { getFollowing, getFollowers } from "@/services/user";
+import { getFollowers, getFollowing } from "@/services/user";
+import { searchAccounts } from "@/app/user/search";
+import {
+  ArrowLeft,
+  Search,
+  Copy,
+  Check,
+  Link2,
+  QrCode,
+  Users,
+  Contact,
+  UserPlus,
+} from "lucide-react";
 
-// ─── Get Current User ID ──────────────────────────────────────────────────────
+// ─── User Card Component ───────────────────────────────────────────────────────
 
 function getMyId() {
   if (typeof window === "undefined") return "";
@@ -34,8 +41,6 @@ function getMyId() {
   }
 }
 
-// ─── User Card Component ───────────────────────────────────────────────────────
-
 function UserCard({ user, isDark, inputBg, card, border, sub, muted, invitedIds, inviting, handleInvite, getInitials }) {
   const uid       = user._id || user.id;
   const isInvited = invitedIds.has(uid);
@@ -43,6 +48,9 @@ function UserCard({ user, isDark, inputBg, card, border, sub, muted, invitedIds,
   const sport     = user.sport || user.category || "";
   const mutual    = user.mutual_friends ?? user.mutual ?? 0;
   const rating    = user.rating ?? user.score ?? null;
+  const avatar    = user.avatar || user.profile_image_url || user.profile_photo?.url || null;
+  const name      = user.name || user.full_name || user.username || "Unknown";
+  const username  = user.user_name || user.username || "";
 
   return (
     <div
@@ -57,23 +65,26 @@ function UserCard({ user, isDark, inputBg, card, border, sub, muted, invitedIds,
           border: isDark ? "1.5px solid #2a2a45" : "1.5px solid #e0e4ef",
         }}
       >
-        {user.avatar ? (
+        {avatar ? (
           <img
-            src={user.avatar}
-            alt={user.name}
+            src={avatar}
+            alt={name}
             className="w-full h-full object-cover rounded-xl"
           />
         ) : (
-          getInitials(user.name || user.user_name)
+          getInitials(name)
         )}
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
         <p className="font-bold text-[14px] truncate">
-          {user.name || user.user_name || "Unknown"}
+          {name}
         </p>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
+          {username && (
+            <span className={`text-[11px] font-medium ${sub}`}>@{username}</span>
+          )}
           {sport && (
             <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-pink-500/15 text-pink-400">
               {sport}
@@ -183,9 +194,18 @@ export default function InvitePlayers({ teamId: teamIdProp, onClose }) {
       try {
         const res  = await createInvite(teamId, { invite_type: "link" });
         const data = res.data || res;
-        if (data.link) setInviteLink(data.link);
+        // Handle both 'link', 'invite_link', and 'invite_code' response formats
+        const link = data.link || data.invite_link || data.invite_code || "";
+        if (link) {
+          // If it's just a code, construct the full URL
+          if (!link.startsWith('http')) {
+            setInviteLink(`https://playymate.app/join/${link}`);
+          } else {
+            setInviteLink(link);
+          }
+        }
       } catch {
-        setInviteLink(`playymate.app/join/${teamId}`);
+        setInviteLink(`https://playymate.app/join/${teamId}`);
       }
     })();
 
@@ -211,11 +231,14 @@ export default function InvitePlayers({ teamId: teamIdProp, onClose }) {
       return; 
     }
     const t = setTimeout(async () => {
+      const searchStartTime = performance.now();
+      console.log("Invite Players search time: Start", searchQuery);
       try {
         setSearching(true);
-        const res  = await searchUsers(teamId, searchQuery);
+        // Use searchAccounts API which calls /api/v1/search/accounts
+        const res = await searchAccounts(searchQuery, 20);
         const data = res.data || res;
-        const allResults = Array.isArray(data) ? data : [];
+        const allResults = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : [];
         
         // Create a Set of following IDs for quick lookup
         const followingIds = new Set(
@@ -249,6 +272,11 @@ export default function InvitePlayers({ teamId: teamIdProp, onClose }) {
         });
         
         setSearchResults(sortedResults);
+        if (searchQuery.toLowerCase() === "akash") {
+          console.log("All akash search results:", sortedResults);
+        }
+        const searchEndTime = performance.now();
+        console.log(`Invite Players search time: ${(searchEndTime - searchStartTime).toFixed(2)}ms`);
       } catch {
         setSearchResults([]);
       } finally {
@@ -269,9 +297,16 @@ export default function InvitePlayers({ teamId: teamIdProp, onClose }) {
   const handleInvite = async (userId) => {
     setInviting(userId);
     try {
-      await sendInvite(teamId, { user_id: userId });
+      const res = await sendInvite(teamId, { invited_user_ids: [userId] });
+      const data = res.data || res;
+      // If the API returns an invite link, show it to the user
+      if (data.invite_link || data.invite_code) {
+        const link = data.invite_link || `https://playymate.app/join/${data.invite_code}`;
+        setInviteLink(link);
+      }
       setInvitedIds(prev => new Set([...prev, userId]));
-    } catch {
+    } catch (err) {
+      console.error("Failed to send invite:", err);
       alert("Failed to send invite");
     } finally {
       setInviting(null);
@@ -401,9 +436,9 @@ export default function InvitePlayers({ teamId: teamIdProp, onClose }) {
               {displayFollowing.length > 0 && (
                 <div className="mb-4">
                   <p className={`text-xs font-semibold uppercase tracking-widest ${muted} mb-2`}>
-                    Your Following
+                    Your Following ({displayFollowing.length})
                   </p>
-                  <div className="space-y-2.5">
+                  <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
                     {displayFollowing.map((user) => (
                       <UserCard 
                         key={user._id || user.id} 
@@ -428,9 +463,9 @@ export default function InvitePlayers({ teamId: teamIdProp, onClose }) {
               {displayOthers.length > 0 && (
                 <div>
                   <p className={`text-xs font-semibold uppercase tracking-widest ${muted} mb-2`}>
-                    Other Users
+                    Other Users ({displayOthers.length})
                   </p>
-                  <div className="space-y-2.5">
+                  <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
                     {displayOthers.map((user) => (
                       <UserCard 
                         key={user._id || user.id} 
@@ -483,7 +518,7 @@ export default function InvitePlayers({ teamId: teamIdProp, onClose }) {
                   <p className={`text-sm ${sub}`}>No recent activity</p>
                 </div>
               ) : (
-                <div className="space-y-2.5">
+                <div className="space-y-2.5 max-h-[400px] overflow-y-auto pr-1">
                   {displayList.map((user) => (
                     <UserCard 
                       key={user._id || user.id} 

@@ -583,7 +583,7 @@ export default function ProfilePage() {
   ].filter((c) => c.items.length > 0);
 
   return (
-    <div className="space-y-4 max-w-5xl mx-auto px-4 pb-10">
+    <div className="space-y-4 lg:max-w-5xl lg:w-full w-96 lg:mx-auto lg:px-4 px-2 pb-10">
 
       {/* ── HEADER CARD ─────────────────────────────────────────────────── */}
       <div
@@ -593,7 +593,7 @@ export default function ProfilePage() {
       >
 
   {/* ───── COVER PHOTO ───── */}
-  <div className="relative h-52 w-full">
+  <div className="relative lg:h-52 lg:w-full h-32 ">
     {/* Cover photo or gradient background */}
     {coverPhoto ? (
       <img 
@@ -651,17 +651,17 @@ export default function ProfilePage() {
 
         {/* ───── USER DETAILS ───── */}
         <div className="p-6 -mt-16 relative z-10">
-          <div className="flex gap-6 items-start flex-wrap md:flex-nowrap">
+          <div className="lg:flex gap-6 items-start flex-wrap md:flex-nowrap">
 
             {/* avatar */}
-            <div className="flex-shrink-0 relative">
-              <div className="w-28 h-28 md:w-36 md:h-36 rounded-[30px] p-[3px] bg-gradient-to-tr from-purple-500 to-orange-500">
+            <div className="  flex-shrink-0 relative">
+              <div className="w-24 h-24 md:w-36 md:h-36 rounded-[30px] p-[3px] bg-gradient-to-tr from-purple-500 to-orange-500">
                 <div className="relative w-full h-full">
                   {avatarUrl || profile_photos?.[0]?.url || profile_image_url ? (
                     <img
                       src={avatarUrl || profile_photos?.[0]?.url || profile_image_url}
                       alt={full_name}
-                      className={`w-full h-full rounded-3xl object-cover border-2 ${
+                      className={`w-full  h-full rounded-3xl object-cover border-2 ${
                         isDark ? "border-[#12122a]" : "border-white"
                       }`}
                     />
@@ -681,7 +681,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               {profile_main_type?.value && (
-                <div className="text-center mt-2">
+                <div className="lg:text-center mt-2">
                   <span className="text-xs font-medium text-white bg-gradient-to-r from-purple-500 to-orange-500 px-3 py-1 rounded-full">
                     {profile_main_type.value}
                   </span>
@@ -690,7 +690,7 @@ export default function ProfilePage() {
             </div>
 
             {/* DETAILS */}
-            <div className="flex-1 min-w-0 mt-12">
+            <div className="flex-1 min-w-0 lg:mt-12 mt-2">
 
               <div className="flex flex-wrap items-center gap-2  space-x-4">
                <div className="flex flex-col"> 
@@ -766,7 +766,7 @@ export default function ProfilePage() {
                 </span>
               </p>
 
-              <div className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF] text-white w-56 mt-3 py-3 flex justify-center items-center text-center rounded-md ">
+              <div className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF] text-white lg:w-56 w-32 px-1 mt-3 lg:py-3 py-1.5 flex justify-center items-center text-center rounded-md ">
                 Create Teams
               </div>
             </div>
@@ -789,12 +789,12 @@ export default function ProfilePage() {
         }`}
       >
         {/* tabs */}
-        <div className="flex gap-6 border-b border-white/90 pb-4 mb-6 overflow-x-auto">
+        <div className="flex lg:gap-6 gap-4 border-b border-white/90 pb-4 mb-6 overflow-x-auto">
           {["Posts", "Reels", "Events", "Activity", "Saved"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`text-sm font-medium pb-2 -mb-4 whitespace-nowrap transition-colors ${
+              className={`lg:text-sm text-[11px] font-medium pb-2 -mb-4 whitespace-nowrap transition-colors ${
                 activeTab === tab
                   ? isDark
                     ? "text-white border-b-2 border-white"
@@ -822,7 +822,7 @@ export default function ProfilePage() {
               </div>
             ) : posts.length > 0 ? (
               <>
-                <div className="grid grid-cols-3 gap-1 mb-4">
+                <div className="grid lg:grid-cols-3 grid-cols-2 gap-1 mb-4">
                   {posts.map((post) => (
                     <div 
                       key={post.post_id} 
@@ -916,7 +916,7 @@ export default function ProfilePage() {
 
 
 
-<div className="grid grid-cols-3 gap-1 mb-4">
+<div className="grid lg:grid-cols-3 grid-cols-2 gap-1 mb-4">
   {reels.map((reel) => (
     <div
       key={reel.reel_id || reel.post_id}

@@ -18,7 +18,7 @@ import {
   X
 } from "lucide-react";
 import { useTheme } from "@/lib/ThemeContext";
-import { getMyTeams, getMyCreatedTeams, getMyJoinedTeams, archiveTeam } from "@/lib/api/teamApi";
+import { getMyTeams, getMyCreatedTeams, getMyJoinedTeams, archiveTeam, getMyInvites, acceptInvite, declineInvite } from "@/lib/api/teamApi";
 
 export default function MyTeamPage() {
   const router = useRouter();
@@ -41,6 +41,16 @@ export default function MyTeamPage() {
 
   // Active tab state
   const [activeTab, setActiveTab] = useState("owned");
+
+  // Invites state for invites tab
+  const [invitesData, setInvitesData] = useState({
+    invites: [],
+    loading: false,
+    error: null,
+  });
+
+  // Invite action loading state
+  const [inviteActionLoading, setInviteActionLoading] = useState(null);
 
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -74,6 +84,31 @@ export default function MyTeamPage() {
 
     fetchTeamsData();
   }, []);
+
+  // Fetch invites when switching to invites tab
+  useEffect(() => {
+    if (activeTab === "invites" && invitesData.invites.length === 0 && !invitesData.loading) {
+      const fetchInvites = async () => {
+        setInvitesData(prev => ({ ...prev, loading: true }));
+        try {
+          const response = await getMyInvites();
+          setInvitesData({
+            invites: response.invites || [],
+            loading: false,
+            error: null,
+          });
+        } catch (error) {
+          console.error("Error fetching invites:", error);
+          setInvitesData({
+            invites: [],
+            loading: false,
+            error: "Failed to load invites",
+          });
+        }
+      };
+      fetchInvites();
+    }
+  }, [activeTab]);
 
   // Handle delete team
   const handleDeleteTeam = async () => {
@@ -114,7 +149,7 @@ export default function MyTeamPage() {
       case "member":
         return teamsData.joined;
       case "invites":
-        return teamsData.invites;
+        return invitesData.invites;
       default:
         return [];
     }
@@ -196,17 +231,72 @@ export default function MyTeamPage() {
 
   // Render invite card
   const renderInviteCard = (invite) => {
-    const teamId = invite.team?._id || invite.team?.id || invite._id || invite.id;
-    
+    const team = invite.team;
+    const inviteCode = invite.invite_code;
+    const isLoading = inviteActionLoading === inviteCode;
+    const isAccepted = invite.status === "accepted";
+
+    const handleViewDetails = () => {
+      router.push(`/teams/my-team/join-invite-team/${inviteCode}`);
+    };
+
+    const handleAccept = async () => {
+      setInviteActionLoading(inviteCode);
+      try {
+        console.log("handleAccept called with inviteCode:", inviteCode);
+        const response = await acceptInvite(inviteCode);
+        console.log("Accept invite response:", response);
+        setInvitesData(prev => ({
+          ...prev,
+          invites: prev.invites.map(i => 
+            i.invite_code === inviteCode ? { ...i, status: "accepted" } : i
+          )
+        }));
+      } catch (error) {
+        console.error("Error accepting invite:", error);
+        console.log("Error message:", error.message);
+        // If already a member, update status and show Join Now
+        const errorMsg = error.message || "";
+        if (errorMsg.includes("already a member") || errorMsg.includes("TEAM_ALREADY_MEMBER")) {
+          console.log("User is already a member, updating status to accepted");
+          setInvitesData(prev => ({
+            ...prev,
+            invites: prev.invites.map(i => 
+              i.invite_code === inviteCode ? { ...i, status: "accepted" } : i
+            )
+          }));
+        } else {
+          alert(error.message || "Failed to accept invitation. Please try again.");
+        }
+      } finally {
+        setInviteActionLoading(null);
+      }
+    };
+
+    const handleDecline = async () => {
+      setInviteActionLoading(inviteCode);
+      try {
+        await declineInvite(inviteCode);
+        setInvitesData(prev => ({
+          ...prev,
+          invites: prev.invites.filter(i => i.invite_code !== inviteCode)
+        }));
+      } catch (error) {
+        console.error("Error declining invite:", error);
+      } finally {
+        setInviteActionLoading(null);
+      }
+    };
+
     return (
       <div
-        key={teamId}
+        key={invite.invite_id}
         className={`flex items-center gap-4 border rounded-2xl p-4 ${cardBg} shadow-sm`}
       >
         {/* Avatar */}
         <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"} overflow-hidden`}>
-          {invite.team?.logo ? (
-            <img src={invite.team.logo} alt={invite.team.name} className="w-full h-full object-cover" />
+          {team?.logo_url || team?.logo ? (
+            <img src={team.logo_url || team.logo} alt={team.name} className="w-full h-full object-cover" />
           ) : (
             <Users size={24} className={mutedText} />
           )}
@@ -215,44 +305,56 @@ export default function MyTeamPage() {
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-lg truncate">{invite.team?.name || invite.name}</h2>
+            <h2 className="font-semibold text-lg truncate">{team?.name || invite.name}</h2>
           </div>
 
           <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
             <span className="flex items-center gap-1">
               <Shield size={12} />
-              {invite.role || "Member"} role
+              {invite.invite_type || "direct"} invite
             </span>
             
-            <span className="flex items-center gap-1 text-yellow-400">
+            <span className={`flex items-center gap-1 ${isAccepted ? "text-green-400" : "text-yellow-400"}`}>
               <Clock size={12} />
-              Pending
+              {isAccepted ? "Accepted" : "Pending"}
             </span>
           </div>
         </div>
 
-        {/* Accept/Decline Actions */}
+        {/* Actions - Show Join Now if accepted, otherwise show Accept/Decline */}
         <div className="flex gap-2">
-          <button
-            className="p-2 rounded-full bg-green-600/20 text-green-400 hover:bg-green-600/30 transition"
-            onClick={(e) => {
-              e.stopPropagation();
-              // Handle accept invite
-              console.log("Accept invite:", invite);
-            }}
-          >
-            <CheckCircle size={18} />
-          </button>
-          <button
-            className="p-2 rounded-full bg-red-600/20 text-red-400 hover:bg-red-600/30 transition"
-            onClick={(e) => {
-              e.stopPropagation();
-              // Handle decline invite
-              console.log("Decline invite:", invite);
-            }}
-          >
-            <X size={18} />
-          </button>
+          {isAccepted ? (
+            <button
+              className="px-4 py-2 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-medium text-sm hover:opacity-90 transition"
+              onClick={() => router.push(`/teams/join-team/onboarding?teamId=${team?._id || team?.id}`)}
+            >
+              Join Now
+            </button>
+          ) : (
+            <>
+              <button
+                className="p-2 rounded-full bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition"
+                onClick={handleViewDetails}
+                title="View Details"
+              >
+                <Users size={18} />
+              </button>
+              <button
+                className="p-2 rounded-full bg-green-600/20 text-green-400 hover:bg-green-600/30 transition disabled:opacity-50"
+                onClick={handleAccept}
+                disabled={isLoading}
+              >
+                <CheckCircle size={18} />
+              </button>
+              <button
+                className="p-2 rounded-full bg-red-600/20 text-red-400 hover:bg-red-600/30 transition disabled:opacity-50"
+                onClick={handleDecline}
+                disabled={isLoading}
+              >
+                <X size={18} />
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
@@ -293,7 +395,7 @@ export default function MyTeamPage() {
         {[
           { key: "owned", label: "Owned", count: teamsData.owned.length },
           { key: "member", label: "Member", count: teamsData.joined.length },
-          { key: "invites", label: "Invites", count: teamsData.invites.length }
+          { key: "invites", label: "Invites", count: invitesData.invites.length }
         ].map((tab) => (
           <button
             key={tab.key}

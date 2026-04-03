@@ -13,6 +13,7 @@ import {
   getTeamProfile, getTeamMembers, getPendingMembers,
   getTeamPayments, getPaymentSummary, createInvite,
   removeMember, updateMemberRole, acceptInvite, declineInvite,
+  getTeamInvites,
 } from "@/lib/api/teamApi";
 import InvitePlayers from "@/app/(home)/home/components/InvitePlayers";
 
@@ -97,6 +98,7 @@ export default function TeamDetailPage() {
   const [team,           setTeam]           = useState(null);
   const [members,        setMembers]        = useState([]);
   const [pending,        setPending]        = useState([]);
+  const [invites,        setInvites]        = useState([]);
   const [payments,       setPayments]       = useState([]);
   const [paymentSummary, setPaymentSummary] = useState(null);
   const [loading,        setLoading]        = useState(true);
@@ -127,6 +129,12 @@ export default function TeamDetailPage() {
           const pendRes = await getPendingMembers(teamId);
           const pendData = pendRes.data || pendRes;
           setPending(Array.isArray(pendData) ? pendData : []);
+        } catch {}
+
+        try {
+          const invRes = await getTeamInvites(teamId);
+          const invData = invRes.data || invRes;
+          setInvites(Array.isArray(invData) ? invData : []);
         } catch {}
 
         try {
@@ -175,7 +183,12 @@ export default function TeamDetailPage() {
   };
 
   const doAccept  = async (id) => { try { await acceptInvite(teamId, id);  setPending(p => p.filter(m => (m._id||m.id) !== id)); } catch {} };
-  const doDecline = async (id) => { try { await declineInvite(teamId, id); setPending(p => p.filter(m => (m._id||m.id) !== id)); } catch {} };
+  const doDecline = async (id) => { 
+    try { 
+      await revokeInvite(teamId, id); 
+      setInvites(p => p.filter(inv => (inv._id||inv.id||inv.invite_id) !== id)); 
+    } catch {} 
+  };
 
   // ── Loading / Error ──
   if (loading) return (
@@ -426,7 +439,7 @@ export default function TeamDetailPage() {
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
               <span style={{ fontSize:13, color: t.textSub, fontWeight:500 }}>
-                {pending.length} pending request{pending.length !== 1 ? "s" : ""}
+                {invites.length} pending invite{invites.length !== 1 ? "s" : ""}
               </span>
               <button onClick={doInvite} style={{
                 padding:"7px 14px", borderRadius:50, border:"none",
@@ -435,27 +448,49 @@ export default function TeamDetailPage() {
                 display:"flex", alignItems:"center", gap:5,
               }}><UserPlus size={13}/> New Invite</button>
             </div>
-            {pending.length === 0
+            {invites.length === 0
               ? <EmptyState icon={Clock} label="No pending invites" color={t.purple} t={t}/>
-              : pending.map(m => (
-                  <div key={m._id||m.id} style={{
-                    background: t.card, border:`1px solid ${t.cardBorder}`,
-                    borderRadius:16, padding:"12px 14px",
-                    display:"flex", alignItems:"center", gap:12,
-                  }}>
-                    <div style={{ width:46, height:46, borderRadius:14, flexShrink:0, background: isDark ? "#1c1c3a" : "#eef0f8", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      <span style={{ fontWeight:800, fontSize:14, color: t.accent }}>{init(m.name)}</span>
+              : invites.map(inv => {
+                  const invId = inv._id || inv.id || inv.invite_id;
+                  const invUser = inv.invited_user || inv.user || {};
+                  const userName = invUser.name || invUser.user_name || invUser.username || "Invited User";
+                  const userAvatar = invUser.avatar || invUser.profile_image_url || null;
+                  const inviteCode = inv.invite_code || inv.code || "";
+                  const inviteLink = inv.invite_link || (inviteCode ? `https://playymate.app/join/${inviteCode}` : "");
+                  const status = inv.status || "pending";
+                  
+                  return (
+                    <div key={invId} style={{
+                      background: t.card, border:`1px solid ${t.cardBorder}`,
+                      borderRadius:16, padding:"12px 14px",
+                      display:"flex", alignItems:"center", gap:12,
+                    }}>
+                      <div style={{ width:46, height:46, borderRadius:14, flexShrink:0, background: isDark ? "#1c1c3a" : "#eef0f8", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
+                        {userAvatar
+                          ? <img src={userAvatar} alt={userName} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+                          : <span style={{ fontWeight:800, fontSize:14, color: t.accent }}>{init(userName)}</span>
+                        }
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <span style={{ fontWeight:700, fontSize:14 }}>{userName}</span>
+                        {inviteLink && (
+                          <p style={{ fontSize:11, color: t.textSub, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{inviteLink}</p>
+                        )}
+                        <p style={{ fontSize:10, color: t.textMuted, marginTop:2 }}>Status: {status}</p>
+                      </div>
+                      <div style={{ display:"flex", gap:8 }}>
+                        <button onClick={() => {
+                          navigator.clipboard.writeText(inviteLink);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }} style={{ width:34, height:34, borderRadius:10, border:"none", background:"rgba(59,130,246,.15)", color: t.blue, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }} title="Copy Link">
+                          {copied ? <CheckCircle size={16}/> : <Copy size={16}/>}
+                        </button>
+                        <button onClick={() => doDecline(invId)} style={{ width:34, height:34, borderRadius:10, border:"none", background:"rgba(239,68,68,.12)", color: t.red, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }} title="Revoke Invite"><X size={16}/></button>
+                      </div>
                     </div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <span style={{ fontWeight:700, fontSize:14 }}>{m.name||"Pending User"}</span>
-                      <p style={{ fontSize:12, color: t.textSub }}>Requested {fmtD(m.joined_at||m.created_at)}</p>
-                    </div>
-                    <div style={{ display:"flex", gap:8 }}>
-                      <button onClick={() => doAccept(m._id||m.id)} style={{ width:34, height:34, borderRadius:10, border:"none", background:"rgba(34,197,94,.15)", color: t.green, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}><CheckCircle size={16}/></button>
-                      <button onClick={() => doDecline(m._id||m.id)} style={{ width:34, height:34, borderRadius:10, border:"none", background:"rgba(239,68,68,.12)", color: t.red, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}><X size={16}/></button>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
             }
           </div>
         )}
