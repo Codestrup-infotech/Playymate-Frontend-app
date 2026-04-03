@@ -314,7 +314,7 @@ export default function MyTeamPage() {
         {/* Avatar */}
         <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"} overflow-hidden`}>
           {team?.logo_url || team?.logo ? (
-            <img src={team.logo_url || team.logo} alt={team.name} className="w-full h-full object-cover" />
+            <img src={team?.logo_url || team?.logo} alt={team?.name} className="w-full h-full object-cover" />
           ) : (
             <Users size={24} className={mutedText} />
           )}

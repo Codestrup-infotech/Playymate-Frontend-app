@@ -112,6 +112,7 @@ export default function InviteDetailsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isAccepted, setIsAccepted] = useState(false);
+  const [bannerUrl, setBannerUrl] = useState(null);
 
   useEffect(() => {
     const fetchInviteDetails = async () => {
@@ -134,23 +135,25 @@ export default function InviteDetailsPage() {
         if (response.data?.is_member === true || response.data?.already_member === true) {
           console.log("✅ User is already a member (from resolveInviteCode) - showing Join Now");
           setIsAccepted(true);
-          
-        } else if (response.data?.team_id) {
-          // If not detected in resolveInviteCode, check via getTeamProfile
-          console.log("Checking team membership via getTeamProfile for teamId:", response.data.team_id);
+        }
+
+        // Always fetch team profile to get banner_url when team_id exists
+        if (response.data?.team_id) {
+          console.log("Fetching team profile for banner, teamId:", response.data.team_id);
           try {
             const teamProfile = await getTeamProfile(response.data.team_id);
             console.log("getTeamProfile response:", teamProfile);
-            console.log("teamProfile.is_member:", teamProfile?.is_member);
-            if (teamProfile?.is_member === true) {
+            console.log("teamProfile.banner_url:", teamProfile?.data?.banner_url);
+            if (teamProfile?.data?.banner_url) {
+              setBannerUrl(teamProfile.data.banner_url);
+            }
+            if (teamProfile?.data?.is_member === true && !isAccepted) {
               console.log("✅ User is already a member (from getTeamProfile) - showing Join Now");
               setIsAccepted(true);
             }
           } catch (teamErr) {
-            console.log("Could not check team membership:", teamErr);
+            console.log("Could not fetch team profile:", teamErr);
           }
-        } else {
-          console.log("❌ NOT a member - showing Accept button");
         }
         
         // Also check invite status from getMyInvites
@@ -308,7 +311,15 @@ export default function InviteDetailsPage() {
           variants={itemVariants}
           className="relative h-36 sm:h-44 md:h-48 rounded-2xl sm:rounded-[2.5rem] overflow-hidden mb-3 sm:mb-4 shadow-lg"
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400" />
+          {bannerUrl ? (
+            <img
+              src={bannerUrl}
+              alt="Team Banner"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400" />
+          )}
           <div className="absolute inset-0 bg-white/5 backdrop-blur-[1px]" />
           <div className="absolute top-4 sm:top-6 right-4 sm:right-6 flex gap-2">
             <div className="px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-white shadow-xl">
