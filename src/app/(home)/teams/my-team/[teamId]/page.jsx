@@ -268,75 +268,257 @@ export default function TeamDetailPage() {
           }}><MoreHorizontal size={18}/></button>
         </div>
 
-        {/* ── Team Card ── */}
-        <div style={{ background: t.card, border:`1px solid ${t.cardBorder}`, borderRadius:22, padding:32, marginBottom:32, boxShadow: t.shadow }}>
-          <div style={{ display:"flex", alignItems:"flex-start", gap:14 }}>
-            {/* Logo */}
-            <div style={{
-              width:64, height:64, borderRadius:18, flexShrink:0,
-              background: isDark ? "#1c1c3a" : "#eef0f8",
-              border:`2px solid ${t.cardBorder}`,
-              display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden",
-            }}>
-              {team.logo
-                ? <img src={team.logo} alt={team.name} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
-                : <span style={{ fontSize:22, fontWeight:800, color: t.accent }}>{init(team.name)}</span>
-              }
-            </div>
+       {/* ── Combined Banner + Team Card (Single Box) ── */}
+<div
+  style={{
+    borderRadius: 24,
+    overflow: "hidden",
+    background: t.card,
+    border: `1px solid ${t.cardBorder}`,
+    boxShadow: t.shadow,
+    marginBottom: 32,
+  }}
+>
+  
+  {/* ── Banner (Top Attached) ── */}
+  {(team.banner_url || team.banner) && (
+    <div
+      style={{
+        width: "100%",
+        height: 190,
+        background: isDark ? "#1c1c3a" : "#eef0f8",
+      }}
+    >
+      <img
+        src={team.banner_url || team.banner}
+        alt="Team Banner"
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+        }}
+      />
+    </div>
+  )}
 
-            {/* Meta */}
-            <div style={{ flex:1, minWidth:0 }}>  
-              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-                <span style={{ fontSize:19, fontWeight:800, letterSpacing:"-0.3px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                  {team.name}
-                </span>
-                {team.is_verified && <CheckCircle size={16} style={{ color: t.blue, flexShrink:0 }}/>}
-              </div>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:6 }}>
-                {(team.category_value || team.sport) && (
-                  <span style={{ background:"rgba(244,63,138,.15)", color: t.accent, fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:50 }}>
-                    {team.category_value || team.sport}
-                  </span>
-                )}
-                <span style={{ background: t.surface, color: t.textSub, fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:50 }}>
-                  {team.visibility === "private" ? "Private" : "Public"}
-                </span>
-                {team.skill_level && (
-                  <span style={{ background:"rgba(34,197,94,.15)", color: t.green, fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:50, textTransform:"capitalize" }}>
-                    {team.skill_level.replace("_"," ")}
-                  </span>
-                )}
-              </div>
-              {team.location?.city && (
-                <div style={{ display:"flex", alignItems:"center", gap:4, fontSize:12, color: t.textSub }}>
-                  <MapPin size={12}/>{team.location.area && `${team.location.area}, `}{team.location.city}
-                </div>
-              )}
-            </div>
-          </div>
+  {/* ── Content (Bottom Attached) ── */}
+  <div style={{ padding: 24 }}>
+    
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+      
+      {/* Logo */}
+      <div
+        style={{
+          width: 80,
+          height: 80,
+          borderRadius: 18,
+          flexShrink: 0,
+          background: isDark ? "#1c1c3a" : "#eef0f8",
+          border: `2px solid ${t.cardBorder}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+        }}
+      >
+        {team.logo_url || team.logo ? (
+          <img
+            src={team.logo_url || team.logo}
+            alt={team.name}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        ) : (
+          <span
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color: t.accent,
+            }}
+          >
+            {init(team.name)}
+          </span>
+        )}
+      </div>
 
-          {team.description && (
-            <p style={{ marginTop:14, fontSize:13, color: t.textSub, lineHeight:1.65 }}>{team.description}</p>
+      {/* Meta */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 6,
+            marginTop: 10,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 20,
+              fontWeight: 800,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {team.name}
+          </span>
+
+          {team.is_verified && (
+            <CheckCircle size={16} style={{ color: t.blue }} />
+          )}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 6,
+            marginBottom: 6,
+          }}
+        >
+          {(team.category_value || team.sport) && (
+            <span
+              style={{
+                background: "rgba(244,63,138,.15)",
+                color: t.accent,
+                fontSize: 11,
+                fontWeight: 700,
+                padding: "4px 10px",
+                borderRadius: 50,
+              }}
+            >
+              {team.category_value || team.sport}
+            </span>
           )}
 
-          {/* Stats */}
-          <div className="stats4" style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:14, marginTop:22 }}>
-            {[
-              { icon:Users,     label:"Members",  value: team.members_count || members.length || 0, c: t.blue   },
-              { icon:Calendar,  label:"Events",   value: team.events_count  || 0,                   c: t.purple },
-              { icon:Trophy,    label:"Win Rate", value: team.win_rate || "0%",                      c: t.yellow },
-              { icon:DollarSign,label:"Revenue",  value: fmt$(team.revenue),                         c: t.green  },
-            ].map(({ icon:I, label, value, c }) => (
-              <div key={label} style={{ background: t.surface, borderRadius:18, padding:"18px 14px", textAlign:"center" }}>
-                <div style={{ width:48, height:48, borderRadius:14, background:`${c}1a`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 10px" }}>
-                  <I size={24} style={{ color:c }}/>
-                </div>
-                <p style={{ fontWeight:800, fontSize:22, letterSpacing:"-0.2px" }}>{value}</p>
-                <p style={{ fontSize:14, color: t.textSub, marginTop:4 }}>{label}</p>
-              </div>
-            ))}
-          </div>
+          <span
+            style={{
+              background: t.surface,
+              color: t.textSub,
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "4px 10px",
+              borderRadius: 50,
+            }}
+          >
+            {team.visibility === "private" ? "Private" : "Public"}
+          </span>
+
+          {team.skill_level && (
+            <span
+              style={{
+                background: "rgba(34,197,94,.15)",
+                color: t.green,
+                fontSize: 11,
+                fontWeight: 600,
+                padding: "4px 10px",
+                borderRadius: 50,
+                textTransform: "capitalize",
+              }}
+            >
+              {team.skill_level.replace("_", " ")}
+            </span>
+          )}
         </div>
+
+        {team.location?.city && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 12,
+              color: t.textSub,
+            }}
+          >
+            <MapPin size={12} />
+            {team.location.area && `${team.location.area}, `}
+            {team.location.city}
+          </div>
+        )}
+      </div>
+    </div>
+
+    {team.description && (
+      <p
+        style={{
+          marginTop: 14,
+          fontSize: 13,
+          color: t.textSub,
+          lineHeight: 1.6,
+        }}
+      >
+        {team.description}
+      </p>
+    )}
+
+    {/* Stats */}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(4,1fr)",
+        gap: 14,
+        marginTop: 22,
+      }}
+    >
+      {[
+        {
+          icon: Users,
+          label: "Members",
+          value: team.members_count || members.length || 0,
+          c: t.blue,
+        },
+        {
+          icon: Calendar,
+          label: "Events",
+          value: team.events_count || 0,
+          c: t.purple,
+        },
+        {
+          icon: Trophy,
+          label: "Win Rate",
+          value: team.win_rate || "0%",
+          c: t.yellow,
+        },
+        {
+          icon: DollarSign,
+          label: "Revenue",
+          value: fmt$(team.revenue),
+          c: t.green,
+        },
+      ].map(({ icon: I, label, value, c }) => (
+        <div
+          key={label}
+          style={{
+            background: t.surface,
+            borderRadius: 18,
+            padding: "18px 14px",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 14,
+              background: `${c}1a`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 10px",
+            }}
+          >
+            <I size={24} style={{ color: c }} />
+          </div>
+
+          <p style={{ fontWeight: 800, fontSize: 22 }}>{value}</p>
+          <p style={{ fontSize: 14, color: t.textSub }}>{label}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
 
         {/* ── Quick Actions ── */}
         <div className="act4" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:22 }}>

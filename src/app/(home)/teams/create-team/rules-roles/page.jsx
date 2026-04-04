@@ -201,25 +201,53 @@ export default function RulesRolesPage() {
 
       {/* FORM */}
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* TEAM SIZE */}
-        <motion.div variants={itemVariants}>
-          <p className="text-sm text-gray-500 mb-2">TEAM SIZE: {formData.max_members}</p>
+      {/* TEAM SIZE */}
+<div>
+  <div className="flex items-center justify-between mb-2">
+    <p className="text-sm text-gray-500">
+      TEAM SIZE: {formData.max_members}
+    </p>
 
-          <input
-            type="range"
-            name="max_members"
-            min="2"
-            max="200"
-            value={formData.max_members}
-            onChange={(e) => setFormData(prev => ({ ...prev, max_members: parseInt(e.target.value) }))}
-            className="w-full accent-pink-500"
-          />
+    {/* ✅ Manual Input */}
+    <input
+      type="number"
+      min="2"
+      max="200"
+      value={formData.max_members}
+      onChange={(e) => {
+        let value = parseInt(e.target.value) || 2
+        if (value < 2) value = 2
+        if (value > 200) value = 200
 
-          <div className="flex justify-between text-sm text-gray-400 mt-1">
-            <span>2</span>
-            <span>200</span>
-          </div>
-        </motion.div>
+        setFormData((prev) => ({
+          ...prev,
+          max_members: value,
+        }))
+      }}
+      className="w-20 px-2 py-1 text-sm border rounded-md outline-none focus:ring-2 focus:ring-pink-500"
+    />
+  </div>
+
+  <input
+    type="range"
+    name="max_members"
+    min="2"
+    max="200"
+    value={formData.max_members}
+    onChange={(e) =>
+      setFormData((prev) => ({
+        ...prev,
+        max_members: parseInt(e.target.value),
+      }))
+    }
+    className="w-full accent-pink-500"
+  />
+
+  <div className="flex justify-between text-sm text-gray-400 mt-1">
+    <span>2</span>
+    <span>200</span>
+  </div>
+</div>
 
         {/* SKILL LEVEL */}
         <motion.div variants={itemVariants}>

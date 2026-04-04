@@ -50,8 +50,7 @@ export default function CreateTeamPage() {
   const inputRef = useRef(null)
 
   const placesServiceRef = useRef(null)
-const mapRef = useRef(null)
-  
+  const mapRef = useRef(null)
 
   // Fetch eligibility and load persisted data on mount
   useEffect(() => {
@@ -78,7 +77,6 @@ const mapRef = useRef(null)
       }
     }
 
-    // Load persisted form data from sessionStorage
     const loadPersistedData = () => {
       if (typeof window !== "undefined") {
         const stored = sessionStorage.getItem("createTeamData")
@@ -383,6 +381,7 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
   }
 
   return (
+    <>
     <motion.div
       className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10 font-Poppins`}
       initial="hidden"
@@ -696,6 +695,8 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
           </motion.div>
         </form>
       )}
-    </motion.div>
+
+</motion.div>
+    </>
   )
 }

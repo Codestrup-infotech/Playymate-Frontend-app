@@ -52,6 +52,9 @@ export default function MyTeamPage() {
   // Invite action loading state
   const [inviteActionLoading, setInviteActionLoading] = useState(null);
 
+  // Invite filter state
+  const [inviteFilter, setInviteFilter] = useState("all");
+
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState(null);
@@ -108,7 +111,11 @@ export default function MyTeamPage() {
       };
       fetchInvites();
     }
-  }, [activeTab]);
+    // Reset invite filter when switching to invites tab
+    if (activeTab === "invites") {
+      setInviteFilter("all");
+    }
+  }, [activeTab, invitesData]);
 
   // Handle delete team
   const handleDeleteTeam = async () => {
@@ -116,7 +123,8 @@ export default function MyTeamPage() {
 
     setDeleting(true);
     try {
-      await archiveTeam(teamToDelete._id || teamToDelete.id);
+      const response = await archiveTeam(teamToDelete._id || teamToDelete.id);
+      console.log("Archive team response:", response);
       
       // Remove the deleted team from the owned list
       setTeamsData(prev => ({
@@ -143,16 +151,45 @@ export default function MyTeamPage() {
 
   // Get teams based on active tab
   const getCurrentTeams = () => {
+    let teams = [];
     switch (activeTab) {
       case "owned":
-        return teamsData.owned;
+        teams = teamsData.owned;
+        break;
       case "member":
-        return teamsData.joined;
+        teams = teamsData.joined;
+        break;
       case "invites":
-        return invitesData.invites;
+        teams = invitesData.invites;
+        break;
+      
       default:
         return [];
     }
+
+    // Filter and sort invites by status
+    if (activeTab === "invites") {
+      let filteredTeams = teams;
+      if (inviteFilter !== "all") {
+        filteredTeams = teams.filter(invite => invite.status === inviteFilter);
+      }
+      return filteredTeams.slice().sort((a, b) => {
+        const statusOrder = { pending: 0, accepted: 1 };
+        const statusA = statusOrder[a.status] ?? 2;
+        const statusB = statusOrder[b.status] ?? 2;
+        if (statusA !== statusB) return statusA - statusB;
+        const dateA = new Date(a.created_at || a.createdAt || 0);
+        const dateB = new Date(b.created_at || b.createdAt || 0);
+        return dateB - dateA;
+      });
+    }
+
+    // Sort by created_at descending (newest first)
+    return teams.slice().sort((a, b) => {
+      const dateA = new Date(a.created_at || a.createdAt || 0);
+      const dateB = new Date(b.created_at || b.createdAt || 0);
+      return dateB - dateA;
+    });
   };
 
   const currentTeams = getCurrentTeams();
@@ -162,6 +199,7 @@ export default function MyTeamPage() {
     const teamId = team._id || team.id;
     const teamName = team.name;
     
+    
     // Helper to convert team name to URL slug
     const toSlug = (name) => {
       if (!name) return ""
@@ -169,63 +207,67 @@ export default function MyTeamPage() {
     }
     
     return (
-      <div
-        key={teamId}
-        className={`flex items-center gap-4 border rounded-2xl p-4 ${cardBg} shadow-sm cursor-pointer hover:opacity-90 transition`}
-        onClick={() => router.push(`/teams/my-team/${teamId}`)}
-      >
-        {/* Avatar */}
-        <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"} overflow-hidden`}>
-          {team.logo ? (
-            <img src={team.logo} alt={team.name} className="w-full h-full object-cover" />
-          ) : (
-            <Users size={24} className={mutedText} />
-          )}
-        </div>
+     <div
+  key={teamId}
+  className={`flex items-center justify-between border rounded-2xl p-4 ${cardBg} shadow-sm cursor-pointer hover:opacity-90 transition`}
+  onClick={() => router.push(`/teams/my-team/${teamId}`)}
+>
+  {/* LEFT SIDE */}
+  <div className="flex items-center gap-4 flex-1 min-w-0">
+    
+    {/* Avatar */}
+    <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"} overflow-hidden`}>
+      {team.logo_url || team.logo ? (
+        <img src={team.logo_url || team.logo} alt={team.name} className="w-full h-full object-cover" />
+      ) : (
+        <Users size={24} className={mutedText} />
+      )}
+    </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-lg truncate">{team.name}</h2>
-            
-            {isOwned && (
-              <span className="bg-green-900/30 text-green-400 text-xs px-2 py-1 rounded-full flex-shrink-0">
-                Owner
-              </span>
-            )}
-          </div>
+    {/* Info */}
+    <div className="min-w-0">
+      <div className="flex items-center gap-2">
+        <h2 className="font-semibold text-lg truncate">{team.name}</h2>
 
-          <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
-            {team.category_value || team.sport ? (
-              <span className="bg-purple-600/20 text-purple-400 px-2 py-[2px] rounded-full text-xs">
-                {team.category_value || team.sport}
-              </span>
-            ) : null}
-
-            <span className="flex items-center gap-1">
-              <Users size={12} />
-              {team.members_count || team.member_count || team.members?.length || 0} members
-            </span>
-
-            {team.is_active !== false && (
-              <span className="text-green-400 flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                Active
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Actions */}
         {isOwned && (
-          <button
-            onClick={(e) => openDeleteModal(team, e)}
-            className={`p-2 rounded-full ${isDark ? "hover:bg-red-900/30 text-red-400" : "hover:bg-red-50 text-red-500"} transition`}
-          >
-            <Trash2 size={18} />
-          </button>
+          <span className="bg-green-900/30 text-green-400 text-xs px-2 py-1 rounded-full">
+            Owner
+          </span>
         )}
       </div>
+
+      <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
+        {team.category_value || team.sport ? (
+          <span className="bg-purple-600/20 text-purple-400 px-2 py-[2px] rounded-full text-xs">
+            {team.category_value || team.sport}
+          </span>
+        ) : null}
+
+        <span className="flex items-center gap-1">
+          <Users size={12} />
+          {team.members_count || team.member_count || team.members?.length || 0} members
+        </span>
+
+        {team.is_active !== false && (
+          <span className="text-green-400 flex items-center gap-1">
+            <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+            Active
+          </span>
+        )}
+      </div>
+    </div>
+  </div>
+
+  {/* RIGHT SIDE DELETE BUTTON */}
+  {isOwned && (
+    <button
+      onClick={(e) => openDeleteModal(team, e)}
+      className={`p-2 rounded-full ${isDark ? "hover:bg-red-900/30 text-red-400" : "hover:bg-red-50 text-red-500"} transition`}
+    >
+      <Trash2 size={18} />
+    </button>
+  )}
+</div>
     );
   };
 
@@ -296,7 +338,7 @@ export default function MyTeamPage() {
         {/* Avatar */}
         <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"} overflow-hidden`}>
           {team?.logo_url || team?.logo ? (
-            <img src={team.logo_url || team.logo} alt={team.name} className="w-full h-full object-cover" />
+            <img src={team?.logo_url || team?.logo} alt={team?.name} className="w-full h-full object-cover" />
           ) : (
             <Users size={24} className={mutedText} />
           )}
@@ -326,10 +368,10 @@ export default function MyTeamPage() {
           {isAccepted ? (
             <button
               className="px-4 py-2 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-medium text-sm hover:opacity-90 transition"
-              onClick={() => router.push(`/teams/join-team/onboarding?teamId=${team?._id || team?.id}`)}
+              onClick={() => router.push(`/teams/my-team/join-invite-team/${inviteCode}`)}
             >
-              Join Now
-            </button>
+              Join Now     
+            </button>          
           ) : (
             <>
               <button
@@ -394,11 +436,11 @@ export default function MyTeamPage() {
       
 
       {/* Tabs */}
-      <div className="flex bg-[#1a1a1a] dark:bg-[#1a1a1a] bg-gray-200 rounded-full p-1 mb-5">
+      <div className="flex  dark:bg-[#1a1a1a] bg-gray-200 rounded-full p-1 mb-5">
         {[
           { key: "owned", label: "Owned", count: teamsData.owned.length },
           { key: "member", label: "Member", count: teamsData.joined.length },
-          { key: "invites", label: "Invites", count: invitesData.invites.length }
+          { key: "invites", label: "Invites", count: invitesData.invites.filter(i => i.status !== "accepted").length }
         ].map((tab) => (
           <button
             key={tab.key}
@@ -419,6 +461,29 @@ export default function MyTeamPage() {
         ))}
       </div>
 
+      {/* Invite Filter */}
+      {activeTab === "invites" && invitesData.invites.length > 0 && (
+        <div className="flex gap-2 mb-4">
+          {[
+            { key: "all", label: "All" },
+            { key: "pending", label: "Pending" },
+            { key: "accepted", label: "Accepted" }
+          ].map((filter) => (
+            <button
+              key={filter.key}
+              onClick={() => setInviteFilter(filter.key)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
+                inviteFilter === filter.key
+                  ? "bg-pink-500 text-white"
+                  : isDark ? "bg-[#1a1a2e] text-gray-400" : "bg-gray-200 text-gray-600"
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Team List */}
       {teamsData.error ? (
         <div className={`text-center py-8 ${mutedText}`}>
@@ -435,16 +500,20 @@ export default function MyTeamPage() {
           <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${isDark ? "bg-[#1a1a2e]" : "bg-gray-100"}`}>
             <Users size={32} className={mutedText} />
           </div>
-          <h3 className="font-semibold text-lg mb-2">
-            {activeTab === "owned" && "No Teams Owned"}
-            {activeTab === "member" && "No Team Memberships"}
-            {activeTab === "invites" && "No Pending Invites"}
-          </h3>
-          <p className={`text-sm ${mutedText} mb-4`}>
-            {activeTab === "owned" && "Create your first team to get started"}
-            {activeTab === "member" && "Join a team to see it here"}
-            {activeTab === "invites" && "Team invitations will appear here"}
-          </p>
+<h3 className="font-semibold text-lg mb-2">
+             {activeTab === "owned" && "No Teams Owned"}
+             {activeTab === "member" && "No Team Memberships"}
+             {activeTab === "invites" && inviteFilter === "all" && "No Invites"}
+             {activeTab === "invites" && inviteFilter === "pending" && "No Pending Invites"}
+             {activeTab === "invites" && inviteFilter === "accepted" && "No Accepted Invites"}
+             
+           </h3>
+           <p className={`text-sm ${mutedText} mb-4`}>
+             {activeTab === "owned" && "Create your first team to get started"}
+             {activeTab === "member" && "Join a team to see it here"}
+             {activeTab === "invites" && "Team invitations will appear here"}
+             
+           </p>
           
           {activeTab === "owned" && (
             <Link
@@ -470,7 +539,7 @@ export default function MyTeamPage() {
         <div className="space-y-4">
           {activeTab === "invites" 
             ? currentTeams.map(renderInviteCard)
-            : currentTeams.map((team) => renderTeamCard(team, activeTab === "owned"))
+            : currentTeams.map((team) => renderTeamCard(team, activeTab === "owned" || activeTab === "archived"))
           }
         </div>
       )}
