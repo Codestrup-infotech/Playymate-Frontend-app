@@ -308,11 +308,11 @@ export default function TeamProfilePage() {
               </div>
             </motion.div>
 
-            <h1 className={`text-2xl sm:text-3xl font-black tracking-tighter mb-1 ${textColor} px-2`}>
+            <h1 className={`text-2xl sm:text-3xl  tracking-tighter mb-1 ${textColor} px-2`}>
               {teamData.name}
             </h1>
             <div className="flex items-center gap-2 mb-4 sm:mb-6 flex-wrap justify-center">
-              <span className="text-xs sm:text-sm font-semibold text-pink-500">
+              <span className="text-xs sm:text-sm  text-pink-500">
                 @{teamData.name?.toLowerCase().replace(/\s+/g, '_')}
               </span>
               <span className="w-1 h-1 rounded-full bg-gray-300" />
@@ -328,7 +328,7 @@ export default function TeamProfilePage() {
               </div>
               <div className={`${mutedBg} border ${borderColor} rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center`}>
                 <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 mb-1 sm:mb-2" />
-                <p className={`text-base sm:text-lg font-black ${textColor} leading-none`}>{skillLevelDisplay.split(' ')[0]}</p>
+                <p className={`text-base sm:text-lg  ${textColor} leading-none`}>{skillLevelDisplay.split(' ')[0]}</p>
                 <p className="text-[9px] sm:text-[10px] uppercase tracking-widest  text-gray-400 mt-1">Skill</p>
               </div>
               <div className={`${mutedBg} border ${borderColor} rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center`}>
@@ -528,10 +528,9 @@ export default function TeamProfilePage() {
               : 'Recently'}
           </p>
         </motion.div>
-
       </motion.main>
 
-      {/* Fixed Bottom CTA */}
+      {/* Fixed Bottom CTA */}  
       <AnimatePresence>
         {!teamData.is_member && (
           <motion.div

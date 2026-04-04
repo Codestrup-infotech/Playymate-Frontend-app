@@ -184,7 +184,7 @@ export default function PaymentScreen() {
 
 
 {/* Your Wallet Card */}
-<div className="bg-gray-50/50 rounded-[32px] p-6 space-y-4 border border-gray-100">
+<div className="bg-gray-50/50 rounded-[24px] p-4 space-y-3 border border-gray-100 max-w-xs mx-auto">
   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-6">
     Your Wallet
   </p>
