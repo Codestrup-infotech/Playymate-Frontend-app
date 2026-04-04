@@ -379,11 +379,15 @@ export async function initiateMembership(teamId, data) {
       body: JSON.stringify(data),
     });
     
+    console.log("Initiate membership response status:", response.status);
+    const responseData = await response.json();
+    console.log("Initiate membership response data:", responseData);
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP error! status: ${response.status} - ${JSON.stringify(responseData)}`);
     }
     
-    return await response.json();
+    return responseData;
   } catch (error) {
     console.error("Error initiating membership:", error);
     throw error;
@@ -569,17 +573,28 @@ export async function createInvite(teamId, data) {
  * @param {string} inviteCode - Invite code
  */
 export async function resolveInviteCode(inviteCode) {
+  console.log("=== resolveInviteCode API call ===");
+  console.log("inviteCode:", inviteCode);
+  console.log("URL:", `${API_BASE}/api/v1/teams/invites/${inviteCode}`);
+  
   try {
     const response = await fetch(`${API_BASE}/api/v1/teams/invites/${inviteCode}`, {
       method: "GET",
       headers: getHeaders(),
     });
     
+    console.log("Response status:", response.status);
+    console.log("Response ok:", response.ok);
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      console.error("Error response text:", errorText);
+      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
     }
     
-    return await response.json();
+    const data = await response.json();
+    console.log("Response data:", data);
+    return data;
   } catch (error) {
     console.error("Error resolving invite code:", error);
     throw error;
@@ -1100,21 +1115,28 @@ export async function getTeamInvites(teamId) {
 }
 
 /**
- * Get my team invites (invitations sent to me)
+ * Get user's invites
  * GET /api/v1/teams/invites/mine
  */
 export async function getMyInvites() {
+  console.log("=== getMyInvites API call ===");
   try {
     const response = await fetch(`${API_BASE}/api/v1/teams/invites/mine`, {
       method: "GET",
       headers: getHeaders(),
     });
     
+    console.log("getMyInvites response status:", response.status);
+    
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
     const json = await response.json();
+    console.log("getMyInvites response JSON:", json);
+    console.log("getMyInvites data structure:", json.data);
+    console.log("Invites array:", json.data?.invites);
+    
     return {
       invites: json.data?.invites || [],
       count: json.data?.count || 0

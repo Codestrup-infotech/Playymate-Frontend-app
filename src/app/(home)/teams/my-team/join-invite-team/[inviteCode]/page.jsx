@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/lib/ThemeContext";
-import { resolveInviteCode, acceptInvite, declineInvite, getMyInvites, getTeamProfile } from "@/lib/api/teamApi";
+import { resolveInviteCode, acceptInvite, declineInvite, getMyInvites, getTeamProfile, initiateMembership, confirmMembership } from "@/lib/api/teamApi";
 
 const SKILL_LEVELS = {
   beginner: "Beginner",
@@ -122,9 +122,52 @@ export default function InviteDetailsPage() {
         console.log("=== FETCHING INVITE DETAILS ===");
         console.log("inviteCode:", inviteCode);
         
-        const response = await resolveInviteCode(inviteCode);
-        console.log("resolveInviteCode response:", response);
-        console.log("Full response data:", response.data);
+        let response;
+        try {
+          response = await resolveInviteCode(inviteCode);
+          console.log("resolveInviteCode response:", response);
+        } catch (resolveErr) {
+          console.log("resolveInviteCode failed:", resolveErr.message);
+          console.log("Trying getMyInvites to find invite data...");
+          
+          // Try to find the invite in user's invites list
+          const invitesResponse = await getMyInvites();
+          console.log("getMyInvites response:", invitesResponse);
+          
+          const foundInvite = invitesResponse.invites?.find(
+            inv => inv.invite_code === inviteCode
+          );
+          
+          if (foundInvite) {
+            console.log("Found invite in user's invites:", foundInvite);
+            // Build response from found invite
+            response = {
+              data: {
+                invite_code: foundInvite.invite_code,
+                team_id: foundInvite.team?._id || foundInvite.team_id,
+                team_name: foundInvite.team?.name || foundInvite.name,
+                logo_url: foundInvite.team?.logo_url || foundInvite.team?.logo,
+                banner_url: foundInvite.team?.banner_url,
+                description: foundInvite.team?.description,
+                member_count: foundInvite.team?.members_count || foundInvite.team?.member_count,
+                category_value: foundInvite.team?.category_value || foundInvite.team?.sport,
+                location: foundInvite.team?.location,
+                visibility: foundInvite.team?.visibility,
+                skill_level: foundInvite.team?.skill_level,
+                age_group: foundInvite.team?.age_group,
+                max_members: foundInvite.team?.max_members,
+                invite_valid: true,
+                is_member: foundInvite.status === "accepted",
+                already_member: foundInvite.status === "accepted"
+              }
+            };
+          } else {
+            console.log("Invite not found in user's invites either");
+            throw new Error("Invite not found");
+          }
+        }
+        
+        console.log("Final response data:", response.data);
         setInviteData(response.data);
         
         // First check from resolveInviteCode response
@@ -132,8 +175,8 @@ export default function InviteDetailsPage() {
         console.log("- data.is_member:", response.data?.is_member);
         console.log("- data.already_member:", response.data?.already_member);
         
-        if (response.data?.is_member === true || response.data?.already_member === true) {
-          console.log("✅ User is already a member (from resolveInviteCode) - showing Join Now");
+        if (response.data?.is_member === true || response.data?.already_member === true || response.data?.invite_already_accepted === true) {
+          console.log("✅ Invite already accepted (from resolveInviteCode) - showing Join Now");
           setIsAccepted(true);
         }
 
@@ -156,25 +199,20 @@ export default function InviteDetailsPage() {
           }
         }
         
-        // Also check invite status from getMyInvites
-        console.log("Checking invite status from getMyInvites...");
-        const invitesResponse = await getMyInvites();
-        console.log("getMyInvites response:", invitesResponse);
-        const myInvites = invitesResponse.invites || [];
-        
-        const alreadyAccepted = myInvites.some(
-          inv => inv.invite_code === inviteCode && inv.status === "accepted"
-        );
-        console.log("alreadyAccepted from invites:", alreadyAccepted);
-        
-        if (alreadyAccepted) {
-          console.log("✅ Invite status is accepted - showing Join Now");
-          setIsAccepted(true);
-        }
-        
         console.log("=== FINAL isAccepted STATE ===");
       } catch (err) {
-        console.error("Error fetching invite details:", err);
+        console.error("=== ERROR FETCHING INVITE DETAILS ===");
+        console.error("Full error object:", JSON.stringify(err, Object.getOwnPropertyNames(err)));
+        console.error("Error message:", err.message);
+        console.error("Error response (if any):", err.response);
+        
+        // More specific error handling
+        if (err.message && err.message.includes("HTTP error")) {
+          console.error("HTTP error detected - checking if 404 means invite not found or just needs different auth");
+          // Even if API returns 404, we might still be able to show join option
+          // Let's try to get team info from the invite code format
+        }
+        
         setError("Failed to load invitation details");
       } finally {
         setLoading(false);
@@ -205,9 +243,51 @@ export default function InviteDetailsPage() {
     }
   };
 
-  const handleJoinNow = () => {
-    if (inviteData?.team_id) {
-      router.push(`/teams/join-team/onboarding?teamId=${inviteData.team_id}`);
+  const handleJoinNow = async () => {
+    if (!inviteData?.team_id) return;
+    
+    const teamId = inviteData.team_id;
+    const membership = inviteData.membership;
+    const isFree = membership?.fee_amount === 0 && !membership?.is_paid;
+    
+    if (isFree) {
+      setActionLoading(true);
+      try {
+        const initiateData = {
+          membership_type: membership?.default_duration_type || "YEARLY",
+          payment_preferences: {
+            use_gold_coins: false,
+            use_diamonds: false
+          }
+        };
+        console.log("Initiating membership with data:", initiateData);
+        const initiateResponse = await initiateMembership(teamId, initiateData);
+        console.log("Initiate membership response:", initiateResponse);
+        
+        const confirmData = {
+          idempotency_key: initiateResponse.data.idempotency_key
+        };
+        const confirmResponse = await confirmMembership(teamId, confirmData);
+        console.log("Confirm membership response:", confirmResponse);
+        
+        const queryParams = new URLSearchParams({
+          teamId: teamId,
+          teamName: inviteData.team_name || "",
+          membership_type: confirmResponse.data.membership_type,
+          membership_start: confirmResponse.data.membership_start,
+          membership_end: confirmResponse.data.membership_end,
+          welcome_bonus_coins: confirmResponse.data.welcome_bonus_coins || 0
+        }).toString();
+        
+        router.push(`/teams/join-team/success?${queryParams}`);
+      } catch (error) {
+        console.error("Error joining free team:", error);
+        alert(error.message || "Failed to join team. Please try again.");
+      } finally {
+        setActionLoading(false);
+      }
+    } else {
+      router.push(`/teams/join-team/onboarding?teamId=${teamId}`);
     }
   };
 
@@ -500,15 +580,20 @@ export default function InviteDetailsPage() {
           >
             <div className="max-w-2xl mx-auto">
               {isAccepted ? (
-                <Link
-                  href={`/teams/join-team/onboarding?teamId=${teamData.team_id}`}
+                <button
+                  onClick={handleJoinNow}
+                  disabled={actionLoading}
                   className="relative group block w-full"
                 >
                   <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-orange-500 rounded-[1.5rem] sm:rounded-[2rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
-                  <div className="relative flex items-center justify-center w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-4 sm:py-5 rounded-[1.3rem] sm:rounded-[1.8rem] font-black text-base sm:text-lg uppercase tracking-widest shadow-xl shadow-pink-500/20 transition-all active:scale-95">
-                    Join Now
+                  <div className="relative flex items-center justify-center w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-4 sm:py-5 rounded-[1.3rem] sm:rounded-[1.8rem] font-black text-base sm:text-lg uppercase tracking-widest shadow-xl shadow-pink-500/20 transition-all active:scale-95 disabled:opacity-70">
+                    {actionLoading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      "Join Now"
+                    )}
                   </div>
-                </Link>
+                </button>
               ) : (
                 <button
                   onClick={handleAccept}

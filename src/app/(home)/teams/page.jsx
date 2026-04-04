@@ -307,7 +307,7 @@ export default function TeamsPage() {
         </button>
 
         <Link
-          href="/teams/my-team"
+          href="/teams/join-team"
           className={`block rounded-2xl p-5 border transition ${actBg}`}
         >
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${isDark ? "bg-[#252542] text-gray-300" : "bg-gray-100 text-gray-700"}`}>

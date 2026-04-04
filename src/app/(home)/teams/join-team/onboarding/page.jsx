@@ -21,8 +21,7 @@ function OnboardingContent() {
   useEffect(() => {
     const fetchData = async () => {
       if (!teamId) {
-        setError("No team specified")
-        setLoading(false)
+        router.replace("/teams/join-team")
         return
       }
       try {

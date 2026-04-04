@@ -526,12 +526,21 @@ function JoinTeamContent() {
             )}
 
             <motion.div variants={itemVariants} className="hidden lg:block">
-              <Link
-                href={`/teams/join-team/onboarding?teamId=${teamId}`}
-                className="block w-full py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-base font-bold text-white text-center shadow-lg"
-              >
-                Join Team
-              </Link>
+              {teamId ? (
+                <Link
+                  href={`/teams/join-team/onboarding?teamId=${teamId}`}
+                  className="block w-full py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-base font-bold text-white text-center shadow-lg"
+                >
+                  Join Team
+                </Link>
+              ) : (
+                <button
+                  disabled
+                  className="block w-full py-4 bg-gray-200 rounded-full text-base font-bold text-gray-400 text-center cursor-not-allowed"
+                >
+                  Join Team
+                </button>
+              )}
             </motion.div>
           </div>
         </div>
@@ -543,12 +552,21 @@ function JoinTeamContent() {
         animate={{ y: 0 }}
         transition={{ delay: 0.3, type: "spring", stiffness: 120 }}
       >
-        <Link
-          href={`/teams/join-team/onboarding?teamId=${teamId}`}
-          className="block w-full py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-base font-bold text-white text-center shadow-xl"
-        >
-          Join Team
-        </Link>
+        {teamId ? (
+          <Link
+            href={`/teams/join-team/onboarding?teamId=${teamId}`}
+            className="block w-full py-4 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-base font-bold text-white text-center shadow-xl"
+          >
+            Join Team
+          </Link>
+        ) : (
+          <button
+            disabled
+            className="block w-full py-4 bg-gray-200 rounded-full text-base font-bold text-gray-400 text-center cursor-not-allowed"
+          >
+            Join Team
+          </button>
+        )}
       </motion.div>
     </motion.div>
   )
