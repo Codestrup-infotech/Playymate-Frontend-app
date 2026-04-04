@@ -139,7 +139,7 @@ export default function TeamsPage() {
           checkEligibility()
         ])
         
-        console.log("getMyTeams response:", teamsResponse);
+        console.log("getMyTeams response FULL:", JSON.stringify(teamsResponse, null, 2));
         console.log("teamsResponse keys:", Object.keys(teamsResponse));
         console.log("teamsResponse.owned:", teamsResponse.owned);
         console.log("teamsResponse.member:", teamsResponse.member);
@@ -151,6 +151,9 @@ export default function TeamsPage() {
           loading: false,
           error: null,
         })
+        
+        console.log("First joined team keys:", Object.keys(teamsResponse.member?.[0] || teamsResponse.joined?.[0] || {}));
+        console.log("First joined team FULL:", JSON.stringify(teamsResponse.member?.[0] || teamsResponse.joined?.[0], null, 2));
         
         // Set eligibility data including teams_created_count
         setEligibility({

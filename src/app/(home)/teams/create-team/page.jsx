@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ArrowLeft, MapPin, Search } from "lucide-react"
+import { ArrowLeft, MapPin, Search, Bell } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/lib/ThemeContext"
 import { checkEligibility, discoverTeams } from "@/lib/api/teamApi"
 import { Shield, AlertCircle } from "lucide-react"
 import { motion } from "framer-motion"
+import ReserveTeamName from "../../home/components/ReserveTeamName"
 
 export default function CreateTeamPage() {
   const router = useRouter()
@@ -46,6 +47,9 @@ export default function CreateTeamPage() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [isScriptLoaded, setIsScriptLoaded] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
+
+  // Reserve Team Name popup state
+  const [showReservePopup, setShowReservePopup] = useState(false)
   const autocompleteServiceRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -383,7 +387,7 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
   return (
     <>
     <motion.div
-      className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10 font-Poppins`}
+      className={`min-h-screen px-60 ${pageBg} ${textColor} px-5 py-6 pb-10 font-Poppins`}
       initial="hidden"
       animate="visible"
       variants={containerVariants}
@@ -482,17 +486,35 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
 
           {/* TEAM NAME */}
           <motion.div variants={itemVariants}>
-            <label className="text-xs tracking-widest text-gray-500 uppercase">Team Name</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Enter team name"
-              required
-              maxLength={80}
-              className={`w-full mt-2 ${inputBg} border ${borderColor} rounded-2xl px-4 py-4 ${textColor} placeholder-gray-400 focus:outline-none focus:border-pink-500 shadow-sm`}
-            />
+            <div className="flex items-center justify-between">
+              <label className="text-xs tracking-widest text-gray-500 uppercase">Team Name</label>
+              <button
+                type="button"
+                onClick={() => setShowReservePopup(true)}
+                className="text-xs font-medium text-orange-500 hover:text-orange-600 transition-colors"
+              >
+                Reserve Team Name
+              </button>
+            </div>
+            <div className="relative mt-2">
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Enter team name"
+                required
+                maxLength={80}
+                className={`w-full ${inputBg} border ${borderColor} rounded-2xl px-4 py-4 ${textColor} placeholder-gray-400 focus:outline-none focus:border-pink-500 shadow-sm`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowReservePopup(true)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 flex items-center justify-center hover:opacity-90 transition-opacity"
+              >
+                <Bell className="w-4 h-4 text-white" />
+              </button>
+            </div>
           </motion.div>
 
           {/* CATEGORY TYPE - First selector */}
@@ -695,6 +717,14 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
           </motion.div>
         </form>
       )}
+
+      <ReserveTeamName
+        isOpen={showReservePopup}
+        onClose={() => setShowReservePopup(false)}
+        teamName={formData.name}
+        onSkip={() => setShowReservePopup(false)}
+        onContinue={() => setShowReservePopup(false)}
+      />
 
 </motion.div>
     </>
