@@ -96,16 +96,29 @@ function PaymentScreen() {
 
   // Initialize with URL param or default to 'gold'
   const [selectedMethod, setSelectedMethod] = useState(methodParam === 'diamonds' ? 'diamonds' : 'gold');
+  const [useGoldForDiscount, setUseGoldForDiscount] = useState(false);
 
   // Calculate values from membership data
-  const membershipFee = membershipData?.fee_amount || membershipData?.options?.find(o => o.type === selectedOption)?.price || 0;
+  const membershipFee = membershipData?.fee_amount || teamData?.fee_amount || 0;
+  const goldCoinDiscountPct = membershipData?.gold_coin_discount_pct || teamData?.gold_coin_discount_pct || 10;
+  
   const useGoldCoins = selectedMethod === 'gold';
   
-  // Use API-provided pricing if available, otherwise calculate
-  const goldCoinsNeeded = membershipData?.breakdown?.gold_coins_to_spend || (useGoldCoins ? membershipFee * 10 : 0);
-  const diamondsNeeded = membershipData?.breakdown?.diamonds_to_spend || (!useGoldCoins ? membershipFee : 0);
-  const goldDiscount = membershipData?.breakdown?.gold_coin_discount || (useGoldCoins ? Math.round(membershipFee * 0.1) : 0);
-  const netPayable = membershipData?.breakdown?.net_payable || membershipFee;
+  // Calculate gold coins needed (if using gold for full payment)
+  const goldCoinsNeeded = useGoldCoins && !useGoldForDiscount ? membershipFee * 10 : 0;
+  
+  // Calculate diamonds needed (90% of fee if gold discount is used, 100% if paying with diamonds)
+  const diamondsNeeded = useGoldForDiscount ? Math.round(membershipFee * 0.9) : membershipFee;
+  
+  // Calculate gold discount amount
+  const goldDiscount = useGoldForDiscount ? Math.round(membershipFee * (goldCoinDiscountPct / 100)) : 0;
+  
+  // Net payable is the diamond amount if using gold for discount, otherwise full fee
+  const netPayable = useGoldForDiscount ? Math.round(membershipFee * 0.9) : membershipFee;
+  
+  // User's wallet balances
+  const userGoldCoins = membershipData?.wallet_balances?.gold_coins || 0;
+  const userDiamonds = membershipData?.wallet_balances?.diamonds || 0;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -142,19 +155,46 @@ function PaymentScreen() {
       return;
     }
 
+    // Check if user has enough coins/diamonds
+    if (useGoldForDiscount) {
+      const goldCoinsNeededForDiscount = Math.round(membershipFee * 0.1 * 10);
+      const diamondsNeededForPayment = Math.round(membershipFee * 0.9);
+      if (userGoldCoins < goldCoinsNeededForDiscount) {
+        setError(`Not enough Gold Coins. You need ${goldCoinsNeededForDiscount} coins for discount.`);
+        return;
+      }
+      if (userDiamonds < diamondsNeededForPayment) {
+        setError(`Not enough Diamonds. You need ${diamondsNeededForPayment} diamonds.`);
+        return;
+      }
+    } else if (selectedMethod === 'gold') {
+      const goldCoinsNeeded = membershipFee * 10;
+      if (userGoldCoins < goldCoinsNeeded) {
+        setError(`Not enough Gold Coins. You need ${goldCoinsNeeded} coins.`);
+        return;
+      }
+    } else if (selectedMethod === 'diamonds') {
+      if (userDiamonds < membershipFee) {
+        setError(`Not enough Diamonds. You need ${membershipFee} diamonds.`);
+        return;
+      }
+    }
+
     setProcessing(true);
     setError(null);
 
     try {
       // Use coins/diamonds based on selection
-      const useGoldCoins = selectedMethod === 'gold';
+      const useGoldCoins = selectedMethod === 'gold' && !useGoldForDiscount;
+      const useDiamonds = selectedMethod === 'diamonds' || useGoldForDiscount;
       
       // Step 1: Initiate membership
       console.log('Initiating membership for team:', teamId);
       const initiateResponse = await initiateMembership(teamId, {
         payment_preferences: {
           use_gold_coins: useGoldCoins,
-          use_diamonds: !useGoldCoins
+          use_diamonds: useDiamonds,
+          use_gold_for_discount: useGoldForDiscount
         }
       });
       
@@ -240,46 +280,43 @@ function PaymentScreen() {
         <h1 className="text-xl font-bold tracking-tight">Payment</h1>
       </header>
 
+      {/* Your Wallet Card */}
+      <div className="bg-gray-50/50 rounded-[24px] p-4 space-y-3 border border-gray-100 max-w-xs mx-auto">
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-6">
+          Your Wallet
+        </p>
+        
+        <div className="flex items-center justify-center gap-12">
+          {/* Gold Coins - Centered */}
+          <div className="flex flex-col items-center">
+            <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center border border-orange-100 mb-3">
+              <Coins className="w-6 h-6 text-orange-500 fill-orange-500" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900 text-center">
+              {userGoldCoins}
+            </div>
+            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">
+              Gold Coins
+            </div>
+          </div>
 
-{/* Your Wallet Card */}
-<div className="bg-gray-50/50 rounded-[24px] p-4 space-y-3 border border-gray-100 max-w-xs mx-auto">
-  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-6">
-    Your Wallet
-  </p>
-  
-  <div className="flex items-center justify-center gap-12">
-    {/* Gold Coins - Centered */}
-    <div className="flex flex-col items-center">
-      <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center border border-orange-100 mb-3">
-        <Coins className="w-6 h-6 text-orange-500 fill-orange-500" />
-      </div>
-      <div className="text-2xl font-bold text-gray-900 text-center">
-        {membershipData?.wallet_balances?.gold_coins || 0}
-      </div>
-      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">
-        Gold Coins
-      </div>
-    </div>
+          {/* Vertical Divider */}
+          <div className="w-[1px] h-16 bg-gray-100" />
 
-    {/* Vertical Divider */}
-    <div className="w-[1px] h-16 bg-gray-100" />
-
-    {/* Diamonds - Centered */}
-    <div className="flex flex-col items-center">
-      <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-100 mb-3">
-        <Gem className="w-6 h-6 text-blue-500 fill-blue-500" />
+          {/* Diamonds - Centered */}
+          <div className="flex flex-col items-center">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-100 mb-3">
+              <Gem className="w-6 h-6 text-blue-500 fill-blue-500" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900 text-center">
+              {userDiamonds}
+            </div>
+            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">
+              Diamonds
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="text-2xl font-bold text-gray-900 text-center">
-        {membershipData?.wallet_balances?.diamonds || 0}
-      </div>
-      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">
-        Diamonds
-      </div>
-    </div>
-  </div>
-</div>
-
-      
 
       <main className="px-6 space-y-8 max-w-md mx-auto">
  
@@ -288,73 +325,91 @@ function PaymentScreen() {
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Choose Payment Method</h2>
 
           <div className="space-y-3">
-              <PaymentOption
-                id="gold"
-                title="Pay with Gold Coins"
-                subtitle="Get 10% discount"
-                coinAmount={String(membershipData?.gold_coin_price || membershipData?.options?.[0]?.price || 0)}
-                coinType="gold"
-                originalPrice={`₹${membershipFee}`}
-                icon={<Coins className="w-6 h-6" />}
-                iconBg="bg-gradient-to-br from-orange-400 to-red-500"
-                isSelected={selectedMethod === 'gold'}
-                onSelect={() => setSelectedMethod('gold')}
-                highlight
-              />
+            <PaymentOption
+              id="gold"
+              title="Pay with Gold Coins"
+              subtitle="Get 10% discount"
+              coinAmount={String(membershipFee * 10)}
+              coinType="gold"
+              originalPrice={`₹${membershipFee}`}
+              icon={<Coins className="w-6 h-6" />}
+              iconBg="bg-gradient-to-br from-orange-400 to-red-500"
+              isSelected={selectedMethod === 'gold' && !useGoldForDiscount}
+              onSelect={() => {
+                setSelectedMethod('gold');
+                setUseGoldForDiscount(false);
+              }}
+              highlight
+            />
 
             <PaymentOption
-                id="diamonds"
-                title="Pay with Diamonds"
-                subtitle="Full payment with diamonds"
-                coinAmount={String(membershipData?.diamond_price || Math.round(membershipFee / 2) || 0)}
-                coinType="diamond"
-                icon={<Gem className="w-6 h-6" />}
-                iconBg="bg-gradient-to-br from-purple-400 to-indigo-600"
-                isSelected={selectedMethod === 'diamonds'}
-                onSelect={() => setSelectedMethod('diamonds')}
-              />
+              id="diamonds"
+              title="Pay with Diamonds"
+              subtitle="Full payment with diamonds"
+              coinAmount={String(membershipFee)}
+              coinType="diamond"
+              icon={<Gem className="w-6 h-6" />}
+              iconBg="bg-gradient-to-br from-purple-400 to-indigo-600"
+              isSelected={selectedMethod === 'diamonds' && !useGoldForDiscount}
+              onSelect={() => {
+                setSelectedMethod('diamonds');
+                setUseGoldForDiscount(false);
+              }}
+            />
           </div>
         </div>
 
-
-
         {/* Summary */}
-<div className="bg-gray-50/50 rounded-[32px] p-6 space-y-4 border border-gray-100">
-  <h2 className="text-base font-bold text-gray-900">Summary</h2>
-  
-  <div className="space-y-3">
-    <div className="flex justify-between text-sm">
-      <span className="text-gray-500 font-medium">Membership Fee</span>
-      <span className="font-bold text-gray-900">₹{membershipFee}</span>
-    </div>
-    
-    {useGoldCoins && goldDiscount > 0 && (
-      <div className="flex justify-between text-sm">
-        <span className="text-orange-600 font-medium">Gold Discount</span>
-        <span className="font-bold text-orange-600">-₹{goldDiscount}</span>
-      </div>
-    )}
-    
-    {useGoldCoins && goldCoinsNeeded > 0 && (
-      <div className="flex justify-between text-sm">
-        <span className="text-orange-600 font-medium">Gold Coins to Spend</span>
-        <span className="font-bold text-orange-600">{goldCoinsNeeded} coins</span>
-      </div>
-    )}
-    
-    {!useGoldCoins && diamondsNeeded > 0 && (
-      <div className="flex justify-between text-sm">
-        <span className="text-purple-600 font-medium">Diamonds to Spend</span>
-        <span className="font-bold text-purple-600">{diamondsNeeded} 💎</span>
-      </div>
-    )}
-    
-    <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
-      <span className="text-base font-bold text-gray-900">Total Payable</span>
-      <span className="text-xl font-black text-gray-900">₹{netPayable}</span>
-    </div>
-  </div>
-</div>
+        <div className="bg-gray-50/50 rounded-[32px] p-6 space-y-4 border border-gray-100">
+          <h2 className="text-base font-bold text-gray-900">Summary</h2>
+          
+          <div className="space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500 font-medium">Joining Fee</span>
+              <span className="font-bold text-gray-900">₹{membershipFee}</span>
+            </div>
+            
+            {useGoldForDiscount && goldDiscount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-orange-600 font-medium">Gold Discount (10%)</span>
+                <span className="font-bold text-orange-600">-₹{goldDiscount}</span>
+              </div>
+            )}
+            
+            {useGoldForDiscount && (
+              <div className="flex justify-between text-sm">
+                <span className="text-orange-600 font-medium">Gold Coins for Discount</span>
+                <span className="font-bold text-orange-600">{Math.round(membershipFee * 0.1 * 10)} coins</span>
+              </div>
+            )}
+            
+            {useGoldForDiscount && diamondsNeeded > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-purple-600 font-medium">Diamonds to Pay (90%)</span>
+                <span className="font-bold text-purple-600">{diamondsNeeded} 💎</span>
+              </div>
+            )}
+            
+            {!useGoldForDiscount && selectedMethod === 'gold' && goldCoinsNeeded > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-orange-600 font-medium">Gold Coins to Spend</span>
+                <span className="font-bold text-orange-600">{goldCoinsNeeded} coins</span>
+              </div>
+            )}
+            
+            {!useGoldForDiscount && selectedMethod === 'diamonds' && diamondsNeeded > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-purple-600 font-medium">Diamonds to Spend</span>
+                <span className="font-bold text-purple-600">{diamondsNeeded} 💎</span>
+              </div>
+            )}
+            
+            <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
+              <span className="text-base font-bold text-gray-900">Total Payable</span>
+              <span className="text-xl font-black text-gray-900">₹{netPayable}</span>
+            </div>
+          </div>
+        </div>
 
         {/* Info Box */}
         <div className="bg-gray-50 rounded-2xl p-4 flex gap-3 border border-gray-100">
@@ -395,7 +450,12 @@ function PaymentScreen() {
             ) : (
               <>
                 <CheckCircle className="w-5 h-5" />
-                Confirm & Join 
+                {useGoldForDiscount 
+                  ? `Pay ₹${netPayable} with ${Math.round(membershipFee * 0.1 * 10)} Gold + ${diamondsNeeded} Diamonds`
+                  : selectedMethod === 'gold'
+                    ? `Pay ${goldCoinsNeeded} Gold Coins`
+                    : `Pay ${diamondsNeeded} Diamonds`
+                }
               </>
             )}
           </motion.button>

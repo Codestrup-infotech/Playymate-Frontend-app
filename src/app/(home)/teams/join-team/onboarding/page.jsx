@@ -29,8 +29,8 @@ function OnboardingContent() {
           getTeamProfile(teamId),
           previewMembership(teamId)
         ])
-        setTeamData(team)
-        setMembershipData(membership)
+        setTeamData(team?.data || team)
+        setMembershipData(membership?.data || membership)
         if (membership?.options?.length > 0) {
           setSelectedOption(membership.options[0].type)
         }
@@ -96,11 +96,15 @@ function OnboardingContent() {
 
       {/* COVER & HEADER */}
       <div className="relative h-64 w-full overflow-hidden">
-        <img
-          src="https://images.unsplash.com/photo-1504450758481-7338eba7524a?q=80&w=2069&auto=format&fit=crop"
-          alt="Stadium"
-          className="w-full h-full object-cover"
-        />
+        {teamData?.cover_image ? (
+          <img
+            src={teamData.cover_image}
+            alt={teamData.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-transparent" />
         <div className="absolute top-6 left-6 z-10">
           <button
@@ -148,6 +152,15 @@ function OnboardingContent() {
               <Trophy size={14} className="text-orange-500" />
               {teamData?.category_value || teamData?.sport || "N/A"}
             </div>
+            {membershipData && (
+              <div className="mt-4 px-4 py-2 bg-gradient-to-r from-pink-50 to-orange-50 rounded-2xl border border-pink-100">
+                <p className="text-xs text-pink-600 font-bold uppercase tracking-wider mb-1">Membership Fee</p>
+                <p className="text-2xl font-black text-slate-900">₹{teamData?.membership?.fee_amount || 0}</p>
+                {teamData?.membership?.default_duration_type && (
+                  <p className="text-xs text-slate-500 font-medium mt-1">{teamData.membership.default_duration_type}</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="px-6 pb-8 space-y-8">
