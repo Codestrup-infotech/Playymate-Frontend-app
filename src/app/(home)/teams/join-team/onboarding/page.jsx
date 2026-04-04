@@ -235,76 +235,6 @@ function OnboardingContent() {
               </section>
             )}
 
-            {/* ─── REDESIGNED: SELECT MEMBERSHIP ─── */}
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest">Select Membership</h3>
-              </div>
-
-              <div className="space-y-2.5">
-
-                {/* Monthly */}
-                <div className="group flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 hover:border-violet-300 hover:bg-violet-50/40 cursor-pointer transition-all duration-200">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm group-hover:border-violet-200 transition-colors">
-                      <Calendar size={14} className="text-slate-500 group-hover:text-violet-500 transition-colors" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800 leading-tight">Monthly</p>
-                      <p className="text-[11px] text-slate-400 leading-tight">Full access to team features</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-base font-bold text-slate-800">₹99</span>
-                    <p className="text-[10px] text-slate-400">/mo</p>
-                  </div>
-                </div>
-
-                {/* Quarterly */}
-                <div className="group flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 hover:border-violet-300 hover:bg-violet-50/40 cursor-pointer transition-all duration-200">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm group-hover:border-violet-200 transition-colors">
-                      <Zap size={14} className="text-slate-500 group-hover:text-violet-500 transition-colors" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800 leading-tight">Quarterly</p>
-                      <p className="text-[11px] text-slate-400 leading-tight">Full access to team features</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-base font-bold text-slate-800">₹249</span>
-                    <p className="text-[10px] text-slate-400">/3 mo</p>
-                  </div>
-                </div>
-
-                {/* Yearly — Best Value */}
-<div className="relative flex items-center justify-between px-4 py-3 rounded-xl bg-gradient-to-r from-pink-500 via-orange-400 to-orange-500 cursor-pointer shadow-md shadow-pink-300/60 hover:shadow-pink-400/70 hover:from-pink-600 hover:via-orange-500 hover:to-orange-600 transition-all duration-200">
-  
-  {/* Badge */}
-  <span className="absolute -top-2.5 right-4 bg-white/20 backdrop-blur text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full shadow-sm">
-    Best Value
-  </span>
-
-  <div className="flex items-center gap-3">
-    <div className="w-8 h-8 rounded-lg bg-white/15 border border-white/20 flex items-center justify-center">
-      <Sparkles size={14} className="text-white" />
-    </div>
-    <div>
-      <p className="text-sm font-semibold text-white leading-tight">Yearly</p>
-      <p className="text-[11px] text-white/80 leading-tight">Full access to team features</p>
-    </div>
-  </div>
-
-  <div className="text-right">
-    <span className="text-base font-bold text-white">₹499</span>
-    <p className="text-[10px] text-white/70">/yr</p>
-  </div>
-</div>
-
-              </div>
-            </section>
-            {/* ─── END REDESIGNED SECTION ─── */}
-
             {/* BENEFITS */}
             <section>
               <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">Membership Perks</h3>
@@ -342,7 +272,7 @@ function OnboardingContent() {
             <p className="text-2xl font-black text-slate-900">₹{currentPrice}</p>
           </div>
           <Link
-            href={`/teams/join-team/payment-2?teamId=${teamId}&option=${selectedOption}`}
+            href={`/teams/join-team/payment-2?teamId=${teamId}&option=${selectedOption || 'YEARLY'}&method=gold`}
             className="flex-1 sm:flex-none px-10 py-4 bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 rounded-2xl text-sm font-black text-white flex items-center justify-center shadow-lg shadow-pink-200 transition-all active:scale-95 uppercase tracking-wider"
           >
             Continue to Payment

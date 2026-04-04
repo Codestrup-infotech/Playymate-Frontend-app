@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Share2, Users, Coins } from 'lucide-react';
+import React, { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Share2, Users, Coins, ChevronLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getTeamProfile } from '@/lib/api/teamApi';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -79,9 +80,30 @@ const popVariants = {
   },
 };
 
-export default function SuccessContent() {
+function SuccessContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [teamData, setTeamData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [showConfetti, setShowConfetti] = useState(true);
+
+  const teamId = searchParams?.get?.('teamId');
+  const membershipType = searchParams?.get?.('membership_type') || 'YEARLY';
+
+  useEffect(() => {
+    const fetchTeamData = async () => {
+      if (teamId) {
+        try {
+          const response = await getTeamProfile(teamId);
+          setTeamData(response?.data || response);
+        } catch (err) {
+          console.error('Error fetching team:', err);
+        }
+      }
+      setLoading(false);
+    };
+    fetchTeamData();
+  }, [teamId]);
 
   useEffect(() => {
     const t = setTimeout(() => setShowConfetti(false), 5000);
@@ -93,6 +115,10 @@ export default function SuccessContent() {
   };
 
   const handleViewTeams = () => {
+    router.push('/teams');
+  };
+
+  const handleBack = () => {
     router.push('/teams');
   };
 
@@ -173,22 +199,27 @@ export default function SuccessContent() {
           <div className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-offset-2 shrink-0"
               style={{ ringColor: '#a855f7' }}>
-              {/* Placeholder avatar */}
-              <div
-                className="w-full h-full flex items-center justify-center text-xl font-bold text-white"
-                style={{ background: 'linear-gradient(135deg, #f472b6, #a855f7)' }}
-              >
-                LI
-              </div>
+              {loading ? (
+                <div className="w-full h-full bg-gray-200 animate-pulse" />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center text-xl font-bold text-white"
+                  style={{ background: 'linear-gradient(135deg, #f472b6, #a855f7)' }}
+                >
+                  {teamData?.name?.charAt(0)?.toUpperCase() || 'T'}
+                </div>
+              )}
             </div>
             <div>
-              <p className="font-bold text-gray-900 text-base">Lorem Ipsum</p>
+              <p className="font-bold text-gray-900 text-base">
+                {loading ? 'Loading...' : teamData?.name || 'Team Name'}
+              </p>
               <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" />
-                Cricket
+                {loading ? '...' : teamData?.category_value || teamData?.sport || 'Sports'}
                 <span className="mx-1 text-gray-300">·</span>
                 <Users className="w-3.5 h-3.5 text-gray-400" />
-                25 members
+                {loading ? '...' : teamData?.member_count || 0} members
               </p>
             </div>
           </div>
@@ -213,7 +244,7 @@ export default function SuccessContent() {
             </div>
             <div>
               <p className="font-bold text-gray-900 text-base">
-                +50 Gold Coins Earned!
+                +{(teamData?.membership?.welcome_bonus_coins) || 50} Gold Coins Earned!
               </p>
               <p className="text-sm text-gray-500 mt-0.5">Welcome bonus for joining</p>
             </div>
@@ -226,7 +257,7 @@ export default function SuccessContent() {
                 animate={{ scale: [1, 1.06, 1] }}
                 transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
               >
-                +50
+                +{(teamData?.membership?.welcome_bonus_coins) || 50}
               </motion.div>
             </div>
           </motion.div>
@@ -277,5 +308,20 @@ export default function SuccessContent() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-gray-500 font-medium">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }

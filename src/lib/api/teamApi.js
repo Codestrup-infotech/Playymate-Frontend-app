@@ -903,11 +903,57 @@ export async function checkNameAvailability(name) {
 }
 
 /**
+ * Get name reservation pricing
+ * GET /api/v1/teams/name-reservation/pricing
+ */
+export async function getNameReservationPricing() {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/name-reservation/pricing`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const json = await response.json();
+    return json.data || json;
+  } catch (error) {
+    console.error("Error getting name reservation pricing:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get name reservation coin balance
+ * GET /api/v1/teams/name-reservation/coin-balance
+ */
+export async function getNameReservationCoinBalance() {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/name-reservation/coin-balance`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const json = await response.json();
+    return json.data || json;
+  } catch (error) {
+    console.error("Error getting name reservation coin balance:", error);
+    throw error;
+  }
+}
+
+/**
  * Reserve team name
  * POST /api/v1/teams/name-reservation/reserve
  * @param {Object} data - { name: string, payment_method: 'COINS' | 'INR', idempotency_key: string }
  */
-export async function reserveName(data) {
+export async function reserveTeamName(data) {
   try {
     const response = await fetch(`${API_BASE}/api/v1/teams/name-reservation/reserve`, {
       method: "POST",
@@ -915,13 +961,16 @@ export async function reserveName(data) {
       body: JSON.stringify(data),
     });
     
+    const responseBody = await response.json().catch(() => ({}));
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorMessage = responseBody.message || responseBody.error || `HTTP error! status: ${response.status}`;
+      throw new Error(errorMessage);
     }
     
-    return await response.json();
+    return responseBody;
   } catch (error) {
-    console.error("Error reserving name:", error);
+    console.error("Error reserving team name:", error);
     throw error;
   }
 }
@@ -1136,7 +1185,9 @@ export default {
   getMySlotPurchases,
   getMySlotBalance,
   checkNameAvailability,
-  reserveName,
+  reserveTeamName,
+  getNameReservationPricing,
+  getNameReservationCoinBalance,
   getMyNameReservations,
   searchUsers,
   sendInvite,

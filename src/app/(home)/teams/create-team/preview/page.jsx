@@ -398,7 +398,7 @@ if (savedProfileFile) {
 
        {/* BANNER SECTION */}
 <div
-  className="relative w-full h-36 cursor-pointer group"
+  className="relative w-full h-40 cursor-pointer group"
   onClick={() => bannerInputRef.current?.click()}
 >
   {/* Banner: image with fallback */}
@@ -591,7 +591,7 @@ function SummaryItem({ icon, label, value }) {
           {icon}
         </div>
         <span className="text-sm font-medium text-gray-500">{label}</span>
-      </div>
+      </div>``
       <span className="text-sm font-bold">{value}</span>
     </div>
   )

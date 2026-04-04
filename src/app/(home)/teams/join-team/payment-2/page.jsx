@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, Info, Wallet, Coins, Gem } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { getTeamProfile, previewMembership } from '@/lib/api/teamApi';
+import { ChevronLeft, Info, Wallet, Coins, Gem, CheckCircle, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getTeamProfile, previewMembership, initiateMembership, confirmMembership } from '@/lib/api/teamApi';
 
 // Inline cn utility — no need for @/lib/utils
 function cn(...classes) {
@@ -80,24 +80,32 @@ const PaymentOption = ({
   );
 };
 
-export default function PaymentScreen() {
+function PaymentScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [selectedMethod, setSelectedMethod] = useState('gold');
   const [teamData, setTeamData] = useState(null);
   const [membershipData, setMembershipData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [processing, setProcessing] = useState(false);
 
-  // Get teamId and option from URL
+  // Get teamId, option, and method from URL
   const teamId = searchParams?.get?.('teamId') || null;
   const selectedOption = searchParams?.get?.('option');
+  const methodParam = searchParams?.get?.('method');
+
+  // Initialize with URL param or default to 'gold'
+  const [selectedMethod, setSelectedMethod] = useState(methodParam === 'diamonds' ? 'diamonds' : 'gold');
 
   // Calculate values from membership data
   const membershipFee = membershipData?.fee_amount || membershipData?.options?.find(o => o.type === selectedOption)?.price || 0;
   const useGoldCoins = selectedMethod === 'gold';
-  const goldDiscount = useGoldCoins ? Math.round(membershipFee * 0.1) : 0;
-  const totalPayable = membershipFee - goldDiscount;
+  
+  // Use API-provided pricing if available, otherwise calculate
+  const goldCoinsNeeded = membershipData?.breakdown?.gold_coins_to_spend || (useGoldCoins ? membershipFee * 10 : 0);
+  const diamondsNeeded = membershipData?.breakdown?.diamonds_to_spend || (!useGoldCoins ? membershipFee : 0);
+  const goldDiscount = membershipData?.breakdown?.gold_coin_discount || (useGoldCoins ? Math.round(membershipFee * 0.1) : 0);
+  const netPayable = membershipData?.breakdown?.net_payable || membershipFee;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -128,8 +136,58 @@ export default function PaymentScreen() {
     router.back();
   };
 
-  const handlePayment = () => {
-    router.push('/teams/join-team/success');
+  const handlePayment = async () => {
+    if (!teamId) {
+      setError('No team specified');
+      return;
+    }
+
+    setProcessing(true);
+    setError(null);
+
+    try {
+      // Use coins/diamonds based on selection
+      const useGoldCoins = selectedMethod === 'gold';
+      
+      // Step 1: Initiate membership
+      console.log('Initiating membership for team:', teamId);
+      const initiateResponse = await initiateMembership(teamId, {
+        payment_preferences: {
+          use_gold_coins: useGoldCoins,
+          use_diamonds: !useGoldCoins
+        }
+      });
+      
+      console.log('Initiate response:', initiateResponse);
+      
+      const initiateData = initiateResponse?.data || initiateResponse;
+      
+      // Check if insufficient coins
+      if (initiateData.insufficient_coins) {
+        setError(initiateData.message || 'Insufficient coins. Please purchase more coins.');
+        setProcessing(false);
+        return;
+      }
+
+      // Step 2: Confirm membership with idempotency key
+      const idempotencyKey = initiateData.idempotency_key;
+      console.log('Confirming membership with key:', idempotencyKey);
+      
+      const confirmResponse = await confirmMembership(teamId, {
+        idempotency_key: idempotencyKey
+      });
+      
+      console.log('Confirm response:', confirmResponse);
+      
+      // Success - navigate to success page
+      router.push(`/teams/join-team/success?teamId=${teamId}&membership_type=${initiateData.membership_type || 'YEARLY'}`);
+      
+    } catch (err) {
+      console.error('Payment error:', err);
+      setError(err.message || 'Failed to process payment. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   if (loading) {
@@ -183,7 +241,7 @@ export default function PaymentScreen() {
       </header>
 
 
-{/* Your Wallet Card */}
+      {/* Your Wallet Card */}
 <div className="bg-gray-50/50 rounded-[32px] p-6 space-y-4 border border-gray-100">
   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-6">
     Your Wallet
@@ -195,7 +253,9 @@ export default function PaymentScreen() {
       <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center border border-orange-100 mb-3">
         <Coins className="w-6 h-6 text-orange-500 fill-orange-500" />
       </div>
-      <div className="text-2xl font-bold text-gray-900 text-center">120</div>
+      <div className="text-2xl font-bold text-gray-900 text-center">
+        {membershipData?.wallet_balances?.gold_coins || 0}
+      </div>
       <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">
         Gold Coins
       </div>
@@ -209,7 +269,9 @@ export default function PaymentScreen() {
       <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-100 mb-3">
         <Gem className="w-6 h-6 text-blue-500 fill-blue-500" />
       </div>
-      <div className="text-2xl font-bold text-gray-900 text-center">300</div>
+      <div className="text-2xl font-bold text-gray-900 text-center">
+        {membershipData?.wallet_balances?.diamonds || 0}
+      </div>
       <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">
         Diamonds
       </div>
@@ -230,7 +292,7 @@ export default function PaymentScreen() {
                 id="gold"
                 title="Pay with Gold Coins"
                 subtitle="Get 10% discount"
-                coinAmount={String(membershipData?.gold_coin_price || Math.round(membershipFee * 10) || 399)}
+                coinAmount={String(membershipData?.gold_coin_price || membershipData?.options?.[0]?.price || 0)}
                 coinType="gold"
                 originalPrice={`₹${membershipFee}`}
                 icon={<Coins className="w-6 h-6" />}
@@ -244,7 +306,7 @@ export default function PaymentScreen() {
                 id="diamonds"
                 title="Pay with Diamonds"
                 subtitle="Full payment with diamonds"
-                coinAmount={String(membershipData?.diamond_price || Math.round(membershipFee / 2) || 250)}
+                coinAmount={String(membershipData?.diamond_price || Math.round(membershipFee / 2) || 0)}
                 coinType="diamond"
                 icon={<Gem className="w-6 h-6" />}
                 iconBg="bg-gradient-to-br from-purple-400 to-indigo-600"
@@ -266,16 +328,30 @@ export default function PaymentScreen() {
       <span className="font-bold text-gray-900">₹{membershipFee}</span>
     </div>
     
-    {useGoldCoins && (
+    {useGoldCoins && goldDiscount > 0 && (
       <div className="flex justify-between text-sm">
-        <span className="text-orange-600 font-medium">Gold Discount (10%)</span>
+        <span className="text-orange-600 font-medium">Gold Discount</span>
         <span className="font-bold text-orange-600">-₹{goldDiscount}</span>
+      </div>
+    )}
+    
+    {useGoldCoins && goldCoinsNeeded > 0 && (
+      <div className="flex justify-between text-sm">
+        <span className="text-orange-600 font-medium">Gold Coins to Spend</span>
+        <span className="font-bold text-orange-600">{goldCoinsNeeded} coins</span>
+      </div>
+    )}
+    
+    {!useGoldCoins && diamondsNeeded > 0 && (
+      <div className="flex justify-between text-sm">
+        <span className="text-purple-600 font-medium">Diamonds to Spend</span>
+        <span className="font-bold text-purple-600">{diamondsNeeded} 💎</span>
       </div>
     )}
     
     <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
       <span className="text-base font-bold text-gray-900">Total Payable</span>
-      <span className="text-xl font-black text-gray-900">₹{totalPayable}</span>
+      <span className="text-xl font-black text-gray-900">₹{netPayable}</span>
     </div>
   </div>
 </div>
@@ -292,16 +368,54 @@ export default function PaymentScreen() {
       {/* Footer Button */}
       <div className=" bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent">
         <div className="max-w-md mx-auto">
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-3 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm text-center"
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
           <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={!processing ? { scale: 1.02 } : {}}
+            whileTap={!processing ? { scale: 0.98 } : {}}
             onClick={handlePayment}
-            className="w-full py-5 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-orange-500 text-white font-bold text-lg shadow-xl shadow-purple-200 flex items-center justify-center gap-2"
+            disabled={processing}
+            className="w-full py-5 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-orange-500 text-white font-bold text-lg shadow-xl shadow-purple-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            Confirm & Join 
+            {processing ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-5 h-5" />
+                Confirm & Join 
+              </>
+            )}
           </motion.button>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Payment2Page() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-gray-500 font-medium">Loading...</p>
+        </div>
+      </div>
+    }>
+      <PaymentScreen />
+    </Suspense>
   );
 }

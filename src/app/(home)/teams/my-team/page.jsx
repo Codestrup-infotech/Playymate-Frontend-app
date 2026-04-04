@@ -52,6 +52,9 @@ export default function MyTeamPage() {
   // Invite action loading state
   const [inviteActionLoading, setInviteActionLoading] = useState(null);
 
+  // Invite filter state
+  const [inviteFilter, setInviteFilter] = useState("all");
+
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState(null);
@@ -108,6 +111,10 @@ export default function MyTeamPage() {
       };
       fetchInvites();
     }
+    // Reset invite filter when switching to invites tab
+    if (activeTab === "invites") {
+      setInviteFilter("all");
+    }
   }, [activeTab, invitesData]);
 
   // Handle delete team
@@ -158,6 +165,23 @@ export default function MyTeamPage() {
       
       default:
         return [];
+    }
+
+    // Filter and sort invites by status
+    if (activeTab === "invites") {
+      let filteredTeams = teams;
+      if (inviteFilter !== "all") {
+        filteredTeams = teams.filter(invite => invite.status === inviteFilter);
+      }
+      return filteredTeams.slice().sort((a, b) => {
+        const statusOrder = { pending: 0, accepted: 1 };
+        const statusA = statusOrder[a.status] ?? 2;
+        const statusB = statusOrder[b.status] ?? 2;
+        if (statusA !== statusB) return statusA - statusB;
+        const dateA = new Date(a.created_at || a.createdAt || 0);
+        const dateB = new Date(b.created_at || b.createdAt || 0);
+        return dateB - dateA;
+      });
     }
 
     // Sort by created_at descending (newest first)
@@ -344,10 +368,10 @@ export default function MyTeamPage() {
           {isAccepted ? (
             <button
               className="px-4 py-2 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-medium text-sm hover:opacity-90 transition"
-              onClick={() => router.push(`/teams/join-team/onboarding?teamId=${team?._id || team?.id}`)}
+              onClick={() => router.push(`/teams/my-team/join-invite-team/${inviteCode}`)}
             >
-              Join Now
-            </button>
+              Join Now     
+            </button>          
           ) : (
             <>
               <button
@@ -416,7 +440,7 @@ export default function MyTeamPage() {
         {[
           { key: "owned", label: "Owned", count: teamsData.owned.length },
           { key: "member", label: "Member", count: teamsData.joined.length },
-          { key: "invites", label: "Invites", count: invitesData.invites.length }
+          { key: "invites", label: "Invites", count: invitesData.invites.filter(i => i.status !== "accepted").length }
         ].map((tab) => (
           <button
             key={tab.key}
@@ -437,6 +461,29 @@ export default function MyTeamPage() {
         ))}
       </div>
 
+      {/* Invite Filter */}
+      {activeTab === "invites" && invitesData.invites.length > 0 && (
+        <div className="flex gap-2 mb-4">
+          {[
+            { key: "all", label: "All" },
+            { key: "pending", label: "Pending" },
+            { key: "accepted", label: "Accepted" }
+          ].map((filter) => (
+            <button
+              key={filter.key}
+              onClick={() => setInviteFilter(filter.key)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
+                inviteFilter === filter.key
+                  ? "bg-pink-500 text-white"
+                  : isDark ? "bg-[#1a1a2e] text-gray-400" : "bg-gray-200 text-gray-600"
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Team List */}
       {teamsData.error ? (
         <div className={`text-center py-8 ${mutedText}`}>
@@ -453,18 +500,20 @@ export default function MyTeamPage() {
           <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${isDark ? "bg-[#1a1a2e]" : "bg-gray-100"}`}>
             <Users size={32} className={mutedText} />
           </div>
-          <h3 className="font-semibold text-lg mb-2">
-            {activeTab === "owned" && "No Teams Owned"}
-            {activeTab === "member" && "No Team Memberships"}
-            {activeTab === "invites" && "No Pending Invites"}
-            
-          </h3>
-          <p className={`text-sm ${mutedText} mb-4`}>
-            {activeTab === "owned" && "Create your first team to get started"}
-            {activeTab === "member" && "Join a team to see it here"}
-            {activeTab === "invites" && "Team invitations will appear here"}
-            
-          </p>
+<h3 className="font-semibold text-lg mb-2">
+             {activeTab === "owned" && "No Teams Owned"}
+             {activeTab === "member" && "No Team Memberships"}
+             {activeTab === "invites" && inviteFilter === "all" && "No Invites"}
+             {activeTab === "invites" && inviteFilter === "pending" && "No Pending Invites"}
+             {activeTab === "invites" && inviteFilter === "accepted" && "No Accepted Invites"}
+             
+           </h3>
+           <p className={`text-sm ${mutedText} mb-4`}>
+             {activeTab === "owned" && "Create your first team to get started"}
+             {activeTab === "member" && "Join a team to see it here"}
+             {activeTab === "invites" && "Team invitations will appear here"}
+             
+           </p>
           
           {activeTab === "owned" && (
             <Link
