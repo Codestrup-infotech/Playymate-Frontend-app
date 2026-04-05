@@ -16,7 +16,9 @@ import {
   AlertCircle,
   Share2,
   MoreVertical,
-  Calendar
+  Calendar,
+  Zap,
+  Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/lib/ThemeContext";
@@ -287,9 +289,11 @@ export default function InviteDetailsPage() {
         setActionLoading(false);
       }
     } else {
-      router.push(`/teams/join-team/onboarding?teamId=${teamId}`);
-    }
+      router.push(`/teams/join-team/payment-2?teamId=${teamId}`);
+    }  
   };
+
+  
 
   const handleBack = () => {
     if (router?.back) {
@@ -560,11 +564,37 @@ export default function InviteDetailsPage() {
               </div>
             </motion.div>
           )}
+
+          {membership && membership.is_paid && (
+            <motion.div variants={itemVariants} className={`${cardBg} rounded-2xl sm:rounded-3xl p-4 sm:p-6 border ${borderColor} shadow-sm`}>
+              <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">Membership Perks</h3>
+              <div className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
+                {[
+                  { title: "Team Chat Access", desc: "Connect with players instantly", icon: <Zap size={16} /> },
+                  { title: "Exclusive Events", desc: "Priority booking for matches", icon: <Calendar size={16} /> },
+                  { title: "Member Discounts", desc: "Save on gear and sessions", icon: <Trophy size={16} /> },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-slate-100 last:border-0">
+                    <div className="w-8 h-8 bg-white rounded-lg shadow-sm flex items-center justify-center text-pink-500">
+                      {item.icon}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-slate-800 text-sm">{item.title}</p>
+                      <p className="text-xs text-slate-500">{item.desc}</p>
+                    </div>
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 flex items-center justify-center text-white shadow-sm">
+                      <Check size={12} strokeWidth={4} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </div>
 
         <motion.div variants={itemVariants} className="mt-6 sm:mt-8 mb-4 text-center">
-          <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-            {teamData.visibility === "public" ? "Public Team" : "Private Team"} • Invitation Required
+          <p className="text-[14px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            {teamData.visibility === "public" ? "Public Team" : "Private Team"} 
           </p>
         </motion.div>
 

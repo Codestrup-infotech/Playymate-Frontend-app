@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, Info, Wallet, Coins, Gem, CheckCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getTeamProfile, previewMembership, initiateMembership, confirmMembership } from '@/lib/api/teamApi';
+import { getTeamProfile, previewMembership, initiateMembership, confirmMembership, getNameReservationCoinBalance } from '@/lib/api/teamApi';
 
 // Inline cn utility — no need for @/lib/utils
 function cn(...classes) {
@@ -23,6 +23,7 @@ const PaymentOption = ({
   isSelected,
   onSelect,
   highlight,
+  selectedBgColor,
 }) => {
   return (
     <motion.div
@@ -31,14 +32,13 @@ const PaymentOption = ({
       className={cn(
         "relative p-4 rounded-2xl cursor-pointer transition-all duration-300 border-2",
         isSelected
-          ? "bg-white border-transparent shadow-xl shadow-purple-100"
+          ? selectedBgColor || "bg-gradient-to-br from-orange-50 to-pink-50 border-orange-300 shadow-lg shadow-orange-100"
           : "bg-gray-50 border-gray-100 hover:border-gray-200",
-        highlight && isSelected && "ring-2 ring-purple-400 ring-offset-2"
+        highlight && isSelected && "ring-2 ring-orange-400 ring-offset-2"
       )}
     >
-      {/* Gradient Border for Highlighted/Selected */}
       {isSelected && (
-        <div className="absolute inset-0 rounded-2xl p-[2px] -z-10 bg-gradient-to-r from-pink-500 via-purple-500 to-orange-500 opacity-20 animate-pulse" />
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-orange-500/5 via-pink-500/5 to-orange-500/5" />
       )}
 
       <div className="flex items-center justify-between">
@@ -94,13 +94,18 @@ function PaymentScreen() {
   const selectedOption = searchParams?.get?.('option');
   const methodParam = searchParams?.get?.('method');
 
-  // Initialize with URL param or default to 'gold'
-  const [selectedMethod, setSelectedMethod] = useState(methodParam === 'diamonds' ? 'diamonds' : 'gold');
+  // Initialize with URL param or default to 'diamonds'
+  const [selectedMethod, setSelectedMethod] = useState(methodParam === 'diamonds' ? 'diamonds' : 'diamonds');
   const [useGoldForDiscount, setUseGoldForDiscount] = useState(false);
 
   // Calculate values from membership data
-  const membershipFee = membershipData?.fee_amount || teamData?.fee_amount || 0;
-  const goldCoinDiscountPct = membershipData?.gold_coin_discount_pct || teamData?.gold_coin_discount_pct || 10;
+  const membershipFee = membershipData?.fee_amount || teamData?.membership?.fee_amount || teamData?.fee_amount || 0;
+  const goldCoinDiscountPct = membershipData?.gold_coin_discount_pct || teamData?.membership?.gold_coin_discount_pct || teamData?.gold_coin_discount_pct || 10;
+  
+  // Calculate amounts with proper rounding
+  const goldDiscountAmount = Math.round(membershipFee * (goldCoinDiscountPct / 100));
+  const goldCoinsToPay = membershipFee - goldDiscountAmount; // After 10% discount
+  const totalPayable = selectedMethod === 'gold' ? goldCoinsToPay : membershipFee;
   
   const useGoldCoins = selectedMethod === 'gold';
   
@@ -117,8 +122,9 @@ function PaymentScreen() {
   const netPayable = useGoldForDiscount ? Math.round(membershipFee * 0.9) : membershipFee;
   
   // User's wallet balances
-  const userGoldCoins = membershipData?.wallet_balances?.gold_coins || 0;
-  const userDiamonds = membershipData?.wallet_balances?.diamonds || 0;
+  const [walletBalances, setWalletBalances] = useState({ gold_coins: 0, diamond_coins: 0 });
+  const userGoldCoins = walletBalances?.gold_coins?.balance || walletBalances?.gold_coins || 0;
+  const userDiamonds = walletBalances?.diamond_coins?.balance || walletBalances?.diamond_coins || 0;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -129,12 +135,16 @@ function PaymentScreen() {
       }
 
       try {
-        const [team, membership] = await Promise.all([
+        const [team, membership, balances] = await Promise.all([
           getTeamProfile(teamId),
-          previewMembership(teamId)
+          previewMembership(teamId),
+          getNameReservationCoinBalance()
         ]);
         setTeamData(team?.data || team);
         setMembershipData(membership?.data || membership);
+        setWalletBalances(balances?.data || balances);
+        
+        console.log('Wallet balances:', balances);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to load payment details');
@@ -155,29 +165,17 @@ function PaymentScreen() {
       return;
     }
 
-    // Check if user has enough coins/diamonds
-    if (useGoldForDiscount) {
-      const goldCoinsNeededForDiscount = Math.round(membershipFee * 0.1 * 10);
-      const diamondsNeededForPayment = Math.round(membershipFee * 0.9);
-      if (userGoldCoins < goldCoinsNeededForDiscount) {
-        setError(`Not enough Gold Coins. You need ${goldCoinsNeededForDiscount} coins for discount.`);
-        return;
-      }
-      if (userDiamonds < diamondsNeededForPayment) {
-        setError(`Not enough Diamonds. You need ${diamondsNeededForPayment} diamonds.`);
-        return;
-      }
-    } else if (selectedMethod === 'gold') {
-      const goldCoinsNeeded = membershipFee * 10;
-      if (userGoldCoins < goldCoinsNeeded) {
-        setError(`Not enough Gold Coins. You need ${goldCoinsNeeded} coins.`);
-        return;
-      }
-    } else if (selectedMethod === 'diamonds') {
-      if (userDiamonds < membershipFee) {
-        setError(`Not enough Diamonds. You need ${membershipFee} diamonds.`);
-        return;
-      }
+    const goldCoinsNeeded = selectedMethod === 'gold' ? goldCoinsToPay : 0;
+    const diamondsNeeded = selectedMethod === 'diamonds' ? membershipFee : 0;
+
+    if (selectedMethod === 'gold' && userGoldCoins < goldCoinsNeeded) {
+      router.push('/wallet/diamond-store');
+      return;
+    }
+
+    if (selectedMethod === 'diamonds' && userDiamonds < diamondsNeeded) {
+      router.push('/wallet/diamond-store');
+      return;
     }
 
     setProcessing(true);
@@ -268,12 +266,12 @@ function PaymentScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 font-sans ">
+    <div className="min-h-screen bg-white text-slate-900 font-sans ">
       {/* Header */}
       <header className="px-6 pt-12 pb-6 flex items-center gap-4 sticky top-0 bg-white/80 backdrop-blur-md z-10">
         <button
           onClick={handleBack}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          className="p-2 hover:bg-slate-100 rounded-full transition-colors"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
@@ -281,8 +279,8 @@ function PaymentScreen() {
       </header>
 
       {/* Your Wallet Card */}
-      <div className="bg-gray-50/50 rounded-[24px] p-4 space-y-3 border border-gray-100 max-w-xs mx-auto">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-6">
+      <div className="bg-gradient-to-br from-slate-50 to-white rounded-[24px] p-4 space-y-3 border border-slate-200 max-w-xs mx-auto">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-6">
           Your Wallet
         </p>
         
@@ -292,130 +290,141 @@ function PaymentScreen() {
             <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center border border-orange-100 mb-3">
               <Coins className="w-6 h-6 text-orange-500 fill-orange-500" />
             </div>
-            <div className="text-2xl font-bold text-gray-900 text-center">
+            <div className="text-2xl font-bold text-slate-900 text-center">
               {userGoldCoins}
             </div>
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">
               Gold Coins
             </div>
           </div>
 
           {/* Vertical Divider */}
-          <div className="w-[1px] h-16 bg-gray-100" />
+          <div className="w-[1px] h-16 bg-slate-200" />
 
           {/* Diamonds - Centered */}
           <div className="flex flex-col items-center">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-100 mb-3">
               <Gem className="w-6 h-6 text-blue-500 fill-blue-500" />
             </div>
-            <div className="text-2xl font-bold text-gray-900 text-center">
+            <div className="text-2xl font-bold text-slate-900 text-center">
               {userDiamonds}
             </div>
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">
               Diamonds
             </div>
           </div>
         </div>
       </div>
 
-      <main className="px-6 space-y-8 max-w-md mx-auto">
- 
+<main className="px-6 space-y-8 max-w-md mx-auto">
+  
         {/* Section Title */}
         <div className="space-y-4">
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Choose Payment Method</h2>
+          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Payment Method</h2>
 
+          {/* Payment with Diamonds - Default */}
           <div className="space-y-3">
-            <PaymentOption
-              id="gold"
-              title="Pay with Gold Coins"
-              subtitle="Get 10% discount"
-              coinAmount={String(membershipFee * 10)}
-              coinType="gold"
-              originalPrice={`₹${membershipFee}`}
-              icon={<Coins className="w-6 h-6" />}
-              iconBg="bg-gradient-to-br from-orange-400 to-red-500"
-              isSelected={selectedMethod === 'gold' && !useGoldForDiscount}
-              onSelect={() => {
-                setSelectedMethod('gold');
-                setUseGoldForDiscount(false);
-              }}
-              highlight
-            />
+            <div
+              className={`p-4 rounded-2xl cursor-pointer transition-all duration-300 border-2 ${
+                !selectedMethod || selectedMethod === 'diamonds'
+                  ? "bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-300 shadow-lg shadow-purple-100"
+                  : "bg-slate-50 border-slate-200"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br from-purple-400 to-indigo-600">
+                    <Gem className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900">Pay with Diamonds</h3>
+                    <p className="text-sm text-slate-500">Full payment</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-bold text-slate-900 text-lg">{membershipFee}</span>
+                  <span className="text-xs text-slate-500"> 💎</span>
+                </div>
+              </div>
+            </div>
 
-            <PaymentOption
-              id="diamonds"
-              title="Pay with Diamonds"
-              subtitle="Full payment with diamonds"
-              coinAmount={String(membershipFee)}
-              coinType="diamond"
-              icon={<Gem className="w-6 h-6" />}
-              iconBg="bg-gradient-to-br from-purple-400 to-indigo-600"
-              isSelected={selectedMethod === 'diamonds' && !useGoldForDiscount}
-              onSelect={() => {
-                setSelectedMethod('diamonds');
-                setUseGoldForDiscount(false);
-              }}
-            />
+            {/* Gold Coins Toggle for Discount */}
+            <div
+              className={`p-4 rounded-2xl cursor-pointer transition-all duration-300 border-2 ${
+                selectedMethod === 'gold'
+                  ? "bg-gradient-to-br from-orange-50 to-amber-50 border-orange-300 shadow-lg shadow-orange-100"
+                  : "bg-slate-50 border-slate-200"
+              }`}
+              onClick={() => setSelectedMethod(selectedMethod === 'gold' ? 'diamonds' : 'gold')}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br from-orange-400 to-red-500">
+                    <Coins className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900">Use Gold Coins</h3>
+                    <p className="text-sm text-orange-600">Get {goldCoinDiscountPct}% discount</p>
+                  </div>
+                </div>
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={selectedMethod === 'gold'}
+                    onChange={() => {}}
+                    className="sr-only"
+                  />
+                  <div className={`w-12 h-6 rounded-full transition-colors ${selectedMethod === 'gold' ? 'bg-gradient-to-r from-orange-400 to-red-500' : 'bg-slate-300'}`}>
+                    <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform mt-0.5 ${selectedMethod === 'gold' ? 'translate-x-6 ml-0.5' : 'translate-x-0.5'}`}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Summary */}
-        <div className="bg-gray-50/50 rounded-[32px] p-6 space-y-4 border border-gray-100">
-          <h2 className="text-base font-bold text-gray-900">Summary</h2>
+        <div className="bg-gradient-to-br from-slate-50 to-white rounded-[32px] p-6 space-y-4 border border-slate-200">
+          <h2 className="text-base font-bold text-slate-900">Summary</h2>
           
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500 font-medium">Joining Fee</span>
-              <span className="font-bold text-gray-900">₹{membershipFee}</span>
+              <span className="text-slate-500 font-medium">Joining Fee</span>
+              <span className="font-bold text-slate-900">₹{membershipFee}</span>
             </div>
             
-            {useGoldForDiscount && goldDiscount > 0 && (
+            {selectedMethod === 'gold' && (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-orange-600 font-medium">Gold Discount ({goldCoinDiscountPct}%)</span>
+                  <span className="font-bold text-orange-600">-₹{goldDiscountAmount}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-orange-600 font-medium">Gold Coins to Pay</span>
+                  <span className="font-bold text-orange-600">{goldCoinsToPay} coins</span>
+                </div>
+              </>
+            )}
+            
+            {selectedMethod === 'diamonds' && (
               <div className="flex justify-between text-sm">
-                <span className="text-orange-600 font-medium">Gold Discount (10%)</span>
-                <span className="font-bold text-orange-600">-₹{goldDiscount}</span>
+                <span className="text-purple-600 font-medium">Diamonds to Pay</span>
+                <span className="font-bold text-purple-600">{membershipFee} 💎</span>
               </div>
             )}
             
-            {useGoldForDiscount && (
-              <div className="flex justify-between text-sm">
-                <span className="text-orange-600 font-medium">Gold Coins for Discount</span>
-                <span className="font-bold text-orange-600">{Math.round(membershipFee * 0.1 * 10)} coins</span>
-              </div>
-            )}
-            
-            {useGoldForDiscount && diamondsNeeded > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-purple-600 font-medium">Diamonds to Pay (90%)</span>
-                <span className="font-bold text-purple-600">{diamondsNeeded} 💎</span>
-              </div>
-            )}
-            
-            {!useGoldForDiscount && selectedMethod === 'gold' && goldCoinsNeeded > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-orange-600 font-medium">Gold Coins to Spend</span>
-                <span className="font-bold text-orange-600">{goldCoinsNeeded} coins</span>
-              </div>
-            )}
-            
-            {!useGoldForDiscount && selectedMethod === 'diamonds' && diamondsNeeded > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-purple-600 font-medium">Diamonds to Spend</span>
-                <span className="font-bold text-purple-600">{diamondsNeeded} 💎</span>
-              </div>
-            )}
-            
-            <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
-              <span className="text-base font-bold text-gray-900">Total Payable</span>
-              <span className="text-xl font-black text-gray-900">₹{netPayable}</span>
+            <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
+              <span className="text-base font-bold text-slate-900">Total Payable</span>
+              <span className="text-xl font-black text-slate-900">₹{totalPayable}</span>
             </div>
           </div>
         </div>
 
         {/* Info Box */}
-        <div className="bg-gray-50 rounded-2xl p-4 flex gap-3 border border-gray-100">
-          <Info className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
-          <p className="text-xs leading-relaxed text-gray-500 font-medium">
-            Gold coins give you a discount on the join fee. Diamond coins can cover the entire payment. Earn coins by participating in events and inviting friends!
+        <div className="bg-slate-50 rounded-2xl p-4 flex gap-3 border border-slate-100">
+          <Info className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
+          <p className="text-xs leading-relaxed text-slate-500 font-medium">
+            Use Gold Coins to get {goldCoinDiscountPct}% discount on joining fee. Earn coins by participating in events and inviting friends!
           </p>
         </div>
       </main>
@@ -450,11 +459,9 @@ function PaymentScreen() {
             ) : (
               <>
                 <CheckCircle className="w-5 h-5" />
-                {useGoldForDiscount 
-                  ? `Pay ₹${netPayable} with ${Math.round(membershipFee * 0.1 * 10)} Gold + ${diamondsNeeded} Diamonds`
-                  : selectedMethod === 'gold'
-                    ? `Pay ${goldCoinsNeeded} Gold Coins`
-                    : `Pay ${diamondsNeeded} Diamonds`
+                {selectedMethod === 'gold' 
+                  ? `Pay ₹${totalPayable} (${goldCoinsToPay} Gold Coins)`
+                  : `Pay ₹${membershipFee} (${membershipFee} Diamonds)`
                 }
               </>
             )}
