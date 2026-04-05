@@ -30,7 +30,7 @@ const PaymentOption = ({
       whileTap={{ scale: 0.98 }}
       onClick={onSelect}
       className={cn(
-        "relative p-4 rounded-2xl cursor-pointer transition-all duration-300 border-2",
+        "relative p-4 rounded-2xl cursor-pointer transition-all duration-300 border-2  ",
         isSelected
           ? selectedBgColor || "bg-gradient-to-br from-orange-50 to-pink-50 border-orange-300 shadow-lg shadow-orange-100"
           : "bg-gray-50 border-gray-100 hover:border-gray-200",
@@ -279,7 +279,7 @@ function PaymentScreen() {
       </header>
 
       {/* Your Wallet Card */}
-      <div className="bg-gradient-to-br from-slate-50 to-white rounded-[24px] p-4 space-y-3 border border-slate-200 max-w-xs mx-auto">
+      <div className="bg-gradient-to-br from-slate-50 to-white rounded-[24px] lg:p-9 p-2 space-y-3 border border-slate-200 max-w-xl  mx-auto">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-6">
           Your Wallet
         </p>
@@ -319,7 +319,7 @@ function PaymentScreen() {
 <main className="px-6 space-y-8 max-w-md mx-auto">
   
         {/* Section Title */}
-        <div className="space-y-4">
+        <div className="space-y-4 mt-10 ">
           <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Payment Method</h2>
 
           {/* Payment with Diamonds - Default */}
@@ -394,16 +394,10 @@ function PaymentScreen() {
             </div>
             
             {selectedMethod === 'gold' && (
-              <>
-                <div className="flex justify-between text-sm">
-                  <span className="text-orange-600 font-medium">Gold Discount ({goldCoinDiscountPct}%)</span>
-                  <span className="font-bold text-orange-600">-₹{goldDiscountAmount}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-orange-600 font-medium">Gold Coins to Pay</span>
-                  <span className="font-bold text-orange-600">{goldCoinsToPay} coins</span>
-                </div>
-              </>
+              <div className="flex justify-between text-sm">
+                <span className="text-orange-600 font-medium">Gold Discount ({goldCoinDiscountPct}%)</span>
+                <span className="font-bold text-orange-600">-₹{goldDiscountAmount}</span>
+              </div>
             )}
             
             {selectedMethod === 'diamonds' && (
@@ -460,8 +454,8 @@ function PaymentScreen() {
               <>
                 <CheckCircle className="w-5 h-5" />
                 {selectedMethod === 'gold' 
-                  ? `Pay ₹${totalPayable} (${goldCoinsToPay} Gold Coins)`
-                  : `Pay ₹${membershipFee} (${membershipFee} Diamonds)`
+                  ? `Pay ₹${totalPayable}`
+                  : `Pay ₹${membershipFee}`
                 }
               </>
             )}
