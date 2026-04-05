@@ -16,6 +16,7 @@ import {
   getTeamInvites,
 } from "@/lib/api/teamApi";
 import InvitePlayers from "@/app/(home)/home/components/InvitePlayers";
+import TeamChat from "@/app/(home)/home/components/TeamChat";
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -833,6 +834,8 @@ export default function TeamDetailPage() {
           </div>
         </Modal>
       )}
+
+      <TeamChat teamId={teamId} />
 
     </div>
   );

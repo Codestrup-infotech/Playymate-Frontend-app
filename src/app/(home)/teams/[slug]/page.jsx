@@ -119,7 +119,7 @@ export default function TeamProfilePage() {
   ];
 
   return (
-    <div style={{ minHeight:"100vh", background: t.bg, color: t.text, fontFamily:"'DM Sans',-apple-system,sans-serif" }}>
+    <div style={{ minHeight:"100vh", marginBottom:"30px" , background: t.bg, color: t.text, fontFamily:"'DM Sans',-apple-system,sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
@@ -132,7 +132,7 @@ export default function TeamProfilePage() {
         }
       `}</style>
 
-      <div className="wrap" style={{ padding:"20px" }}>
+      <div className="wrap" style={{ padding:"1px" }}>
 
         {/* Top Nav */}
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>

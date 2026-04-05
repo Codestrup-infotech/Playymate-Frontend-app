@@ -149,11 +149,11 @@ export default function TeamChat({ teamId: initialTeamId }) {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-6 right-10 z-50">
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="h-10 w-40 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center gap-2 transition-all duration-300 hover:scale-105"
+          className="h-10 w-32 bg-white/90  hover:bg-gradient-to-tr hover:from-[#EF3AFF] hover:to-[#FF8319] text-blue-500 hover:text-white rounded-full shadow-lg  flex items-center justify-center gap-2 transition-all duration-300 hover:scale-105"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -180,7 +180,7 @@ export default function TeamChat({ teamId: initialTeamId }) {
 
       {isOpen && (
         <div className="animate-slideUp w-80 h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
-          <div className="bg-blue-600 p-4 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
                 <svg
@@ -227,7 +227,7 @@ export default function TeamChat({ teamId: initialTeamId }) {
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-white hover:bg-blue-700 p-2 rounded-lg transition-colors"
+                className="text-white hover:text-black hover:bg-white p-2 rounded-full transition-colors"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -294,7 +294,7 @@ export default function TeamChat({ teamId: initialTeamId }) {
                         className="w-8 h-8 rounded-full object-cover"
                       />
                     ) : (
-                      <span className="text-blue-600 text-xs font-medium">
+                      <span className="text-blue-600  text-xs font-medium">
                         {getInitials(message.sender_id?.full_name)}
                       </span>
                     )}
