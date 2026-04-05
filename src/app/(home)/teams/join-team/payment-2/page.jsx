@@ -268,7 +268,7 @@ function PaymentScreen() {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans ">
       {/* Header */}
-      <header className="px-6 pt-12 pb-6 flex items-center gap-4 sticky top-0 bg-white/80 backdrop-blur-md z-10">
+      <header className="px-6 pt-6 flex items-center gap-4 sticky top-0 bg-white/80 backdrop-blur-md z-10">
         <button
           onClick={handleBack}
           className="p-2 hover:bg-slate-100 rounded-full transition-colors"
@@ -316,7 +316,7 @@ function PaymentScreen() {
         </div>
       </div>
 
-<main className="px-6 space-y-8 max-w-md mx-auto">
+<main className="px-6 space-y-8 max-w-xl mx-auto">
   
         {/* Section Title */}
         <div className="space-y-4 mt-10 ">
@@ -374,8 +374,8 @@ function PaymentScreen() {
                     onChange={() => {}}
                     className="sr-only"
                   />
-                  <div className={`w-12 h-6 rounded-full transition-colors ${selectedMethod === 'gold' ? 'bg-gradient-to-r from-orange-400 to-red-500' : 'bg-slate-300'}`}>
-                    <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform mt-0.5 ${selectedMethod === 'gold' ? 'translate-x-6 ml-0.5' : 'translate-x-0.5'}`}></div>
+                  <div className={`w-12 h-6  rounded-full transition-colors ${selectedMethod === 'gold' ? 'bg-gradient-to-r from-orange-400 to-red-500' : 'bg-slate-300'}`}>
+                    <div className={`w-6  h-6 bg-white rounded-full shadow transform transition-transform mt-0.5 ${selectedMethod === 'gold' ? 'translate-x-6 ml-0.5' : 'translate-x-0.5'}`}></div>
                   </div>
                 </div>
               </div>
