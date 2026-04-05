@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/lib/ThemeContext";
 import { getTeamProfile, getTeamMembers } from "@/lib/api/teamApi";
+import TeamChat from "@/app/(home)/home/components/TeamChat";
 
 function EmptyState({ icon: Icon, label, color, t }) {
   return (
@@ -412,6 +413,8 @@ export default function TeamProfilePage() {
         )}
 
       </div>
+
+      <TeamChat teamId={teamId} />
     </div>
   );
 }

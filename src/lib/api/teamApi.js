@@ -1173,6 +1173,204 @@ export async function searchTeamsByName(name) {
   }
 }
 
+// ==================== Team Chat ====================
+
+/**
+ * Get team chat info
+ * GET /api/v1/teams/:teamId/chat
+ * @param {string} teamId - Team ID
+ */
+export async function getTeamChatInfo(teamId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/chat`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting team chat info:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get team chat members
+ * GET /api/v1/teams/:teamId/chat/members
+ * @param {string} teamId - Team ID
+ */
+export async function getTeamChatMembers(teamId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/chat/members`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting team chat members:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get team chat messages (paginated)
+ * GET /api/v1/teams/:teamId/chat/messages
+ * @param {string} teamId - Team ID
+ * @param {Object} params - { cursor?: string, limit?: number }
+ */
+export async function getTeamChatMessages(teamId, params = {}) {
+  try {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/chat/messages?${queryString}`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting team chat messages:", error);
+    throw error;
+  }
+}
+
+/**
+ * Send a message to team chat
+ * POST /api/v1/teams/:teamId/chat/messages
+ * @param {string} teamId - Team ID
+ * @param {Object} data - { content: string, message_type?: string, reply_to?: string }
+ */
+export async function sendTeamChatMessage(teamId, data) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/chat/messages`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error sending team chat message:", error);
+    throw error;
+  }
+}
+
+/**
+ * React to a message
+ * POST /api/v1/teams/:teamId/chat/react/:messageId
+ * @param {string} teamId - Team ID
+ * @param {string} messageId - Message ID
+ * @param {Object} data - { emoji: string }
+ */
+export async function reactToMessage(teamId, messageId, data) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/chat/react/${messageId}`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error reacting to message:", error);
+    throw error;
+  }
+}
+
+/**
+ * Mark messages as read
+ * POST /api/v1/teams/:teamId/chat/read
+ * @param {string} teamId - Team ID
+ * @param {Object} data - { messageId?: string }
+ */
+export async function markMessagesAsRead(teamId, data = {}) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/chat/read`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error marking messages as read:", error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a message
+ * DELETE /api/v1/teams/:teamId/chat/messages/:messageId
+ * @param {string} teamId - Team ID
+ * @param {string} messageId - Message ID
+ */
+export async function deleteTeamChatMessage(teamId, messageId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/chat/messages/${messageId}`, {
+      method: "DELETE",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error deleting team chat message:", error);
+    throw error;
+  }
+}
+
+/**
+ * Search team chat messages
+ * GET /api/v1/teams/:teamId/chat/search
+ * @param {string} teamId - Team ID
+ * @param {Object} params - { q: string, sender_id?: string, message_type?: string, has_media?: boolean }
+ */
+export async function searchTeamChatMessages(teamId, params) {
+  try {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/chat/search?${queryString}`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error searching team chat messages:", error);
+    throw error;
+  }
+}
+
 export default {
   checkTeamHealth,
   generatePresignedUrl,
@@ -1216,4 +1414,12 @@ export default {
   getRecentActivity,
   getTeamInvites,
   getMyInvites,
+  getTeamChatInfo,
+  getTeamChatMembers,
+  getTeamChatMessages,
+  sendTeamChatMessage,
+  reactToMessage,
+  markMessagesAsRead,
+  deleteTeamChatMessage,
+  searchTeamChatMessages,
 };

@@ -21,6 +21,7 @@ import { useFeedRefresh } from "@/context/FeedRefreshContext";
 import { addBookmark, checkBookmark, removeBookmark, createCollection, getCollections, addToCollection } from "@/app/user/share";
 import CreateCollectionPopup from "./components/CreateCollection";
 import ThreeDotButton from "./components/ThreeDotButton";
+// import TeamChat from "./components/TeamChat";
 
 /* ─── Small helper components ─── */
 
@@ -1089,6 +1090,9 @@ function HomePageContent() {
           }
         }}
       />
+
+      {/* Team Chat */}
+  
     </>
   );
 }
