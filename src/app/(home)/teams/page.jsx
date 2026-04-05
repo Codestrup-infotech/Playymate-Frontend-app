@@ -145,9 +145,46 @@ export default function TeamsPage() {
         console.log("teamsResponse.member:", teamsResponse.member);
         console.log("teamsResponse.joined:", teamsResponse.joined);
         
+        const ownedTeams = teamsResponse.owned || [];
+        const joinedTeams = teamsResponse.member || teamsResponse.joined || [];
+        
+        console.log("First owned team FULL:", JSON.stringify(ownedTeams[0], null, 2));
+        console.log("First owned team keys:", Object.keys(ownedTeams[0] || {}));
+        console.log("First joined team FULL:", JSON.stringify(joinedTeams[0], null, 2));
+        console.log("First joined team keys:", Object.keys(joinedTeams[0] || {}));
+        
+        const sortByDate = (teams, dateFields) => {
+          const sorted = [...teams].sort((a, b) => {
+            // First try date fields
+            for (const field of dateFields) {
+              if (a[field] && b[field]) {
+                const dateA = new Date(a[field]);
+                const dateB = new Date(b[field]);
+                if (dateA.getTime() !== dateB.getTime()) {
+                  return dateB.getTime() - dateA.getTime();
+                }
+              }
+            }
+            // Fallback: use _id timestamp (MongoDB ObjectId contains creation time)
+            if (a._id && b._id) {
+              const idA = a._id.toString();
+              const idB = b._id.toString();
+              // ObjectId first 4 bytes are timestamp
+              const timeA = parseInt(idA.substring(0, 8), 16) * 1000;
+              const timeB = parseInt(idB.substring(0, 8), 16) * 1000;
+              return timeB - timeA;
+            }
+            return 0;
+          });
+          return sorted;
+        };
+        
+        const sortedOwned = sortByDate(ownedTeams, ['created_at', 'createdAt', 'created', 'updated_at', 'updatedAt']);
+        const sortedJoined = sortByDate(joinedTeams, ['joined_at', 'joinedAt', 'joined', 'created_at', 'createdAt', 'created']);
+        
         setTeamsData({
-          owned: teamsResponse.owned || [],
-          joined: teamsResponse.member || teamsResponse.joined || [],
+          owned: sortedOwned,
+          joined: sortedJoined,
           loading: false,
           error: null,
         })
