@@ -91,8 +91,17 @@ function JoinTeamContent() {
         }
       } else {
         try {
-          const teams = await discoverTeams({ limit: 20 })
+          const teams = await discoverTeams({ limit: 20, category_type: 'sports' })
           const teamsArray = Array.isArray(teams) ? teams : teams?.data || []
+          
+          console.log('Discover Teams Response:', JSON.stringify(teams, null, 2))
+          console.log('Teams Array:', teamsArray)
+          
+          if (teamsArray.length > 0) {
+            console.log('First Team Keys:', Object.keys(teamsArray[0]))
+            console.log('First Team Full:', JSON.stringify(teamsArray[0], null, 2))
+          }
+          
           setDiscoverTeamsList(teamsArray)
         } catch (err) {
           console.error("Error fetching teams:", err)
@@ -232,8 +241,8 @@ function JoinTeamContent() {
               >
                 <Link href={`/teams/join-team/${team._id || team.id}`} className="flex items-center gap-4">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center text-xl font-black text-white shadow-lg">
-                    {team.logo ? (
-                      <img src={team.logo} alt={team.name} className="w-full h-full object-cover rounded-2xl" />
+                    {team.logo || team.logo_url ? (
+                      <img src={team.logo || team.logo_url} alt={team.name} className="w-full h-full object-cover rounded-2xl" />
                     ) : (
                       team.name?.charAt(0)?.toUpperCase() || "T"
                     )}
@@ -247,7 +256,7 @@ function JoinTeamContent() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold bg-gray-50 border border-gray-100 rounded-lg px-2 py-1">
-                      {team.members_count || 0}
+                      {team.member_count || team.members_count || 0}
                     </span>
                     <div className="w-7 h-7 bg-gradient-to-r from-pink-500 to-orange-400 rounded-lg flex items-center justify-center">
                       <ChevronRight size={14} className="text-white" />

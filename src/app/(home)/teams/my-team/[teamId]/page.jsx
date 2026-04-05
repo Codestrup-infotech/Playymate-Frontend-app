@@ -119,11 +119,16 @@ export default function TeamDetailPage() {
       try {
         setLoading(true);
         const teamRes = await getTeamProfile(teamId);
-        setTeam(teamRes.data || teamRes);
-
-        const memRes = await getTeamMembers(teamId);
-        const memData = memRes.data || memRes;
-        setMembers(Array.isArray(memData) ? memData : []);
+        const teamData = teamRes.data || teamRes;
+        setTeam(teamData);
+        
+        if (teamData.members && Array.isArray(teamData.members)) {
+          setMembers(teamData.members);
+        } else {
+          const memRes = await getTeamMembers(teamId);
+          const memData = memRes.data || memRes;
+          setMembers(Array.isArray(memData) ? memData : []);
+        }
 
         try {
           const pendRes = await getPendingMembers(teamId);
@@ -569,32 +574,43 @@ export default function TeamDetailPage() {
               ? <EmptyState icon={Users} label="No members yet" color={t.blue} t={t}/>
               : members.map(m => {
                   const rc = roleC(m.role);
+                  const userObj = m.user || {};
+                  const memberName = userObj.full_name || userObj.name || userObj.username || "Unknown";
+                  const memberAvatar = userObj.profile_image_url || userObj.avatar || null;
+                  const memberUsername = userObj.username || "";
+                  const memberUserId = m.user_id || m.userId || null;
                   return (
                     <div key={m._id||m.id} className="hvr-card" style={{
                       background: t.card, border:`1px solid ${t.cardBorder}`,
                       borderRadius:16, padding:"12px 14px",
                       display:"flex", alignItems:"center", gap:12,
                     }}>
-                      <div style={{
-                        width:46, height:46, borderRadius:14, flexShrink:0,
-                        background: isDark ? "#1c1c3a" : "#eef0f8",
-                        border:`1.5px solid ${t.cardBorder}`,
-                        display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden",
-                      }}>
-                        {m.avatar
-                          ? <img src={m.avatar} alt={m.name} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
-                          : <span style={{ fontWeight:800, fontSize:14, color: t.accent }}>{init(m.name||m.user_name)}</span>
+                      <div 
+                        onClick={() => memberUserId && router.push(`/home/profile/${memberUserId}`)}
+                        style={{
+                          width:46, height:46, borderRadius:14, flexShrink:0,
+                          background: isDark ? "#1c1c3a" : "#eef0f8",
+                          border:`1.5px solid ${t.cardBorder}`,
+                          display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden",
+                          cursor: memberUserId ? "pointer" : "default",
+                        }}>
+                        {memberAvatar
+                          ? <img src={memberAvatar} alt={memberName} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+                          : <span style={{ fontWeight:800, fontSize:14, color: t.accent }}>{init(memberName)}</span>
                         }
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                          <span style={{ fontWeight:700, fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                            {m.name||m.user_name}
+                          <span 
+                            onClick={() => memberUserId && router.push(`/home/profile/${memberUserId}`)}
+                            style={{ fontWeight:700, fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", cursor: memberUserId ? "pointer" : "default" }}
+                          >
+                            {memberName}
                           </span>
                           {m.role === "owner" && <Crown size={13} style={{ color: t.yellow, flexShrink:0 }}/>}
                         </div>
                         <span style={{ fontSize:12, color: t.textSub, display:"block", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                          {m.email || m.phone || "Team Member"}
+                          {memberUsername || "Team Member"}
                         </span>
                       </div>
                       <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -805,7 +821,7 @@ export default function TeamDetailPage() {
       {removeTarget && (
         <Modal title="Remove Member" onClose={() => setRemoveTarget(null)} t={t} isDark={isDark}>
           <p style={{ fontSize:13, color: t.textSub, marginBottom:24, lineHeight:1.65 }}>
-            Are you sure you want to remove <strong style={{ color: t.text }}>{removeTarget.name}</strong> from the team?
+            Are you sure you want to remove <strong style={{ color: t.text }}>{(removeTarget.user?.full_name || removeTarget.user?.name || removeTarget.user?.username || removeTarget.name || "this member")}</strong> from the team?
           </p>
           <div style={{ display:"flex", gap:10 }}>
             <button onClick={() => setRemoveTarget(null)} disabled={removing} style={{ flex:1, padding:12, borderRadius:50, border:`1.5px solid ${t.cardBorder}`, background:"transparent", color: t.text, fontWeight:700, fontSize:14, cursor:"pointer" }}>
