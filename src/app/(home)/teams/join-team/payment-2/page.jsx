@@ -100,6 +100,7 @@ function PaymentScreen() {
 
   // Calculate values from membership data
   const membershipFee = membershipData?.fee_amount || teamData?.membership?.fee_amount || teamData?.fee_amount || 0;
+  const defaultDurationType = membershipData?.default_duration_type || teamData?.membership?.default_duration_type || 'YEARLY';
   const goldCoinDiscountPct = membershipData?.gold_coin_discount_pct || teamData?.membership?.gold_coin_discount_pct || teamData?.gold_coin_discount_pct || 10;
   
   // Calculate amounts with proper rounding
@@ -182,17 +183,16 @@ function PaymentScreen() {
     setError(null);
 
     try {
-      // Use coins/diamonds based on selection
-      const useGoldCoins = selectedMethod === 'gold' && !useGoldForDiscount;
-      const useDiamonds = selectedMethod === 'diamonds' || useGoldForDiscount;
+      const useGoldCoins = selectedMethod === 'gold';
+      const useDiamonds = selectedMethod === 'diamonds';
       
       // Step 1: Initiate membership
       console.log('Initiating membership for team:', teamId);
       const initiateResponse = await initiateMembership(teamId, {
+        membership_type: defaultDurationType,
         payment_preferences: {
           use_gold_coins: useGoldCoins,
-          use_diamonds: useDiamonds,
-          use_gold_for_discount: useGoldForDiscount
+          use_diamonds: useDiamonds
         }
       });
       
