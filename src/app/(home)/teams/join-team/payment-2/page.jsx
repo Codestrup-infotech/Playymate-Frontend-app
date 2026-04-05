@@ -105,28 +105,16 @@ function PaymentScreen() {
   
   // Calculate amounts with proper rounding
   const goldDiscountAmount = Math.round(membershipFee * (goldCoinDiscountPct / 100));
-  const goldCoinsToPay = membershipFee - goldDiscountAmount; // After 10% discount
+  const goldCoinsToPay = membershipFee - goldDiscountAmount;
   const totalPayable = selectedMethod === 'gold' ? goldCoinsToPay : membershipFee;
   
-  const useGoldCoins = selectedMethod === 'gold';
-  
-  // Calculate gold coins needed (if using gold for full payment)
-  const goldCoinsNeeded = useGoldCoins && !useGoldForDiscount ? membershipFee * 10 : 0;
-  
-  // Calculate diamonds needed (90% of fee if gold discount is used, 100% if paying with diamonds)
-  const diamondsNeeded = useGoldForDiscount ? Math.round(membershipFee * 0.9) : membershipFee;
-  
-  // Calculate gold discount amount
-  const goldDiscount = useGoldForDiscount ? Math.round(membershipFee * (goldCoinDiscountPct / 100)) : 0;
-  
-  // Net payable is the diamond amount if using gold for discount, otherwise full fee
-  const netPayable = useGoldForDiscount ? Math.round(membershipFee * 0.9) : membershipFee;
-  
-  // User's wallet balances
   const [walletBalances, setWalletBalances] = useState({ gold_coins: 0, diamond_coins: 0 });
   const userGoldCoins = walletBalances?.gold_coins?.balance || walletBalances?.gold_coins || 0;
   const userDiamonds = walletBalances?.diamond_coins?.balance || walletBalances?.diamond_coins || 0;
-
+  
+  const diamondsNeeded = selectedMethod === 'gold' ? goldCoinsToPay : membershipFee;
+  const hasInsufficientBalance = userDiamonds < diamondsNeeded;
+  
   useEffect(() => {
     const fetchData = async () => {
       if (!teamId) {
@@ -166,15 +154,7 @@ function PaymentScreen() {
       return;
     }
 
-    const goldCoinsNeeded = selectedMethod === 'gold' ? goldCoinsToPay : 0;
-    const diamondsNeeded = selectedMethod === 'diamonds' ? membershipFee : 0;
-
-    if (selectedMethod === 'gold' && userGoldCoins < goldCoinsNeeded) {
-      router.push('/wallet/diamond-store');
-      return;
-    }
-
-    if (selectedMethod === 'diamonds' && userDiamonds < diamondsNeeded) {
+    if (hasInsufficientBalance) {
       router.push('/wallet/diamond-store');
       return;
     }
@@ -186,7 +166,6 @@ function PaymentScreen() {
       const useGoldCoins = selectedMethod === 'gold';
       const useDiamonds = selectedMethod === 'diamonds';
       
-      // Step 1: Initiate membership
       console.log('Initiating membership for team:', teamId);
       const initiateResponse = await initiateMembership(teamId, {
         membership_type: defaultDurationType,
@@ -200,14 +179,12 @@ function PaymentScreen() {
       
       const initiateData = initiateResponse?.data || initiateResponse;
       
-      // Check if insufficient coins
       if (initiateData.insufficient_coins) {
         setError(initiateData.message || 'Insufficient coins. Please purchase more coins.');
         setProcessing(false);
         return;
       }
 
-      // Step 2: Confirm membership with idempotency key
       const idempotencyKey = initiateData.idempotency_key;
       console.log('Confirming membership with key:', idempotencyKey);
       
@@ -217,7 +194,6 @@ function PaymentScreen() {
       
       console.log('Confirm response:', confirmResponse);
       
-      // Success - navigate to success page
       router.push(`/teams/join-team/success?teamId=${teamId}&membership_type=${initiateData.membership_type || 'YEARLY'}`);
       
     } catch (err) {
@@ -441,14 +417,26 @@ function PaymentScreen() {
           <motion.button
             whileHover={!processing ? { scale: 1.02 } : {}}
             whileTap={!processing ? { scale: 0.98 } : {}}
-            onClick={handlePayment}
+            onClick={hasInsufficientBalance ? () => router.push('/wallet/diamond-store') : handlePayment}
             disabled={processing}
-            className="w-full py-5 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-orange-500 text-white font-bold text-lg shadow-xl shadow-purple-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            className={cn(
+              "w-full py-5 rounded-full font-bold text-lg shadow-xl flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed",
+              processing 
+                ? "bg-slate-400 text-white" 
+                : hasInsufficientBalance
+                  ? "bg-gradient-to-r from-purple-500 to-indigo-600 text-white"
+                  : "bg-gradient-to-r from-pink-500 via-purple-500 to-orange-500 text-white shadow-purple-200"
+            )}
           >
             {processing ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Processing...
+              </>
+            ) : hasInsufficientBalance ? (
+              <>
+                <Gem className="w-5 h-5" />
+                Insufficient balance - buy diamond now
               </>
             ) : (
               <>

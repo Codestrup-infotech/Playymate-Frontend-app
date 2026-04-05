@@ -352,10 +352,10 @@ export default function InviteDetailsPage() {
   }
 
   return (
-    <div className={`min-h-screen ${pageBg} pb-10 font-sans selection:bg-pink-500/10`}>
+    <div className={`min-h-screen `}>
 
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-slate-200/60 px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-        <div className="flex items-center justify-between max-w-2xl mx-auto">
+      <header className="sticky top-0 z-50">
+        <div className="flex ">
           <div className="flex items-center gap-3 sm:gap-4">
             <motion.button
               whileHover={{ scale: 1.1 }}
@@ -367,7 +367,7 @@ export default function InviteDetailsPage() {
             </motion.button>
             <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900">Invitation Details</h1>
           </div>
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <motion.button
               whileTap={{ scale: 0.9 }}
               className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${mutedBg} flex items-center justify-center border border-slate-200/40 text-slate-600`}
@@ -380,7 +380,7 @@ export default function InviteDetailsPage() {
             >
               <MoreVertical size={16} />
             </motion.button>
-          </div>
+          </div> */}
         </div>
       </header>
 
