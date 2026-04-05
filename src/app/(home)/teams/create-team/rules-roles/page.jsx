@@ -147,7 +147,7 @@ export default function RulesRolesPage() {
 
   return (
     <motion.div
-      className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10`}
+      className={`min-h-screen lg:px-56 ${pageBg} ${textColor} px-5 py-6 pb-10`}
       initial="hidden"
       animate="visible"
       variants={containerVariants}

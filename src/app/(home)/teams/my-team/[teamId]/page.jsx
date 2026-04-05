@@ -236,7 +236,7 @@ export default function TeamDetailPage() {
   ];
 
   return (
-    <div style={{ minHeight:"100vh", background: t.bg, color: t.text, fontFamily:"'DM Sans',-apple-system,sans-serif" }}>
+    <div style={{ minHeight:"100vh" , background: t.bg, color: t.text, fontFamily:"'DM Sans',-apple-system,sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
@@ -835,7 +835,7 @@ export default function TeamDetailPage() {
         </Modal>
       )}
 
-      <TeamChat teamId={teamId} />
+      <TeamChat teamId={teamId} teamName={team?.name} />
 
     </div>
   );

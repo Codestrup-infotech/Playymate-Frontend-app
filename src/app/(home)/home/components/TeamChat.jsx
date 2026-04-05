@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getMyTeams, getTeamChatInfo, getTeamChatMembers, getTeamChatMessages, sendTeamChatMessage } from '@/lib/api/teamApi';
 
-export default function TeamChat({ teamId: initialTeamId }) {
+export default function TeamChat({ teamId: initialTeamId, teamName: initialTeamName }) {
   const [isOpen, setIsOpen] = useState(false);
   const [chatInfo, setChatInfo] = useState(null);
   const [members, setMembers] = useState([]);
@@ -11,6 +11,7 @@ export default function TeamChat({ teamId: initialTeamId }) {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [teamId, setTeamId] = useState(initialTeamId || null);
+  const [teamName, setTeamName] = useState(initialTeamName || null);
   const [teams, setTeams] = useState([]);
   const [showTeamSelector, setShowTeamSelector] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -144,6 +145,7 @@ export default function TeamChat({ teamId: initialTeamId }) {
   };
 
   const getSelectedTeamName = () => {
+    if (teamName) return teamName;
     const team = teams.find(t => (t._id || t.id) === teamId);
     return team?.name || 'Team Chat';
   };

@@ -327,7 +327,7 @@ if (savedProfileFile) {
 
   return (
     <motion.div
-      className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10 font-Poppins`}
+      className={`min-h-screen lg:px-60 ${pageBg} ${textColor} px-5 py-6 pb-10 font-Poppins`}
       initial="hidden"
       animate="visible"
       variants={containerVariants}
@@ -585,13 +585,13 @@ if (savedProfileFile) {
 
 function SummaryItem({ icon, label, value }) {
   return (
-    <div className="flex justify-between items-center group">
+    <div className="flex justify-between items-center group  ">
       <div className="flex items-center gap-3">
         <div className="p-2 bg-gray-50 rounded-xl text-gray-400 group-hover:text-pink-500 group-hover:bg-pink-50 transition-all">
           {icon}
         </div>
         <span className="text-sm font-medium text-gray-500">{label}</span>
-      </div>``
+      </div>
       <span className="text-sm font-bold">{value}</span>
     </div>
   )

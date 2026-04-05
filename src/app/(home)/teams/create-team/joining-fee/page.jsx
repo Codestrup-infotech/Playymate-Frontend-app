@@ -150,7 +150,7 @@ export default function JoiningFeePage() {
 
   return (
     <motion.div
-      className={`min-h-screen ${pageBg} ${textColor} px-5 py-6 pb-10 font-Poppins`}
+      className={`min-h-screen lg:px-60 ${pageBg} ${textColor} px-5 py-6 pb-10 font-Poppins`}
       initial="hidden"
       animate="visible"
       variants={containerVariants}
