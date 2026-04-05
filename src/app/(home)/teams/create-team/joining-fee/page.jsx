@@ -222,7 +222,7 @@ export default function JoiningFeePage() {
               className="sr-only peer"
             />
             <div className={`w-14 h-8 rounded-full flex items-center p-1 transition-all duration-300 ${formData.is_paid ? "bg-gradient-to-r from-pink-500 to-orange-400" : "bg-gray-300"}`}>
-              <div className={`w-6 h-6 bg-white rounded-full shadow transition-transform duration-300 ${formData.is_paid ? "translate-x-0" : "ml-auto"}`}></div>
+              <div className={`w-6 h-6 bg-white rounded-full shadow transition-transform duration-300 ${formData.is_paid ? "translate-x-6" : "translate-x-0"}`}></div>
             </div>
           </label>
         </motion.div>
@@ -236,38 +236,12 @@ export default function JoiningFeePage() {
                 type="number"
                 value={formData.fee_amount}
                 onChange={(e) => setFormData(prev => ({ ...prev, fee_amount: e.target.value }))}
-                placeholder="Enter fee amount"
+                placeholder="Enter Yearly fee amount"
                 className={`w-full ${cardBg} border ${borderColor} rounded-2xl px-4 py-4 ${textColor} placeholder-gray-400 focus:outline-none focus:border-pink-500 shadow-sm`}
               />
             </motion.div>
 
-            {/* DURATION PRICING */}
-            <motion.div variants={itemVariants} className="mb-6">
-              <p className="text-sm text-gray-500 mb-3">DURATION PRICING</p>
-              
-              <div className="space-y-3">
-                {MEMBERSHIP_DURATIONS.map((duration) => (
-                  <div key={duration.value} className="flex items-center gap-4">
-                    <span className="w-20 text-sm text-gray-500">{duration.label}</span>
-                    <input
-                      type="number"
-                      value={formData.duration_pricing[duration.value]?.amount || ""}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        duration_pricing: {
-                          ...prev.duration_pricing,
-                          [duration.value]: { amount: e.target.value }
-                        }
-                      }))}
-                      min="0"
-                      placeholder="Amount"
-                      className={`flex-1 ${cardBg} border ${borderColor} rounded-xl px-3 py-2 ${textColor} placeholder-gray-400 focus:outline-none focus:border-pink-500`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
+           
             {/* GOLD COIN DISCOUNT */}
             <motion.div 
               variants={itemVariants}

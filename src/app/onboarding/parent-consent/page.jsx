@@ -180,7 +180,7 @@ export default function OnboardingParentConsentPage() {
   // Handle form submission
   const handleSubmit = async () => {
     if (!parentFullName.trim()) { setError("Please enter parent's full name"); return; }
-    if (!parentPhone.trim()) { setError("Please enter parent's phone number"); return; }
+    if (!parentPhone.trim() || parentPhone.length !== 10) { setError("Please enter a valid 10-digit phone number"); return; }
     if (!relationship) { setError("Please select your relationship to the minor"); return; }
     if (!idProofType) { setError("Please select ID proof document type"); return; }
     if (!idProofFile) { setError("Please upload ID proof document"); return; }
@@ -430,7 +430,12 @@ export default function OnboardingParentConsentPage() {
                 <input
                   type="tel"
                   value={parentPhone}
-                  onChange={(e) => setParentPhone(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    if (value.length <= 10) {
+                      setParentPhone(value);
+                    }
+                  }}
                   placeholder="Enter phone number"
                   className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-[#1a1a1a] border border-[#2e2e2e] focus:border-pink-500 focus:outline-none text-sm text-white placeholder-gray-600 transition-colors"
                 />
