@@ -402,6 +402,13 @@ function HomePageContent() {
   const [viewingFollowerStory, setViewingFollowerStory] = useState(false);
   const [followerStoryIndex, setFollowerStoryIndex] = useState(0);
   const [selectedFollowerProfile, setSelectedFollowerProfile] = useState(null);
+  const [viewedStoryUserIds, setViewedStoryUserIds] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('viewedStoryUserIds');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
   const [selectedPost, setSelectedPost] = useState(null);
   const [isPostDetailOpen, setIsPostDetailOpen] = useState(false);
   const [sharePost, setSharePost] = useState(null);
@@ -464,6 +471,13 @@ function HomePageContent() {
       refreshStory();
     }
   }, [searchParams, router]);
+
+  // Save viewed story user IDs to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && viewedStoryUserIds.length > 0) {
+      localStorage.setItem('viewedStoryUserIds', JSON.stringify(viewedStoryUserIds));
+    }
+  }, [viewedStoryUserIds]);
 
   // Fetch user profile and stories on mount
   useEffect(() => {
@@ -595,6 +609,10 @@ function HomePageContent() {
 
   // Close follower story viewer
   const closeFollowerStoryViewer = () => {
+    if (selectedFollowerProfile?._id && !viewedStoryUserIds.includes(selectedFollowerProfile._id)) {
+      setViewedStoryUserIds(prev => [...prev, selectedFollowerProfile._id]);
+      console.log('[HomePage] User story viewed successfully:', selectedFollowerProfile._id, 'Username:', selectedFollowerProfile.username);
+    }
     setViewingFollowerStory(false);
     setFollowerStoryIndex(0);
   };
@@ -826,6 +844,14 @@ function HomePageContent() {
         username: storyGroup.user?.username,
         profile_image_url: storyGroup.user?.profile_image_url
       }}
+      ringColor="bg-gradient-to-tr from-yellow-400 via-orange-500 to-pink-500"
+      viewedStoryIds={viewedStoryUserIds}
+      storyVisibility={storyGroup.user?.story_visibility || "public"}
+      onStoryView={(viewedUserId) => {
+        if (!viewedStoryUserIds.includes(viewedUserId)) {
+          setViewedStoryUserIds(prev => [...prev, viewedUserId]);
+        }
+      }}
     />
 
     <p className="text-xs mt-1">{storyGroup.user?.full_name}</p>
@@ -869,7 +895,16 @@ function HomePageContent() {
             <UserStory 
               userId={selectedFollowerProfile._id} 
               profile={selectedFollowerProfile}
-              showRing={false}
+              showRing={true}
+              ringColor="bg-gradient-to-tr from-yellow-400 via-orange-500 to-pink-500"
+              viewedStoryIds={viewedStoryUserIds}
+              storyVisibility={selectedFollowerProfile?.story_visibility || "public"}
+              onStoryView={(viewedUserId) => {
+                console.log('[HomePage] User story viewed successfully:', viewedUserId);
+                if (!viewedStoryUserIds.includes(viewedUserId)) {
+                  setViewedStoryUserIds(prev => [...prev, viewedUserId]);
+                }
+              }}
             />
           )}
 

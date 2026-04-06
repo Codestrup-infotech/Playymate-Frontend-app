@@ -2060,6 +2060,7 @@ useEffect(() => {
             profile_image_url: selectedStory.author?.profile_image_url
           }}
           showRing={false}
+          ringColor="bg-gray-200"
           initialStory={selectedStory}
           showUserProfile={false}
         />

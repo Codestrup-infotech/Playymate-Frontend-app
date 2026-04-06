@@ -31,6 +31,11 @@ import {
   searchAccounts,
   getRecommendations,
 } from "@/app/user/search";
+import {
+  sendFollowRequest,
+  getFollowRequestStatus,
+  cancelFollowRequest,
+} from "@/services/user";
 
 // Placeholder avatar
 const PLACEHOLDER_AVATAR =
@@ -49,6 +54,8 @@ export default function SearchPage() {
   const [activeTab, setActiveTab] = useState("people"); // people, interests, nearby
   const [error, setError] = useState(null);
   const [followedUsers, setFollowedUsers] = useState(new Set()); // Track followed users locally
+  const [pendingRequests, setPendingRequests] = useState(new Set()); // Track pending follow requests
+  const [followActionLoading, setFollowActionLoading] = useState(null); // Track loading state per user
 
   // Fetch suggested users, search history, and trending on mount
   useEffect(() => {
@@ -96,7 +103,32 @@ export default function SearchPage() {
       setIsLoading(true);
       const response = await getSuggestedUsers({ limit: 10 });
       if (response.status === "success" && response.data) {
-        setSuggestedUsers(response.data.items || []);
+        const users = response.data.items || [];
+        setSuggestedUsers(users);
+        
+        // Check for users with pending follow requests or private accounts
+        const newPendingRequests = new Set();
+        for (const user of users) {
+          const status = user.follow_request_status || user.followStatus || user.status;
+          if (status === 'pending') {
+            newPendingRequests.add(user.user_id || user._id || user.id);
+          } else if (user.is_private === true || user.is_private === 'true') {
+            // For private accounts, check follow request status via API
+            try {
+              const userId = user.user_id || user._id || user.id;
+              const statusRes = await getFollowRequestStatus(userId);
+              const statusData = statusRes?.data?.data || statusRes?.data;
+              if (statusData?.status === 'pending') {
+                newPendingRequests.add(userId);
+              }
+            } catch (err) {
+              console.error("Error checking follow status:", err);
+            }
+          }
+        }
+        if (newPendingRequests.size > 0) {
+          setPendingRequests(prev => new Set([...prev, ...newPendingRequests]));
+        }
       }
     } catch (err) {
       console.error("Failed to fetch suggested users:", err);
@@ -149,6 +181,30 @@ export default function SearchPage() {
       if ((response.status === "success" || response.success) && response.data) {
         const results = response.data.items || response.data.results || response.data || [];
         setSearchResults(results);
+        
+        // Check for users with pending follow requests or private accounts
+        const newPendingRequests = new Set();
+        for (const user of results) {
+          const status = user.follow_request_status || user.followStatus || user.status;
+          if (status === 'pending') {
+            newPendingRequests.add(user.user_id || user._id || user.id);
+          } else if (user.is_private === true || user.is_private === 'true') {
+            // For private accounts, check follow request status via API
+            try {
+              const userId = user.user_id || user._id || user.id;
+              const statusRes = await getFollowRequestStatus(userId);
+              const statusData = statusRes?.data?.data || statusRes?.data;
+              if (statusData?.status === 'pending') {
+                newPendingRequests.add(userId);
+              }
+            } catch (err) {
+              console.error("Error checking follow status:", err);
+            }
+          }
+        }
+        if (newPendingRequests.size > 0) {
+          setPendingRequests(prev => new Set([...prev, ...newPendingRequests]));
+        }
       } else {
         setSearchResults([]);
       }
@@ -179,19 +235,46 @@ export default function SearchPage() {
     return followedUsers.has(userId);
   };
 
-  const handleFollow = async (userId, isFollowing) => {
+  // Check if user has pending follow request
+  const isRequestPending = (userId) => {
+    return pendingRequests.has(userId);
+  };
+
+  const handleFollow = async (userId, userData) => {
+    const isFollowing = followedUsers.has(userId) || userData?.is_following;
+    const isPrivate = userData?.is_private === true;
+    const isPending = pendingRequests.has(userId);
+    
+    if (followActionLoading === userId) return;
+    setFollowActionLoading(userId);
+    
     try {
-      // Optimistically update local state
-      const wasFollowing = followedUsers.has(userId) || isFollowing;
-      
-      if (wasFollowing) {
+      if (isFollowing) {
+        // Unfollow
         await unfollowUser(userId);
         setFollowedUsers(prev => {
           const newSet = new Set(prev);
           newSet.delete(userId);
           return newSet;
         });
+      } else if (isPrivate && isPending) {
+        // Cancel follow request
+        await cancelFollowRequest(userId);
+        setPendingRequests(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(userId);
+          return newSet;
+        });
+      } else if (isPrivate) {
+        // Send follow request for private user
+        console.log("=== SEARCH FOLLOW DEBUG ===");
+        console.log("Target user ID:", userId);
+        console.log("User is private:", isPrivate);
+        console.log("========================");
+        await sendFollowRequest(userId);
+        setPendingRequests(prev => new Set([...prev, userId]));
       } else {
+        // Direct follow for public user
         await followUser(userId);
         setFollowedUsers(prev => new Set([...prev, userId]));
       }
@@ -204,6 +287,8 @@ export default function SearchPage() {
       }
     } catch (err) {
       console.error("Follow/Unfollow error:", err);
+    } finally {
+      setFollowActionLoading(null);
     }
   };
 
@@ -436,17 +521,26 @@ export default function SearchPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleFollow(user.user_id || user._id || user.id, isUserFollowed(user.user_id || user._id || user.id));
+                          handleFollow(user.user_id || user._id || user.id, user);
                         }}
-                        className={`absolute right-4 px-4 py-2 rounded-lg text-sm font-medium ${
+                        disabled={followActionLoading === (user.user_id || user._id || user.id)}
+                        className={`absolute right-4 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-70 ${
                           isUserFollowed(user.user_id || user._id || user.id)
                             ? isDark
                               ? "bg-[#1a1a2e] text-gray-300"
                               : "bg-white text-gray-700"
+                            : isRequestPending(user.user_id || user._id || user.id)
+                            ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
                             : "bg-gradient-to-r from-purple-600 to-orange-500 text-white"
                         }`}
                       >
-                        {isUserFollowed(user.user_id || user._id || user.id) ? "Following" : "Follow"}
+                        {followActionLoading === (user.user_id || user._id || user.id) 
+                          ? "..." 
+                          : isUserFollowed(user.user_id || user._id || user.id) 
+                          ? "Following" 
+                          : isRequestPending(user.user_id || user._id || user.id)
+                          ? "Requested"
+                          : "Follow"}
                       </button>
                     </div>
                   ))}
@@ -565,17 +659,26 @@ export default function SearchPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleFollow(user.user_id || user._id || user.id, user.is_following);
+                            handleFollow(user.user_id || user._id || user.id, user);
                           }}
-                          className={`absolute right-4 px-4 py-2 rounded-lg text-sm font-medium ${
+                          disabled={followActionLoading === (user.user_id || user._id || user.id)}
+                          className={`absolute right-4 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-70 ${
                             user.is_following
                               ? isDark
                                 ? "bg-[#1a1a2e] text-gray-300"
                                 : "bg-white text-gray-700"
+                              : isRequestPending(user.user_id || user._id || user.id)
+                              ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
                               : "bg-gradient-to-r from-purple-600 to-orange-500 text-white"
                           }`}
                         >
-                          {user.is_following ? "Following" : "Follow"}
+                          {followActionLoading === (user.user_id || user._id || user.id) 
+                            ? "..." 
+                            : user.is_following 
+                            ? "Following" 
+                            : isRequestPending(user.user_id || user._id || user.id)
+                            ? "Requested"
+                            : "Follow"}
                         </button>
                       </div>
                     ))}

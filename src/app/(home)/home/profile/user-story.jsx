@@ -11,10 +11,18 @@ import { useRouter } from "next/navigation";
 import Report from "@/app/(home)/home/components/Report";
 import DefaultAvatar from "./default-avatar.jsx";
 
-export default function UserStory({ userId, profile, showRing = true, initialStoryId, initialStory, showUserProfile = true }) {
+export default function UserStory({ userId, profile, showRing = true, ringColor = "bg-gradient-to-tr from-yellow-400 via-orange-500 to-pink-500", viewedStoryIds = [], onStoryView, initialStoryId, initialStory, showUserProfile = true, storyVisibility = "public" }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const router = useRouter();
+  const hasViewedStories = viewedStoryIds.includes(userId) || (profile?._id && viewedStoryIds.includes(profile._id));
+
+  // Determine ring color based on visibility and viewed state
+  const getRingColor = () => {
+    if (hasViewedStories) return "bg-gray-200";
+    if (storyVisibility === "close_friends") return "bg-green-500";
+    return ringColor;
+  };
 
   // Filter styles for story
   const getFilterStyle = (story) => {
@@ -208,6 +216,10 @@ export default function UserStory({ userId, profile, showRing = true, initialSto
       
       console.log("[UserStory] Fetched stories:", { activeStories, archivedStories, allStories, sortedStories, count: sortedStories.length });
       
+      // Get story visibility from first story (most recent)
+      const currentVisibility = sortedStories[0]?.visibility || "public";
+      console.log("[UserStory] Story visibility:", currentVisibility);
+      
       if (sortedStories.length > 0) {
         setStories(sortedStories);
         setHasStories(true);
@@ -229,7 +241,10 @@ export default function UserStory({ userId, profile, showRing = true, initialSto
     setShowStoryViewer(false);
     setStoryIndex(0);
     setProgress(0);
-  }, []);
+    if (onStoryView && userId) {
+      onStoryView(userId);
+    }
+  }, [onStoryView, userId]);
 
   const goToNextStory = useCallback(() => {
     if (storyIndex < stories.length - 1) {
@@ -455,16 +470,18 @@ useEffect(() => {
 
   if (!profile) return null;
 
+  const currentRingColor = getRingColor();
+
   return (
     <>
       {/* PROFILE IMAGE */}
       <div className="relative">
-       <div
-  className={`w-20 h-20 rounded-2xl p-[2px] cursor-pointer ${
-    showRing && hasStories
-      ? "bg-gradient-to-tr from-yellow-400 via-orange-500 to-pink-500"
-      : "bg-transparent"
-  }`}
+        <div
+          className={`w-20 h-20 rounded-2xl p-[2px] cursor-pointer ${
+            showRing && hasStories
+              ? currentRingColor
+              : "bg-transparent"
+          }`}
   onClick={handleProfilePhotoClick}
 >
          <div className="w-full h-full rounded-2xl overflow-hidden">

@@ -163,6 +163,30 @@ api.post("/api/v1/auth/signup/email-password", {
   // Check follow status
   getFollowStatus: (userId) => api.get(`/users/${userId}/follow-status`),
 
+  // ============ FOLLOW REQUESTS (for private accounts) ============
+  // Send a follow request to a private user
+  sendFollowRequest: (userId, message = '') => api.post(`/users/${userId}/follow`, { message }),
+
+  // Cancel a sent follow request by userId
+  cancelFollowRequest: (userId) => api.delete(`/users/${userId}/follow-request`),
+
+  // Accept a follow request
+  acceptFollowRequest: (requestId) => api.post(`/follow-requests/${requestId}/accept`),
+
+  // Reject a follow request
+  rejectFollowRequest: (requestId) => api.post(`/follow-requests/${requestId}/reject`),
+
+  // Get follow request status with a user
+  getFollowRequestStatus: (userId) => api.get(`/users/${userId}/follow-request-status`),
+
+  // Get pending follow requests (received)
+  getPendingFollowRequests: (limit = 20, cursor = null) => 
+    api.get('/follow-requests/pending', { params: { limit, cursor } }),
+
+  // Get sent follow requests
+  getSentFollowRequests: (limit = 20, cursor = null) => 
+    api.get('/follow-requests/sent', { params: { limit, cursor } }),
+
   // ============ BLOCK/UNBLOCK ============
   // Block a user - also removes them from your followers list
   blockUser: (userId, reason = "") => api.post(`/users/${userId}/block`, { reason }),
@@ -303,5 +327,14 @@ export const followUser = (userId) => userService.followUser(userId);
 export const unfollowUser = (userId) => userService.unfollowUser(userId);
 export const getAccountPrivacy = () => userService.getAccountPrivacy();
 export const updateAccountPrivacy = (isPrivate) => userService.updateAccountPrivacy(isPrivate);
+
+// Follow request exports
+export const sendFollowRequest = (userId, message) => userService.sendFollowRequest(userId, message);
+export const cancelFollowRequest = (userId) => userService.cancelFollowRequest(userId);
+export const acceptFollowRequest = (requestId) => userService.acceptFollowRequest(requestId);
+export const rejectFollowRequest = (requestId) => userService.rejectFollowRequest(requestId);
+export const getFollowRequestStatus = (userId) => userService.getFollowRequestStatus(userId);
+export const getPendingFollowRequests = (limit, cursor) => userService.getPendingFollowRequests(limit, cursor);
+export const getSentFollowRequests = (limit, cursor) => userService.getSentFollowRequests(limit, cursor);
 
 export default userService;

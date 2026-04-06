@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { getMyTeams, getTeamChatInfo, getTeamChatMembers, getTeamChatMessages, sendTeamChatMessage } from '@/lib/api/teamApi';
 
 export default function TeamChat({ teamId: initialTeamId, teamName: initialTeamName }) {
@@ -34,6 +34,21 @@ export default function TeamChat({ teamId: initialTeamId, teamName: initialTeamN
       scrollToBottom();
     }
   }, [messages]);
+
+  const handleClickOutside = useCallback((e) => {
+    const chatBox = document.getElementById('team-chat-box');
+    const chatButton = document.getElementById('team-chat-button');
+    if (chatBox && !chatBox.contains(e.target) && !chatButton?.contains(e.target)) {
+      setIsOpen(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [isOpen, handleClickOutside]);
 
   const fetchUserTeams = async () => {
     try {
@@ -154,6 +169,7 @@ export default function TeamChat({ teamId: initialTeamId, teamName: initialTeamN
     <div className="fixed bottom-6 right-10 z-50">
       {!isOpen && (
         <button
+          id="team-chat-button"
           onClick={() => setIsOpen(true)}
           className="h-10 w-32 bg-white/90  hover:bg-gradient-to-tr hover:from-[#EF3AFF] hover:to-[#FF8319] text-blue-500 hover:text-white rounded-full shadow-lg  flex items-center justify-center gap-2 transition-all duration-300 hover:scale-105"
         >
@@ -181,7 +197,7 @@ export default function TeamChat({ teamId: initialTeamId, teamName: initialTeamN
       )}
 
       {isOpen && (
-        <div className="animate-slideUp w-80 h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
+        <div id="team-chat-box" className="animate-slideUp w-80 h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
           <div className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
