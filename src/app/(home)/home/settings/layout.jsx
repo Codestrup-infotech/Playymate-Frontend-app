@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Lock, Users, HelpCircle, VolumeX, FileWarning, Trash2 } from "lucide-react";
+import { User, Lock, Users, HelpCircle, VolumeX, FileWarning, Trash2, Ban } from "lucide-react";
 import { useTheme } from "@/lib/ThemeContext";
 
 export default function SettingsLayout({ children }) {
@@ -30,6 +30,11 @@ export default function SettingsLayout({ children }) {
       name: "Muted Users",
       path: "/home/settings/muted-user-list",
       icon: <VolumeX size={20} />,
+    },
+    {
+      name: "Blocked Users",
+      path: "/home/settings/blocked-user",
+      icon: <Ban size={20} />,
     },
     {
       name: "Withdraw Report",

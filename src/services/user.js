@@ -194,6 +194,10 @@ api.post("/api/v1/auth/signup/email-password", {
   // Unblock a user
   unblockUser: (userId) => api.delete(`/users/${userId}/block`),
 
+  // Get blocked users list
+  getBlockedUsers: (limit = 20, cursor = null) => 
+    api.get('/users/blocked', { params: { limit, cursor } }),
+
   // ============ MUTE/UNMUTE ============
   // Mute a user
   muteUser: (userId, muteOptions = { mute_posts: true, mute_stories: true, mute_notifications: false }) => 

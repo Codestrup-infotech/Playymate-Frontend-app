@@ -157,6 +157,7 @@ export default function UserProfilePage() {
   // Mute/Unmute state
   const [isMuted, setIsMuted] = useState(false);
   const [isCloseFriend, setIsCloseFriend] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   
   // Share popup state
   const [showSharePopup, setShowSharePopup] = useState(false);
@@ -293,7 +294,6 @@ console.log("=== FOLLOW ACTION ===");
         console.log("Mute status fetched:", muteData);
       } catch (error) {
         console.error("Error fetching mute status:", error);
-        // Fallback to using profile data if available
         if (profile) {
           setIsMuted(profile.is_muted === true);
         }
@@ -302,6 +302,37 @@ console.log("=== FOLLOW ACTION ===");
     
     if (!isOwnProfile && userId) {
       fetchMuteStatus();
+    }
+  }, [userId, isOwnProfile, profile]);
+
+  // Fetch block status when userId changes
+  useEffect(() => {
+    const fetchBlockStatus = async () => {
+      if (!userId || isOwnProfile) return;
+      
+      try {
+        const response = await userService.getBlockedUsers(100, null);
+        const data = response?.data?.data || response?.data;
+        const blockedUsers = data?.blocked_users || data?.users || data || [];
+        
+        const isUserBlocked = blockedUsers.some(blocked => {
+          const blockedUser = blocked.user || blocked;
+          const blockedUserId = blockedUser._id || blockedUser.user_id || blockedUser.id;
+          return blockedUserId === userId;
+        });
+        
+        setIsBlocked(isUserBlocked);
+        console.log("Block status fetched:", isUserBlocked);
+      } catch (error) {
+        console.error("Error fetching block status:", error);
+        if (profile) {
+          setIsBlocked(profile.is_blocked === true);
+        }
+      }
+    };
+    
+    if (!isOwnProfile && userId) {
+      fetchBlockStatus();
     }
   }, [userId, isOwnProfile, profile]);
 
@@ -325,7 +356,6 @@ console.log("=== FOLLOW ACTION ===");
   // Handle remove from close friends
   const handleRemoveFromCloseFriends = async () => {
     try {
-      // Use the username from profile state or from userId if it's a username
       const username = profile?.username || userId;
       if (!username) {
         console.error("No username available to remove from close friends");
@@ -336,6 +366,28 @@ console.log("=== FOLLOW ACTION ===");
       console.log("User removed from close friends");
     } catch (error) {
       console.error("Error removing from close friends:", error);
+    }
+  };
+
+  // Handle block user
+  const handleBlockUser = async () => {
+    try {
+      await userService.blockUser(userId);
+      setIsBlocked(true);
+      console.log("User blocked successfully");
+    } catch (error) {
+      console.error("Error blocking user:", error);
+    }
+  };
+
+  // Handle unblock user
+  const handleUnblockUser = async () => {
+    try {
+      await userService.unblockUser(userId);
+      setIsBlocked(false);
+      console.log("User unblocked successfully");
+    } catch (error) {
+      console.error("Error unblocking user:", error);
     }
   };
 
@@ -938,10 +990,13 @@ console.log("=== FOLLOW ACTION ===");
         userProfileImage={profileData?.profile_image_url}
         isMuted={isMuted}
         isCloseFriend={isCloseFriend}
+        isBlocked={isBlocked}
         onMute={handleMuteUser}
         onUnmute={handleUnmuteUser}
         onAddCloseFriend={handleAddToCloseFriends}
         onRemoveCloseFriend={handleRemoveFromCloseFriends}
+        onBlock={handleBlockUser}
+        onUnblock={handleUnblockUser}
         username={profileData?.username}
       />
 
