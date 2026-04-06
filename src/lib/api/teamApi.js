@@ -1371,6 +1371,129 @@ export async function searchTeamChatMessages(teamId, params) {
   }
 }
 
+/**
+ * Edit a message
+ * PATCH /api/v1/teams/:teamId/chat/messages/:messageId
+ * @param {string} teamId - Team ID
+ * @param {string} messageId - Message ID
+ * @param {Object} data - { content: string }
+ */
+export async function editTeamChatMessage(teamId, messageId, data) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/chat/messages/${messageId}`, {
+      method: "PATCH",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error editing team chat message:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get edit history of a message
+ * GET /api/v1/teams/:teamId/chat/messages/:messageId/edits
+ * @param {string} teamId - Team ID
+ * @param {string} messageId - Message ID
+ */
+export async function getMessageEditHistory(teamId, messageId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/chat/messages/${messageId}/edits`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting message edit history:", error);
+    throw error;
+  }
+}
+
+/**
+ * Create thread reply
+ * POST /api/v1/teams/:teamId/chat/messages/:messageId/reply
+ * @param {string} teamId - Team ID
+ * @param {string} messageId - Parent message ID
+ * @param {Object} data - { content: string, message_type?: string }
+ */
+export async function createThreadReply(teamId, messageId, data) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/chat/messages/${messageId}/reply`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error creating thread reply:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get thread replies
+ * GET /api/v1/teams/:teamId/chat/messages/:messageId/replies
+ * @param {string} teamId - Team ID
+ * @param {string} messageId - Parent message ID
+ */
+export async function getThreadReplies(teamId, messageId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/chat/messages/${messageId}/replies`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting thread replies:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get team threads
+ * GET /api/v1/teams/:teamId/chat/threads
+ * @param {string} teamId - Team ID
+ */
+export async function getTeamThreads(teamId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/chat/threads`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting team threads:", error);
+    throw error;
+  }
+}
+
 export default {
   checkTeamHealth,
   generatePresignedUrl,
@@ -1422,4 +1545,9 @@ export default {
   markMessagesAsRead,
   deleteTeamChatMessage,
   searchTeamChatMessages,
+  editTeamChatMessage,
+  getMessageEditHistory,
+  createThreadReply,
+  getThreadReplies,
+  getTeamThreads,
 };

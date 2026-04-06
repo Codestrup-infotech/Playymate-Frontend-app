@@ -567,8 +567,8 @@ const handleUpdateReply = async (commentId, replyId) => {
 
                   const commentAuthorId = String(comment.author?.user_id || comment.author?._id || comment.user?.user_id || comment.user?._id || '');
                   const currentUserId = String(currentUser?.user_id || currentUser?._id || currentUser?.id || '');
-                  // Check if current user owns this comment - always show for now to test
-                  const isOwnComment = true;
+                  // Check if current user owns this comment
+                  const isOwnComment = commentAuthorId === currentUserId;
 
                  return (
  <div
@@ -593,9 +593,9 @@ const handleUpdateReply = async (commentId, replyId) => {
       <span>{comment.text}</span>
     </div>
 
-    {/* RIGHT SIDE (3 DOT) */}
-    {isOwnComment && (
-      <div className="relative ml-2">
+    {/* RIGHT SIDE (3 DOT) - Show on hover */}
+    {isOwnComment ? (
+      <div className="relative ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={() =>
             setActiveCommentMenu(prev =>
@@ -605,7 +605,6 @@ const handleUpdateReply = async (commentId, replyId) => {
             )
           }
           className="p-1 rounded hover:bg-gray-200 text-black"
-          style={{ visibility: 'visible', opacity: 1 }}
         >
           <MoreHorizontal size={16} />
         </button>
@@ -622,7 +621,6 @@ const handleUpdateReply = async (commentId, replyId) => {
             >
               Update
             </button>
-
             <button
               onClick={() =>
                 handleDeleteComment(comment.comment_id || comment.id)
@@ -631,7 +629,6 @@ const handleUpdateReply = async (commentId, replyId) => {
             >
               Delete
             </button>
-
             <button
               onClick={() => setActiveCommentMenu(null)}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-600"
@@ -640,6 +637,14 @@ const handleUpdateReply = async (commentId, replyId) => {
             </button>
           </div>
         )}
+      </div>
+    ) : (
+      <div className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <ThreeDotButton
+          targetId={comment.comment_id || comment.id}
+          targetType="comment"
+          userId={commentAuthorId}
+        />
       </div>
     )}
   </div>
@@ -658,23 +663,8 @@ const handleUpdateReply = async (commentId, replyId) => {
       </button>
     </div>
 
-    {/* RIGHT (3 DOT ALSO HERE FOR PERFECT ALIGN) */}
-    {isOwnComment && (
-      <div className="relative group">
-        <button
-          onClick={() =>
-            setActiveCommentMenu(prev =>
-              prev === (comment.comment_id || comment.id)
-                ? null
-                : (comment.comment_id || comment.id)
-            )
-          }
-          className="p-1 rounded hover:bg-gray-200"
-        >
-          <MoreHorizontal size={16} />
-        </button>
-      </div>
-    )}
+    {/* RIGHT spacer for perfect alignment */}
+    <div />
   </div>
 
   {/* EDIT COMMENT */}
@@ -709,8 +699,8 @@ const handleUpdateReply = async (commentId, replyId) => {
         console.log('UserPostDetailModal - replyId:', replyId);
         const replyAuthorId = String(reply.author?.user_id || reply.author?._id || reply.user?.user_id || reply.user?._id || '');
         const currentUserId = String(currentUser?.user_id || currentUser?._id || currentUser?.id || '');
-        // Always show for now to test
-        const isOwnReply = true;
+        // Check if current user owns this reply
+        const isOwnReply = replyAuthorId === currentUserId;
         return (
         <div key={idx} className="flex justify-between items-start">
 
@@ -727,8 +717,8 @@ const handleUpdateReply = async (commentId, replyId) => {
             </div>
           </div>
 
-          {isOwnReply && (
-            <div className="relative">
+          {isOwnReply ? (
+            <div className="relative opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={() =>
                   setActiveCommentMenu(prev =>
@@ -773,6 +763,14 @@ const handleUpdateReply = async (commentId, replyId) => {
                   </button>
                 </div>
               )}
+            </div>
+          ) : (
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <ThreeDotButton
+                targetId={replyId}
+                targetType="reply"
+                userId={replyAuthorId}
+              />
             </div>
           )}
         </div>
