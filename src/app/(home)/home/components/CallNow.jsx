@@ -1,109 +1,79 @@
 "use client";
 
 import { Phone, Video } from "lucide-react";
-import { initiateCall } from "@/app/user/call-now";
+import { initiateCall, storeCallSession } from "@/app/user/call-now";
 
 export default function CallNow({ selectedConv, myId }) {
   if (!selectedConv) return null;
 
-  const participants = (selectedConv.participants || [])
+  // Collect all participant IDs except yourself
+  const recipients = (selectedConv.participants || [])
     .map((p) => p.user_id?._id || p.user_id)
     .filter((id) => id && id !== myId);
 
-  const handleCall = async (type) => {
+  const handleCall = async (callType) => {
     try {
+      // 1. Initiate the call via API
       const res = await initiateCall({
-        call_type: type,
-        recipient_ids: participants,
-        is_group_call: participants.length > 1,
+        call_type: callType,
+        recipient_ids: recipients,
+        is_group_call: recipients.length > 1,
       });
 
-      // ✅ correct parsing
+      // 2. Parse the API response
+      // Based on your postman response:
+      // res.data.call      → call object
+      // res.data.token     → ZegoCloud RTC token
+      // res.data.provider_config → { type, app_id, server_url, room_id, user_id }
       const apiData = res?.data;
-      const call = apiData?.call || apiData;
-      const providerConfig = apiData?.provider_config;
-      const token = apiData?.token;
+      if (!apiData) throw new Error("No data in response");
 
-      // Get provider type - could be in providerConfig.type or call.provider
-      let providerType = providerConfig?.type;
-      if (!providerType && call?.provider) {
-        providerType = call.provider;
+      const call = apiData.call;
+      const token = apiData.token;
+      const providerConfig = apiData.provider_config;
+
+      if (!call?._id) throw new Error("Call ID missing from response");
+      if (!token) throw new Error("Token missing from response");
+      if (!providerConfig) throw new Error("Provider config missing");
+      if (providerConfig.type !== "ZEGOCLOUD") {
+        throw new Error(`Expected ZEGOCLOUD, got: ${providerConfig.type}`);
       }
 
-      const callId = call?._id;
+      // 3. Store in sessionStorage so the call page can use it immediately
+      //    (avoids needing to call accept API for the initiator)
+      storeCallSession(call._id, {
+        role: "initiator",
+        call,
+        token,
+        provider_config: providerConfig,
+      });
 
-      // ✅ validations
-      if (!callId) throw new Error("Call ID missing");
-      if (!providerType) throw new Error("Provider missing");
-
-      // ✅ Support both providers
-      const supportedProviders = ["AGORA", "WEBRTC_SELFHOSTED"];
-      if (!supportedProviders.includes(providerType)) {
-        alert(`Unsupported provider: ${providerType}`);
-        return;
-      }
-
-      // ❌ Agora check (keep existing validation for Agora)
-      if (providerType === "AGORA") {
-        if (!providerConfig?.app_id) {
-          alert("Agora not configured on backend");
-          return;
-        }
-
-        if (!call?.room_id) {
-          alert("Room ID missing");
-          return;
-        }
-
-        if (!token) {
-          alert("Call token missing");
-          return;
-        }
-      }
-
-      // ✅ For WEBRTC_SELFHOSTED, we just need the call ID and proceed
-      // Store provider config in sessionStorage for the call page to use
-      if (providerType === "WEBRTC_SELFHOSTED") {
-        const callData = {
-          provider: providerType,
-          ws_url: providerConfig?.ws_url,
-          token: token,
-          room_id: call?.room_id,
-          app_id: providerConfig?.app_id,
-        };
-        sessionStorage.setItem(`call_${callId}`, JSON.stringify(callData));
-      }
-
-      // ✅ correct URL
-      const url = `/call/${callId}?type=${type}`;
-
-      window.open(url, "_blank");
-
+      // 4. Open call page in a new window
+      const url = `/call/${call._id}?type=${callType}`;
+      window.open(url, "_blank", "width=900,height=700");
     } catch (err) {
-      console.error("Call error:", err);
+      console.error("Call initiation error:", err);
       alert(err.message || "Failed to start call");
     }
   };
 
   return (
     <div className="flex items-center gap-2">
-
-      {/* Voice Call */}
       <button
         onClick={() => handleCall("audio")}
-        className="w-9 h-9 rounded-full bg-pink-50 hover:bg-pink-100 flex items-center justify-center"
+        title="Voice Call"
+        className="w-9 h-9 rounded-full bg-pink-50 hover:bg-pink-100 flex items-center justify-center transition-colors"
       >
         <Phone className="w-4 h-4 text-pink-500" />
       </button>
 
-      {/* Video Call */}
       <button
         onClick={() => handleCall("video")}
-        className="w-9 h-9 rounded-full bg-pink-50 hover:bg-pink-100 flex items-center justify-center"
+        title="Video Call"
+        className="w-9 h-9 rounded-full bg-pink-50 hover:bg-pink-100 flex items-center justify-center transition-colors"
       >
         <Video className="w-4 h-4 text-pink-500" />
       </button>
-
     </div>
   );
 }

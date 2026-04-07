@@ -1,4 +1,5 @@
 import "./globals.css";
+import IncomingCallHandler from "@/app/(home)/home/components/IncomingCall";
 
 // AWS Amplify configuration for Face Liveness
 // import "@/lib/amplify-config";
@@ -22,6 +23,7 @@ export default function RootLayout({ children }) {
         style={{ fontFamily: "'Playfair Display', serif" }}
       >
         {children}
+        <IncomingCallHandler />
       </body>
     </html>
   );
