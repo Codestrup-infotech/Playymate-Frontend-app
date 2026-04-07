@@ -606,7 +606,7 @@ export default function ProfilePage() {
   ].filter((c) => c.items.length > 0);
 
   return (
-    <div className="space-y-4 lg:max-w-5xl lg:w-full w-96 lg:mx-auto lg:px-4 px-2 pb-10">
+    <div className="space-y-4 lg:max-w-5xl lg:w-full md:max-w-full md:w-full w-96 lg:mx-auto lg:px-4 px-2 pb-10">
 
       {/* ── HEADER CARD ─────────────────────────────────────────────────── */}
       <div

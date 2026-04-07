@@ -637,7 +637,7 @@ console.log("=== FOLLOW ACTION ===");
           
            
 
-        <div className={`${isDark ? "bg-gray-800" : "bg-white shadow-gray-300 border "} rounded-2xl  lg:px-4 lg:py-6 p-1 py-1 mb-6 shadow-sm`}>
+        <div className={`${isDark ? "bg-gray-800" : "bg-white shadow-gray-300 border "} rounded-2xl  lg:px-4 px-3 lg:py-6 p-1 py-4 mb-6 shadow-sm`}>
 
             {/* <button 
             onClick={() => router.back()}
@@ -648,7 +648,7 @@ console.log("=== FOLLOW ACTION ===");
 
 
  {/* Cover Photo Section */}
-          <div className="relative inset-0 h-52 w-full overflow-hidden">
+          <div className="relative inset-0 lg:h-52 h-40 w-full overflow-hidden">
             {profileData.cover_photo ? (
               <img 
                 src={profileData.cover_photo} 
@@ -656,11 +656,11 @@ console.log("=== FOLLOW ACTION ===");
                 className="w-full  h-full object-cover rounded-xl "
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-l from-[#FF8319] to-[#EF3AFF]" />
+              <div className="w-full h-full  rounded-2xl bg-gradient-to-l from-[#FF8319] to-[#EF3AFF]" />
             )}
           </div>
           
-          <div className="flex mt-5 flex-col md:flex-row gap-10">
+          <div className="flex mt-5 flex-col md:flex-row lg:gap-10 gap-6">
             {/* Profile Image with Story Ring */}
 
             <div className="flex flex-col"> 
@@ -711,7 +711,12 @@ console.log("=== FOLLOW ACTION ===");
              
 
 
-
+  {/* Bio */} 
+              {profileData.bio && (
+                <p className={` lg:pl-4  ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+                  {profileData.bio}
+                </p>
+              )}
              
               {/* Stats */}
               <div className="flex justify-start items-center gap-6 py-2">
@@ -740,18 +745,13 @@ console.log("=== FOLLOW ACTION ===");
 
             {/* Location */}
               {location.display_text && (
-                <div className={`flex items-center gap-1  mb-1 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+                <div className={`flex items-center gap-1  mb-4 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
                   <MapPin size={14} />
                   <span className="text-sm">{location.display_text}</span>
                 </div>
               )}
 
-              {/* Bio */} 
-              {profileData.bio && (
-                <p className={`mb-4 lg:pl-4  ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                  {profileData.bio}
-                </p>
-              )}
+            
 
 
 
@@ -851,7 +851,7 @@ console.log("=== FOLLOW ACTION ===");
                   : isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-800"
               }`}
             >
-              <Grid size={18} />
+              <Grid size={18} />  
               Posts
             </button>
             <button
@@ -887,7 +887,7 @@ console.log("=== FOLLOW ACTION ===");
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
                   </div>
                 ) : posts.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-1 mb-4">
+                  <div className="grid lg:grid-cols-3 grid-cols-2 gap-1 mb-4">
                    {posts.map((post, index) => (
   <div
     key={post?._id || `post-${index}`}
@@ -924,7 +924,7 @@ console.log("=== FOLLOW ACTION ===");
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
                   </div>
                 ) : reels.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid lg:grid-cols-3 grid-cols-2 gap-2">
                    {reels.map((reel, index) => (
   <div
     key={reel?._id || `reel-${index}`}

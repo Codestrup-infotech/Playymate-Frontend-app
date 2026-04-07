@@ -663,8 +663,23 @@ const handleUpdateReply = async (commentId, replyId) => {
       </button>
     </div>
 
-    {/* RIGHT spacer for perfect alignment */}
-    <div />
+    {/* RIGHT (3 DOT ALSO HERE FOR PERFECT ALIGN) */}
+    {isOwnComment && (
+      <div className="relative group">
+        <button
+          onClick={() =>
+            setActiveCommentMenu(prev =>
+              prev === (comment.comment_id || comment.id)
+                ? null
+                : (comment.comment_id || comment.id)
+            )
+          }
+          className="p-1 rounded hover:bg-gray-200"
+        >
+          <MoreHorizontal size={16} />
+        </button>
+      </div>
+    )}
   </div>
 
   {/* EDIT COMMENT */}

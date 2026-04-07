@@ -326,7 +326,7 @@ export default function TeamsPage() {
       </div>
 
       {/* ACTION CARDS */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
+      <div className="grid lg:grid-cols-2 grid-cols-1 gap-4 mb-8">
 
         {/* Create Team Button - with eligibility check */}
         <button
@@ -362,8 +362,8 @@ export default function TeamsPage() {
       {/* MY TEAMS SECTION - Show if user owns OR has joined any teams */}
       {(teamsData.owned.length > 0 || teamsData.joined.length > 0) && (
         <>
-        <div className="flex w-full space-x-7 "> 
-          <div className=" flex flex-col  w-1/2 ">
+        <div className="lg:flex w-full lg:space-x-7 "> 
+          <div className=" lg:flex flex-col  lg:w-1/2 ">
           {teamsData.owned.length > 0 && (
             <>
             <h2 className="text-xl font-semibold mb-4 tracking-tight">Teams You Own</h2>
@@ -391,7 +391,7 @@ export default function TeamsPage() {
             </>
           )}
            </div>
-           <div className=" flex flex-col w-1/2  "> 
+           <div className=" lg:flex flex-col lg:w-1/2  "> 
            {teamsData.joined.length > 0 && (
             <>
             <h2 className="text-xl font-semibold mb-4 tracking-tight">Teams You Joined</h2>

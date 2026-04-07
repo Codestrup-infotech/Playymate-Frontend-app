@@ -209,11 +209,11 @@ export default function MyTeamPage() {
     return (
      <div
   key={teamId}
-  className={`flex items-center justify-between border rounded-2xl p-4 ${cardBg} shadow-sm cursor-pointer hover:opacity-90 transition`}
+  className={`flex w-80 lg:w-full items-center justify-between border rounded-2xl p-4 ${cardBg} shadow-sm cursor-pointer hover:opacity-90 transition`}
   onClick={() => router.push(`/teams/my-team/${teamId}`)}
 >
   {/* LEFT SIDE */}
-  <div className="flex items-center gap-4 flex-1 min-w-0">
+  <div className="lg:flex items-center gap-4 flex-1 min-w-0">
     
     {/* Avatar */}
     <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-[#252542]" : "bg-gray-100"} overflow-hidden`}>

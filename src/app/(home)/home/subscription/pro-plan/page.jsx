@@ -29,8 +29,7 @@ import {
   Unlock,
 } from "lucide-react";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 const FEATURE_META = {
   PROFILE_SETUP: { label: "Profile Setup", icon: <Users size={16} /> },
