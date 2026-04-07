@@ -13,10 +13,11 @@ import {
   getTeamProfile, getTeamMembers, getPendingMembers,
   getTeamPayments, getPaymentSummary, createInvite,
   removeMember, updateMemberRole, acceptInvite, declineInvite,
-  getTeamInvites,
+  getTeamInvites, checkNameAvailability,
 } from "@/lib/api/teamApi";
 import InvitePlayers from "@/app/(home)/home/components/InvitePlayers";
 import TeamChat from "@/app/(home)/home/components/TeamChat";
+import ReserveTeamNameAfterCreation from "@/app/(home)/home/components/ReserveTeamNameAfterCreation";
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -112,6 +113,7 @@ export default function TeamDetailPage() {
   const [removeTarget,   setRemoveTarget]   = useState(null);
   const [removing,       setRemoving]       = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showReserveNameModal, setShowReserveNameModal] = useState(false);
 
   // ── Fetch ──
   useEffect(() => {
@@ -121,6 +123,19 @@ export default function TeamDetailPage() {
         setLoading(true);
         const teamRes = await getTeamProfile(teamId);
         const teamData = teamRes.data || teamRes;
+        console.log("Team Profile Data:", teamData);
+        
+        // Check if name was reserved via API
+        try {
+          const availabilityRes = await checkNameAvailability(teamData.name);
+          const availability = availabilityRes.data || availabilityRes;
+          console.log("Name Availability:", availability);
+          teamData.name_reserved = availability.is_reserved === true;
+          console.log("Is Name Reserved:", teamData.name_reserved);
+        } catch (err) {
+          console.log("Could not check name availability:", err);
+        }
+        
         setTeam(teamData);
         
         if (teamData.members && Array.isArray(teamData.members)) {
@@ -370,8 +385,30 @@ export default function TeamDetailPage() {
             {team.name}
           </span>
 
-          {team.is_verified && (
+          {team.name_reserved === true && (
             <CheckCircle size={16} style={{ color: t.blue }} />
+          )}
+          
+          {!team.name_reserved && userRole === "owner" && (
+            <button
+              onClick={() => setShowReserveNameModal(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "4px 10px",
+                borderRadius: 50,
+                background: "rgba(244,63,138,0.15)",
+                border: "none",
+                cursor: "pointer",
+                fontSize: 11,
+                fontWeight: 600,
+                color: t.accent,
+              }}
+            >
+              <Shield size={12} />
+              Reserve Name
+            </button>
           )}
         </div>
 
@@ -567,6 +604,8 @@ export default function TeamDetailPage() {
             );
           })}
         </div>
+
+        {/* add the button team reservation button here  */}
 
         {/* ── Members Tab ── */}
         {activeTab === "members" && (
@@ -834,6 +873,18 @@ export default function TeamDetailPage() {
           </div>
         </Modal>
       )}
+
+      {/* ── Reserve Team Name Modal ── */}
+      <ReserveTeamNameAfterCreation
+        isOpen={showReserveNameModal}
+        onClose={() => setShowReserveNameModal(false)}
+        teamId={teamId}
+        teamName={team?.name}
+        isAlreadyReserved={team?.name_reserved === true}
+        onSuccess={(result) => {
+          setTeam(prev => ({ ...prev, name_reserved: true }))
+        }}
+      />
 
       <TeamChat teamId={teamId} teamName={team?.name} />
 

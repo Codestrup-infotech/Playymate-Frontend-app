@@ -4,13 +4,27 @@ import { useState, useEffect } from "react"
 import { X, CheckCircle, AlertCircle, Loader2, Coins, Sparkles } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from "@/lib/ThemeContext"
-import { checkNameAvailability, getNameReservationPricing, getNameReservationCoinBalance, reserveTeamName } from "@/lib/api/teamApi"
+import { 
+  checkNameAvailability, 
+  getNameReservationPricing, 
+  getNameReservationCoinBalance, 
+  initiateNameReservation,
+  confirmNameReservation,
+  getNameReservationStatus
+} from "@/lib/api/teamApi"
 
-export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, onSkip, onContinue }) {
+export default function ReserveTeamNameAfterCreation({ 
+  isOpen, 
+  onClose, 
+  teamId, 
+  teamName, 
+  onSuccess,
+  isAlreadyReserved = false
+}) {
   const { theme } = useTheme()
   const isDark = theme === "dark"
 
-  const [step, setStep] = useState("check") // check, confirm, processing, success, error
+  const [step, setStep] = useState("check") 
   const [availability, setAvailability] = useState(null)
   const [pricing, setPricing] = useState(null)
   const [balances, setBalances] = useState(null)
@@ -18,7 +32,7 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
   const [error, setError] = useState(null)
   const [useGoldCoins, setUseGoldCoins] = useState(false)
   const [reservationResult, setReservationResult] = useState(null)
-  const [inputTeamName, setInputTeamName] = useState("")
+  const [initiatedData, setInitiatedData] = useState(null)
 
   const bgColor = isDark ? "bg-[#1a1a2e]" : "bg-white"
   const textColor = isDark ? "text-white" : "text-gray-900"
@@ -27,12 +41,11 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
   const inputBg = isDark ? "bg-[#0f0f1a]" : "bg-gray-50"
 
   const checkAvailability = async () => {
-    const nameToCheck = teamName || inputTeamName
-    if (!nameToCheck || !nameToCheck.trim()) return
+    if (!teamName || !teamName.trim()) return
     
     try {
       setLoading(true)
-      const result = await checkNameAvailability(nameToCheck)
+      const result = await checkNameAvailability(teamName)
       setAvailability(result.data || result)
     } catch (err) {
       console.error("Error checking availability:", err)
@@ -60,12 +73,23 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
     }
   }
 
-  const handleCheckNewName = () => {
-    if (inputTeamName.trim()) {
-      checkAvailability()
-      fetchPricing()
-      fetchBalances()
+  const checkCurrentReservation = async () => {
+    if (!teamId) return
+    try {
+      const result = await getNameReservationStatus(teamId)
+      const data = result.data || result
+      if (data?.name_reservation?.is_reserved) {
+        setAvailability({
+          is_reserved: true,
+          is_reservable: false,
+          name: teamName
+        })
+        return true
+      }
+    } catch (err) {
+      console.log("Could not check reservation status:", err)
     }
+    return false
   }
 
   useEffect(() => {
@@ -75,61 +99,88 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
       setError(null)
       setReservationResult(null)
       setUseGoldCoins(false)
-      setInputTeamName("")
-    }
-  }, [isOpen])
-
-  useEffect(() => {
-    if (isOpen && (teamName || inputTeamName)) {
-      const nameToCheck = teamName || inputTeamName
-      if (nameToCheck && nameToCheck.trim()) {
-        checkAvailability()
-        fetchPricing()
-        fetchBalances()
+      setInitiatedData(null)
+      
+      if (isAlreadyReserved) {
+        setAvailability({
+          is_reserved: true,
+          is_reservable: false,
+          name: teamName
+        })
       }
     }
-  }, [isOpen, teamName, inputTeamName])
+  }, [isOpen, teamId, isAlreadyReserved])
 
-  const handleReserve = async () => {
-    const nameToReserve = teamName || inputTeamName
-    if (!nameToReserve || !nameToReserve.trim()) {
-      setError("Please enter a team name")
+  useEffect(() => {
+    if (isOpen && teamName && !isAlreadyReserved) {
+      checkAvailability()
+      fetchPricing()
+      fetchBalances()
+    }
+  }, [isOpen, teamName, isAlreadyReserved])
+
+  const handleInitiate = async () => {
+    if (!teamName || !teamName.trim() || !teamId) {
+      setError("Invalid team information")
       return
     }
     
-    // Just mark as reserved locally - no API call
-    // The actual reservation + payment happens during team creation
-    const reservationResult = {
-      reservation_id: `reserve_${nameToReserve.replace(/\s+/g, '_')}_${Date.now()}`,
-      name: nameToReserve,
-      use_gold_coins: useGoldCoins,
-      status: "RESERVED",
-      payment_pending: true
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const idempotencyKey = `name_res_${teamId}_${Date.now()}`
+      
+      const result = await initiateNameReservation({
+        teamId: teamId,
+        use_gold_coins: useGoldCoins,
+        idempotency_key: idempotencyKey
+      })
+      
+      const data = result.data || result
+      setInitiatedData(data)
+      setStep("confirm")
+    } catch (err) {
+      console.error("Error initiating reservation:", err)
+      setError(err.message || "Failed to initiate reservation")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleConfirm = async () => {
+    if (!initiatedData?.idempotency_key || !teamId) {
+      setError("Invalid reservation data")
+      return
     }
     
-    // Store reserved name in localStorage for later verification
-    const existingReservations = JSON.parse(localStorage.getItem('reservedTeamNames') || '[]');
-    if (!existingReservations.includes(nameToReserve)) {
-      localStorage.setItem('reservedTeamNames', JSON.stringify([...existingReservations, nameToReserve]));
-    }
-    
-    setReservationResult(reservationResult)
-    setStep("success")
-    
-    if (onSuccess) {
-      onSuccess(reservationResult)
+    try {
+      setLoading(true)
+      setError(null)
+      setStep("processing")
+      
+      const result = await confirmNameReservation(teamId, {
+        idempotency_key: initiatedData.idempotency_key
+      })
+      
+      const data = result.data || result
+      setReservationResult(data)
+      setStep("success")
+      
+      if (onSuccess) {
+        onSuccess(data)
+      }
+    } catch (err) {
+      console.error("Error confirming reservation:", err)
+      setError(err.message || "Failed to confirm reservation")
+      setStep("error")
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleSkip = () => {
-    if (onSkip) onSkip()
-    if (onContinue) onContinue()
-    onClose()
-  }
-
-  const handleContinueAfterSuccess = () => {
-    if (onContinue) onContinue()
-    onClose()
+    if (onClose) onClose()
   }
 
   const formatNumber = (num) => {
@@ -141,8 +192,8 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
   const goldCoinsToUse = useGoldCoins ? Math.floor(priceAmount * (maxGoldPercentage / 100)) : 0
   const diamondCoinsToUse = priceAmount - goldCoinsToUse
 
-  const goldBalance = balances?.gold_coins?.balance || 0
-  const diamondBalance = balances?.diamond_coins?.balance || 0
+  const goldBalance = balances?.gold_coins?.balance || balances?.gold_coins || 0
+  const diamondBalance = balances?.diamond_coins?.balance || balances?.diamonds || balances?.diamond_coins || 0
   const canAfford = (useGoldCoins ? goldBalance >= goldCoinsToUse : true) && diamondBalance >= diamondCoinsToUse
 
   if (!isOpen) return null
@@ -185,33 +236,11 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
           {/* Step: Check Availability */}
           {step === "check" && (
             <>
-              {/* Team Name Display or Input */}
-              {teamName ? (
-                <div className={`${inputBg} rounded-2xl p-4 mb-4`}>
-                  <p className={`text-xs ${subTextColor} mb-1`}>Team Name</p>
-                  <p className={`text-xl font-bold ${textColor}`}>{teamName}</p>
-                </div>
-              ) : (
-                <div className="mb-4">
-                  <p className={`text-xs ${subTextColor} mb-1`}>Enter Team Name</p>
-                  <input
-                    type="text"
-                    value={inputTeamName}
-                    onChange={(e) => setInputTeamName(e.target.value)}
-                    placeholder="Enter your team name"
-                    className={`w-full ${inputBg} border ${borderColor} rounded-2xl px-4 py-3 ${textColor} placeholder-gray-400 focus:outline-none focus:border-pink-500`}
-                  />
-                  {inputTeamName.trim() && (
-                    <button
-                      onClick={handleCheckNewName}
-                      disabled={loading}
-                      className="mt-2 w-full px-4 py-2 bg-pink-500 text-white rounded-xl text-sm font-medium"
-                    >
-                      {loading ? "Checking..." : "Check Availability"}
-                    </button>
-                  )}
-                </div>
-              )}
+              {/* Team Name Display */}
+              <div className={`${inputBg} rounded-2xl p-4 mb-4`}>
+                <p className={`text-xs ${subTextColor} mb-1`}>Team Name</p>
+                <p className={`text-xl font-bold ${textColor}`}>{teamName}</p>
+              </div>
 
               {/* Availability Status */}
               {loading ? (
@@ -221,6 +250,16 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
               ) : availability ? (
                 <div className="mb-6">
                   {availability.is_reserved ? (
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-4 flex items-start gap-3">
+                      <CheckCircle className="text-green-500 mt-0.5" size={20} />
+                      <div>
+                        <p className="font-medium text-green-600 dark:text-green-400">Name Already Reserved!</p>
+                        <p className={`text-sm ${subTextColor}`}>
+                          Your team name is protected
+                        </p>
+                      </div>
+                    </div>
+                  ) : availability.is_reservable === false ? (
                     <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 flex items-start gap-3">
                       <AlertCircle className="text-red-500 mt-0.5" size={20} />
                       <div>
@@ -256,7 +295,7 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
                       </span>
                     </div>
                     <p className={`text-xs ${subTextColor} mt-2`}>
-                      One-time payment • Never expires
+                      One-time payment - Never expires
                     </p>
                   </div>
 
@@ -342,9 +381,9 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
                 >
                   Skip for Now
                 </button>
-                {(teamName || inputTeamName) && availability?.is_reservable && canAfford ? (
+                {availability?.is_reservable && canAfford ? (
                   <button
-                    onClick={handleReserve}
+                    onClick={handleInitiate}
                     disabled={loading}
                     className="flex-1 px-4 py-3 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-white text-sm font-medium flex items-center justify-center gap-2"
                   >
@@ -353,9 +392,16 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
                     ) : (
                       <>
                         <Coins size={16} />
-                        Continue
+                        Reserve Now
                       </>
                     )}
+                  </button>
+                ) : availability?.is_reserved ? (
+                  <button
+                    onClick={handleSkip}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-white text-sm font-medium"
+                  >
+                    Continue
                   </button>
                 ) : (
                   <button
@@ -369,14 +415,91 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
             </>
           )}
 
+          {/* Step: Confirm */}
+          {step === "confirm" && initiatedData && (
+            <div className="mb-6">
+              <div className={`${inputBg} rounded-2xl p-4 mb-4`}>
+                <p className={`text-xs ${subTextColor} mb-2`}>Ready to Reserve</p>
+                <p className={`text-lg font-bold ${textColor}`}>{teamName}</p>
+              </div>
+
+              <div className={`${inputBg} rounded-2xl p-4 mb-4`}>
+                <p className={`text-xs ${subTextColor} mb-3`}>Payment Summary</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className={`text-sm ${subTextColor}`}>Total Price</span>
+                    <span className={`text-sm font-medium ${textColor}`}>
+                      {formatNumber(initiatedData.price_breakdown?.total_coins || priceAmount)} coins
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={`text-sm ${subTextColor}`}>Gold Coins</span>
+                    <span className={`text-sm font-medium ${textColor}`}>
+                      {formatNumber(initiatedData.price_breakdown?.gold_coins || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={`text-sm ${subTextColor}`}>Diamond Coins</span>
+                    <span className={`text-sm font-medium ${textColor}`}>
+                      {formatNumber(initiatedData.price_breakdown?.diamond_coins || priceAmount)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {initiatedData.new_balances && (
+                <div className={`${inputBg} rounded-2xl p-4 mb-4`}>
+                  <p className={`text-xs ${subTextColor} mb-3`}>New Balance After Payment</p>
+                  <div className="flex justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                      <span className={`text-sm ${textColor}`}>
+                        Gold: {formatNumber(initiatedData.new_balances.gold_coins)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                      <span className={`text-sm ${textColor}`}>
+                        Diamonds: {formatNumber(initiatedData.new_balances.diamond_coins)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStep("check")}
+                  className={`flex-1 px-4 py-3 rounded-full border ${borderColor} ${textColor} text-sm font-medium`}
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleConfirm}
+                  disabled={loading}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-white text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Coins size={16} />
+                      Confirm & Pay
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Step: Processing */}
           {step === "processing" && (
             <div className="py-12 text-center">
               <div className="w-16 h-16 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 flex items-center justify-center mx-auto mb-4">
                 <Loader2 className="w-8 h-8 text-white animate-spin" />
               </div>
-              <p className={`text-lg font-medium ${textColor}`}>Reserving your team name...</p>
-              <p className={`text-sm ${subTextColor} mt-2`}>Please wait while we process your payment</p>
+              <p className={`text-lg font-medium ${textColor}`}>Processing your reservation...</p>
+              <p className={`text-sm ${subTextColor} mt-2`}>Please wait while we complete the payment</p>
             </div>
           )}
 
@@ -388,9 +511,7 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
               </div>
               <h3 className={`text-xl font-bold ${textColor} mb-2`}>Name Reserved!</h3>
               <p className={`text-sm ${subTextColor} mb-6`}>
-                Your team name "{teamName || inputTeamName}" is now protected and exclusively yours.
-                <br />
-                <span className="text-blue-500 font-medium">Coins will be deducted when you create the team.</span>
+                Your team name "{teamName}" is now protected and exclusively yours.
               </p>
               
               {reservationResult && (
@@ -405,17 +526,17 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
                     </div>
                     <div className="flex justify-between">
                       <span className={`text-sm ${subTextColor}`}>Status</span>
-                      <span className="text-sm font-medium text-green-500">Active</span>
+                      <span className="text-sm font-medium text-green-500">{reservationResult.status || "ACTIVE"}</span>
                     </div>
                   </div>
                 </div>
               )}
 
               <button
-                onClick={handleContinueAfterSuccess}
+                onClick={handleSkip}
                 className="w-full px-4 py-3 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full text-white text-sm font-medium"
               >
-                Continue
+                Done
               </button>
             </div>
           )}
@@ -434,7 +555,7 @@ export default function ReserveTeamName({ isOpen, onClose, teamName, onSuccess, 
                   onClick={handleSkip}
                   className={`flex-1 px-4 py-3 rounded-full border ${borderColor} ${textColor} text-sm font-medium`}
                 >
-                  Skip
+                  Close
                 </button>
                 <button
                   onClick={() => {

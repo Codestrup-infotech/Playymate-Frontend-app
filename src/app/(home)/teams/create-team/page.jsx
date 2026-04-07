@@ -50,6 +50,8 @@ export default function CreateTeamPage() {
 
   // Reserve Team Name popup state
   const [showReservePopup, setShowReservePopup] = useState(false)
+  const [isNameReserved, setIsNameReserved] = useState(false)
+  const [reservationData, setReservationData] = useState(null)
   const autocompleteServiceRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -95,6 +97,11 @@ export default function CreateTeamPage() {
             visibility: parsed.visibility || "public",
             description: parsed.description || "",
           }))
+          // Restore reservation state
+          if (parsed.isNameReserved) {
+            setIsNameReserved(true)
+            setReservationData(parsed.reservationData || null)
+          }
         }
       }
     }
@@ -338,7 +345,12 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
     
     // Store form data in sessionStorage for next steps
     if (typeof window !== "undefined") {
-      sessionStorage.setItem("createTeamData", JSON.stringify(formData))
+      const dataToStore = {
+        ...formData,
+        isNameReserved,
+        reservationData
+      }
+      sessionStorage.setItem("createTeamData", JSON.stringify(dataToStore))
     }
     router.push("/teams/create-team/rules-roles")
   }
@@ -496,6 +508,11 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
                 Reserve Team Name
               </button>
             </div>
+            {isNameReserved && (
+              <div className="flex items-center gap-2 mt-2 text-blue-500 text-sm font-medium">
+                ✔ Team name reserved
+              </div>
+            )}
             <div className="relative mt-2">
               <input
                 type="text"
@@ -724,6 +741,10 @@ placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
         teamName={formData.name}
         onSkip={() => setShowReservePopup(false)}
         onContinue={() => setShowReservePopup(false)}
+        onSuccess={(data) => {
+          setIsNameReserved(true)
+          setReservationData(data)
+        }}
       />
 
 </motion.div>
