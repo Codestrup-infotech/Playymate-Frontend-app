@@ -25,7 +25,7 @@ import ThreeDotButton from "./components/ThreeDotButton";
 
 /* ─── Small helper components ─── */
 
-function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, onShareClick, onSaveClick, onUserClick, isBookmarked }) {
+function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, onShareClick, onSaveClick, onUserClick, isBookmarked, onRefresh }) {
   // Initialize liked state from post data - check if user already liked this post
   const postIsLiked = post?.is_liked === true || 
                        post?.is_liked === "true" || 
@@ -242,10 +242,15 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, on
           // Call the toggle like API
           const result = await toggleLike("post", postId, "like");
           console.log("[PostCard] Like toggle result:", result);
-          
+
           // Update state based on API response (if available)
           if (result && result.liked !== undefined) {
             setLiked(result.liked);
+          }
+
+          // Refresh the feed to ensure like status is updated in the data
+          if (onRefresh) {
+            onRefresh();
           }
         } catch (error) {
           console.error("[PostCard] Error toggling like:", error);
@@ -357,10 +362,10 @@ function FriendActivityCard({ item, isDark, cardBg, mutedText }) {
   );
 }
 
-function FeedItemRenderer({ item, isDark, cardBg, mutedText, iconBtn, onCommentClick, onShareClick, onUserClick }) {
+function FeedItemRenderer({ item, isDark, cardBg, mutedText, iconBtn, onCommentClick, onShareClick, onUserClick, onRefresh }) {
   if (!item) return null;
   if (item.type === "post") {
-    return <PostCard post={item} isDark={isDark} cardBg={cardBg} mutedText={mutedText} iconBtn={iconBtn} onCommentClick={onCommentClick} onShareClick={onShareClick} onUserClick={onUserClick} />;
+    return <PostCard post={item} isDark={isDark} cardBg={cardBg} mutedText={mutedText} iconBtn={iconBtn} onCommentClick={onCommentClick} onShareClick={onShareClick} onUserClick={onUserClick} onRefresh={onRefresh} />;
   }
   if (item.type === "venue") {
     const venue = item.data ?? item;
@@ -974,6 +979,7 @@ function HomePageContent() {
                   onSaveClick={handleSaveClick}
                   onUserClick={handleUserClick}
                   isBookmarked={postBookmarkStatus[item?.data?.content_id || item?.data?.post_id] || false}
+                  onRefresh={refresh}
                 />
               ))}
             </div>
@@ -993,6 +999,7 @@ function HomePageContent() {
                   onCommentClick={handleCommentClick}
                   onShareClick={handleShareClick}
                   onUserClick={handleUserClick}
+                  onRefresh={refresh}
                 />
               ))}
             </div>

@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, Smartphone, CreditCard, Wallet, Zap, AlertCircle, CheckCircle2 } from "lucide-react";
 
-const API_BASE     = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_SN6ZSPuY8lfpxY";
 
 const BG_PAGE     = "#FFFFFF";

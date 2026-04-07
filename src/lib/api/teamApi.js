@@ -5,9 +5,7 @@
  */
 
 // API_BASE should be the base URL WITHOUT /api/v1 (e.g., http://localhost:5000)
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ? 
-  process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1$/, '') : 
-  "http://localhost:5000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1$/, '');
 
 /**
  * Get auth token from localStorage

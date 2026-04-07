@@ -12,7 +12,7 @@ const getBaseUrl = () => {
     const cleanUrl = envUrl.replace(/\/$/, '');
     return cleanUrl.includes('/api/v1') ? cleanUrl : `${cleanUrl}/api/v1`;
   }
-  return "http://localhost:5000/api/v1";
+  throw new Error("NEXT_PUBLIC_API_URL environment variable is not set");
 };
 
 const BASE_URL = getBaseUrl();

@@ -680,7 +680,7 @@ function CreatePostContent() {
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center">
       <div
         className={`bg-white  rounded-xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
-          isWide ? "w-[800px] h-[520px]" : "w-[520px] h-[480px]"
+          isWide ? "lg:w-[800px] lg:h-[520px] h-[700px] " : "w-[520px] h-[480px]"
         }`}
       >
         {/* ── HEADER ── */}
@@ -924,8 +924,8 @@ function CreatePostContent() {
 
           {/* EDIT — Image */}
           {step === "edit" && (
-            <div className="flex w-full h-full ">
-              <div className="flex-1 bg-white p-3 relative flex items-center justify-center overflow-hidden ">
+            <div className="lg:flex lg:flex-row flex flex-col w-full lg:h-full md:h-full h-screen ">
+              <div className="flex-1 bg-white p-3 lg:relative flex items-center justify-center overflow-hidden ">
                 {/* Navigation arrows */}
                 {files.length > 1 && (
                   <>
@@ -963,7 +963,7 @@ function CreatePostContent() {
                 </div>
               </div>
 
-              <div className="w-[340px] border-l border-gray-200 flex flex-col overflow-hidden">
+              <div className="lg:w-[340px] border-l border-gray-200 flex flex-col overflow-hidden">
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 flex-shrink-0">
                   {["Filters", "Adjustments"].map((tab) => (
@@ -1009,10 +1009,10 @@ function CreatePostContent() {
 
                   {/* Adjustments tab */}
                   {editTab === "Adjustments" && (
-                    <div className="p-5 space-y-5">
+                    <div className="p-5 lg:space-y-5 space-y-1">
                       {ADJUSTMENTS.map((item) => (
                         <div key={item}>
-                          <div className="flex justify-between text-sm mb-2">
+                          <div className="flex justify-between text-sm lg:mb-2">
                             <span className="text-[#262626] font-medium">{item}</span>
                             <span className="text-gray-400">{getImageAdjustments(currentIndex)[item]}</span>
                           </div>

@@ -25,14 +25,24 @@ export default function PhoneLogin() {
 
 
 
-//   useEffect(() => {
-//   const script = document.createElement("script");
-//   script.src = "https://cdn.jsdelivr.net/npm/eruda";
-//   script.onload = () => {
-//     window.eruda.init();
-//   };
-//   document.body.appendChild(script);
-// }, []);
+
+  ///////////// phone login console
+
+
+  useEffect(() => {
+  const script = document.createElement("script");
+  script.src = "https://cdn.jsdelivr.net/npm/eruda";
+  script.onload = () => {
+    window.eruda.init();
+  };
+  document.body.appendChild(script);
+}, []);
+
+
+
+
+
+
 
   /*
   ==============================
@@ -273,18 +283,20 @@ export default function PhoneLogin() {
   const currentScreen = step === "phone" ? phoneScreen : otpScreen;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col  justify-center items-center space-y-20 px-6">
+    <> 
+   
+   <div className="min-h-screen w-full bg-black text-white flex flex-col justify-center items-center space-y-20 px-4 sm:px-6">
 
       {/* Back */}
       <button
         onClick={() => router.back()}
-        className="text-xl  mr-80 "
+        className="text-xl  lg:mr-80  "
       >
         ←
       </button>
 
       {/* Content */}
-      <div className="flex  flex-col justify-center items-center w-full mx-auto">
+     <div className="flex flex-col justify-center items-center w-full max-w-md mx-auto">
 
         {/* Title */}
         <div className="text-center mb-8">
@@ -320,7 +332,7 @@ export default function PhoneLogin() {
 
         {/* PHONE INPUT */}
         {step === "phone" && (
-          <div className="flex items-center  w-96 font-Poppins bg-[#1a1a1a] rounded-xl px-4 h-14 gap-3 border border-pink-500 ">
+          <div className="flex items-center w-full max-w-md font-Poppins bg-[#1a1a1a] rounded-xl px-4 h-14 gap-3 border border-pink-500 ">
 
             <span className="text-xl">🇮🇳</span>
             <span className="text-gray-400">
@@ -391,10 +403,12 @@ export default function PhoneLogin() {
       <button
         onClick={step === "phone" ? sendPhoneOtp : verifyPhoneOtp}
         disabled={loading}
-        className="w-full max-w-sm font-Poppins mx-auto py-4 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-500 font-semibold"
+        className="w-full max-w-md  font-Poppins mx-auto py-4 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-500 font-semibold"
       >
         {loading ? "Loading..." : currentScreen?.cta_text?.primary}
       </button>
-    </div>
+    </div> 
+   
+    </>
   );
 }
