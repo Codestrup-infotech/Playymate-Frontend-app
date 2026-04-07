@@ -267,6 +267,14 @@ if (savedProfileFile) {
         apiPayload.membership = teamData.membership
       }
 
+      // Add name reservation data if user reserved the name
+      if (teamData.isNameReserved && teamData.reservationData) {
+        apiPayload.reserve_name = true
+        apiPayload.use_gold_coins = teamData.reservationData.use_gold_coins || false
+        apiPayload.name_payment_method = "COINS"
+        apiPayload.name_idempotency_key = teamData.reservationData.reservation_id
+      }
+
       const response = await createTeam(apiPayload)
 
       // Console log the response to see the result

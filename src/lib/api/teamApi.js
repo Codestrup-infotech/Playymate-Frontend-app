@@ -966,17 +966,27 @@ export async function getNameReservationCoinBalance() {
 /**
  * Reserve team name
  * POST /api/v1/teams/name-reservation/reserve
- * @param {Object} data - { name: string, payment_method: 'COINS' | 'INR', idempotency_key: string }
+ * @param {Object} data - { name: string, teamId: string, payment_method: 'COINS' | 'INR', idempotency_key: string }
  */
 export async function reserveTeamName(data) {
+  console.log("reserveTeamName API call with data:", JSON.stringify(data, null, 2));
+  
+  const teamId = data.teamId;
+  const { teamId: _teamId, ...bodyData } = data;
+  
+  console.log("Extracted teamId:", teamId);
+  console.log("Body data with team_id:", JSON.stringify({ team_id: teamId, ...bodyData }, null, 2));
+  
   try {
     const response = await fetch(`${API_BASE}/api/v1/teams/name-reservation/reserve`, {
       method: "POST",
       headers: getHeaders(),
-      body: JSON.stringify(data),
+      body: JSON.stringify({ team_id: teamId, ...bodyData }),
     });
     
+    console.log("reserveTeamName response status:", response.status);
     const responseBody = await response.json().catch(() => ({}));
+    console.log("reserveTeamName response body:", responseBody);
     
     if (!response.ok) {
       const errorMessage = responseBody.message || responseBody.error || `HTTP error! status: ${response.status}`;
@@ -1008,6 +1018,87 @@ export async function getMyNameReservations() {
     return await response.json();
   } catch (error) {
     console.error("Error getting my name reservations:", error);
+    throw error;
+  }
+}
+
+/**
+ * Initiate name reservation
+ * POST /api/v1/teams/:teamId/name-reservation/initiate
+ * @param {Object} data - { teamId: string, use_gold_coins: boolean, idempotency_key: string }
+ */
+export async function initiateNameReservation(data) {
+  const { teamId, ...bodyData } = data;
+  
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/name-reservation/initiate`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(bodyData),
+    });
+    
+    const responseBody = await response.json().catch(() => ({}));
+    
+    if (!response.ok) {
+      const errorMessage = responseBody.message || responseBody.error || `HTTP error! status: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+    
+    return responseBody;
+  } catch (error) {
+    console.error("Error initiating name reservation:", error);
+    throw error;
+  }
+}
+
+/**
+ * Confirm name reservation
+ * POST /api/v1/teams/:teamId/name-reservation/confirm
+ * @param {string} teamId - Team ID
+ * @param {Object} data - { idempotency_key: string }
+ */
+export async function confirmNameReservation(teamId, data) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/name-reservation/confirm`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    const responseBody = await response.json().catch(() => ({}));
+    
+    if (!response.ok) {
+      const errorMessage = responseBody.message || responseBody.error || `HTTP error! status: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+    
+    return responseBody;
+  } catch (error) {
+    console.error("Error confirming name reservation:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get name reservation status for a team
+ * GET /api/v1/teams/:teamId/name-reservation
+ * @param {string} teamId - Team ID
+ */
+export async function getNameReservationStatus(teamId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/teams/${teamId}/name-reservation`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const json = await response.json();
+    return json.data || json;
+  } catch (error) {
+    console.error("Error getting name reservation status:", error);
     throw error;
   }
 }
@@ -1406,6 +1497,9 @@ export default {
   getMySlotBalance,
   checkNameAvailability,
   reserveTeamName,
+  initiateNameReservation,
+  confirmNameReservation,
+  getNameReservationStatus,
   getNameReservationPricing,
   getNameReservationCoinBalance,
   getMyNameReservations,
