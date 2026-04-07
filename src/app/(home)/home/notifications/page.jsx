@@ -13,7 +13,7 @@ import {
   deleteNotification,
   clearAllNotifications,
 } from "@/app/user/notifications";
-import { userService } from "@/services/user";
+import { userService, acceptFollowRequest, rejectFollowRequest } from "@/services/user";
 
 const TABS = [
   { key: "all", label: "All" },
@@ -87,6 +87,7 @@ export default function NotificationsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [followingUsers, setFollowingUsers] = useState({}); // Track follow status per user
+  const [followRequests, setFollowRequests] = useState({}); // Track follow request responses per notification
   const notificationsPerPage = 10;
 
   // Get current notifications for pagination
@@ -196,6 +197,47 @@ export default function NotificationsPage() {
     }
   };
 
+  // Handle accept follow request
+  const handleAcceptRequest = async (notification) => {
+    const actorId = notification?.actor_id?._id;
+    const requestId = notification?.request_id || notification?.reference?.content_id;
+    if (!actorId || !requestId) return;
+    setFollowRequests((prev) => ({ ...prev, [notification._id]: 'accepting' }));
+    try {
+      await acceptFollowRequest(requestId);
+      setFollowRequests((prev) => ({ ...prev, [notification._id]: 'accepted' }));
+      setFollowingUsers((prev) => ({ ...prev, [actorId]: true }));
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n._id === notification._id ? { ...n, is_following: true, request_status: 'accepted' } : n
+        )
+      );
+    } catch (error) {
+      console.error("Error accepting follow request:", error);
+      setFollowRequests((prev) => ({ ...prev, [notification._id]: 'error' }));
+    }
+  };
+
+  // Handle reject follow request
+  const handleRejectRequest = async (notification) => {
+    const actorId = notification?.actor_id?._id;
+    const requestId = notification?.request_id || notification?.reference?.content_id;
+    if (!actorId || !requestId) return;
+    setFollowRequests((prev) => ({ ...prev, [notification._id]: 'rejecting' }));
+    try {
+      await rejectFollowRequest(requestId);
+      setFollowRequests((prev) => ({ ...prev, [notification._id]: 'rejected' }));
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n._id === notification._id ? { ...n, request_status: 'rejected' } : n
+        )
+      );
+    } catch (error) {
+      console.error("Error rejecting follow request:", error);
+      setFollowRequests((prev) => ({ ...prev, [notification._id]: 'error' }));
+    }
+  };
+
   // Reset page when tab changes
   useEffect(() => {
     setCurrentPage(1);
@@ -253,8 +295,61 @@ export default function NotificationsPage() {
             />
 
             <div className="flex-1 pb-3">
-              {/* FOR FOLLOWS: Title + Time + Follow Back button on same line */}
-              {item.notification_type === "user_followed" ? (
+              {/* FOR FOLLOW REQUESTS: Show Accept/Reject buttons */}
+              {item.notification_type === "follow_request" || item.notification_type === "follow_request_received" || item.request_id ? (
+                <div>
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm">
+                      <span 
+                        className="font-semibold cursor-pointer  hover:text-pink-500"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          item?.actor_id?._id && handleUserClick(item.actor_id._id);
+                        }}
+                      >
+                        {item?.actor_id?.full_name}
+                      </span>{" "}
+                      {item.title}
+                    </p>
+                    <span className="text-xs text-gray-400">
+                      {formatTime(item.created_at)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-2">
+                    {item.body}
+                  </p>
+                  {/* Accept/Reject buttons */}
+                  {item.request_status !== 'accepted' && item.request_status !== 'rejected' && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAcceptRequest(item);
+                        }}
+                        disabled={followRequests[item._id] === 'accepting'}
+                        className="bg-green-500 hover:bg-green-600 px-3 py-1.5 font-Poppins text-white text-xs rounded-md disabled:opacity-50"
+                      >
+                        {followRequests[item._id] === 'accepting' ? "Confirming..." : "Confirm"}
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item._id, e);
+                        }}
+                        className="text-gray-500 hover:text-gray-700 text-xs px-2 py-1 bg-gray-300 rounded-md "
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                  {item.request_status === 'accepted' && (
+                    <span className="text-xs text-green-500 mt-2 inline-block">Accepted</span>
+                  )}
+                  {item.request_status === 'rejected' && (
+                    <span className="text-xs text-gray-500 mt-2 inline-block">Rejected</span>
+                  )}
+                </div>
+              ) : item.notification_type === "user_followed" ? (
                 <div>
                   <div className="flex justify-between items-start">
                     <p className="text-sm">

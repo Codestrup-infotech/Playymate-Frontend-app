@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 
 
-import { userService } from "@/services/user";
+import { userService, sendFollowRequest, cancelFollowRequest, getFollowRequestStatus } from "@/services/user";
 import { useTheme } from "@/lib/ThemeContext";
 import postService from "@/app/user/post";
 import Activity from "../../components/Activity.jsx";
@@ -45,6 +45,7 @@ import UserFollowUnfollow from "../../components/UserFollowUnfollow.jsx";
 import SharePopup from "../../components/sharepopup.jsx";
 import Report from "../../components/Report.jsx";
 import closeFriendsService from "@/app/user/close-friend.jsx";
+import { Loader2 } from "lucide-react";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -156,6 +157,7 @@ export default function UserProfilePage() {
   // Mute/Unmute state
   const [isMuted, setIsMuted] = useState(false);
   const [isCloseFriend, setIsCloseFriend] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   
   // Share popup state
   const [showSharePopup, setShowSharePopup] = useState(false);
@@ -165,6 +167,11 @@ export default function UserProfilePage() {
 
   // Report modal state
   const [showReport, setShowReport] = useState(false);
+
+  // Follow request state
+  const [isTargetPrivate, setIsTargetPrivate] = useState(false);
+  const [followRequestStatus, setFollowRequestStatus] = useState(null); // null, 'pending', 'accepted', 'rejected'
+  const [followRequestActionLoading, setFollowRequestActionLoading] = useState(false);
 
   // Helper function to check if string is a valid MongoDB ObjectId
   const isObjectId = (str) => {
@@ -178,20 +185,60 @@ export default function UserProfilePage() {
     setCurrentUser(user);
   }, []);
 
-  // Handle follow a user
+  // Handle follow a user (or send follow request if private)
   const handleFollow = async () => {
+    if (followRequestActionLoading) return;
+    setFollowRequestActionLoading(true);
     try {
-      await userService.followUser(userId);
-      setProfile((prev) => ({
-        ...prev,
-        is_following: true,
-        stats: {
-          ...prev.stats,
-          followers_count: (prev.stats?.followers_count || 0) + 1
-        }
-      }));
+console.log("=== FOLLOW ACTION ===");
+      console.log("Target userId:", userId);
+      console.log("Is private:", isTargetPrivate);
+      console.log("Current request status:", followRequestStatus);
+      
+      // Check if target user has private account
+      if (isTargetPrivate && followRequestStatus !== 'accepted') {
+        // Send follow request
+        console.log("Sending follow request...");
+        const result = await sendFollowRequest(userId);
+        console.log("Follow request result:", result);
+        setFollowRequestStatus('pending');
+        console.log("=== STATUS SET TO 'pending' ===");
+      } else {
+        // Direct follow for public accounts
+        console.log("Sending direct follow...");
+        await userService.followUser(userId);
+        setProfile((prev) => ({
+          ...prev,
+          is_following: true,
+          stats: {
+            ...prev.stats,
+            followers_count: (prev.stats?.followers_count || 0) + 1
+          }
+        }));
+        setFollowRequestStatus('accepted');
+      }
+      console.log("Follow success! Status:", followRequestStatus);
     } catch (error) {
+      console.error("=== FOLLOW ERROR ===");
       console.error("Error following user:", error);
+      console.error("Error response:", error?.response?.data);
+      console.error("===================");
+    } finally {
+      setFollowRequestActionLoading(false);
+    }
+  };
+
+  // Handle cancel follow request
+  const handleCancelFollowRequest = async () => {
+    if (followRequestActionLoading) return;
+    setFollowRequestActionLoading(true);
+    try {
+      await cancelFollowRequest(userId);
+      setFollowRequestStatus(null);
+    } catch (error) {
+      console.error("Error canceling follow request:", error);
+    } finally {
+      setFollowRequestActionLoading(false);
     }
   };
 
@@ -247,7 +294,6 @@ export default function UserProfilePage() {
         console.log("Mute status fetched:", muteData);
       } catch (error) {
         console.error("Error fetching mute status:", error);
-        // Fallback to using profile data if available
         if (profile) {
           setIsMuted(profile.is_muted === true);
         }
@@ -256,6 +302,37 @@ export default function UserProfilePage() {
     
     if (!isOwnProfile && userId) {
       fetchMuteStatus();
+    }
+  }, [userId, isOwnProfile, profile]);
+
+  // Fetch block status when userId changes
+  useEffect(() => {
+    const fetchBlockStatus = async () => {
+      if (!userId || isOwnProfile) return;
+      
+      try {
+        const response = await userService.getBlockedUsers(100, null);
+        const data = response?.data?.data || response?.data;
+        const blockedUsers = data?.blocked_users || data?.users || data || [];
+        
+        const isUserBlocked = blockedUsers.some(blocked => {
+          const blockedUser = blocked.user || blocked;
+          const blockedUserId = blockedUser._id || blockedUser.user_id || blockedUser.id;
+          return blockedUserId === userId;
+        });
+        
+        setIsBlocked(isUserBlocked);
+        console.log("Block status fetched:", isUserBlocked);
+      } catch (error) {
+        console.error("Error fetching block status:", error);
+        if (profile) {
+          setIsBlocked(profile.is_blocked === true);
+        }
+      }
+    };
+    
+    if (!isOwnProfile && userId) {
+      fetchBlockStatus();
     }
   }, [userId, isOwnProfile, profile]);
 
@@ -279,7 +356,6 @@ export default function UserProfilePage() {
   // Handle remove from close friends
   const handleRemoveFromCloseFriends = async () => {
     try {
-      // Use the username from profile state or from userId if it's a username
       const username = profile?.username || userId;
       if (!username) {
         console.error("No username available to remove from close friends");
@@ -290,6 +366,28 @@ export default function UserProfilePage() {
       console.log("User removed from close friends");
     } catch (error) {
       console.error("Error removing from close friends:", error);
+    }
+  };
+
+  // Handle block user
+  const handleBlockUser = async () => {
+    try {
+      await userService.blockUser(userId);
+      setIsBlocked(true);
+      console.log("User blocked successfully");
+    } catch (error) {
+      console.error("Error blocking user:", error);
+    }
+  };
+
+  // Handle unblock user
+  const handleUnblockUser = async () => {
+    try {
+      await userService.unblockUser(userId);
+      setIsBlocked(false);
+      console.log("User unblocked successfully");
+    } catch (error) {
+      console.error("Error unblocking user:", error);
     }
   };
 
@@ -359,6 +457,48 @@ export default function UserProfilePage() {
         console.log("is_close_friend from API:", data.is_close_friend);
         console.log("isCloseFriend state set to:", isCfFromApi);
         console.log("===================================");
+
+        // Check if target user has private account
+        const isPrivate = data.is_private === true || data.is_private === "true";
+        setIsTargetPrivate(isPrivate);
+        
+        console.log("=== PROFILE PRIVACY CHECK ===");
+        console.log("Profile user ID (data._id):", data._id);
+        console.log("Profile username:", data.username);
+        console.log("URL userId param:", userId);
+        console.log("is_private from profile:", data.is_private);
+        console.log("isPrivate:", isPrivate);
+        console.log("is_following:", data.is_following);
+        console.log("follow_request_status:", data.follow_request_status);
+        console.log("===========================");
+        
+        // First check if profile data already has follow_request_status
+        if (data.follow_request_status && data.follow_request_status !== 'none') {
+          setFollowRequestStatus(data.follow_request_status);
+          console.log("=== SET STATUS FROM PROFILE ===");
+          console.log("Status from profile:", data.follow_request_status);
+        } else if (data.is_following) {
+          setFollowRequestStatus('accepted');
+        }
+        // Also check via API for private accounts
+        else if (isPrivate && !data.is_own_profile && !data.is_following) {
+          try {
+            // Use actual userId from profile data, not URL param (URL might be username)
+            const actualUserId = data._id || userId;
+            console.log("=== CHECKING FOLLOW STATUS ===");
+            console.log("Calling API with userId:", actualUserId);
+            const statusRes = await getFollowRequestStatus(actualUserId);
+            const statusData = statusRes?.data?.data || statusRes?.data;
+            console.log("Follow status response:", statusData);
+            if (statusData?.status && statusData.status !== 'none') {
+              setFollowRequestStatus(statusData.status);
+              console.log("=== FOLLOW REQUEST STATUS SET ===");
+              console.log("Status:", statusData.status);
+            }
+          } catch (frErr) {
+            console.error("Error fetching follow request status:", frErr);
+          }
+        }
         
         // URL Rewrite: If user has username and current URL uses userId, update URL to show username
         if (data.username && userId !== data.username) {
@@ -513,7 +653,7 @@ export default function UserProfilePage() {
               <img 
                 src={profileData.cover_photo} 
                 alt="Cover" 
-                className="w-full h-full object-cover rounded-xl "
+                className="w-full  h-full object-cover rounded-xl "
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-l from-[#FF8319] to-[#EF3AFF]" />
@@ -633,32 +773,48 @@ export default function UserProfilePage() {
                   </>
                 ) : (
                   <>
-                    <button 
-                      onClick={() => profileData.is_following ? setShowFollowOptions(true) : handleFollow()}
-                      className="flex-1 max-w-56 px-4 py-2 bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] text-white rounded-lg hover:bg-gradient-to-r hover:from-[#FF8319] hover:to-[#EF3AFF] flex items-center justify-center gap-2"
-                    >
-                      {profileData.is_following ? (
+                    {(() => {
+                      const isFollowing = profileData.is_following;
+                      const isPendingRequest = followRequestStatus === 'pending';
+                      const showFollowOptionsBtn = isFollowing;
+                      const showRequested = isTargetPrivate && isPendingRequest;
+                      
+                      return (
                         <>
-                          <span>Following</span>
-                          <ChevronDown size={16} />
+                          <button 
+                            onClick={() => showFollowOptionsBtn ? setShowFollowOptions(true) : (showRequested ? handleCancelFollowRequest() : handleFollow())}
+                            disabled={followRequestActionLoading}
+                            className={`flex-1 max-w-56 px-4 py-2 rounded-lg flex items-center justify-center gap-2 disabled:opacity-70 ${showRequested ? "bg-gray-200 text-gray-800 hover:bg-gray-300" : "bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] text-white hover:bg-gradient-to-r hover:from-[#FF8319] hover:to-[#EF3AFF]"}`}
+                          >
+                            {followRequestActionLoading ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : isFollowing ? (
+                              <>
+                                <span>Following</span>
+                                <ChevronDown size={16} />
+                              </>
+                            ) : showRequested ? (
+                              <span>Requested</span>
+                            ) : (
+                              <>
+                                <UserPlus size={16} />
+                                Follow
+                              </>
+                            )}
+                          </button>
+                          <button className="px-4 py-2 bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] text-white rounded-lg  hover:bg-gradient-to-r hover:from-[#FF8319] hover:to-[#EF3AFF] flex items-center justify-center gap-2">
+                            <MessageCircle size={16} />
+                            Message
+                          </button>
+                          <button 
+                            onClick={() => setShowSharePopup(true)}
+                            className={`p-2 rounded-lg ${isDark ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-300 hover:bg-gray-200"}`}
+                          >
+                            <Share2 size={20} className={isDark ? "text-white" : "text-gray-700"} />
+                          </button>
                         </>
-                      ) : (
-                        <>
-                          <UserPlus size={16} />
-                          Follow
-                        </>
-                      )}
-                    </button>
-                    <button className="px-4 py-2 bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] text-white rounded-lg  hover:bg-gradient-to-r hover:from-[#FF8319] hover:to-[#EF3AFF] flex items-center justify-center gap-2">
-                      <MessageCircle size={16} />
-                      Message
-                    </button>
-                    <button 
-                      onClick={() => setShowSharePopup(true)}
-                      className={`p-2 rounded-lg ${isDark ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-300 hover:bg-gray-200"}`}
-                    >
-                      <Share2 size={20} className={isDark ? "text-white" : "text-gray-700"} />
-                    </button>
+                      );
+                    })()}
                   </>
                 )}
               </div>
@@ -834,10 +990,13 @@ export default function UserProfilePage() {
         userProfileImage={profileData?.profile_image_url}
         isMuted={isMuted}
         isCloseFriend={isCloseFriend}
+        isBlocked={isBlocked}
         onMute={handleMuteUser}
         onUnmute={handleUnmuteUser}
         onAddCloseFriend={handleAddToCloseFriends}
         onRemoveCloseFriend={handleRemoveFromCloseFriends}
+        onBlock={handleBlockUser}
+        onUnblock={handleUnblockUser}
         username={profileData?.username}
       />
 

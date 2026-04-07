@@ -112,7 +112,7 @@ function PaymentScreen() {
   const userGoldCoins = walletBalances?.gold_coins?.balance || walletBalances?.gold_coins || 0;
   const userDiamonds = walletBalances?.diamond_coins?.balance || walletBalances?.diamond_coins || 0;
   
-  const diamondsNeeded = selectedMethod === 'gold' ? goldCoinsToPay : membershipFee;
+  const diamondsNeeded = membershipFee;
   const hasInsufficientBalance = userDiamonds < diamondsNeeded;
   
   useEffect(() => {
@@ -163,14 +163,14 @@ function PaymentScreen() {
     setError(null);
 
     try {
-      const useGoldCoins = selectedMethod === 'gold';
-      const useDiamonds = selectedMethod === 'diamonds';
+      const useGoldForDiscount = selectedMethod === 'gold';
+      const useDiamonds = true; // Always use diamonds for payment, gold coins just for discount
       
       console.log('Initiating membership for team:', teamId);
       const initiateResponse = await initiateMembership(teamId, {
         membership_type: defaultDurationType,
         payment_preferences: {
-          use_gold_coins: useGoldCoins,
+          use_gold_coins: useGoldForDiscount,
           use_diamonds: useDiamonds
         }
       });
@@ -376,12 +376,12 @@ function PaymentScreen() {
               </div>
             )}
             
-            {selectedMethod === 'diamonds' && (
-              <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-sm">
                 <span className="text-purple-600 font-medium">Diamonds to Pay</span>
-                <span className="font-bold text-purple-600">{membershipFee} 💎</span>
+                <span className="font-bold text-purple-600">
+                  {selectedMethod === 'gold' ? goldCoinsToPay : membershipFee} 💎
+                </span>
               </div>
-            )}
             
             <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
               <span className="text-base font-bold text-slate-900">Total Payable</span>

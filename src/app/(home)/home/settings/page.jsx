@@ -2,15 +2,44 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 export default function SettingsPage() {
   const router = useRouter();
+  const pathname = usePathname();
 
-  // Redirect to Edit Profile by default or show a welcome message
-  useEffect(() => {
-    // Optionally redirect to a default settings page
-    // router.push("/home/profile/edit");
-  }, []);
+  const settingsItems = [
+    {
+      title: "Edit Profile",
+      description: "Update your profile information, profile picture, and bio.",
+      href: "/home/profile/edit",
+    },
+    {
+      title: "Account Privacy",
+      description: "Control who can see your profile and content.",
+      href: "/home/settings/account-privacy",
+    },
+    {
+      title: "Close Friends",
+      description: "Manage your close friends list for restricted sharing.",
+      href: "/home/settings/close-friends",
+    },
+    {
+      title: "Muted Users",
+      description: "Manage users you've muted.",
+      href: "/home/settings/muted-user-list",
+    },
+    {
+      title: "Blocked Users",
+      description: "Manage users you've blocked.",
+      href: "/home/settings/blocked-user",
+    },
+    {
+      title: "Help",
+      description: "Get help with your account and learn about Playymate features.",
+      href: "/home/settings/help",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -22,33 +51,18 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-4">
-        <div className="p-4 border rounded-lg hover:bg-gray-50 transition">
-          <h3 className="font-medium">Edit Profile</h3>
-          <p className="text-sm text-gray-500">
-            Update your profile information, profile picture, and bio.
-          </p>
-        </div>
-
-        <div className="p-4 border rounded-lg hover:bg-gray-50 transition">
-          <h3 className="font-medium">Account Privacy</h3>
-          <p className="text-sm text-gray-500">
-            Control who can see your profile and content.
-          </p>
-        </div>
-
-        <div className="p-4 border rounded-lg hover:bg-gray-50 transition">
-          <h3 className="font-medium">Close Friends</h3>
-          <p className="text-sm text-gray-500">
-            Manage your close friends list for restricted sharing.
-          </p>
-        </div>
-
-        <div className="p-4 border rounded-lg hover:bg-gray-50 transition">
-          <h3 className="font-medium">Help</h3>
-          <p className="text-sm text-gray-500">
-            Get help with your account and learn about Playymate features.
-          </p>
-        </div>
+        {settingsItems.map((item, index) => (
+          <div
+            key={index}
+            className="p-4 border rounded-lg hover:bg-gray-50 transition cursor-pointer"
+            onClick={() => router.push(item.href)}
+          >
+            <h3 className="font-medium">{item.title}</h3>
+            <p className="text-sm text-gray-500">
+              {item.description}
+            </p>
+          </div>
+        ))}
       </div>
     </div>
   );

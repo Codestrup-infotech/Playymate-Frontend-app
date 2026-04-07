@@ -1,4 +1,4 @@
-import { X, Star } from "lucide-react";
+import { X, Star, Ban, CheckCircle } from "lucide-react";
 
 export default function UserFollowUnfollow({
   isOpen,
@@ -13,7 +13,10 @@ export default function UserFollowUnfollow({
   onUnmute,
   onAddCloseFriend,
   onRemoveCloseFriend,
-  username
+  username,
+  isBlocked = false,
+  onBlock,
+  onUnblock,
 }) {
   if (!isOpen) return null;
 
@@ -39,13 +42,26 @@ export default function UserFollowUnfollow({
         try {
           await onAddCloseFriend();
         } catch (error) {
-          // Handle ALREADY_CLOSE_FRIEND error - toggle to remove
           if (error?.response?.data?.error_code === 'ALREADY_CLOSE_FRIEND') {
             if (onRemoveCloseFriend) {
               await onRemoveCloseFriend();
             }
           }
         }
+      }
+    }
+  };
+
+  const handleBlockClick = async () => {
+    if (isBlocked) {
+      if (onUnblock) {
+        await onUnblock();
+        if (onClose) onClose();
+      }
+    } else {
+      if (onBlock) {
+        await onBlock();
+        if (onClose) onClose();
       }
     }
   };
@@ -109,7 +125,6 @@ export default function UserFollowUnfollow({
             onClick={() => {
               if (onUnfollow) {
                 onUnfollow();
-                // Auto close popup when Unfollow is clicked
                 if (onClose) {
                   onClose();
                 }
@@ -117,6 +132,21 @@ export default function UserFollowUnfollow({
             }}
           >
             <p className="text-sm text-red-500 font-medium">Unfollow</p>
+          </div>
+
+          {/* Block/Unblock */}
+          <div 
+            className="flex justify-between items-center cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 p-3 rounded-lg transition-colors"
+            onClick={handleBlockClick}
+          >
+            <p className="text-sm text-red-500 font-medium">
+              {isBlocked ? "Unblock" : "Block"}
+            </p>
+            {isBlocked ? (
+              <CheckCircle size={20} className="text-red-500" />
+            ) : (
+              <Ban size={20} className="text-red-500" />
+            )}
           </div>
         </div>
       </div>

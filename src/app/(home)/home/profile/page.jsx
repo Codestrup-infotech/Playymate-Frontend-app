@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Settings,
   Share2,
@@ -29,6 +30,7 @@ import {
 
 
 import { userService } from "@/services/user";
+import { getMyCreatedTeams } from "@/lib/api/teamApi";
 import { useTheme } from "@/lib/ThemeContext";
 import postService from "@/app/user/post";
 import Activity from "../components/Activity.jsx";
@@ -150,6 +152,10 @@ export default function ProfilePage() {
   // Avatar state
   const [avatarUrl, setAvatarUrl] = useState(null);
 
+  // Teams state
+  const [userTeams, setUserTeams] = useState([]);
+  const [teamsLoading, setTeamsLoading] = useState(true);
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -182,6 +188,23 @@ export default function ProfilePage() {
       }
     };
     fetchProfile();
+  }, []);
+
+  // Fetch user's created teams
+  useEffect(() => {
+    const fetchUserTeams = async () => {
+      try {
+        const response = await getMyCreatedTeams();
+        if (response.status === "success" && response.data) {
+          setUserTeams(response.data);
+        }
+      } catch (err) {
+        console.error("Error fetching user teams:", err);
+      } finally {
+        setTeamsLoading(false);
+      }
+    };
+    fetchUserTeams();
   }, []);
 
   // Handle bio save from popup
@@ -690,22 +713,27 @@ export default function ProfilePage() {
             </div>
 
             {/* DETAILS */}
-            <div className="flex-1 min-w-0 lg:mt-12 mt-2">
+            <div className="flex-1  min-w-0 lg:mt-12 mt-2">
 
-              <div className="flex flex-wrap items-center gap-2  space-x-4">
-               <div className="flex flex-col"> 
+              <div className="flex flex-col">
+               
+               <div className="flex space-x-2 "> 
                 <h2 className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
                   {full_name}
                 </h2>
 
-  <h3 className="text-gray-500 text-sm font-semibold ">
-              {username  || "User"}
-            </h3> </div>
-
+            
                 {verification_badge === "verified" && (
                   <ShieldCheck size={18} className="text-purple-500" />
                 )}
+                
+            </div>
 
+
+  <h3 className="text-gray-500 text-sm font-semibold ">
+              {username  || "User"}
+            </h3> 
+            
 
         </div>
 
@@ -766,9 +794,21 @@ export default function ProfilePage() {
                 </span>
               </p>
 
-              <div className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]  hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF] text-white lg:w-56 w-32 px-1 mt-3 lg:py-3 py-1.5 flex justify-center items-center text-center rounded-md ">
-                Create Teams
-              </div>
+              {userTeams && userTeams.length > 0 ? (
+                <Link
+                  href="/teams/my-team"
+                  className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF] text-white lg:w-36 w-32 px-1.5 mt-3 lg:py-2.5 py-1.5 flex justify-center items-center text-center rounded-md"
+                >
+                  My Teams
+                </Link>
+              ) : (
+                <Link
+                  href="/teams"
+                  className="bg-gradient-to-r from-[#EF3AFF] to-[#FF8319] hover:bg-gradient-r hover:from-[#FF8319] hover:to-[#EF3AFF] text-white lg:w-36 w-32 px-1.5 mt-3 lg:py-2.5 py-1.5 flex justify-center items-center text-center rounded-md"
+                >
+                  Create Teams
+                </Link>
+              )}
             </div>
           </div>
         </div>
