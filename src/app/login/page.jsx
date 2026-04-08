@@ -9,6 +9,7 @@ import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { userService } from "@/services/user";
 import { authService } from "@/services/auth";
+import { initializeFcm } from "@/services/fcm";
 import { getRouteFromStep } from "@/lib/api/navigation";
 import { getOnboardingRedirect } from "@/lib/onboarding/stateMachine";
 
@@ -138,6 +139,7 @@ export default function LoginPage() {
 
       if (accessToken) {
         authService.storeTokens({ accessToken, refreshToken });
+        initializeFcm();
         router.push("/onboarding/home");
       }
     } catch (error) {
@@ -175,6 +177,7 @@ export default function LoginPage() {
 
           if (accessToken) {
             authService.storeTokens({ accessToken, refreshToken });
+            initializeFcm();
             router.push("/onboarding/home");
           }
         } catch (error) {

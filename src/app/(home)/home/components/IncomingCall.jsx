@@ -1,38 +1,61 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Phone, PhoneOff, Video } from "lucide-react";
 import { useCallSocket } from "@/hooks/useCallSocket";
 import { acceptCall, declineCall, storeCallSession } from "@/app/user/call-now";
 
-/**
- * Drop this anywhere in your layout (e.g. in the root layout or chat layout).
- * It listens via the useCallSocket hook and shows a popup on incoming call.
- * 
- * Usage:
- *   <IncomingCallHandler />
- */
 export default function IncomingCallHandler() {
   const [incoming, setIncoming] = useState(null);
+  const timeoutRef = useRef(null);
+
+  const handleIncomingCall = useCallback((data) => {
+    console.log("[IncomingCall] Received call:", data);
+    setIncoming(data);
+
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setIncoming((prev) => (prev?.call_id === data.call_id ? null : prev));
+    }, 30000);
+  }, []);
+
+  const clearCallTimeout = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
 
   useCallSocket({
-    onIncomingCall: useCallback((data) => {
-      setIncoming(data);
-    }, []),
+    onIncomingCall: handleIncomingCall,
     onCallEnded: useCallback((data) => {
-      // If the incoming popup is for this call, dismiss it
+      clearCallTimeout();
       setIncoming((prev) =>
         prev?.call_id === data?.call_id ? null : prev
       );
-    }, []),
+    }, [clearCallTimeout]),
   });
+
+  useEffect(() => {
+    const handleFcmCall = (e) => {
+      console.log("[IncomingCall] FCM call event:", e.detail);
+      handleIncomingCall(e.detail);
+    };
+    
+    window.addEventListener("fcmIncomingCall", handleFcmCall);
+    return () => {
+      window.removeEventListener("fcmIncomingCall", handleFcmCall);
+      clearCallTimeout();
+    };
+  }, [handleIncomingCall, clearCallTimeout]);
 
   if (!incoming) return null;
 
   const handleAccept = async () => {
+    clearCallTimeout();
     try {
       const res = await acceptCall(incoming.call_id);
-      const token = res?.data?.token;
+      const token = res?.data?.token || res?.data?.rtc_token || res?.data?.zego_token;
       const providerConfig = res?.data?.provider_config;
       const call = { _id: incoming.call_id, ...res?.data };
 
@@ -58,6 +81,7 @@ export default function IncomingCallHandler() {
   };
 
   const handleDecline = async () => {
+    clearCallTimeout();
     try {
       await declineCall(incoming.call_id);
     } catch (e) {
@@ -77,10 +101,8 @@ export default function IncomingCallHandler() {
           )}
         </div>
         <div>
-          <p className="font-semibold text-sm">Incoming Call</p>
-          <p className="text-gray-400 text-xs capitalize">
-            {incoming.call_type || "video"} call
-          </p>
+          <p className="font-semibold text-sm">{incoming.caller_name || incoming.caller_username || incoming.callerId || 'Someone'}</p>
+          <p className="text-gray-400 text-xs">is calling you...</p>
         </div>
       </div>
 

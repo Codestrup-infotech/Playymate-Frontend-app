@@ -14,6 +14,7 @@ import {
   clearAllNotifications,
 } from "@/app/user/notifications";
 import { userService, acceptFollowRequest, rejectFollowRequest } from "@/services/user";
+import { acceptCall, declineCall, storeCallSession } from "@/app/user/call-now";
 
 const TABS = [
   { key: "all", label: "All" },
@@ -88,6 +89,7 @@ export default function NotificationsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [followingUsers, setFollowingUsers] = useState({}); // Track follow status per user
   const [followRequests, setFollowRequests] = useState({}); // Track follow request responses per notification
+  const [callRequests, setCallRequests] = useState({}); // Track call request responses per notification
   const notificationsPerPage = 10;
 
   // Get current notifications for pagination
@@ -238,6 +240,62 @@ export default function NotificationsPage() {
     }
   };
 
+  // Handle accept incoming call from notification
+  const handleAcceptCall = async (notification) => {
+    const callId = notification?.reference?.call_id || notification?.call_id;
+    if (!callId) return;
+    setCallRequests((prev) => ({ ...prev, [notification._id]: 'accepting' }));
+    try {
+      const res = await acceptCall(callId);
+      const token = res?.data?.token || res?.data?.rtc_token || res?.data?.zego_token;
+      const providerConfig = res?.data?.provider_config;
+      const call = { _id: callId, ...res?.data };
+
+      storeCallSession(callId, {
+        role: "participant",
+        call,
+        token,
+        provider_config: providerConfig,
+      });
+
+      setCallRequests((prev) => ({ ...prev, [notification._id]: 'accepted' }));
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n._id === notification._id ? { ...n, call_status: 'accepted' } : n
+        )
+      );
+
+      const callType = notification?.call_type || "video";
+      window.open(
+        `/call/${callId}?type=${callType}`,
+        "_blank",
+        "width=900,height=700"
+      );
+    } catch (error) {
+      console.error("Error accepting call:", error);
+      setCallRequests((prev) => ({ ...prev, [notification._id]: 'error' }));
+    }
+  };
+
+  // Handle decline incoming call from notification
+  const handleDeclineCall = async (notification) => {
+    const callId = notification?.reference?.call_id || notification?.call_id;
+    if (!callId) return;
+    setCallRequests((prev) => ({ ...prev, [notification._id]: 'declining' }));
+    try {
+      await declineCall(callId);
+      setCallRequests((prev) => ({ ...prev, [notification._id]: 'declined' }));
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n._id === notification._id ? { ...n, call_status: 'declined' } : n
+        )
+      );
+    } catch (error) {
+      console.error("Error declining call:", error);
+      setCallRequests((prev) => ({ ...prev, [notification._id]: 'error' }));
+    }
+  };
+
   // Reset page when tab changes
   useEffect(() => {
     setCurrentPage(1);
@@ -383,6 +441,59 @@ export default function NotificationsPage() {
                   <p className="text-xs text-gray-400 ">
                     {item.body}
                   </p>
+                </div>
+              ) : item.notification_type === "call_incoming" || item.notification_type === "incoming_call" || item.call_id ? (
+                <div>
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm">
+                      <span 
+                        className="font-semibold cursor-pointer hover:text-pink-500"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          item?.actor_id?._id && handleUserClick(item.actor_id._id);
+                        }}
+                      >
+                        {item?.actor_id?.full_name || item?.actor_id?.username || 'Someone'}
+                      </span>{" "}
+                      {item.title}
+                    </p>
+                    <span className="text-xs text-gray-400">
+                      {formatTime(item.created_at)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-2">
+                    {item.body || "Incoming video call"}
+                  </p>
+                  {item.call_status !== 'accepted' && item.call_status !== 'declined' && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAcceptCall(item);
+                        }}
+                        disabled={callRequests[item._id] === 'accepting'}
+                        className="bg-green-500 hover:bg-green-600 px-3 py-1.5 font-Poppins text-white text-xs rounded-md disabled:opacity-50"
+                      >
+                        {callRequests[item._id] === 'accepting' ? "Connecting..." : "Accept"}
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeclineCall(item);
+                        }}
+                        disabled={callRequests[item._id] === 'declining'}
+                        className="bg-red-500 hover:bg-red-600 px-3 py-1.5 font-Poppins text-white text-xs rounded-md disabled:opacity-50"
+                      >
+                        {callRequests[item._id] === 'declining' ? "Declining..." : "Decline"}
+                      </button>
+                    </div>
+                  )}
+                  {item.call_status === 'accepted' && (
+                    <span className="text-xs text-green-500 mt-2 inline-block">Call accepted - opening...</span>
+                  )}
+                  {item.call_status === 'declined' && (
+                    <span className="text-xs text-gray-500 mt-2 inline-block">Call declined</span>
+                  )}
                 </div>
               ) : (
                 /* FOR OTHER NOTIFICATIONS: Title + Time (time on right with space) */

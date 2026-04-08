@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "../../../services/auth";
+import { initializeFcm } from "../../../services/fcm";
 import { getRouteFromStep } from "../../../lib/api/navigation";
 import { calculateProgressPercentage } from "../../../lib/onboarding/progressCalculator";
 
@@ -199,6 +200,9 @@ export default function PhoneLogin() {
 
       // Also persist via authService
       authService.storeTokens({ accessToken, refreshToken });
+
+      // Initialize FCM for push notifications
+      initializeFcm();
 
       // Route based on next_required_step from OTP verify response
       if (nextStepFromOtp === "NAME_CAPTURE" || nextStepFromOtp === "NAME") {

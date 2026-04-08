@@ -1,5 +1,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
+import { cleanupFcmToken } from './fcm';
+
 /**
  * Logout user by calling the logout API and clearing all auth tokens
  * @param {string} accessToken - The access token from localStorage
@@ -93,6 +95,9 @@ export async function performLogout() {
 
   // Always clear tokens and redirect, even if API fails
   clearAuthTokens();
+  
+  // Deactivate FCM token on logout
+  cleanupFcmToken();
 
   // Use window.location for full page redirect to clear browser history
   // This prevents user from going back to protected pages after logout

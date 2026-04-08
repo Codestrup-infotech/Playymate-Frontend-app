@@ -21,23 +21,20 @@ export default function CallNow({ selectedConv, myId }) {
       });
 
       // 2. Parse the API response
-      // Based on your postman response:
-      // res.data.call      → call object
-      // res.data.token     → ZegoCloud RTC token
-      // res.data.provider_config → { type, app_id, server_url, room_id, user_id }
       const apiData = res?.data;
       if (!apiData) throw new Error("No data in response");
 
       const call = apiData.call;
-      const token = apiData.token;
+      const token = apiData.token || apiData.rtc_token || apiData.zego_token;
       const providerConfig = apiData.provider_config;
 
       if (!call?._id) throw new Error("Call ID missing from response");
-      if (!token) throw new Error("Token missing from response");
       if (!providerConfig) throw new Error("Provider config missing");
-      if (providerConfig.type !== "ZEGOCLOUD") {
-        throw new Error(`Expected ZEGOCLOUD, got: ${providerConfig.type}`);
-      }
+      
+      // Log for debugging
+      console.log("[CallNow] Provider type:", providerConfig?.type);
+      console.log("[CallNow] Token:", token ? "present" : "NULL");
+      console.log("[CallNow] app_id:", providerConfig?.app_id);
 
       // 3. Store in sessionStorage so the call page can use it immediately
       //    (avoids needing to call accept API for the initiator)

@@ -16,18 +16,11 @@ import {
 // ZegoExpressEngine needs:        "wss://webliveroom1-api.zegocloud.com/ws"
 // ─────────────────────────────────────────────────────────────────────────────
 function buildZegoServerUrl(serverUrl) {
-  // "https://webliveroom1.api.zegocloud.com"
-  //  → strip https://
-  //  → replace .api.zegocloud.com with -api.zegocloud.com/ws
-  //  → prefix wss://
   return serverUrl
     .replace(/^https?:\/\//, "wss://")
     .replace(".api.zegocloud.com", "-api.zegocloud.com/ws");
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Unique stream ID per publisher (must be unique per room)
-// ─────────────────────────────────────────────────────────────────────────────
 function makeStreamId(roomId, userId) {
   return `${roomId}-${userId}`;
 }
@@ -35,22 +28,24 @@ function makeStreamId(roomId, userId) {
 export default function CallPage() {
   const { callId } = useParams();
   const searchParams = useSearchParams();
-  const callType = searchParams.get("type") || "video"; // "audio" | "video"
+  const callType = searchParams.get("type") || "video";
 
   // ── Refs ──────────────────────────────────────────────────────────────────
-  const zgRef = useRef(null);               // ZegoExpressEngine instance
-  const localStreamRef = useRef(null);      // local MediaStream
-  const myStreamIdRef = useRef(null);       // my published stream ID
-  const localVideoRef = useRef(null);       // <video> local
-  const remoteVideoRef = useRef(null);      // <video> remote (1-on-1)
+  const providerRef = useRef(null);
+  const providerTypeRef = useRef(null);
+  const localTracksRef = useRef({ audioTrack: null, videoTrack: null });
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+  const remoteUsersRef = useRef({});
 
   // ── State ─────────────────────────────────────────────────────────────────
-  const [status, setStatus] = useState("Connecting…");   // UI status label
+  const [status, setStatus] = useState("Connecting…");
   const [muted, setMuted] = useState(false);
   const [videoOff, setVideoOff] = useState(false);
   const [error, setError] = useState(null);
-  const [remoteCount, setRemoteCount] = useState(0);     // how many peers joined
-  const [role, setRole] = useState("participant");        // "initiator" | "participant"
+  const [remoteCount, setRemoteCount] = useState(0);
+  const [role, setRole] = useState("participant");
+  const [providerType, setProviderType] = useState(null);
 
   // ── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -58,217 +53,447 @@ export default function CallPage() {
 
     const init = async () => {
       try {
-        // ── Step 1: Get token + provider_config ──────────────────────────
-        //   Initiator: already stored in sessionStorage by CallNow.jsx
-        //   Callee:    call accept API to get token + provider_config
         let token = null;
         let providerConfig = null;
         let callRole = "participant";
 
         const stored = getCallSession(callId);
+        console.log("[Call] Stored session:", JSON.stringify(stored, null, 2));
 
         if (stored?.token && stored?.provider_config) {
-          // ✅ Initiator path — data already here, no extra API call
-          token = stored.token;
+          token = stored.token || stored.rtc_token || stored.zego_token;
+          providerConfig = stored.provider_config;
+          callRole = stored.role || "initiator";
+        } else if (stored?.provider_config) {
+          // Support case where token might be missing but provider_config exists
+          token = stored.token || stored.rtc_token || stored.zego_token;
           providerConfig = stored.provider_config;
           callRole = stored.role || "initiator";
         } else {
-          // ✅ Callee path — call accept to get credentials
           if (!isMounted) return;
           setStatus("Accepting call…");
 
           const acceptRes = await acceptCall(callId);
+          console.log("[Call] Accept response:", JSON.stringify(acceptRes, null, 2));
 
-          // Handle idempotent case (already_joined: true means token is null)
           if (acceptRes?.data?.already_joined && !acceptRes?.data?.token) {
             throw new Error("You already joined this call in another window.");
           }
 
-          token = acceptRes?.data?.token;
+          token = acceptRes?.data?.token || acceptRes?.data?.rtc_token || acceptRes?.data?.zego_token;
           providerConfig = acceptRes?.data?.provider_config;
           callRole = "participant";
         }
 
-        if (!token) throw new Error("RTC token missing. Cannot join room.");
+        console.log("[Call] Token after extraction:", token);
+        console.log("[Call] ProviderConfig:", JSON.stringify(providerConfig, null, 2));
+        
+        // Allow proceeding without token for ZEGOCLOUD (it can use room_id auth)
         if (!providerConfig) throw new Error("Provider config missing.");
-        if (providerConfig.type !== "ZEGOCLOUD") {
-          throw new Error(`Unsupported provider: ${providerConfig.type}`);
+        if (!providerConfig.type) throw new Error("Provider type missing.");
+        
+        // For ZEGOCLOUD, we can proceed without token (optional for some configs)
+        // For AGORA, token is required
+        if (!token && providerConfig.type === "AGORA") {
+          throw new Error("RTC token missing. Cannot join room.");
+        }
+        
+        if (!token) {
+          console.warn("[Call] Token is null, proceeding without token (ZEGOCLOUD room_id auth)");
         }
 
         if (!isMounted) return;
         setRole(callRole);
-        setStatus("Initializing ZegoCloud…");
+        setProviderType(providerConfig.type);
+        providerTypeRef.current = providerConfig.type;
 
-        // ── Step 2: Parse ZegoCloud config ──────────────────────────────
-        const appId = parseInt(providerConfig.app_id, 10);  // must be Number
-        const roomId = providerConfig.room_id;
-        const userId = providerConfig.user_id;
-        const zegoServer = buildZegoServerUrl(providerConfig.server_url);
+        const type = providerConfig.type;
 
-        if (!appId || isNaN(appId)) throw new Error("Invalid app_id");
-        if (!roomId) throw new Error("room_id missing");
-        if (!userId) throw new Error("user_id missing");
+        console.log("[Call] Switching to provider:", type);
 
-        console.log("[ZegoCloud] appId:", appId);
-        console.log("[ZegoCloud] server:", zegoServer);
-        console.log("[ZegoCloud] roomId:", roomId);
-        console.log("[ZegoCloud] userId:", userId);
-
-        // ── Step 3: Create ZegoExpressEngine ────────────────────────────
-        // Dynamic import so it only loads in the browser
-        const zegoModule = await import("zego-express-engine-webrtc");
-        const ZegoExpressEngine = zegoModule.ZegoExpressEngine || zegoModule.default;
-
-        const zg = new ZegoExpressEngine(appId, zegoServer);
-        zgRef.current = zg;
-
-        // ── Step 4: Room event listeners ─────────────────────────────────
-
-        // Remote stream added or removed
-        zg.on("roomStreamUpdate", async (rId, updateType, streamList) => {
-          if (!isMounted) return;
-
-          if (updateType === "ADD") {
-            for (const stream of streamList) {
-              try {
-                const remoteStream = await zg.startPlayingStream(
-                  stream.streamID
-                );
-                // For 1-on-1, attach to single remote video element
-                if (remoteVideoRef.current) {
-                  remoteVideoRef.current.srcObject = remoteStream;
-                }
-              } catch (playErr) {
-                console.error("Failed to play remote stream:", playErr);
-              }
-            }
-            setRemoteCount((c) => c + streamList.length);
-          }
-
-          if (updateType === "DELETE") {
-            for (const stream of streamList) {
-              zg.stopPlayingStream(stream.streamID);
-            }
-            setRemoteCount((c) => Math.max(0, c - streamList.length));
-          }
-        });
-
-        // Room state changes
-        zg.on("roomStateUpdate", (rId, state, errorCode, extendedData) => {
-          if (!isMounted) return;
-          console.log("[ZegoCloud] roomStateUpdate:", state, errorCode);
-
-          if (state === "CONNECTED") setStatus("Connected ✓");
-          if (state === "CONNECTING") setStatus("Connecting…");
-          if (state === "DISCONNECTED") {
-            if (errorCode !== 0) {
-              setError(`Disconnected (code: ${errorCode})`);
-            }
-          }
-        });
-
-        // Network quality (optional)
-        zg.on("publishQualityUpdate", (streamId, quality) => {
-          // can be used to show network indicator
-        });
-
-        // ── Step 5: Login to room ────────────────────────────────────────
-        if (!isMounted) return;
-        setStatus("Joining room…");
-
-        const loginResult = await zg.loginRoom(
-          roomId,
-          token,
-          { userID: userId, userName: userId },
-          { userUpdate: true }
-        );
-
-        console.log("[ZegoCloud] loginRoom result:", loginResult);
-
-        if (!loginResult) {
-          throw new Error("Failed to login to ZegoCloud room");
+        if (type === "AGORA") {
+          console.log("[Call] Using AGORA SDK");
+          await initAgora(providerConfig, token, callType, isMounted);
+        } else if (type === "ZEGOCLOUD") {
+          console.log("[Call] Using ZEGOCLOUD SDK");
+          await initZegoCloud(providerConfig, token, callType, isMounted);
+        } else if (type === "WEBRTC_SELFHOSTED") {
+          throw new Error("WEBRTC_SELFHOSTED not implemented yet");
+        } else {
+          throw new Error(`Unsupported provider: ${type}`);
         }
-
-        // ── Step 6: Create and publish local stream ──────────────────────
-        if (!isMounted) return;
-        setStatus("Starting camera/mic…");
-
-        const streamConstraints = {
-          camera: {
-            audio: true,
-            video: callType === "video",
-          },
-        };
-
-        const localStream = await zg.createStream(streamConstraints);
-        localStreamRef.current = localStream;
-
-        // Show local video preview
-        if (localVideoRef.current && callType === "video") {
-          localVideoRef.current.srcObject = localStream;
-        }
-
-        // Publish with a unique stream ID
-        const streamId = makeStreamId(roomId, userId);
-        myStreamIdRef.current = streamId;
-        zg.startPublishingStream(streamId, localStream);
-
-        if (isMounted) setStatus("Connected ✓");
       } catch (err) {
-        console.error("[ZegoCloud] init error:", err);
+        console.error("[Call] init error:", err);
         if (isMounted) setError(err.message);
       }
     };
 
     init();
 
-    // ── Cleanup on unmount ───────────────────────────────────────────────
     return () => {
       isMounted = false;
       cleanup();
     };
   }, [callId, callType]);
 
-  // ── Cleanup helper ────────────────────────────────────────────────────────
-  const cleanup = useCallback(() => {
-    const zg = zgRef.current;
-    if (!zg) return;
+  // ── Agora Event Handlers Setup ────────────────────────────────────────────
+  const setupAgoraEventHandlers = (client, isMounted) => {
+    client.on("user-published", async (user, mediaType) => {
+      if (!isMounted) return;
+      console.log("[Agora] User published:", user.uid, mediaType);
+      
+      await client.subscribe(user, { audioTrack: true, videoTrack: true });
+      
+      if (mediaType === "video" && remoteVideoRef.current) {
+        const videoTrack = user.videoTrack;
+        if (videoTrack) {
+          remoteVideoRef.current.srcObject = videoTrack.play();
+        }
+      }
+      
+      if (mediaType === "audio") {
+        const audioTrack = user.audioTrack;
+        if (audioTrack) {
+          audioTrack.play();
+        }
+      }
+      
+      remoteUsersRef.current[user.uid] = user;
+      setRemoteCount(Object.keys(remoteUsersRef.current).length);
+    });
+
+    client.on("user-unpublished", (user, mediaType) => {
+      if (!isMounted) return;
+      console.log("[Agora] User unpublished:", user.uid, mediaType);
+    });
+
+    client.on("user-left", (user, reason) => {
+      if (!isMounted) return;
+      console.log("[Agora] User left:", user.uid, reason);
+      delete remoteUsersRef.current[user.uid];
+      setRemoteCount(Object.keys(remoteUsersRef.current).length);
+    });
+
+    client.on("connection-state-change", (curState, prevState, reason) => {
+      if (!isMounted) return;
+      console.log("[Agora] connection-state-change:", curState, prevState, reason);
+      
+      if (curState === "CONNECTED") setStatus("Connected ✓");
+      if (curState === "CONNECTING") setStatus("Connecting…");
+      if (curState === "DISCONNECTED") {
+        setError(`Disconnected: ${reason}`);
+      }
+    });
+  };
+
+  // ── Agora Initialization ────────────────────────────────────────────────
+  const initAgora = async (providerConfig, token, callType, isMounted) => {
+    setStatus("Initializing Agora…");
+
+    const appId = providerConfig.app_id;
+    const channelName = providerConfig.channel_name;
+    const uid = providerConfig.uid;
+
+    console.log("[Agora] ========== AGORA INIT STARTED ==========");
+    console.log("[Agora] Full providerConfig:", JSON.stringify(providerConfig, null, 2));
+    console.log("[Agora] appId:", appId, "type:", typeof appId);
+    console.log("[Agora] channel:", channelName);
+    console.log("[Agora] uid:", uid, "type:", typeof uid);
+    console.log("[Agora] token:", token ? "present (" + token.substring(0, 30) + "...)" : "NULL");
+
+    if (!appId) {
+      console.error("[Agora] ERROR: app_id is missing!");
+      throw new Error("AGORA app_id is missing from provider config");
+    }
+    if (!channelName) {
+      console.error("[Agora] ERROR: channel_name is missing!");
+      throw new Error("AGORA channel_name is missing from provider config");
+    }
+    if (!token) {
+      console.error("[Agora] ERROR: token is missing!");
+      throw new Error("AGORA token is missing");
+    }
+
+    // Ensure parameters are correct types
+    const appIdStr = String(appId);
+    const channelStr = String(channelName);
+    const uidValue = uid ? String(uid) : null;
+
+    console.log("[Agora] Joining with:", { appId: appIdStr, channel: channelStr, uid: uidValue });
+
+    const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
+    const client = AgoraRTC.createClient({
+      mode: "rtc",
+      codec: "vp8",
+    });
+    providerRef.current = client;
+
+    // Set up event handlers BEFORE joining
+    setupAgoraEventHandlers(client, isMounted);
+
+    if (!isMounted) return;
+    setStatus("Joining channel…");
 
     try {
-      if (myStreamIdRef.current) {
-        zg.stopPublishingStream(myStreamIdRef.current);
+      // Join with string parameters
+      await client.join(appIdStr, channelStr, token, uidValue);
+      console.log("[Agora] Joined channel successfully!");
+
+      if (!isMounted) return;
+      setStatus("Starting camera/mic…");
+
+      let audioTrack = null;
+      let videoTrack = null;
+
+      audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+      console.log("[Agora] Microphone track created");
+      
+      if (callType === "video") {
+        videoTrack = await AgoraRTC.createCameraVideoTrack();
+        console.log("[Agora] Camera track created");
+        
+        if (localVideoRef.current) {
+          videoTrack.play(localVideoRef.current);
+          console.log("[Agora] Camera playing in local video");
+        }
       }
-      if (localStreamRef.current) {
-        zg.destroyStream(localStreamRef.current);
+
+      localTracksRef.current = { audioTrack, videoTrack };
+
+      const tracks = [audioTrack, videoTrack].filter(Boolean);
+      if (tracks.length > 0) {
+        await client.publish(tracks);
+        console.log("[Agora] Published", tracks.length, "tracks");
       }
-      zg.logoutRoom();
+
+      if (isMounted) {
+        setStatus("Connected ✓");
+        console.log("[Agora] ========== AGORA CONNECTED ==========");
+      }
+    } catch (agoraErr) {
+      console.error("[Agora] Error during initialization:", agoraErr);
+      throw agoraErr;
+    }
+  };
+
+  // ── ZegoCloud Initialization ─────────────────────────────────────────────
+  const initZegoCloud = async (providerConfig, token, callType, isMounted) => {
+    setStatus("Initializing ZegoCloud…");
+
+    const appId = parseInt(providerConfig.app_id, 10);
+    const roomId = providerConfig.room_id;
+    const userId = providerConfig.user_id;
+    const serverUrl = (providerConfig.server_url || "").trim();
+    
+    console.log("[ZegoCloud] Raw app_id from providerConfig:", providerConfig.app_id);
+    console.log("[ZegoCloud] Raw server_url from providerConfig:", serverUrl);
+    
+    // Build WebSocket URL from server_url
+    let zegoServer = serverUrl;
+    if (serverUrl && !serverUrl.includes('/ws')) {
+      zegoServer = buildZegoServerUrl(serverUrl);
+    }
+
+    if (!appId || isNaN(appId)) {
+      console.error("[ZegoCloud] Invalid app_id:", providerConfig.app_id);
+      console.error("[ZegoCloud] Full providerConfig:", JSON.stringify(providerConfig, null, 2));
+      setError("ZEGOCLOUD not configured. Please contact admin to set up ZEGOCLOUD app_id and server_secret in backend.");
+      return;
+    }
+    if (!roomId) throw new Error("room_id missing");
+    if (!userId) throw new Error("user_id missing");
+
+    console.log("[ZegoCloud] appId:", appId);
+    console.log("[ZegoCloud] server:", zegoServer);
+    console.log("[ZegoCloud] roomId:", roomId);
+    console.log("[ZegoCloud] userId:", userId);
+    console.log("[ZegoCloud] token:", token ? "present" : "NULL");
+
+    const zegoModule = await import("zego-express-engine-webrtc");
+    const ZegoExpressEngine = zegoModule.ZegoExpressEngine || zegoModule.default;
+
+    const zg = new ZegoExpressEngine(appId, zegoServer);
+    providerRef.current = zg;
+
+    zg.on("roomStreamUpdate", async (rId, updateType, streamList) => {
+      if (!isMounted) return;
+
+      if (updateType === "ADD") {
+        for (const stream of streamList) {
+          try {
+            const remoteStream = await zg.startPlayingStream(stream.streamID);
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.srcObject = remoteStream;
+            }
+          } catch (playErr) {
+            console.error("Failed to play remote stream:", playErr);
+          }
+        }
+        setRemoteCount((c) => c + streamList.length);
+      }
+
+      if (updateType === "DELETE") {
+        for (const stream of streamList) {
+          zg.stopPlayingStream(stream.streamID);
+        }
+        setRemoteCount((c) => Math.max(0, c - streamList.length));
+      }
+    });
+
+    zg.on("roomStateUpdate", (rId, state, errorCode, extendedData) => {
+      if (!isMounted) return;
+      console.log("[ZegoCloud] roomStateUpdate:", state, errorCode);
+
+      if (state === "CONNECTED") setStatus("Connected ✓");
+      if (state === "CONNECTING") setStatus("Connecting…");
+      if (state === "DISCONNECTED") {
+        if (errorCode !== 0) {
+          setError(`Disconnected (code: ${errorCode})`);
+        }
+      }
+    });
+
+    if (!isMounted) return;
+    setStatus("Joining room…");
+
+    try {
+      console.log("[ZegoCloud] Calling loginRoom with token:", token ? "YES" : "NO");
+      const loginResult = await zg.loginRoom(
+        roomId,
+        token || "", // Pass empty string if token is null
+        { userID: userId, userName: userId },
+        { userUpdate: true }
+      );
+
+      console.log("[ZegoCloud] loginRoom result:", loginResult);
+
+      if (!loginResult) {
+        throw new Error("Failed to login to ZegoCloud room");
+      }
+    } catch (loginErr) {
+      console.error("[ZegoCloud] loginRoom error:", loginErr);
+      throw new Error(`ZegoCloud login failed: ${loginErr.message}`);
+    }
+
+    if (!isMounted) return;
+    setStatus("Starting camera/mic…");
+
+    const streamConstraints = {
+      camera: {
+        audio: true,
+        video: callType === "video",
+      },
+    };
+
+    const localStream = await zg.createStream(streamConstraints);
+    localTracksRef.current.localStream = localStream;
+
+    if (localVideoRef.current && callType === "video") {
+      localVideoRef.current.srcObject = localStream;
+    }
+
+    const streamId = makeStreamId(roomId, userId);
+    zg.startPublishingStream(streamId, localStream);
+
+    if (isMounted) setStatus("Connected ✓");
+  };
+
+  // ── Cleanup helper ────────────────────────────────────────────────────────
+  const cleanup = useCallback(() => {
+    const provider = providerRef.current;
+    if (!provider) return;
+
+    const type = providerTypeRef.current;
+
+    try {
+      if (type === "AGORA") {
+        cleanupAgora();
+      } else if (type === "ZEGOCLOUD") {
+        cleanupZegoCloud();
+      }
     } catch (e) {
       console.error("Cleanup error:", e);
     }
 
-    zgRef.current = null;
-    localStreamRef.current = null;
+    providerRef.current = null;
+    localTracksRef.current = { audioTrack: null, videoTrack: null, localStream: null };
   }, []);
 
+  const cleanupAgora = async () => {
+    const client = providerRef.current;
+    const tracks = localTracksRef.current;
+
+    if (tracks.audioTrack) {
+      tracks.audioTrack.stop();
+      tracks.audioTrack.close();
+    }
+    if (tracks.videoTrack) {
+      tracks.videoTrack.stop();
+      tracks.videoTrack.close();
+    }
+
+    if (client) {
+      await client.leave();
+    }
+  };
+
+  const cleanupZegoCloud = () => {
+    const zg = providerRef.current;
+    const tracks = localTracksRef.current;
+
+    if (tracks.localStream) {
+      try {
+        zg.stopPublishingStream(null);
+        zg.destroyStream(tracks.localStream);
+      } catch (e) {
+        console.error("ZegoCloud cleanup error:", e);
+      }
+    }
+    if (zg) {
+      try {
+        zg.logoutRoom();
+      } catch (e) {
+        console.error("ZegoCloud logout error:", e);
+      }
+    }
+  };
+
   // ── Controls ──────────────────────────────────────────────────────────────
-
-  const toggleMute = useCallback(() => {
-    const zg = zgRef.current;
-    if (!zg || !localStreamRef.current) return;
-
+  const toggleMute = useCallback(async () => {
+    const type = providerTypeRef.current;
+    const tracks = localTracksRef.current;
     const newMuted = !muted;
-    // ZegoCloud API: mutePublishStreamAudio
-    zg.mutePublishStreamAudio(localStreamRef.current, newMuted);
+
+    if (type === "AGORA") {
+      if (tracks.audioTrack) {
+        await tracks.audioTrack.setEnabled(newMuted ? false : true);
+      }
+    } else if (type === "ZEGOCLOUD") {
+      const zg = providerRef.current;
+      if (zg && tracks.localStream) {
+        zg.mutePublishStreamAudio(tracks.localStream, newMuted);
+      }
+    }
+
     setMuted(newMuted);
   }, [muted]);
 
-  const toggleVideo = useCallback(() => {
-    const zg = zgRef.current;
-    if (!zg || !localStreamRef.current) return;
-
+  const toggleVideo = useCallback(async () => {
+    const type = providerTypeRef.current;
+    const tracks = localTracksRef.current;
     const newVideoOff = !videoOff;
-    // ZegoCloud API: mutePublishStreamVideo
-    zg.mutePublishStreamVideo(localStreamRef.current, newVideoOff);
+
+    if (type === "AGORA") {
+      if (tracks.videoTrack) {
+        await tracks.videoTrack.setEnabled(newVideoOff ? false : true);
+      }
+    } else if (type === "ZEGOCLOUD") {
+      const zg = providerRef.current;
+      if (zg && tracks.localStream) {
+        zg.mutePublishStreamVideo(tracks.localStream, newVideoOff);
+      }
+    }
+
     setVideoOff(newVideoOff);
   }, [videoOff]);
 
@@ -276,7 +501,6 @@ export default function CallPage() {
     try {
       cleanup();
 
-      // Initiator can end the whole call; others just leave
       if (role === "initiator") {
         await endCall(callId);
       } else {
@@ -317,6 +541,9 @@ export default function CallPage() {
           }`}
         />
         {status}
+        {providerType && (
+          <span className="text-xs text-gray-400 ml-2">({providerType})</span>
+        )}
         {remoteCount > 0 && (
           <span className="flex items-center gap-1 ml-2">
             <Users className="w-3 h-3" />
@@ -352,7 +579,7 @@ export default function CallPage() {
           <video
             ref={localVideoRef}
             autoPlay
-            muted          // always muted locally to avoid echo
+            muted
             playsInline
             className={`w-36 h-52 rounded-2xl object-cover border-2 border-white/20 bg-gray-800 ${
               videoOff ? "hidden" : ""
@@ -382,7 +609,7 @@ export default function CallPage() {
         <button
           onClick={toggleMute}
           title={muted ? "Unmute" : "Mute"}
-          className={`w-13 h-13 w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
             muted ? "bg-white text-gray-900" : "bg-gray-700 text-white hover:bg-gray-600"
           }`}
         >
@@ -420,5 +647,3 @@ export default function CallPage() {
     </div>
   );
 }
-
-// Fix: Phone icon was missing and added to import

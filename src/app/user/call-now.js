@@ -62,6 +62,7 @@ export async function initiateCall(payload) {
     body: JSON.stringify(payload),
   });
   const data = await res.json();
+  console.log("[call-now.js] initiateCall response:", JSON.stringify(data, null, 2));
   if (!res.ok) throw new Error(data.message || "Failed to initiate call");
   return data;
 }

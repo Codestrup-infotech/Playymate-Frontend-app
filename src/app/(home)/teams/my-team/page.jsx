@@ -424,14 +424,7 @@ export default function MyTeamPage() {
       </div>
 
       {/* Create Team Button */}
-      <Link
-        href="/teams/create-team"
-        className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-orange-500 flex items-center justify-center gap-2 text-white font-semibold mb-5"
-      >
-        <Plus size={20} />
-        Create Team
-      </Link>
-
+    
 
       
 

@@ -1285,9 +1285,10 @@ useEffect(() => {
           const callData = {
             provider: data.provider || data.provider_config?.type,
             ws_url: data.provider_config?.ws_url || data.rtc_ws_url,
-            token: data.token,
+            token: data.token || data.rtc_token || data.zego_token,
             room_id: data.room_id,
             app_id: data.provider_config?.app_id,
+            provider_config: data.provider_config,
           };
           sessionStorage.setItem(`call_${data.call_id}`, JSON.stringify(callData));
         }
@@ -2087,13 +2088,14 @@ useEffect(() => {
                     
                     // Store provider config for the call page
                     const providerConfig = res?.data?.provider_config;
-                    const token = res?.data?.token;
+                    const token = res?.data?.token || res?.data?.rtc_token || res?.data?.zego_token;
                     const callData = {
                       provider: incomingCall.provider || providerConfig?.type,
                       ws_url: providerConfig?.ws_url || incomingCall.providerConfig?.ws_url,
                       token: token,
                       room_id: incomingCall.roomId,
                       app_id: providerConfig?.app_id,
+                      provider_config: providerConfig,
                     };
                     sessionStorage.setItem(`call_${incomingCall.callId}`, JSON.stringify(callData));
                     

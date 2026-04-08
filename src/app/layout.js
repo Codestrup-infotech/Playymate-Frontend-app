@@ -1,5 +1,6 @@
 import "./globals.css";
 import IncomingCallHandler from "@/app/(home)/home/components/IncomingCall";
+import FcmInitializer from "@/components/FcmInitializer";
 
 // AWS Amplify configuration for Face Liveness
 // import "@/lib/amplify-config";
@@ -22,6 +23,7 @@ export default function RootLayout({ children }) {
         suppressHydrationWarning
         style={{ fontFamily: "'Playfair Display', serif" }}
       >
+        <FcmInitializer />
         {children}
         <IncomingCallHandler />
       </body>
