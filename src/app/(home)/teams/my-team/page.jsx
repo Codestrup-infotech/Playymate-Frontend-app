@@ -25,7 +25,7 @@ export default function MyTeamPage() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
-  const pageBg = isDark ? "bg-black text-white" : "bg-gray-50 text-gray-900";
+  const pageBg = isDark ? " text-white" : " text-gray-900";
   const cardBg = isDark ? "bg-[#12121c] border-[#2a2a45]" : "bg-white border-gray-200";
   const actBg = isDark ? "bg-[#12121c] border-[#2a2a45] hover:bg-[#1c1c2e]" : "bg-white border-gray-200 hover:bg-gray-50";
   const mutedText = isDark ? "text-zinc-400" : "text-gray-500";
@@ -404,14 +404,14 @@ export default function MyTeamPage() {
 
   if (teamsData.loading) {
     return (
-      <div className={`min-h-screen ${pageBg} flex items-center justify-center`}>
+      <div className={`min-h-screen ${pageBg}  flex items-center justify-center`}>
         <div className="w-8 h-8 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className={`min-h-screen ${pageBg} px-5 py-6`}>
+    <div className={`min-h-screen ${pageBg} lg:px-20 px-3 py-6`}>
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button

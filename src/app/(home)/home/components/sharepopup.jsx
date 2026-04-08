@@ -653,7 +653,8 @@ export default function SharePopup({
   contentId,
   thumbnail = null,
   title = null,
-  onShareSuccess = null, // Callback when share is successful
+  onShareSuccess = null,
+  shareUrl: customShareUrl = null,
 }) {
   // Debug: Log props when SharePopup opens
   useEffect(() => {
@@ -668,9 +669,10 @@ export default function SharePopup({
   const overlayRef = useRef(null);
 
   const shareUrl =
-    typeof window !== "undefined"
+    customShareUrl ||
+    (typeof window !== "undefined"
       ? `${window.location.origin}/${contentType}/${contentId}`
-      : `/${contentType}/${contentId}`;
+      : `/${contentType}/${contentId}`);
 
  useEffect(() => {
   if (!isOpen) {

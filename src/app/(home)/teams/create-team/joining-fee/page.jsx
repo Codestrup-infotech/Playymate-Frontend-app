@@ -53,7 +53,6 @@ export default function JoiningFeePage() {
     },
     welcome_bonus_coins: 0,
     use_gold_coins: false,
-    use_diamonds: true,
     host_earnings: "wallet",
   })
 
@@ -85,7 +84,6 @@ export default function JoiningFeePage() {
           setFormData(prev => ({
             ...prev,
             use_gold_coins: parsed.payment_preferences.use_gold_coins ?? false,
-            use_diamonds: parsed.payment_preferences.use_diamonds ?? true,
             host_earnings: parsed.host_earnings ?? "wallet",
           }))
         }
@@ -115,7 +113,6 @@ export default function JoiningFeePage() {
       },
       payment_preferences: {
         use_gold_coins: formData.use_gold_coins,
-        use_diamonds: formData.use_diamonds,
       },
       host_earnings: formData.host_earnings,
     }
@@ -259,32 +256,6 @@ export default function JoiningFeePage() {
                   className="w-5 h-5 accent-pink-500"
                 />
                 <span className="text-sm text-gray-500">Enable gold coin payments</span>
-              </div>
-            </motion.div>
-
-            {/* DIAMOND PAYMENT */}
-            <motion.div 
-              variants={itemVariants}
-              whileHover={{ scale: 1.02 }}
-              className={`${cardBg} border ${borderColor} rounded-2xl p-5 flex items-center justify-between shadow-sm mb-6`}
-            >
-              <div>
-                <h3 className="font-semibold">Diamond Coin Payment</h3>
-                <p className="text-sm text-gray-500">Full Payment Via Diamond Coins</p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.use_diamonds}
-                    onChange={(e) => setFormData(prev => ({ ...prev, use_diamonds: e.target.checked }))}
-                    className="sr-only peer"
-                  />
-                  <div className={`w-14 h-8 rounded-full flex items-center p-1 transition-all duration-300 ${formData.use_diamonds ? "bg-gradient-to-r from-pink-500 to-orange-400" : "bg-gray-300"}`}>
-                    <div className={`w-6 h-6 bg-white rounded-full shadow transition-transform duration-300 ${formData.use_diamonds ? "translate-x-0" : ""}`}></div>
-                  </div>
-                </label>
               </div>
             </motion.div>
           </>
