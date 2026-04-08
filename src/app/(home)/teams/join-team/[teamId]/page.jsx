@@ -242,7 +242,7 @@ export default function TeamProfilePage() {
             </motion.button>
             <h1 className="text-xl tracking-tight text-gray-900">Team Profile</h1>
           </div>
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <motion.button
               whileTap={{ scale: 0.9 }}
               className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${mutedBg} flex items-center justify-center border ${borderColor} ${mutedText}`}
@@ -255,7 +255,7 @@ export default function TeamProfilePage() {
             >
               <MoreVertical size={16} />
             </motion.button>
-          </div>
+          </div> */}
         </div>
       </header>
 
@@ -316,7 +316,7 @@ export default function TeamProfilePage() {
                 @{teamData.name?.toLowerCase().replace(/\s+/g, '_')}
               </span>
               <span className="w-1 h-1 rounded-full bg-gray-300" />
-              <span className={`text-xs sm:text-sm ${mutedText}`}>{location.city || "Global"}</span>
+              <span className={`text-xs sm:text-sm ${mutedText}`}>{location.city || ""}</span>
             </div>
 
             {/* Stats Grid */}

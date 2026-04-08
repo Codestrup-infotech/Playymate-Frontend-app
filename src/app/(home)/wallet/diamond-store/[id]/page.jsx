@@ -27,7 +27,7 @@ function DiamondDetailContent() {
   }
 
   return (
-    <div className="min-h-screen  text-gray-900 lg:pb-12 pb-9 font-Poppins lg:px-6 ">
+    <div className="min-h-screen  text-gray-900 lg:pb-12 pb-9 font-Poppins lg:px-32 md:px-2 ">
       {/* Header */}
       <div className=" px-5 lg:pb-4 pt-2 flex items-center ">
         <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">

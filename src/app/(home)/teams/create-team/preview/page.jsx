@@ -451,7 +451,7 @@ if (savedProfileFile) {
       <img
         src={profileImage}
         alt="Team Profile"
-        className="w-full h-full object-cover"
+        className="w-auto h-auto  object-cover"
         onError={(e) => {
           e.currentTarget.style.display = "none"
         }}

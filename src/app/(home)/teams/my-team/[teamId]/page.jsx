@@ -331,8 +331,8 @@ export default function TeamDetailPage() {
       {/* Logo */}
       <div
         style={{
-          width: 80,
-          height: 80,
+          width: 130,
+          height: 130,
           borderRadius: 18,
           flexShrink: 0,
           background: isDark ? "#1c1c3a" : "#eef0f8",
@@ -347,7 +347,7 @@ export default function TeamDetailPage() {
           <img
             src={team.logo_url || team.logo}
             alt={team.name}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            // style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         ) : (
           <span
@@ -375,7 +375,7 @@ export default function TeamDetailPage() {
         >
           <span
             style={{
-              fontSize: 20,
+              fontSize: 26,
               fontWeight: 800,
               whiteSpace: "nowrap",
               overflow: "hidden",

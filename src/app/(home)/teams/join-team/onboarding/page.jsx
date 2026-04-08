@@ -95,29 +95,42 @@ function OnboardingContent() {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
 
       {/* COVER & HEADER */}
-      <div className="relative h-64 w-full overflow-hidden">
-        {teamData?.cover_image ? (
-          <img
-            src={teamData.cover_image}
-            alt={teamData.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-transparent" />
-        <div className="absolute top-6 left-6 z-10">
-          <button
-            onClick={() => router.back()}
-            className="p-2.5 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-colors"
-          >
-            <ArrowLeft size={22} />
-          </button>
-        </div>
-      </div>
+   {/* COVER & HEADER */}
+<div className="max-w-xl mx-auto">
+  
+  {/* COVER & HEADER */}
+  <div className="relative h-64 w-full rounded-t-[32px] overflow-hidden">
+    {teamData?.cover_image ? (
+      <img
+        src={teamData.cover_image}
+        alt={teamData.name}
+        className="w-full h-full object-cover"
+      />
+    ) : (
+      <div className="w-full h-full bg-gradient-to-r from-[#F03DF7] to-[#FE7E28]" />
+    )}
+
+    <div className="absolute top-6 left-6 z-10">
+      <button
+        onClick={() => router.back()}
+        className="p-2.5 bg-white/10 backdrop-blur-md rounded-full text-white"
+      >
+        <ArrowLeft size={22} />
+      </button>
+    </div>
+  </div>
+
+  {/* MAIN CONTENT */}
+  <div className=" relative z-20 px-4">
+    <div className="bg-white rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden">
+      {/* your content */}
+    </div>
+  </div>
+
+</div>
 
       {/* MAIN CONTENT */}
-      <div className="max-w-xl mx-auto px-4 -mt-24 relative z-20">
+      <div className="max-w-xl mx-auto  -mt-24 relative z-20">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -277,8 +290,8 @@ function OnboardingContent() {
       </div>
 
       {/* FOOTER ACTION */}
-      <div className="bottom-0 inset-x-0 p-6 bg-white/80 backdrop-blur-xl border-t border-slate-100 z-30">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-4">
+      <div className=" lg:py-5 z-30">
+        <div className="lg:max-w-lg mx-auto flex items-center justify-between gap-4">
           <div className="hidden sm:block">
             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Total to pay</p>
             <p className="text-2xl font-black text-slate-900">₹{currentPrice}</p>

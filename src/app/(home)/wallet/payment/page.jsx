@@ -64,7 +64,7 @@ function PaymentContent() {
 
   return (
     <> 
-    <div className=" flex justify-center items-center "> 
+    <div className=" flex justify-center items-center lg:mb-10 mb-2  "> 
     <div className="lg:min-h-screen lg:w-2/3  w-full   md:h-screen  text-gray-900 lg:mb-24 pb-5 font-Poppins ">
       {/* Header */}
       <div className=" px-5 lg:pb-4 pt-6 flex items-center ">
@@ -127,7 +127,7 @@ function PaymentContent() {
       )}
 
       {/* Confirm */}
-      <div className="px-4">
+      <div className="px-4 ">
         <button
           onClick={handleConfirm}
           disabled={loading}
