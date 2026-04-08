@@ -103,7 +103,7 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, on
       >
   <img
     src={author.profile_image_url}
-    className="w-10 h-10 rounded-full object-cover"
+    className="w-10 h-10 rounded-2xl object-cover"
   />
   <div>
     {/* <h4 className={`text-sm font-semibold ${isDark ? "text-white" : "text-black"}`}>
@@ -800,7 +800,7 @@ function HomePageContent() {
             <div className="flex flex-col items-center shrink-0">
               <div className="relative">
                 <div
-                  className={`w-20 h-20 rounded-full p-[2px] cursor-pointer hover:opacity-80 transition-opacity ${
+                  className={`w-20 h-20 rounded-2xl p-[2px] cursor-pointer hover:opacity-80 transition-opacity ${
                     (userStories.length > 0)
                       ? "bg-gradient-to-tr from-purple-500 to-orange-500"
                       : "bg-gray-300"
@@ -813,7 +813,7 @@ function HomePageContent() {
                     }
                   }}
                 >
-                  <div className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-200"}`}>
+                  <div className={`w-full h-full rounded-2xl overflow-hidden flex items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-200"}`}>
                     {/* Show user profile photo by default - not story */}
                     {userProfile?.profile_photos?.[0]?.url || userProfile?.profile_image_url ? (
                       <img 
@@ -1066,9 +1066,9 @@ function HomePageContent() {
                   {suggestedFollows.slice(0, 6).map((u, index) => (
                     <div key={u.user_id || `suggested-${index}`} className="flex items-center gap-3">
                       {u.profile_image_url ? (
-                        <img src={u.profile_image_url} alt={u.full_name} className="w-9 h-9 rounded-full object-cover" />
+                        <img src={u.profile_image_url} alt={u.full_name} className="w-9 h-9 rounded-xl object-cover" />
                       ) : (
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-r from-purple-500 to-orange-500" />
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-r from-purple-500 to-orange-500" />
                       )}
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-medium truncate ${isDark ? "text-white" : "text-gray-900"}`}>
