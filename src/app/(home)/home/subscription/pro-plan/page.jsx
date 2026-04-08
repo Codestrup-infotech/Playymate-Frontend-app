@@ -328,7 +328,7 @@ function ProPlanPageContent() {
 
       <div
         style={{
-          position: "fixed",
+          position: "",
           bottom: 0,
           left: 0,
           right: 0,
@@ -345,8 +345,7 @@ function ProPlanPageContent() {
           style={{
             width: "100%",
             maxWidth: "440px",
-            padding: "15px",
-            marginLeft: "160px",
+            padding: "15px", 
             borderRadius: "14px",
             border: "none",
             cursor: "pointer",

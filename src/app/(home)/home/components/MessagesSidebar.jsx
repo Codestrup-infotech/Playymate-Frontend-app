@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   getConversations,
   getMessageRequests,
@@ -8,6 +8,7 @@ import {
   unpinConversation,
   leaveConversation,
 } from "@/services/messages";
+import { searchAccounts } from "@/app/user/search";
 
 // ─── Token & ID helpers ────────────────────────────────────────────────────────
 
@@ -181,11 +182,15 @@ export default function MessagesSidebar({
   onMessageRequestsChange = () => {},
   myId = "",
   conversations = [],
+  onSearchUsers = null,
 }) {
   const [localConvLoading, setLocalConvLoading] = useState(true);
   const [localConversations, setLocalConversations] = useState([]);
   const [messageRequests, setMessageRequests] = useState([]);
   const [menuOpenConvId, setMenuOpenConvId] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchDebounceRef = useRef(null);
 
   // Sync with parent conversations when they change
   // This is the main data source from parent component
@@ -288,8 +293,48 @@ export default function MessagesSidebar({
     fetchMessageRequests();
   }, []);
 
-  // Filter conversations based on search
+  // Filter conversations based on search - only filter if search is less than 2 chars
+  // Otherwise, show search results
   const sidebarMyId = getMyId();
+  
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  
+  // Search effect for users
+  useEffect(() => {
+    // Clear search results when search is empty or less than 2 chars
+    if (!search.trim() || search.trim().length < 2) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      setSearchLoading(false);
+      return;
+    }
+    
+    // Clear previous timeout
+    clearTimeout(searchDebounceRef.current);
+    
+    setSearchLoading(true);
+    setShowSearchResults(true);
+    
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const response = await searchAccounts(search.trim(), 20);
+        if ((response.status === "success" || response.success) && response.data) {
+          const results = response.data.items || response.data.results || response.data || [];
+          setSearchResults(results);
+        } else {
+          setSearchResults([]);
+        }
+      } catch (error) {
+        console.error("Search error:", error);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 500);
+    
+    return () => clearTimeout(searchDebounceRef.current);
+  }, [search]);
+
   const filtered = localConversations.filter((c) =>
     getConvName(c, sidebarMyId).toLowerCase().includes(search.toLowerCase())
   );
@@ -364,6 +409,16 @@ export default function MessagesSidebar({
     onSelectConv(conv);
   };
 
+  // Handle user selection from search results
+  const handleUserSelect = (user) => {
+    if (onSearchUsers) {
+      onSearchUsers(user);
+    }
+    setSearch("");
+    setSearchResults([]);
+    setShowSearchResults(false);
+  };
+
   const isLoading = localConvLoading;
 
   return (
@@ -418,6 +473,47 @@ export default function MessagesSidebar({
               <div key={i} className="h-14 rounded-2xl bg-gray-100 animate-pulse" />
             ))}
           </div>
+        ) : showSearchResults && search.trim().length >= 2 ? (
+          // Show search results
+          searchLoading ? (
+            <div className="p-4 space-y-3">
+              {Array(3).fill(0).map((_, i) => (
+                <div key={i} className="h-14 rounded-2xl bg-gray-100 animate-pulse" />
+              ))}
+            </div>
+          ) : searchResults.length > 0 ? (
+            <div>
+              <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+                Search Results
+              </div>
+              {searchResults.map((user) => (
+                <button
+                  key={user._id || user.user_id || user.id}
+                  onClick={() => handleUserSelect(user)}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-50"
+                >
+                  <Avatar 
+                    name={user.full_name || user.username || ""} 
+                    imgUrl={user.profile_image_url || user.avatar} 
+                    size={10} 
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-900 truncate">
+                      {user.full_name || user.username || "Unknown"}
+                    </div>
+                    {user.username && (
+                      <div className="text-xs text-gray-500 truncate">@{user.username}</div>
+                    )}
+                  </div>
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center py-12 text-sm text-gray-400">No users found</p>
+          )
         ) : filtered.length === 0 ? (
           <p className="text-center py-12 text-sm text-gray-400">No conversations</p>
         ) : (

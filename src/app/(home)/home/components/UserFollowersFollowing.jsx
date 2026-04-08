@@ -180,11 +180,11 @@ export default function UserFollowModal({
                         }}
                         className={`text-sm px-3 py-1 rounded-md ${
                           userIsMutual
-                            ? "bg-pink-600 text-white"
+                            ? "bg-slate-300 text-black "
                             : "bg-purple-600 text-white"
                         }`}
                       >
-                        {userIsMutual ? "Mutual" : "Follow"}
+                        {userIsMutual ? "Following" : "Follow"}
                       </button>
                     )}
                   </div>

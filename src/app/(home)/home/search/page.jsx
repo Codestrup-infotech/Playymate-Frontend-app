@@ -347,9 +347,9 @@ export default function SearchPage() {
 
   return (
     <div className="space-y-6">
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="lg:max-w-6xl  lg:mx-auto  lg:px-4">
         <div
-          className={`rounded-xl p-6 ${
+          className={`rounded-xl lg:p-6 p-4  ${
             isDark ? "bg-[#1a1a2e] text-white" : "bg-white shadow"
           }`}
         >
@@ -510,11 +510,11 @@ export default function SearchPage() {
                           <p className="text-gray-400 text-sm">
                             @{user.username}
                           </p>
-                          {user.bio && (
+                          {/* {user.bio && (
                             <p className="text-gray-500 text-xs mt-1 line-clamp-1">
                               {user.bio}
                             </p>
-                          )}
+                          )} */}
                         </div>
                       </div>
 

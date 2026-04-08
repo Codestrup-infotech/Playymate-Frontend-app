@@ -55,20 +55,20 @@ function ApplyCoinsContent() {
   const sliderPercent = maxCoins > 0 ? (coinsUsed / maxCoins) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] text-gray-900 pb-10 font-sans">
+    <div className="lg:min-h-screen md:h-screen  text-gray-900 lg:pb-10 lg:px-32 md:px-4 font-Poppins ">
       {/* Header */}
-      <div className=" px-5 pb-4 flex items-center gap-4 shadow-sm">
-        <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+      <div className=" px-5 lg:pb-4 md:pb-3 flex items-center  ">
+        <button onClick={() => router.back()} className="w-9 h-9 hidden lg:block md:block rounded-full bg-gray-100  items-center justify-center">
           <ArrowLeft size={18} className="text-gray-700" />
         </button>
-        <h1 className="text-xl font-bold">Apply Coins</h1>
+        <h1 className="text-xl font-semibold hidden lg:block md:block ">Apply Coins</h1>
       </div>
 
       {/* Bill Amount */}
-      <div className="px-4 mt-5 mb-7">
+      <div className="px-4 lg:mt-4  lg:mb-7 mb-3">
         <div className="bg-white rounded-3xl p-7 text-center border border-gray-100 shadow-sm">
           <p className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-2">Bill Amount</p>
-          <h2 className="text-5xl font-black text-gray-800">₹{billAmount.toLocaleString()}</h2>
+          <h2 className="text-5xl font-semibold text-gray-800">₹{billAmount.toLocaleString()}</h2>
         </div>
       </div>
 
@@ -150,7 +150,7 @@ function ApplyCoinsContent() {
           </div>
         </div>
 
-        <p className="text-center text-gray-400 text-sm mt-5">
+        <p className="text-center text-gray-400 text-sm lg:mt-5 mt-3">
           Coins = Real Discounts. Let's go! 🚀
         </p>
 
@@ -158,7 +158,7 @@ function ApplyCoinsContent() {
         <button
           onClick={() => router.back()}
           disabled={coinsUsed === 0 || loading}
-          className="mt-6 w-full py-4 rounded-3xl text-base font-bold text-white shadow-lg disabled:opacity-40"
+          className="lg:mt-6 mt-4 w-full py-4 rounded-3xl text-base font-bold text-white shadow-lg disabled:opacity-40"
           style={{ background: "linear-gradient(135deg, #ec4899, #f97316)" }}
         >
           Apply {coinsUsed} Coins

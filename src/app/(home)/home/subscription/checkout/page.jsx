@@ -379,7 +379,7 @@ function CheckoutPageContent() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: BG_PAGE, color: TEXT_1, paddingBottom: "120px" }}>
+    <div style={{ minHeight: "100vh", background: BG_PAGE, color: TEXT_1, paddingBottom: "12px" }}>
       <style>{`
         * { box-sizing: border-box; }
         @keyframes spin   { to { transform: rotate(360deg); } }
@@ -606,7 +606,7 @@ function CheckoutPageContent() {
       </div>
 
       <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0,
+         bottom: 0, left: 0, right: 0,
         padding: "16px 20px",
         background: "linear-gradient(to top,#FFFFFF 70%,transparent)",
         display: "flex", justifyContent: "center", zIndex: 20,
@@ -615,7 +615,7 @@ function CheckoutPageContent() {
           onClick={handlePayment}
           disabled={paying || payStatus === "success"}
           style={{
-            width: "100%", maxWidth: "440px", marginLeft: "160px",
+            width: "100%", maxWidth: "440px", 
             display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
             padding: "15px", borderRadius: "14px", border: "none",
             cursor: paying || payStatus === "success" ? "not-allowed" : "pointer",

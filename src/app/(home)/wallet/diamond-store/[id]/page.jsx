@@ -27,17 +27,17 @@ function DiamondDetailContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] text-gray-900 pb-12 font-sans">
+    <div className="min-h-screen  text-gray-900 lg:pb-12 pb-9 font-Poppins lg:px-6 ">
       {/* Header */}
-      <div className=" px-5 pb-4 flex items-center gap-4 shadow-sm">
+      <div className=" px-5 lg:pb-4 pt-2 flex items-center ">
         <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
           <ArrowLeft size={18} className="text-gray-700" />
         </button>
-        <h1 className="text-xl font-bold">Diamond Store</h1>
+        <h1 className="text-xl font-semibold hidden lg:block md:block ">Diamond Store</h1>
       </div>
 
       {/* Main Card */}
-      <div className="px-4 mt-5">
+      <div className="px-4 lg:mt-5 md:mt-4 mt-2">
         <div
           className="rounded-3xl p-8 text-center relative overflow-hidden shadow-lg"
           style={{ background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #06b6d4 100%)" }}
