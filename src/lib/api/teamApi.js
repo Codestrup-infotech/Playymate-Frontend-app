@@ -5,7 +5,8 @@
  */
 
 // API_BASE should be the base URL WITHOUT /api/v1 (e.g., http://localhost:5000)
-const API_BASE = process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1$/, '');
+// Keep this build-safe when Amplify has not injected env vars yet.
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/api\/v1\/?$/, "");
 
 /**
  * Get auth token from localStorage
