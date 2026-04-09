@@ -124,25 +124,7 @@ export default function WalletPage() {
         </div>
 
         {/* Wallet Balance Card */}
-        {walletBalance && (
-          <div className="rounded-3xl p-5 bg-white border border-gray-100 shadow-sm">
-            <p className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-2">Wallet Balance</p>
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span className="text-3xl">👛</span>
-                <span className="text-4xl font-black text-gray-800">
-                  ₹{(walletBalance.balance ?? 0).toLocaleString()}
-                </span>
-              </div>
-              <span className={`text-xs px-3 py-1 rounded-full font-bold ${
-                walletBalance.status === "ACTIVE" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
-              }`}>
-                {walletBalance.status}
-              </span>
-            </div>
-            <p className="text-xs mt-2 text-gray-400">INR · Cash Wallet</p>
-          </div>
-        )}
+     
       </div>
 
       {/* Recent Activity */}

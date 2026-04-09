@@ -262,31 +262,7 @@ export default function JoiningFeePage() {
               </div>
             </motion.div>
 
-            {/* DIAMOND PAYMENT */}
-            <motion.div 
-              variants={itemVariants}
-              whileHover={{ scale: 1.02 }}
-              className={`${cardBg} border ${borderColor} rounded-2xl p-5 flex items-center justify-between shadow-sm mb-6`}
-            >
-              <div>
-                <h3 className="font-semibold">Diamond Coin Payment</h3>
-                <p className="text-sm text-gray-500">Full Payment Via Diamond Coins</p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.use_diamonds}
-                    onChange={(e) => setFormData(prev => ({ ...prev, use_diamonds: e.target.checked }))}
-                    className="sr-only peer"
-                  />
-                  <div className={`w-14 h-8 rounded-full flex items-center p-1 transition-all duration-300 ${formData.use_diamonds ? "bg-gradient-to-r from-pink-500 to-orange-400" : "bg-gray-300"}`}>
-                    <div className={`w-6 h-6 bg-white rounded-full shadow transition-transform duration-300 ${formData.use_diamonds ? "translate-x-0" : ""}`}></div>
-                  </div>
-                </label>
-              </div>
-            </motion.div>
+         
           </>
         )}
 
