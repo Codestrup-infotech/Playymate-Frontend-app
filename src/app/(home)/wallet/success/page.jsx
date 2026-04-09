@@ -11,9 +11,9 @@ function DiamondSuccessContent() {
   const newBalance = Number(params.get("newBalance")) || diamondsAdded;
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] text-gray-900 flex flex-col justify-between px-5 py-12 font-sans">
+    <div className="   text-gray-900 flex flex-col justify-between  lg:px-32 px-4 font-Poppins ">
       {/* Top */}
-      <div className="text-center mt-8">
+      <div className="text-center ">
         <div
           className="w-28 h-28 mx-auto rounded-full flex items-center justify-center text-6xl mb-6 shadow-lg"
           style={{ background: "linear-gradient(135deg, #3B82F6, #06b6d4)" }}
@@ -21,13 +21,13 @@ function DiamondSuccessContent() {
           💎
         </div>
 
-        <h1 className="text-4xl font-black text-gray-800">
+        <h1 className="text-4xl font-semibold text-gray-800">
           {diamondsAdded.toLocaleString()} Diamonds Added!
         </h1>
         <p className="text-gray-400 mt-2 text-sm">You're Ready To Boost Your Game 🚀</p>
 
         {/* Balance Card */}
-        <div className="mt-8 bg-white rounded-3xl p-7 border border-gray-100 shadow-md">
+        <div className="mt-8 bg-white rounded-3xl p-8 border border-gray-100 shadow-md">
           <p className="text-xs font-bold tracking-widest text-gray-400 uppercase">New Balance</p>
           <h2
             className="text-5xl font-black mt-3 bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent"
@@ -41,7 +41,7 @@ function DiamondSuccessContent() {
       </div>
 
       {/* Buttons */}
-      <div className=" mb-4 flex gap-3">
+      <div className=" mb-4 mt-10  flex gap-3">
         <button
           onClick={() => router.push("/home")}
           className="w-full py-4 rounded-3xl text-base font-semibold text-white shadow-sm"

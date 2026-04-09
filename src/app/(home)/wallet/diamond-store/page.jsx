@@ -84,17 +84,17 @@ export default function DiamondStore() {
 
   /* ────────────────────────── UI ────────────────────────── */
   return (
-    <div className="min-h-screen bg-[#F5F6FA] font-sans pb-14">
+    <div className="min-h-screen bg-[#F5F6FA] font-Poppins pb-14">
 
       {/* ── Header ── */}
-      <div className=" px-5 pb-4 flex items-center gap-4 shadow-sm">
+      <div className=" px-5 pt-4 flex items-center  ">
         <button
           onClick={() => router.back()}
           className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center"
         >
           <ArrowLeft size={18} className="text-gray-700" />
         </button>
-        <h1 className="text-xl font-bold text-gray-900">Diamond store</h1>
+        <h1 className="text-xl font-medium text-gray-900 hidden lg:block md:block font-Poppins ">Diamond store</h1>
       </div>
 
       {/* ── Hero ── */}
@@ -106,7 +106,7 @@ export default function DiamondStore() {
         </div>
 
         <h2
-          className="text-2xl font-black tracking-tight"
+          className="text-2xl  font-semibold tracking-tight"
           style={{
             background: "linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)",
             WebkitBackgroundClip: "text",
@@ -132,7 +132,7 @@ export default function DiamondStore() {
       </div>
 
       {/* ── Grid ── */}
-      <div className="px-4">
+      <div className="px-4  ">
         {loading ? (
           /* Skeleton */
           <div

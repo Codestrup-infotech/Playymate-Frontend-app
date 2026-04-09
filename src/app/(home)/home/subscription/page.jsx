@@ -436,9 +436,14 @@ export default function UpgradePage() {
             margin: "0 auto",
             padding: "0 20px 40px",
             display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: "16px",
+          gridTemplateColumns:
+  typeof window !== "undefined" && window.innerWidth <= 768
+    ? "repeat(1, 1fr)"
+    : "repeat(2, 1fr)",
+    gap: "16px",
           }}
+
+          
         >
           {filteredPlans.map((plan) => {
             const config = PLAN_CONFIG[plan.key] || {

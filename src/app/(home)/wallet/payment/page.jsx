@@ -63,17 +63,19 @@ function PaymentContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] text-gray-900 pb-10 font-sans">
+    <> 
+    <div className=" flex justify-center items-center "> 
+    <div className="lg:min-h-screen lg:w-2/3  w-full   md:h-screen  text-gray-900 lg:mb-24 pb-5 font-Poppins ">
       {/* Header */}
-      <div className=" px-5 pb-4 flex items-center gap-4 shadow-sm">
+      <div className=" px-5 lg:pb-4 pt-6 flex items-center ">
         <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
           <ArrowLeft size={18} className="text-gray-700" />
         </button>
-        <h1 className="text-xl font-bold">Payment</h1>
+        <h1 className="text-xl font-semibold hidden lg:block md:block ">Payment</h1>
       </div>
 
       {/* Order Summary */}
-      <div className="px-4 mt-5 mb-6">
+      <div className="px-4 lg:mt-5 mt-3 mb-6">
         <div
           className="rounded-3xl p-6 text-center relative overflow-hidden shadow-md"
           style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}
@@ -136,6 +138,8 @@ function PaymentContent() {
         </button>
       </div>
     </div>
+</div>
+     </>
   );
 }
 

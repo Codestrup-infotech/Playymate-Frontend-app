@@ -63,10 +63,10 @@ export default function WalletPage() {
     history.filter((i) => i.coin_type === "DIAMOND");
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] text-gray-900 pb-36 font-Poppins">
+    <div className="min-h-screen  lg:px-32 md:px-4 text-gray-900 lg:pb-14 md:pb-20  font-Poppins">
       {/* Header */}
-      <div className=" px-5 pb-4 flex items-center justify-between shadow-sm">
-        <h1 className="text-3xl font-semibold">Wallet</h1>
+      <div className=" px-5 lg:pb-4  flex items-center justify-between ">
+        <h1 className="lg:text-3xl text-2xl font-semibold  ">Wallet</h1>
        
       </div>
 
@@ -215,7 +215,7 @@ export default function WalletPage() {
       </div>
 
       {/* Bottom Buttons */}
-      <div className="fixed bottom-0 left-0 right-0 px-4 pb-7 pt-4"
+      <div className=" bottom-0 left-0 right-0 px-4  pt-6"
         style={{ background: "linear-gradient(to top, #F5F6FA 65%, transparent)" }}>
         <div className="flex gap-3 max-w-md mx-auto">
           <button

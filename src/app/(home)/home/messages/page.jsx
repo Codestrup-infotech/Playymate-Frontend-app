@@ -452,10 +452,10 @@ function Bubble({ msg, myId, profileMap, messageRequests = [], onReply, onEdit, 
               msg.is_deleted
                 ? "bg-gray-100 text-gray-400 italic rounded-2xl"
                 : isMe
-                ? "text-white rounded-2xl rounded-br-sm"
-                : "bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-bl-sm shadow-sm"
+                ? "text-black rounded-2xl rounded-br-sm"
+                : "bg-white border text-gray-800 rounded-2xl rounded-bl-sm "
             }`}
-            style={isMe && !msg.is_deleted ? { background: "linear-gradient(135deg, #ec4899, #f97316)" } : {}}
+            style={isMe && !msg.is_deleted ? { background: "linear-gradient(135deg, #F9FAFB, #F9FAFB)" } : {}}
           >
 
 
@@ -886,7 +886,7 @@ function Bubble({ msg, myId, profileMap, messageRequests = [], onReply, onEdit, 
             )}
 
             <div className={`flex items-center gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
-              <span className={`text-[10px] ${isMe ? "text-white/60" : "text-gray-400"}`}>
+              <span className={`text-[10px] ${isMe ? "text-gray-400" : "text-gray-400"}`}>
                 {formatTime(msg.created_at)}
               </span>
               {isMe && !msg.is_deleted && (
@@ -1556,6 +1556,20 @@ useEffect(() => {
     } catch (e) { alert("Failed: " + e.message); }
   };
 
+  // ── Handle user selection from sidebar search ──────────────────────────────────
+
+  const handleSidebarUserSelect = async (user) => {
+    try {
+      const userId = user._id || user.user_id || user.id;
+      const conv = await createConversation({ participants: [userId] });
+      setSearch("");
+      handleSelectConv(conv);
+    } catch (e) { 
+      console.error("Failed to start conversation:", e.message);
+      alert("Failed to start conversation: " + e.message);
+    }
+  };
+
   // ── Rename ───────────────────────────────────────────────────────────────────
 
   const handleRename = async () => {
@@ -1640,6 +1654,7 @@ useEffect(() => {
         onMessageRequestsChange={setMessageRequests}
         myId={myId}
         conversations={conversations}
+        onSearchUsers={handleSidebarUserSelect}
       />
 
       {/* ── Chat ─────────────────────────────────────────────────────────── */}
@@ -1693,7 +1708,7 @@ useEffect(() => {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-[#F5F6FA]">
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-white ">
             {msgLoading ? (
               <div className="space-y-4">
                 {Array(5).fill(0).map((_, i) => (
