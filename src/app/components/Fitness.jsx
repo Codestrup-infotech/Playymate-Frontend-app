@@ -10,20 +10,31 @@ const COINS_PER_QUESTION = 10;
    CONDITIONAL VISIBILITY
 ===================================================== */
 function buildVisibleSteps(questions, answers) {
+  console.log(`[buildVisibleSteps] questions.length: ${questions.length}, answers:`, JSON.stringify(answers));
+  
   return questions.filter((q) => {
-    if (!q.conditional_on) return true;
+    if (!q.conditional_on) {
+      console.log(`[buildVisibleSteps] ${q.question_id}: no condition, visible`);
+      return true;
+    }
 
     const { question_id, condition_type, condition_value } =
       q.conditional_on;
 
     const prevAnswer = answers[question_id];
+    console.log(`[buildVisibleSteps] ${q.question_id}: checking condition, prevAnswer:`, prevAnswer, condition_value);
 
     if (prevAnswer === undefined || prevAnswer === null) {
+      console.log(`[buildVisibleSteps] ${q.question_id}: no answer yet, not visible`);
       return false;
     }
 
     if (condition_type === "equals") {
-      return String(prevAnswer) === String(condition_value);
+      const normalizedAnswer = String(prevAnswer).toLowerCase();
+      const normalizedCondition = String(condition_value).toLowerCase();
+      const result = normalizedAnswer === normalizedCondition;
+      console.log(`[buildVisibleSteps] ${q.question_id}: equals check, ${normalizedAnswer} === ${normalizedCondition} = ${result}`);
+      return result;
     }
 
     if (condition_type === "contains") {
@@ -224,6 +235,7 @@ export default function Fitness({ onBack, onComplete }) {
         const fitnessQuestions = data?.questions?.fitness || [];
         const medicalQuestions = data?.questions?.medical || [];
 
+        console.log('[Fitness] Full questions response:', JSON.stringify(data?.questions, null, 2));
         console.log('[Fitness] Fitness questions:', fitnessQuestions.map(q => ({ id: q.question_id, type: q.question_type })));
         console.log('[Fitness] Medical questions:', medicalQuestions.map(q => ({ id: q.question_id, type: q.question_type })));
 
@@ -401,8 +413,82 @@ export default function Fitness({ onBack, onComplete }) {
       const data = res.data?.data;
       console.log(`[Fitness.submitAnswer] Success for ${qId}:`, data);
 
-           if (data?.profile_completed) {
-        console.log(`[Fitness.submitAnswer] Profile completed! Full response:`, data);
+      if (data?.next_question_id) {
+        console.log(`[Fitness.submitAnswer] Next question from API: ${data.next_question_id}`);
+        console.log(`[Fitness.submitAnswer] currentCategory: ${currentCategory}`);
+        console.log(`[Fitness.submitAnswer] stepIndex: ${stepIndex}`);
+        console.log(`[Fitness.submitAnswer] visibleSteps.length: ${visibleSteps.length}`);
+        
+        const isMedical = allQuestions.medical.some(m => m.question_id === data.next_question_id);
+        console.log(`[Fitness.submitAnswer] isMedical: ${isMedical}`);
+        
+        if (isMedical && currentCategory !== "medical") {
+          console.log(`[Fitness.submitAnswer] Switching to medical category for question: ${data.next_question_id}`);
+          setCurrentCategory("medical");
+          setQuestions(allQuestions.medical);
+          
+          let medicalIndex = 0;
+          if (data.next_question_id === "medical_conditions") {
+            medicalIndex = allQuestions.medical.findIndex(q => q.question_id === "has_medical_conditions");
+            if (medicalIndex < 0) medicalIndex = 0;
+          } else {
+            medicalIndex = allQuestions.medical.findIndex(q => q.question_id === data.next_question_id);
+          }
+          
+          console.log(`[Fitness.submitAnswer] Setting stepIndex to: ${medicalIndex}`);
+          setStepIndex(medicalIndex >= 0 ? medicalIndex : 0);
+          setAnswers({});
+          return;
+        }
+        
+        if (isMedical && currentCategory === "medical") {
+          console.log(`[Fitness.submitAnswer] Already in medical, finding next question`);
+          const nextIndex = allQuestions.medical.findIndex(q => q.question_id === data.next_question_id);
+          console.log(`[Fitness.submitAnswer] Next medical question index: ${nextIndex}, current stepIndex: ${stepIndex}`);
+          
+          if (nextIndex >= 0 && nextIndex !== stepIndex) {
+            const nextQ = allQuestions.medical[nextIndex];
+            const isVisible = buildVisibleSteps(allQuestions.medical, answers).some(q => q.question_id === nextQ.question_id);
+            console.log(`[Fitness.submitAnswer] Next question visibility: ${isVisible}`);
+            
+            if (isVisible) {
+              setStepIndex(nextIndex);
+              return;
+            } else {
+              console.log(`[Fitness.submitAnswer] Next question is hidden (conditional), completing profile`);
+              if (data?.next_action === "PHYSICAL_PROFILE_COMPLETE") {
+                console.log(`[Fitness.submitAnswer] Profile fully completed!`);
+                onComplete();
+                return;
+              }
+            }
+          }
+          
+          if (nextIndex === stepIndex) {
+            console.log(`[Fitness.submitAnswer] Already at last question, checking for completion`);
+            if (data?.next_action === "PHYSICAL_PROFILE_COMPLETE") {
+              console.log(`[Fitness.submitAnswer] Profile fully completed!`);
+              onComplete();
+              return;
+            }
+          }
+        }
+        
+        if (stepIndex < visibleSteps.length - 1) {
+          console.log(`[Fitness.submitAnswer] Moving to next question in same category`);
+          setStepIndex((i) => i + 1);
+        } else if (currentCategory === "fitness" && allQuestions.medical.length > 0) {
+          console.log(`[Fitness.submitAnswer] No more fitness questions, switching to medical`);
+          setCurrentCategory("medical");
+          setQuestions(allQuestions.medical);
+          setStepIndex(0);
+          setAnswers({});
+        }
+        return;
+      }
+
+      if (data?.next_action === "PHYSICAL_PROFILE_COMPLETE" && !data?.next_question_id) {
+        console.log(`[Fitness.submitAnswer] Profile fully completed.`);
         onComplete();
         return;
       }
@@ -410,12 +496,18 @@ export default function Fitness({ onBack, onComplete }) {
       if (stepIndex < visibleSteps.length - 1) {
         setStepIndex((i) => i + 1);
       } else {
+        console.log(`[Fitness.submitAnswer] No more questions in fitness.`);
+        console.log(`[Fitness.submitAnswer] allQuestions.medical length:`, allQuestions.medical.length);
+        console.log(`[Fitness.submitAnswer] allQuestions.medical:`, allQuestions.medical);
+        
         if (currentCategory === "fitness" && allQuestions.medical.length > 0) {
+          console.log(`[Fitness.submitAnswer] Switching to medical category`);
           setCurrentCategory("medical");
           setQuestions(allQuestions.medical);
           setStepIndex(0);
           setAnswers({});
         } else {
+          console.log(`[Fitness.submitAnswer] No medical questions, completing...`);
           onComplete();
         }
       }
@@ -494,7 +586,7 @@ export default function Fitness({ onBack, onComplete }) {
       {/* QUESTION CARD */}
       <div className="bg-gradient-to-r font-Poppins from-blue-600 to-cyan-500 rounded-2xl p-6 text-center mb-8">
         <div className="text-sm uppercase tracking-wide  mb-2">
-          💪 FITNESS
+          {currentCategory === "medical" ? "🏥 MEDICAL" : "💪 FITNESS"}
         </div>
         <h2 className="text-lg">{current?.question_text}</h2>
       </div>
@@ -545,13 +637,34 @@ export default function Fitness({ onBack, onComplete }) {
             );
           })}
 
+        {current?.question_type === "multi_choice" && (
+          <div className="space-y-3">
+            {current.options.map((opt) => {
+              const selected = (answers[current.question_id] || []).includes(opt.label);
+              return (
+                <button
+                  key={opt.option_id}
+                  onClick={() => setAnswer(current.question_id, opt.label, "multi")}
+                  className={`w-full py-3.5 rounded-xl border transition ${
+                    selected
+                      ? "bg-blue-500 border-blue-500"
+                      : "border-gray-600 hover:bg-blue-400"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
       </div>
 
       {/* CONTINUE BUTTON */}
       <button
         disabled={!hasAnswer()}
         onClick={submitAnswer}
-        className="bottom-6 w-96 font-Poppins mt-4 justify-center items-center py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40"
+        className="bottom-6 w-full font-Poppins mt-4 justify-center items-center py-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 disabled:opacity-40"
       >
         Continue
       </button>

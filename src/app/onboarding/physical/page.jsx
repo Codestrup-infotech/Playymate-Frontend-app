@@ -82,7 +82,7 @@ export default function PhysicalPreferences() {
 
         setTimeout(() => {
           setStep(2);
-        }, 3000);
+        }, 4000);
 
       } catch (err) {
         console.error("Failed to fetch screen:", err);
@@ -294,7 +294,7 @@ export default function PhysicalPreferences() {
         ) : (
           <>
             {step === 1 && (
-              <IntroLoader image={screenData?.image_url} />
+              <IntroLoader image={screenData?.image_url} introData={screenData} />
             )}
 
             {step === 2 && (
@@ -386,17 +386,90 @@ export default function PhysicalPreferences() {
   );
 }
 
-function IntroLoader({ image }) {
+function IntroLoader({ image, introData }) {
+  const title = introData?.title || introData?.description || "Tell Us About Your Experience";
+  
   return (
     <>
 
-      <div className="flex items-center justify-center min-h-screen bg-black">
+      {/* <div className="relative flex items-center justify-center min-h-screen bg-black ">
         <img
           src={image}
           alt="loading"
-          className="w-80 h-[450px]  rounded-2xl "
+          className="w-80 h-[450px] rounded-2xl "
         />
-      </div> </>
+      
+        <div className="absolute bottom-8 left-0 right-0 px-4">
+            {(() => {
+              const titleText = title || "Tell Us About Your Experience";
+              const words = titleText.split(" ");
+              if (words.length === 1) {
+                return (
+                  <h1 className="text-white text-2xl font-bold leading-tight text-center">
+                    <span className="bg-gradient-to-r from-orange-500 to-pink-400 bg-clip-text text-transparent">
+                      {titleText}
+                    </span>
+                  </h1>
+                );
+              }
+              const lastWord = words.pop();
+
+              return (
+                <h1 className="text-white text-2xl font-bold leading-tight text-center">
+                  {words.join(" ")}{" "}
+                  <span className="bg-gradient-to-r from-orange-500 to-pink-400 bg-clip-text text-transparent">
+                    {lastWord}
+                  </span>
+                </h1>
+              );
+            })()}
+        </div>
+      </div>  */}
+      
+      <div className="flex items-center justify-center min-h-screen bg-black">
+  
+  {/* IMAGE WRAPPER (IMPORTANT) */}
+  <div className="relative w-80 h-[450px]">
+    
+    <img
+      src={image}
+      alt="loading"
+      className="w-full h-full rounded-2xl object-cover"
+    />
+
+    {/* TEXT OVER IMAGE (BOTTOM) */}
+    <div className="absolute bottom-4 left-0 right-0 px-4 text-center">
+      {(() => {
+        const titleText = title || " ";
+        const words = titleText.split(" ");
+
+        if (words.length === 1) {
+          return (
+            <h1 className="text-white text-2xl font-bold leading-tight">
+              <span className="bg-gradient-to-r from-orange-500 to-pink-400 bg-clip-text text-transparent">
+                {titleText}
+              </span>
+            </h1>
+          );
+        }
+
+        const lastWord = words.pop();
+
+        return (
+          <h1 className="text-white text-2xl font-bold leading-tight">
+            {words.join(" ")}{" "}
+            <span className="bg-gradient-to-r from-orange-500 to-pink-400 bg-clip-text text-transparent">
+              {lastWord}
+            </span>
+          </h1>
+        );
+      })()}
+    </div>
+
+  </div>
+</div>
+      
+      </>
   );
 }
 

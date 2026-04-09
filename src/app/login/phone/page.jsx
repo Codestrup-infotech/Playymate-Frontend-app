@@ -118,11 +118,12 @@ export default function PhoneLogin() {
       localStorage.removeItem("playymate_access_token");
       localStorage.removeItem("playymate_refresh_token");
 
-      const response = await authService.sendPhoneOTP(phone);
+    const fullPhone = `+91${phone}`;
+      const response = await authService.sendPhoneOTP(fullPhone);
 
       const flowId = response?.data?.auth_flow_id;
       sessionStorage.setItem("auth_flow_id", flowId);
-      sessionStorage.setItem("phone", phone);
+      sessionStorage.setItem("phone", fullPhone);
 
       setStep("phoneOtp");
       setTimer(30);

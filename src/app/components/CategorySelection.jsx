@@ -767,17 +767,67 @@ if (submitRes?.reward?.pending_coins !== undefined) {
       {/* INTRO */}
       {screen === "intro" && introData && (
         <div className="max-w-md w-full flex flex-col  text-center justify-center items-center space-y-6">
-          {/* <h1 className="text-2xl mb-8 font-bold text-white text-md font-Playfair Display ">
-            {introData?.intro?.title_text}
-          </h1> */}
+          {/* Overlay text - above the image */}
+          {/* {introData?.intro?.title_text && (
+            <div className="px-4">
+              {(() => {
+                const title = introData?.intro?.title_text || "Tell Us About Your Experience";
+                const words = title.split(" ");
+                const lastWord = words.pop();
 
-          {introData?.intro?.media_url && (
+                return (
+                  <h1 className="text-white text-xl font-bold leading-tight">
+                    {words.join(" ")}{" "}
+                    <span className="bg-gradient-to-r from-orange-500 to-pink-400 bg-clip-text text-transparent">
+                      {lastWord}
+                    </span>
+                  </h1>
+                );
+              })()}
+            </div>
+          )} */}
+
+          {/* {introData?.intro?.media_url && (
             <img
               src={introData.intro.media_url}
               alt="intro"
               className=" w-[280px]  h-[430px]  rounded-3xl "
             />
-          )}
+          )} */}
+
+
+{introData?.intro?.media_url && (
+  <div className="relative w-[280px] h-[430px]">
+
+    <img
+      src={introData.intro.media_url}
+      alt="intro"
+      className="w-full h-full object-cover rounded-3xl"
+    />
+
+    {/* TEXT ON IMAGE */}
+    {introData?.intro?.title_text && (
+      <div className="absolute bottom-4 left-0 right-0 font-Poppins px-4 text-center">
+        {(() => {
+          const title = introData.intro.title_text;
+          const words = title.split(" ");
+          const lastWord = words.pop();
+
+          return (
+            <h1 className="text-white text-3xl font-bold ">
+              {words.join(" ")}{" "}
+              <span className="bg-gradient-to-r from-orange-500 to-pink-400 bg-clip-text text-transparent">
+                {lastWord}
+              </span>
+            </h1>
+          );
+        })()}
+      </div>
+    )}
+
+  </div>
+)}
+
 
           {introData?.intro?.subtitle_text && (
             <p className="text-white text-md font-Playfair Display ">
@@ -804,12 +854,7 @@ if (submitRes?.reward?.pending_coins !== undefined) {
            
           </h2>
 
-          {/* <p className="text-2xl font-semibold text-center">  {itemsData.category_description}</p> */}
-
-          {/* <p className="text-center text-gray-400 font-Poppins">
-            Select up to <span className="text-white font-Poppins"> {itemsData.max_selection}{" "}
-            {itemsData.category_title}  </span>
-          </p> */}
+       
 <p className="text-center text-gray-400 font-Poppins">
   Select up to{" "}
   <span className="text-white font-Poppins">
@@ -884,19 +929,33 @@ if (submitRes?.reward?.pending_coins !== undefined) {
       )}
 
       {/* QUESTIONS */}
-   {screen === "questions" && questions && questions.length > 0 && (
+    {screen === "questions" && questions && questions.length > 0 && (
   <div className="max-w-md absolute flex flex-col justify-center items-center w-full ">
-<div className="relative top-4"> 
+<div className="relative top-4">
  <SportProgressBar
-  percentage={questions[qIndex]?.progress_percentage || progressPercentage}
-  pendingCoins={pendingCoins}
-  colorStart={gradient.card.split(" ")[0].replace("from-[", "").replace("]", "")}
-  colorEnd={gradient.card.split(" ")[1].replace("to-[", "").replace("]", "")}
-/>
- </div>
+   percentage={questions[qIndex]?.progress_percentage || progressPercentage}
+   pendingCoins={pendingCoins}
+   colorStart={gradient.card.split(" ")[0].replace("from-[", "").replace("]", "")}
+   colorEnd={gradient.card.split(" ")[1].replace("to-[", "").replace("]", "")}
+ />
+</div>
     {questions[qIndex] && qIndex < questions.length ? (
       <>
-        <div className={`p-6 w-80  rounded-xl mb-2 bg-gradient-to-r ${gradient.card} text-lg text-white font-Poppins text-center`}>
+        <div className={`p-6 w-80 rounded-xl mb-2 bg-gradient-to-r ${gradient.card} text-lg text-white font-Poppins text-center`}>
+          {/* Category Item Header inside question box */}
+          {currentItemKey && (
+            <div className="flex flex-col items-center mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">
+                  {itemsData?.items?.find(i => i.key === currentItemKey)?.icon || "🎯"}
+                </span>
+                <span className="text-lg font-semibold">
+                  {getItemDisplayName(itemsData?.items?.find(i => i.key === currentItemKey))}
+                </span>
+              </div>
+              <div className="w-full h-[0.5px] bg-gray-50 mt-2"></div>
+            </div>
+          )}
           {questions[qIndex].question_text}
         </div>
 
@@ -919,12 +978,12 @@ ${
             </button>
           ))}
 
-        <button
+        {/* <button
           onClick={() => handleBackToItems()}
           className="mt-4 text-gray-400 hover:text-white text-sm"
         >
           ← Back to Items
-        </button>
+        </button> */}
       </>
     ) : (
       <div className="text-center text-gray-400">

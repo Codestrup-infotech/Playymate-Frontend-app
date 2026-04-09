@@ -38,6 +38,7 @@ import postService from "@/app/user/post";
 import Activity from "../../components/Activity.jsx";
 import BioPopup from "@/app/components/profileCompletion/BioPopup.jsx";
 import UserPostDetailModal from "../../components/UserPostDetailModal.jsx";
+import UserPostDetailModalMobileView from "../../components/UserPostDetailModalMobileView.jsx";
 import UserFollowModal from "../../components/UserFollowersFollowing.jsx";
 import UserStory from "../user-story.jsx";
 import Highlights from "../../components/highlights.jsx";
@@ -151,6 +152,10 @@ export default function UserProfilePage() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [selectedPostLoading, setSelectedPostLoading] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
+  const [selectedPostIndex, setSelectedPostIndex] = useState(0);
+  const [selectedReel, setSelectedReel] = useState(null);
+  const [selectedReelIndex, setSelectedReelIndex] = useState(0);
+  const [modalContentType, setModalContentType] = useState('posts'); // 'posts' or 'reels'
   const [showFollowOptions, setShowFollowOptions] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   
@@ -172,6 +177,10 @@ export default function UserProfilePage() {
   const [isTargetPrivate, setIsTargetPrivate] = useState(false);
   const [followRequestStatus, setFollowRequestStatus] = useState(null); // null, 'pending', 'accepted', 'rejected'
   const [followRequestActionLoading, setFollowRequestActionLoading] = useState(false);
+
+
+const [modalPosts, setModalPosts] = useState([]);
+const [modalIndex, setModalIndex] = useState(0);
 
   // Helper function to check if string is a valid MongoDB ObjectId
   const isObjectId = (str) => {
@@ -600,10 +609,36 @@ console.log("=== FOLLOW ACTION ===");
     }
   };
 
-  const handlePostClick = async (post) => {
+const handlePostClick = async (post, index, type = "posts") => {
+  setSelectedPostLoading(true);
+
+  const list = type === "reels" ? reels : posts;
+
+  setSelectedPost(post);
+  setSelectedPostLoading(false);
+
+  setShowPostModal(true);
+
+  setModalPosts(list);
+  setModalIndex(index);
+};
+
+  const handlePostNavigate = (newIndex) => {
+    if (modalContentType === 'posts' && newIndex >= 0 && newIndex < posts.length) {
+      setSelectedPostIndex(newIndex);
+      setSelectedPost(posts[newIndex]);
+    } else if (modalContentType === 'reels' && newIndex >= 0 && newIndex < reels.length) {
+      setSelectedReelIndex(newIndex);
+      setSelectedReel(reels[newIndex]);
+    }
+  };
+
+  const handleReelClick = async (reel, index) => {
     setSelectedPostLoading(true);
-    // Use post data directly from profile - the API might fail
-    setSelectedPost(post);
+    setSelectedReelIndex(index);
+    setSelectedReel(reel);
+    setSelectedPost(reel);
+    setModalContentType('reels');
     setSelectedPostLoading(false);
     setShowPostModal(true);
   };
@@ -916,10 +951,10 @@ console.log("=== FOLLOW ACTION ===");
                   </div>
                 ) : posts.length > 0 ? (
                   <div className="grid lg:grid-cols-3 grid-cols-2 gap-1 mb-4">
-                   {posts.map((post, index) => (
-  <div
-    key={post?._id || `post-${index}`}
-                        onClick={() => handlePostClick(post)}
+                    {posts.map((post, index) => (
+                      <div
+                        key={post?._id || `post-${index}`}
+                     onClick={() => handlePostClick(post, index, "posts")}
                         className="aspect-[3/4] relative bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-80 transition"
                       >
                         {post.media && post.media.length > 0 ? (
@@ -957,7 +992,7 @@ console.log("=== FOLLOW ACTION ===");
                       <div
                         key={reel?.post_id || reel?._id || `reel-${index}`}
                         className="aspect-square cursor-pointer overflow-hidden rounded-lg relative group"
-                        onClick={() => handlePostClick(reel)}
+                      onClick={() => handlePostClick(reel, index, "reels")}
                       >
                         {reel.thumbnail_url || (reel.media && reel.media[0]?.thumbnail) ? (
                           <img
@@ -1007,7 +1042,7 @@ console.log("=== FOLLOW ACTION ===");
       </div>
 
       {/* Post Detail Modal */}
-      {showPostModal && selectedPost && (
+      {/* {showPostModal && selectedPost && (
         <UserPostDetailModal
           post={selectedPost}
           isLoading={selectedPostLoading}
@@ -1017,7 +1052,40 @@ console.log("=== FOLLOW ACTION ===");
           }}
           currentUser={currentUser}
         />
-      )}
+      )} */}
+
+{showPostModal && selectedPost && (
+  <>
+    {/* Desktop */}
+    <div className="hidden md:block lg:block xl:block">
+      <UserPostDetailModal
+        post={selectedPost}
+        isLoading={selectedPostLoading}
+        onClose={() => {
+          setShowPostModal(false);
+          setSelectedPost(null);
+        }}
+        currentUser={currentUser}
+      />
+    </div>
+
+    {/* Mobile - Instagram style */}
+    <div className="block md:hidden lg:hidden xl:hidden">
+      <UserPostDetailModalMobileView
+        post={selectedPost}
+        isLoading={selectedPostLoading}
+        onClose={() => {
+          setShowPostModal(false);
+          setSelectedPost(null);
+        }}
+        currentUser={currentUser}
+        allPosts={modalPosts}
+        currentIndex={modalIndex}
+        onNavigatePost={(index) => setModalIndex(index)}
+      />
+    </div>
+  </>
+)}
 
       {/* Follow/Unfollow Options Popup */}
       <UserFollowUnfollow

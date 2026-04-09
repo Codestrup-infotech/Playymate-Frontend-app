@@ -197,43 +197,51 @@ export default function OnboardingGenderPage() {
         {/* Gender Options */}
         <div className="mt-8 flex flex-col gap-4   font-Poppins font-normal">
           {genderOptions.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => handleSubmit(option.id)}
-              disabled={loading}
-              className={`
-                w-full py-5 px-6
-                flex items-center justify-center gap-3
-                text-lg font-semibold
-                rounded-2xl
-                bg-gradient-to-br from-[#1e1e22] to-[#18181c] hover:bg-gradient-to-br  hover:from-[#EB4694] hover:to-[#FF8319]
-                border
-                transition-all duration-200
-                shadow-lg
-                ${
-                  gender === option.id
-                    ? "border-pink-500 ring-1  ring-pink-500/50 scale-[1.02]"
-                    : "border-[#2a2a30] hover:border-pink-500/60 hover:brightness-110"
-                }
-                active:scale-[0.98]
-                disabled:opacity-50
-              `}
-            >
-              <span>{option.label}</span>
+          <div
+  className={`
+    p-[1px] rounded-2xl
+    bg-gradient-to-r from-[#EF3AFF] to-[#FF8319]
+    ${gender === option.id ? "scale-[1.02]" : ""}
+  `}
+>
+  <button
+    key={option.id}
+    onClick={() => handleSubmit(option.id)}
+    disabled={loading}
+    className={`
+      w-full py-5 px-6
+      flex items-center justify-center gap-3
+      text-lg font-semibold
+      rounded-2xl
+      bg-gradient-to-br from-[#1e1e22] to-[#18181c]
+      hover:bg-gradient-to-r hover:from-[#EF3AFF] hover:to-[#FF8319]
+      transition-all duration-200
+      shadow-lg
+      ${
+        gender === option.id
+          ? "ring-1 ring-pink-500/50"
+          : "hover:brightness-110"
+      }
+      active:scale-[0.98]
+      disabled:opacity-50
+    `}
+  >
+    <span>{option.label}</span>
 
-              {option.symbol && (
-                <span
-                  className="text-xl hover:text-white"
-                  style={{ color: option.symbolColor }}
-                >
-                  {option.symbol}
-                </span>
-              )}
+    {option.symbol && (
+      <span
+        className="text-xl hover:text-white"
+        style={{ color: option.symbolColor }}
+      >
+        {option.symbol}
+      </span>
+    )}
 
-              {loading && gender === option.id && (
-                <Loader2 className="w-4 h-4 animate-spin ml-1 text-pink-400  " />
-              )}
-            </button>
+    {loading && gender === option.id && (
+      <Loader2 className="w-4 h-4 animate-spin ml-1 text-pink-400" />
+    )}
+  </button>
+</div>
           ))}
         </div>
 
