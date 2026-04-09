@@ -55,10 +55,11 @@ export default function SettingsLayout({ children }) {
 
   return (
     
-    <div className={`flex max-w-full lg:w-3/4   h-screen fixed ${isDark ? 'bg-[#12122A]' : 'bg-white '} ${isDark ? 'text-white' : 'text-black'}`}>
+    <div className={`flex max-w-full lg:w-3/4    rounded-tl-xl  rounded-xl  h-screen fixed ${isDark ? 'bg-[#12122A]' : 'bg-white '} ${isDark ? 'text-white' : 'text-black'}`}>
        
+       <div className="hidden lg:block   "> 
       {/* Sidebar */}
-      <div className={`w-72 ${isDark ? 'border-r border-gray-800' : 'border-r border-gray-200'} p-4 overflow-y-auto flex-shrink-0 ${isDark ? 'bg-[#12122A]' : 'bg-white'}`}>
+      <div className={`w-72 ${isDark ? 'border-r    rounded-tl-xl  border-gray-800' : 'border-r border-gray-200'} p-4 overflow-y-auto flex-shrink-0 ${isDark ? 'bg-[#12122A]' : 'bg-white    rounded-tl-xl '}`}>
         <h2 className="text-lg font-semibold mb-6">Settings</h2>
 
         <div className="space-y-1">
@@ -81,10 +82,10 @@ export default function SettingsLayout({ children }) {
             );
           })}
         </div>
-      </div>
+      </div> </div>
 
       {/* RIGHT SIDE CONTENT */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto ">
          {children}
       </div>
     </div> 
