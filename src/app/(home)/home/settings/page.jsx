@@ -35,6 +35,16 @@ export default function SettingsPage() {
       href: "/home/settings/blocked-user",
     },
     {
+      title: "Withdraw Report",
+      description: "View your withdrawal history and reports.",
+      href: "/home/settings/withdraw-report",
+    },
+    {
+      title: "Delete My Account",
+      description: "Permanently delete your account and data.",
+      href: "/home/settings/delete-account",
+    },
+      {
       title: "Help",
       description: "Get help with your account and learn about Playymate features.",
       href: "/home/settings/help",
@@ -42,7 +52,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:hidden  block px-2 py-3  ">
       <div>
         <h1 className="text-2xl font-bold mb-2">Settings</h1>
         <p className="text-gray-600">
@@ -50,7 +60,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4  ">
         {settingsItems.map((item, index) => (
           <div
             key={index}

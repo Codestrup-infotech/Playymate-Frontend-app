@@ -98,20 +98,30 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, on
     <div className={`${cardBg} rounded-xl overflow-hidden shadow-sm transition-colors duration-300 relative`}>
       {/* Author row */}
      <div 
-        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:opacity-80"
+        className="flex  gap-3 px-4 py-3 cursor-pointer hover:opacity-80"
         onClick={() => onUserClick && onUserClick(post)}
       >
   <img
     src={author.profile_image_url}
-    className="w-10 h-10 rounded-full object-cover"
+    className="w-10 h-10 rounded-2xl object-cover"
   />
   <div>
-    <h4 className={`text-sm font-semibold ${isDark ? "text-white" : "text-black"}`}>
+    {/* <h4 className={`text-sm font-semibold ${isDark ? "text-white" : "text-black"}`}>
       {author.full_name}
+    </h4> */}
+    <h4 className={`text-sm font-semibold font-Poppins ${isDark ? "text-white" : "text-black "}`}>
+      {author.username}
     </h4>
-    <p className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-      @{author.username}
-    </p>
+
+
+      {/* Location */}
+     {content.location?.display_text && (
+  <p className={`text-sm flex items-center gap-1 ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+    <MapPin size={14} /> {content.location.display_text}
+  </p>
+)}
+
+
   </div>
 </div>
 
@@ -192,33 +202,28 @@ function PostCard({ post, isDark, cardBg, mutedText, iconBtn, onCommentClick, on
       <img
         src={media[0].url}
         alt="post media"
-        className="w-full h-auto   object-cover rounded-xl "
+        className="w-[400px] h-[490px] object-cover  rounded-xl "
       />
     )}
   </div>
 )}
 
-      {/* Text */}
+    <div className="flex mb-2"> 
+  {/* Text */}
      {content.text && (
-  <p className={`px-4 py-2 text-base font-medium ${isDark ? "text-white" : "text-black"}`}>
+  <p className={` text-[16px] px-4 font-normal font-sans ${isDark ? "text-white" : "text-gray-800 "}`}>
     {content.text}
   </p>
 )}
 
+
       {/* Hashtags */}
      {content.hashtags && content.hashtags.length > 0 && (
-  <p className={`px-4 pb-2 text-sm font-semibold ${isDark ? "text-blue-400" : "text-blue-600"}`}>
+  <p className={`px-4  text-[16px] font-sans ${isDark ? "text-blue-400" : "text-blue-500"}`}>
     {content.hashtags.map(tag => `#${tag}`).join(' ')}
   </p>
 )}
-
-      {/* Location */}
-     {content.location?.display_text && (
-  <p className={`px-4 pb-2 text-sm flex items-center gap-1 ${isDark ? "text-gray-300" : "text-gray-600"}`}>
-    <MapPin size={14} /> {content.location.display_text}
-  </p>
-)}
-
+</div>
       {/* Actions */}
    <div className="flex justify-between items-center px-4 pb-4 mt-auto">
 
@@ -784,7 +789,7 @@ function HomePageContent() {
 
   return (
     <>
-    <div className="flex items-start gap-8 lg:px-14 px-3 max-w-[1200px] mx-auto w-full">
+    <div className="flex items-start gap-8 lg:px-14 px-3 max-w-[1000px] mx-auto w-full">
 
         {/* ── Feed Column ── */}
         <div className="flex-1 max-w-[470px] space-y-6">
@@ -795,7 +800,7 @@ function HomePageContent() {
             <div className="flex flex-col items-center shrink-0">
               <div className="relative">
                 <div
-                  className={`w-20 h-20 rounded-full p-[2px] cursor-pointer hover:opacity-80 transition-opacity ${
+                  className={`w-20 h-20 rounded-2xl p-[2px] cursor-pointer hover:opacity-80 transition-opacity ${
                     (userStories.length > 0)
                       ? "bg-gradient-to-tr from-purple-500 to-orange-500"
                       : "bg-gray-300"
@@ -808,7 +813,7 @@ function HomePageContent() {
                     }
                   }}
                 >
-                  <div className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-200"}`}>
+                  <div className={`w-full h-full rounded-2xl overflow-hidden flex items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-200"}`}>
                     {/* Show user profile photo by default - not story */}
                     {userProfile?.profile_photos?.[0]?.url || userProfile?.profile_image_url ? (
                       <img 
@@ -1061,9 +1066,9 @@ function HomePageContent() {
                   {suggestedFollows.slice(0, 6).map((u, index) => (
                     <div key={u.user_id || `suggested-${index}`} className="flex items-center gap-3">
                       {u.profile_image_url ? (
-                        <img src={u.profile_image_url} alt={u.full_name} className="w-9 h-9 rounded-full object-cover" />
+                        <img src={u.profile_image_url} alt={u.full_name} className="w-9 h-9 rounded-xl object-cover" />
                       ) : (
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-r from-purple-500 to-orange-500" />
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-r from-purple-500 to-orange-500" />
                       )}
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-medium truncate ${isDark ? "text-white" : "text-gray-900"}`}>

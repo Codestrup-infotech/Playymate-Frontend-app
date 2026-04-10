@@ -555,9 +555,15 @@ console.log("=== FOLLOW ACTION ===");
       if (activeTab === "Reels" && profile?._id && !reelsLoading) {
         setReelsLoading(true);
         try {
-          const response = await postService.getUserReels(profile._id, 20, null);
-          console.log('Reels API response:', response);
-          const newReels = response.data?.data?.reels || response.data?.data?.items || [];
+          const response = await postService.getUserPosts(profile._id, 50, null);
+          console.log('Reels from posts API response:', response);
+          const allPosts = response.data?.data?.posts || response.data?.data?.items || [];
+          const newReels = allPosts.filter((post) => {
+            if (!post.media || post.media.length === 0) return false;
+            const mediaType = post.media[0].type?.toLowerCase();
+            return mediaType === "video" || mediaType === "gif";
+          });
+          console.log("Filtered videos/GIFs for reels:", newReels);
           setReels(newReels);
           setReelsCursor(response.data?.data?.next_cursor);
           setHasMoreReels(response.data?.data?.has_more || false);
@@ -571,6 +577,28 @@ console.log("=== FOLLOW ACTION ===");
     };
     loadReels();
   }, [activeTab, profile?._id]);
+
+  const loadMoreReels = async () => {
+    if (reelsCursor && hasMoreReels && !reelsLoading && profile?._id) {
+      setReelsLoading(true);
+      try {
+        const response = await postService.getUserPosts(profile._id, 50, reelsCursor);
+        const allPosts = response.data?.data?.posts || response.data?.data?.items || [];
+        const newReels = allPosts.filter((post) => {
+          if (!post.media || post.media.length === 0) return false;
+          const mediaType = post.media[0].type?.toLowerCase();
+          return mediaType === "video" || mediaType === "gif";
+        });
+        setReels((prev) => [...prev, ...newReels]);
+        setReelsCursor(response.data?.data?.next_cursor);
+        setHasMoreReels(response.data?.data?.has_more || false);
+      } catch (error) {
+        console.error("Error loading more reels:", error);
+      } finally {
+        setReelsLoading(false);
+      }
+    }
+  };
 
   const handlePostClick = async (post) => {
     setSelectedPostLoading(true);
@@ -925,10 +953,11 @@ console.log("=== FOLLOW ACTION ===");
                   </div>
                 ) : reels.length > 0 ? (
                   <div className="grid lg:grid-cols-3 grid-cols-2 gap-2">
-                   {reels.map((reel, index) => (
-  <div
-    key={reel?._id || `reel-${index}`}
+                    {reels.map((reel, index) => (
+                      <div
+                        key={reel?.post_id || reel?._id || `reel-${index}`}
                         className="aspect-square cursor-pointer overflow-hidden rounded-lg relative group"
+                        onClick={() => handlePostClick(reel)}
                       >
                         {reel.thumbnail_url || (reel.media && reel.media[0]?.thumbnail) ? (
                           <img
@@ -936,14 +965,24 @@ console.log("=== FOLLOW ACTION ===");
                             alt=""
                             className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                           />
+                        ) : reel.media && reel.media[0]?.url ? (
+                          <video
+                            src={reel.media[0].url}
+                            className="w-full h-full object-cover"
+                            muted
+                            preload="metadata"
+                          />
                         ) : (
                           <div className={`w-full h-full flex items-center justify-center ${isDark ? "bg-gray-700" : "bg-gray-100"}`}>
                             <Play size={24} className={isDark ? "text-gray-500" : "text-gray-400"} />
                           </div>
                         )}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                          <Play size={40} className="text-white drop-shadow-md" />
+                        </div>
                         <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white">
                           <Play size={14} fill="white" />
-                          <span className="text-xs font-medium">{reel.view_count || 0}</span>
+                          <span className="text-xs font-medium">{reel.view_count || reel.likes_count || 0}</span>
                         </div>
                       </div>
                     ))}

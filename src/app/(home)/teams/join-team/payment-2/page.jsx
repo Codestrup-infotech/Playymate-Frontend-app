@@ -112,7 +112,7 @@ function PaymentScreen() {
   const userGoldCoins = walletBalances?.gold_coins?.balance || walletBalances?.gold_coins || 0;
   const userDiamonds = walletBalances?.diamond_coins?.balance || walletBalances?.diamond_coins || 0;
   
-  const diamondsNeeded = membershipFee;
+  const diamondsNeeded = selectedMethod === 'gold' ? goldCoinsToPay : membershipFee;
   const hasInsufficientBalance = userDiamonds < diamondsNeeded;
   
   useEffect(() => {

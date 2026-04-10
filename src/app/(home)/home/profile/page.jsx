@@ -787,12 +787,14 @@ export default function ProfilePage() {
                 <p className="text-sm text-gray-500 italic">No bio yet</p>
               )}
 
-              <p className="text-sm text-gray-500  mt-2 flex items-center text-center rounded-md shadow-2xl">
-                <MapPin size={14} className="text-[#F65B98] flex-shrink-0" />
-                <span className="ml-2">
-                  {location || "No location added"}
-                </span>
-              </p>
+              {location && (
+                <p className="text-sm text-gray-500  mt-2 flex items-center text-center rounded-md shadow-2xl">
+                  <MapPin size={14} className="text-[#F65B98] flex-shrink-0" />
+                  <span className="ml-2">
+                    {location}
+                  </span>
+                </p>
+              )}
 
               {userTeams && userTeams.length > 0 ? (
                 <Link

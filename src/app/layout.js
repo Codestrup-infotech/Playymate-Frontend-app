@@ -21,7 +21,7 @@ export default function RootLayout({ children }) {
       </head>
       <body
         suppressHydrationWarning
-        style={{ fontFamily: "'Playfair Display', serif" }}
+        style={{ fontFamily: "'Poppins', sans-serif" }}
       >
         <FcmInitializer />
         {children}

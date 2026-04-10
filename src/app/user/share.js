@@ -4,6 +4,8 @@
  * All endpoints require Authorization: Bearer {token}
  */
 
+const DEFAULT_API_BASE_URL = "https://api.playymate.com/api/v1";
+
 // Determine base URL - handle both cases: with or without /api/v1
 const getBaseUrl = () => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -12,7 +14,7 @@ const getBaseUrl = () => {
     const cleanUrl = envUrl.replace(/\/$/, '');
     return cleanUrl.includes('/api/v1') ? cleanUrl : `${cleanUrl}/api/v1`;
   }
-  throw new Error("NEXT_PUBLIC_API_URL environment variable is not set");
+  return DEFAULT_API_BASE_URL;
 };
 
 const BASE_URL = getBaseUrl();

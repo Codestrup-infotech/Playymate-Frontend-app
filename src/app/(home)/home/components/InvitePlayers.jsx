@@ -21,6 +21,7 @@ import {
   Contact,
   UserPlus,
 } from "lucide-react";
+import SharePopup from "./sharepopup";
 
 // ─── User Card Component ───────────────────────────────────────────────────────
 
@@ -153,6 +154,7 @@ export default function InvitePlayers({ teamId: teamIdProp, onClose }) {
   const [myFollowing, setMyFollowing]    = useState([]);
   const [myFollowers, setMyFollowers]    = useState([]);
   const [loadingConnections, setLoadingConnections] = useState(true);
+  const [showSharePopup, setShowSharePopup] = useState(false);
 
   // ── Load my followers and following ──
   const myId = useMemo(() => getMyId(), []);
@@ -393,11 +395,12 @@ export default function InvitePlayers({ teamId: teamIdProp, onClose }) {
         <div className="grid grid-cols-3 gap-3">
           {[
             { icon: Contact, label: "Contact",   color: "text-pink-400",   bg: "bg-pink-500/10"   },
-            { icon: Link2,   label: "Share Link", color: "text-purple-400", bg: "bg-purple-500/10" },
+            { icon: Link2,   label: "Share Link", color: "text-purple-400", bg: "bg-purple-500/10", action: () => setShowSharePopup(true) },
             { icon: QrCode,  label: "QR Code",    color: "text-pink-400",   bg: "bg-pink-500/10"   },
-          ].map(({ icon: Icon, label, color, bg: ibg }) => (
+          ].map(({ icon: Icon, label, color, bg: ibg, action }) => (
             <button
               key={label}
+              onClick={action}
               className={`${card} border ${border} rounded-2xl py-4 flex flex-col items-center gap-2 hover:scale-[1.02] transition-transform`}
             >
               <div className={`w-11 h-11 rounded-xl ${ibg} flex items-center justify-center`}>
@@ -541,6 +544,15 @@ export default function InvitePlayers({ teamId: teamIdProp, onClose }) {
           )}
         </div>
       </div>
+
+      <SharePopup
+        isOpen={showSharePopup}
+        onClose={() => setShowSharePopup(false)}
+        contentType="team"
+        contentId={teamId}
+        title="Join my team on Playymate!"
+        shareUrl={inviteLink}
+      />
     </div>
   );
 }

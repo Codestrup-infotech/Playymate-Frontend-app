@@ -53,7 +53,6 @@ export default function JoiningFeePage() {
     },
     welcome_bonus_coins: 0,
     use_gold_coins: false,
-    use_diamonds: true,
     host_earnings: "wallet",
   })
 
@@ -85,7 +84,6 @@ export default function JoiningFeePage() {
           setFormData(prev => ({
             ...prev,
             use_gold_coins: parsed.payment_preferences.use_gold_coins ?? false,
-            use_diamonds: parsed.payment_preferences.use_diamonds ?? true,
             host_earnings: parsed.host_earnings ?? "wallet",
           }))
         }
@@ -115,7 +113,6 @@ export default function JoiningFeePage() {
       },
       payment_preferences: {
         use_gold_coins: formData.use_gold_coins,
-        use_diamonds: formData.use_diamonds,
       },
       host_earnings: formData.host_earnings,
     }

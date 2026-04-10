@@ -322,7 +322,7 @@ export default function NotificationsPage() {
 
       {/* STICKY TABS */}
       <div className="sticky top-16 z-10 bg-inherit px-4  border-b border-gray-200 text-sm overflow-x-auto backdrop-blur-sm bg-opacity-95">
-        <div className="flex gap-6">
+        <div className="flex lg:gap-6 gap-2">
           {TABS.map((tab) => (
             <button
               key={tab.key}

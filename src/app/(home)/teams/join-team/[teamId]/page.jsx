@@ -240,9 +240,9 @@ export default function TeamProfilePage() {
             >
               <ArrowLeft size={18} />
             </motion.button>
-            <h1 className="text-xl tracking-tight text-gray-900">Team Profile</h1>
+            <h1 className="text-xl font-Poppins tracking-tight text-gray-900">Team Profile</h1>
           </div>
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <motion.button
               whileTap={{ scale: 0.9 }}
               className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${mutedBg} flex items-center justify-center border ${borderColor} ${mutedText}`}
@@ -255,7 +255,7 @@ export default function TeamProfilePage() {
             >
               <MoreVertical size={16} />
             </motion.button>
-          </div>
+          </div> */}
         </div>
       </header>
 
@@ -301,14 +301,14 @@ export default function TeamProfilePage() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-pink-500 to-orange-400">
+                  <span className="text-2xl sm:text-3xl font-Poppins font-black text-transparent bg-clip-text bg-gradient-to-br from-pink-500 to-orange-400">
                     {teamData.name?.charAt(0)?.toUpperCase() || "T"}
                   </span>
                 )}
               </div>
             </motion.div>
 
-            <h1 className={`text-2xl sm:text-3xl  tracking-tighter mb-1 ${textColor} px-2`}>
+            <h1 className={`text-2xl sm:text-3xl font-Poppins tracking-tighter mb-1 ${textColor} px-2`}>
               {teamData.name}
             </h1>
             <div className="flex items-center gap-2 mb-4 sm:mb-6 flex-wrap justify-center">
@@ -316,14 +316,14 @@ export default function TeamProfilePage() {
                 @{teamData.name?.toLowerCase().replace(/\s+/g, '_')}
               </span>
               <span className="w-1 h-1 rounded-full bg-gray-300" />
-              <span className={`text-xs sm:text-sm ${mutedText}`}>{location.city || "Global"}</span>
+              <span className={`text-xs sm:text-sm ${mutedText}`}>{location.city || ""}</span>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full">
               <div className={`${mutedBg} border ${borderColor} rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center`}>
                 <Users className="w-4 h-4 sm:w-5 sm:h-5 text-pink-500 mb-1 sm:mb-2" />
-                <p className={`text-base sm:text-lg font-black ${textColor} leading-none`}>{teamData.member_count || members.length || 0}</p>
+                <p className={`text-base sm:text-lg font-Poppins font-black ${textColor} leading-none`}>{teamData.member_count || members.length || 0}</p>
                 <p className="text-[9px] sm:text-[10px] uppercase tracking-widest  text-gray-400 mt-1">Members</p>
               </div>
               <div className={`${mutedBg} border ${borderColor} rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center`}>
@@ -333,7 +333,7 @@ export default function TeamProfilePage() {
               </div>
               <div className={`${mutedBg} border ${borderColor} rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center`}>
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 mb-1 sm:mb-2" />
-                <p className={`text-base sm:text-lg font-black ${textColor} leading-none`}>{teamData.max_members || 0}</p>
+                <p className={`text-base sm:text-lg font-Poppins font-black ${textColor} leading-none`}>{teamData.max_members || 0}</p>
                 <p className="text-[9px] sm:text-[10px] uppercase tracking-widest  text-gray-400 mt-1">Capacity</p>
               </div>
             </div>
@@ -346,7 +346,7 @@ export default function TeamProfilePage() {
           {/* About */}
           {teamData.description && (
             <motion.div variants={itemVariants} className={`${cardBg} rounded-2xl sm:rounded-3xl p-4 sm:p-6 border ${borderColor} shadow-sm`}>
-              <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-400 mb-3 sm:mb-4 flex items-center gap-2">
+              <h3 className="text-xs sm:text-sm font-Poppins font-black uppercase tracking-widest text-gray-400 mb-3 sm:mb-4 flex items-center gap-2">
                 <Star className="w-3 h-3 sm:w-4 sm:h-4 text-pink-500" />
                 About Team
               </h3>
@@ -363,7 +363,7 @@ export default function TeamProfilePage() {
                 <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-pink-500" />
               </div>
               <div>
-                <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-400">Primary Location</h3>
+                <h3 className="text-[10px] sm:text-xs font-Poppins font-black uppercase tracking-widest text-gray-400">Primary Location</h3>
                 <p className={` text-sm sm:text-base ${textColor}`}>{locationString}</p>
               </div>
             </div>
@@ -377,11 +377,11 @@ export default function TeamProfilePage() {
             >
               <div className={`${cardBg} rounded-xl sm:rounded-[1.9rem] p-4 sm:p-6`}>
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h3 className="font-black uppercase tracking-widest text-orange-600 flex items-center gap-2 text-xs sm:text-sm">
+                  <h3 className="font-Poppins font-black uppercase tracking-widest text-orange-600 flex items-center gap-2 text-xs sm:text-sm">
                     <Coins className="w-4 h-4 sm:w-5 sm:h-5" />
                     Membership Plans
                   </h3>
-                  <div className="px-2 sm:px-3 py-1 bg-orange-50 border border-orange-100 rounded-full text-[9px] sm:text-[10px] font-black text-orange-600 uppercase tracking-widest">
+                  <div className="px-2 sm:px-3 py-1 bg-orange-50 border border-orange-100 rounded-full text-[9px] sm:text-[10px] font-Poppins font-black text-orange-600 uppercase tracking-widest">
                     Premium
                   </div>
                 </div>
@@ -393,7 +393,7 @@ export default function TeamProfilePage() {
                       className={`flex justify-between items-center p-3 sm:p-4 rounded-xl sm:rounded-2xl ${mutedBg} border ${borderColor}`}
                     >
                       <span className={` text-sm sm:text-base ${mutedText}`}>{DURATION_LABELS[duration] || duration}</span>
-                      <span className={`text-lg sm:text-xl font-black ${textColor}`}>
+                      <span className={`text-lg sm:text-xl font-Poppins font-black ${textColor}`}>
                         {formatPrice(pricing?.amount)}
                       </span>
                     </div>
@@ -404,7 +404,7 @@ export default function TeamProfilePage() {
                       <span className={` text-sm sm:text-base ${mutedText}`}>
                         {DURATION_LABELS[membership.default_duration_type] || "Membership"}
                       </span>
-                      <span className={`text-lg sm:text-xl font-black ${textColor}`}>
+                      <span className={`text-lg sm:text-xl font-Poppins font-black ${textColor}`}>
                         {formatPrice(membership.fee_amount)}
                       </span>
                     </div>
@@ -432,7 +432,7 @@ export default function TeamProfilePage() {
           {/* Roles */}
           {(rolesConfig.co_captain_enabled || rolesConfig.manager_enabled || rolesConfig.coach_enabled) && (
             <motion.div variants={itemVariants} className={`${cardBg} rounded-2xl sm:rounded-3xl p-4 sm:p-6 border ${borderColor} shadow-sm`}>
-              <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-400 mb-3 sm:mb-4 flex items-center gap-2">
+              <h3 className="text-xs sm:text-sm font-Poppins font-black uppercase tracking-widest text-gray-400 mb-3 sm:mb-4 flex items-center gap-2">
                 <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-purple-500" />
                 Available Roles
               </h3>
@@ -463,11 +463,11 @@ export default function TeamProfilePage() {
           {members.length > 0 && (
             <motion.div variants={itemVariants} className={`${cardBg} rounded-2xl sm:rounded-3xl p-4 sm:p-6 border ${borderColor} shadow-sm`}>
               <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                <h3 className="text-xs sm:text-sm font-Poppins font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
                   <Users className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
                   Squad Members
                 </h3>
-                <span className={`text-[9px] sm:text-[10px] font-black ${mutedBg} px-2 py-1 rounded-md ${mutedText} uppercase tracking-widest`}>
+                <span className={`text-[9px] sm:text-[10px] font-Poppins font-black ${mutedBg} px-2 py-1 rounded-md ${mutedText} uppercase tracking-widest`}>
                   {members.length} Total
                 </span>
               </div>
@@ -485,7 +485,7 @@ export default function TeamProfilePage() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <span className="text-xs font-black text-gray-400">
+                            <span className="text-xs font-Poppins font-black text-gray-400">
                               {member.user?.full_name?.charAt(0)?.toUpperCase() || "M"}
                             </span>
                           )}
@@ -499,7 +499,7 @@ export default function TeamProfilePage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={` text-xs sm:text-sm ${textColor} truncate`}>{member.user?.full_name}</p>
-                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-400">{member.role}</p>
+                      <p className="text-[9px] sm:text-[10px] font-Poppins font-black uppercase tracking-widest text-gray-400">{member.role}</p>
                     </div>
                     <motion.button
                       whileTap={{ scale: 0.9 }}
@@ -511,7 +511,7 @@ export default function TeamProfilePage() {
                 ))}
 
                 {members.length > 5 && (
-                  <button className={`w-full py-2.5 sm:py-3 rounded-xl sm:rounded-2xl ${mutedBg} border ${borderColor} text-[10px] sm:text-xs font-black uppercase tracking-widest ${mutedText} hover:${textColor} hover:${mutedBg} transition-all`}>
+                  <button className={`w-full py-2.5 sm:py-3 rounded-xl sm:rounded-2xl ${mutedBg} border ${borderColor} text-[10px] sm:text-xs font-Poppins font-black uppercase tracking-widest ${mutedText} hover:${textColor} hover:${mutedBg} transition-all`}>
                     View All {members.length} Members
                   </button>
                 )}
@@ -522,7 +522,7 @@ export default function TeamProfilePage() {
 
         {/* Footer */}
         <motion.div variants={itemVariants} className="mt-6 sm:mt-8 mb-4 text-center">
-          <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+          <p className="text-[9px] sm:text-[10px] font-Poppins font-black uppercase tracking-[0.2em] text-gray-400">
             Established {teamData.created_at
               ? new Date(teamData.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'long' })
               : 'Recently'}
@@ -544,8 +544,8 @@ export default function TeamProfilePage() {
                 href={`/teams/join-team/onboarding?teamId=${teamId}`}
                 className="relative group block w-full"
               >
-                <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-orange-500 rounded-[1.5rem] sm:rounded-[2rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
-                <div className="relative flex items-center justify-center w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-4 sm:py-5 rounded-[1.3rem] sm:rounded-[1.8rem] font-black text-base sm:text-lg uppercase tracking-widest shadow-xl shadow-pink-500/20 transition-all active:scale-95">
+                <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-orange-500 rounded-xl sm:rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
+                <div className="relative flex items-center justify-center w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-Poppins font-semibold text-sm sm:text-base tracking-wide shadow-xl shadow-pink-500/20 transition-all active:scale-95">
                   Join Team
                 </div>
               </Link>

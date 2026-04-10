@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 const REPORT_OPTIONS = [
@@ -23,8 +23,15 @@ export default function Report({
   const [step, setStep] = useState("options"); // options | success
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const popupRef = useRef(null);
 
   if (!isOpen) return null;
+
+  const handleOverlayClick = (e) => {
+    if (popupRef.current && !popupRef.current.contains(e.target)) {
+      onClose();
+    }
+  };
 
   const handleReport = async (reason) => {
     try {
@@ -64,20 +71,22 @@ export default function Report({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
-      <div className="w-full max-w-md bg-white rounded-t-2xl p-4 animate-slideUp">
+    <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/40" onClick={handleOverlayClick}>
+      <div ref={popupRef} className="w-full max-w-md  h-fit rounded-2xl  bg-white rounded-t-2xl p-4 animate-slideUp">
         {/* HEADER */}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Report</h2>
-          <button onClick={onClose} className="text-xl">
-            ×
-          </button>
-        </div>
+        {step === "options" && (
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold">Report</h2>
+            <button onClick={onClose} className="text-xl">
+              ×
+            </button>
+          </div>
+        )}
 
         {/* STEP 1: OPTIONS */}
         {step === "options" && (
           <div>
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm text-gray-600 mb-2">
               Why are you reporting this?
             </p>
 
@@ -87,7 +96,7 @@ export default function Report({
                   key={index}
                   disabled={loading}
                   onClick={() => handleReport(item.value)}
-                  className="w-full text-left px-4 py-3 rounded-lg border hover:bg-gray-100 transition"
+                  className="w-full text-left px-4 py-2 rounded-lg border hover:bg-gray-100 transition"
                 >
                   {item.label}
                 </button>
@@ -106,7 +115,7 @@ export default function Report({
               onClick={() =>
                 router.push("/home/settings/withdraw-report")
               }
-              className="w-full bg-blue-600 text-white py-3 rounded-lg mb-2"
+              className="w-60 bg-gradient-to-r from-[#F03FEF] to-[#FD7C2F]  text-white py-3 rounded-lg mb-2"
             >
               View My Reports
             </button>
