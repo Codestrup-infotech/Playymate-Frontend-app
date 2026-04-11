@@ -6,15 +6,14 @@ import {
   Users, Trophy, Calendar, UserPlus, ArrowLeft,
   Shield, CheckCircle, Clock, X, Crown, DollarSign,
   Settings, Copy, Check, MapPin, Zap, CreditCard,
-  Activity, MoreHorizontal, Star, Award, TrendingUp,
-  Share2, Trash2,
+  Activity, Star, Award, TrendingUp,
 } from "lucide-react";
 import { useTheme } from "@/lib/ThemeContext";
 import {
   getTeamProfile, getTeamMembers, getPendingMembers,
   getTeamPayments, getPaymentSummary, createInvite,
   removeMember, updateMemberRole, acceptInvite, declineInvite,
-  getTeamInvites, checkNameAvailability, archiveTeam,
+  getTeamInvites, checkNameAvailability,
 } from "@/lib/api/teamApi";
 import InvitePlayers from "@/app/(home)/home/components/InvitePlayers";
 import TeamChat from "@/app/(home)/home/components/TeamChat";
@@ -115,12 +114,6 @@ export default function TeamDetailPage() {
   const [removing,       setRemoving]       = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showReserveNameModal, setShowReserveNameModal] = useState(false);
-  const [showMenuPopup, setShowMenuPopup] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [shareLink, setShareLink] = useState("");
-  const [creatingLink, setCreatingLink] = useState(false);
 
   // ── Fetch ──
   useEffect(() => {
@@ -218,41 +211,6 @@ export default function TeamDetailPage() {
     } catch {} 
   };
 
-  const doDeleteTeam = async () => {
-    setDeleting(true);
-    try {
-      await archiveTeam(teamId);
-      router.push("/teams/my-team");
-    } catch (err) {
-      console.error("Error deleting team:", err);
-      alert("Failed to delete team. Please try again.");
-    } finally {
-      setDeleting(false);
-      setShowDeleteConfirm(false);
-    }
-  };
-
-  const doShareTeam = async () => {
-    setCreatingLink(true);
-    try {
-      const res = await createInvite(teamId, { invite_type: "link" });
-      const data = res.data || res;
-      const link = data.invite_link || `https://playymate.app/join/${data.invite_code}`;
-      setShareLink(link);
-    } catch (err) {
-      console.error("Error creating invite:", err);
-      alert("Failed to create share link. Please try again.");
-    } finally {
-      setCreatingLink(false);
-    }
-  };
-
-  const copyShareLink = () => {
-    navigator.clipboard.writeText(shareLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   // ── Loading / Error ──
   if (loading) return (
     <div style={{ minHeight:"100vh", background: t.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -324,14 +282,6 @@ export default function TeamDetailPage() {
             }}><ArrowLeft size={18}/></button>
             <span style={{ fontSize:18, fontWeight:800, letterSpacing:"-0.4px" }}>Team Details</span>
           </div>
-          <button 
-            onClick={() => setShowMenuPopup(!showMenuPopup)}
-            style={{
-              width:38, height:38, borderRadius:12,
-              background: t.surface, border:"none", cursor:"pointer",
-              display:"flex", alignItems:"center", justifyContent:"center", color: t.text,
-            }}
-          ><MoreHorizontal size={18}/></button>
         </div>
 
        {/* ── Combined Banner + Team Card (Single Box) ── */}
@@ -930,191 +880,6 @@ export default function TeamDetailPage() {
           setTeam(prev => ({ ...prev, name_reserved: true }))
         }}
       />
-
-      {/* ── Menu Popup ── */}
-      {showMenuPopup && (
-        <>
-          <div 
-            style={{
-              position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
-              zIndex: 150,
-            }}
-            onClick={() => setShowMenuPopup(false)}
-          />
-          <div style={{
-            position: "absolute",
-            top: 70,
-            right: 20,
-            background: isDark ? "#1a1a2e" : "#ffffff",
-            borderRadius: 16,
-            padding: "8px 0",
-            minWidth: 160,
-            boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
-            zIndex: 151,
-          }}>
-            <button 
-              onClick={() => {
-                setShowMenuPopup(false);
-                setShowShareModal(true);
-              }}
-              style={{
-                width: "100%",
-                padding: "12px 16px",
-                border: "none",
-                background: "transparent",
-                color: t.text,
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                textAlign: "left",
-              }}
-            >
-              <Share2 size={16} style={{ color: t.blue }} />
-              Share Team
-            </button>
-            {userRole === "owner" && (
-              <button 
-                onClick={() => {
-                  setShowMenuPopup(false);
-                  setShowDeleteConfirm(true);
-                }}
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  border: "none",
-                  background: "transparent",
-                  color: t.red,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  textAlign: "left",
-                }}
-              >
-                <Trash2 size={16} />
-                Delete Team
-              </button>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* ── Share Modal ── */}
-      {showShareModal && (
-        <Modal title="Share Team" onClose={() => setShowShareModal(false)} t={t} isDark={isDark}>
-          <p style={{ fontSize: 13, color: t.textSub, marginBottom: 16, lineHeight: 1.5 }}>
-            Share this team with others by sending them the link below.
-          </p>
-          {shareLink ? (
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <input 
-                type="text" 
-                value={shareLink} 
-                readOnly
-                style={{
-                  flex: 1,
-                  padding: "12px 14px",
-                  borderRadius: 12,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.surface,
-                  color: t.text,
-                  fontSize: 13,
-                }}
-              />
-              <button 
-                onClick={copyShareLink}
-                style={{
-                  padding: "12px 16px",
-                  borderRadius: 12,
-                  border: "none",
-                  background: copied ? t.green : t.gradBtn,
-                  color: "#fff",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
-                {copied ? "Copied" : "Copy"}
-              </button>
-            </div>
-          ) : (
-            <button 
-              onClick={doShareTeam}
-              disabled={creatingLink}
-              style={{
-                width: "100%",
-                padding: 14,
-                borderRadius: 12,
-                border: "none",
-                background: t.gradBtn,
-                color: "#fff",
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: "pointer",
-                marginBottom: 16,
-                opacity: creatingLink ? 0.6 : 1,
-              }}
-            >
-              {creatingLink ? "Creating Link..." : "Generate Share Link"}
-            </button>
-          )}
-        </Modal>
-      )}
-
-      {/* ── Delete Confirmation Modal ── */}
-      {showDeleteConfirm && (
-        <Modal title="Delete Team" onClose={() => setShowDeleteConfirm(false)} t={t} isDark={isDark}>
-          <p style={{ fontSize: 13, color: t.textSub, marginBottom: 24, lineHeight: 1.65 }}>
-            Are you sure you want to delete <strong style={{ color: t.text }}>{team?.name}</strong>? This action cannot be undone.
-          </p>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button 
-              onClick={() => setShowDeleteConfirm(false)} 
-              disabled={deleting}
-              style={{ 
-                flex: 1, 
-                padding: 12, 
-                borderRadius: 50, 
-                border: `1.5px solid ${t.cardBorder}`, 
-                background: "transparent", 
-                color: t.text, 
-                fontWeight: 700, 
-                fontSize: 14, 
-                cursor: "pointer" 
-              }}
-            >
-              Cancel
-            </button>
-            <button 
-              onClick={doDeleteTeam} 
-              disabled={deleting}
-              style={{ 
-                flex: 1, 
-                padding: 12, 
-                borderRadius: 50, 
-                border: "none", 
-                background: t.red, 
-                color: "#fff", 
-                fontWeight: 700, 
-                fontSize: 14, 
-                cursor: "pointer",
-                opacity: deleting ? 0.6 : 1 
-              }}
-            >
-              {deleting ? "Deleting..." : "Delete"}
-            </button>
-          </div>
-        </Modal>
-      )}
 
       <TeamChat teamId={teamId} teamName={team?.name} />
 

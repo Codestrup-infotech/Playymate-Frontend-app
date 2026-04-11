@@ -5,7 +5,7 @@ import { Users, Plus, Trophy, Calendar, UserPlus, ArrowRight } from "lucide-reac
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/lib/ThemeContext"
-import { getMyTeams, checkEligibility, initiateSlotPurchase, confirmSlotPurchase, getCoinBalance } from "@/lib/api/teamApi"
+import { getMyTeams, getMyJoinedTeams, checkEligibility, initiateSlotPurchase, confirmSlotPurchase, getCoinBalance } from "@/lib/api/teamApi"
 
 // Helper function to convert team name to URL slug
 const toSlug = (name) => {
@@ -134,9 +134,10 @@ export default function TeamsPage() {
     const fetchTeamsData = async () => {
       try {
         // Fetch both teams and eligibility in parallel
-        const [teamsResponse, eligibilityResponse] = await Promise.all([
+        const [teamsResponse, eligibilityResponse, joinedResponse] = await Promise.all([
           getMyTeams(),
-          checkEligibility()
+          checkEligibility(),
+          getMyJoinedTeams().catch(e => ({ data: [], error: e.message }))
         ])
         
         console.log("getMyTeams response FULL:", JSON.stringify(teamsResponse, null, 2));
@@ -144,18 +145,41 @@ export default function TeamsPage() {
         console.log("teamsResponse.owned:", teamsResponse.owned);
         console.log("teamsResponse.member:", teamsResponse.member);
         console.log("teamsResponse.joined:", teamsResponse.joined);
+        console.log("getMyJoinedTeams response:", joinedResponse);
         
         const ownedTeams = teamsResponse.owned || [];
-        const joinedTeams = teamsResponse.member || teamsResponse.joined || [];
         
-        console.log("First owned team FULL:", JSON.stringify(ownedTeams[0], null, 2));
-        console.log("First owned team keys:", Object.keys(ownedTeams[0] || {}));
-        console.log("First joined team FULL:", JSON.stringify(joinedTeams[0], null, 2));
-        console.log("First joined team keys:", Object.keys(joinedTeams[0] || {}));
+        // Get joined teams from separate API response
+        let joinedTeamsFromApi = [];
+        if (joinedResponse && !joinedResponse.error) {
+          if (joinedResponse.data && Array.isArray(joinedResponse.data)) {
+            joinedTeamsFromApi = joinedResponse.data;
+          } else if (Array.isArray(joinedResponse)) {
+            joinedTeamsFromApi = joinedResponse;
+          }
+        }
+        
+        // Also check main API for joined teams
+        const joinedFromMainApi = teamsResponse.member || teamsResponse.joined || [];
+        
+        // Use whichever has data, prioritize the separate API
+        let allJoinedTeams = [];
+        if (joinedTeamsFromApi.length > 0) {
+          allJoinedTeams = joinedTeamsFromApi;
+        } else if (joinedFromMainApi.length > 0) {
+          allJoinedTeams = joinedFromMainApi;
+        }
+        
+        console.log("allJoinedTeams:", allJoinedTeams);
+        
+        // Filter out owned teams from joined teams to avoid duplicates
+        const ownedTeamIds = new Set((ownedTeams || []).map(t => t._id || t.id));
+        const joinedTeams = (allJoinedTeams || []).filter(t => !ownedTeamIds.has(t._id || t.id));
+        
+        console.log("Final joinedTeams after filter:", joinedTeams);
         
         const sortByDate = (teams, dateFields) => {
           const sorted = [...teams].sort((a, b) => {
-            // First try date fields
             for (const field of dateFields) {
               if (a[field] && b[field]) {
                 const dateA = new Date(a[field]);
@@ -165,11 +189,9 @@ export default function TeamsPage() {
                 }
               }
             }
-            // Fallback: use _id timestamp (MongoDB ObjectId contains creation time)
             if (a._id && b._id) {
               const idA = a._id.toString();
               const idB = b._id.toString();
-              // ObjectId first 4 bytes are timestamp
               const timeA = parseInt(idA.substring(0, 8), 16) * 1000;
               const timeB = parseInt(idB.substring(0, 8), 16) * 1000;
               return timeB - timeA;
@@ -189,10 +211,6 @@ export default function TeamsPage() {
           error: null,
         })
         
-        console.log("First joined team keys:", Object.keys(teamsResponse.member?.[0] || teamsResponse.joined?.[0] || {}));
-        console.log("First joined team FULL:", JSON.stringify(teamsResponse.member?.[0] || teamsResponse.joined?.[0], null, 2));
-        
-        // Set eligibility data including teams_created_count
         setEligibility({
           can_create_team: eligibilityResponse.can_create_team ?? false,
           kyc_status: eligibilityResponse.kyc_status || null,
@@ -200,7 +218,6 @@ export default function TeamsPage() {
           teams_created_count: eligibilityResponse.teams_created_count || 0,
           denial_reason: eligibilityResponse.denial_reason || null,
           loading: false,
-          // New fields from eligibility API
           available_packages: eligibilityResponse.available_packages || [],
           slot_addons_available: eligibilityResponse.slot_addons_available || false,
           purchased_slots_total: eligibilityResponse.purchased_slots_total || 0,

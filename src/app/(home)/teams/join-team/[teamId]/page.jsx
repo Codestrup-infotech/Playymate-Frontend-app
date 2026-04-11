@@ -22,6 +22,16 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from "@/lib/ThemeContext"
 import { getTeamProfile } from "@/lib/api/teamApi"
 
+const CDN_BASE = process.env.NEXT_PUBLIC_WASABI_CDN_URL || "";
+
+const getFullImageUrl = (relativeUrl) => {
+  if (!relativeUrl) return null;
+  if (relativeUrl.startsWith("http")) return relativeUrl;
+  const fullUrl = `${CDN_BASE}/${relativeUrl}`;
+  console.log("Image URL:", fullUrl);
+  return fullUrl;
+}
+
 const SKILL_LEVELS = {
   beginner: "Beginner",
   intermediate: "Intermediate",
@@ -47,6 +57,7 @@ export default function TeamProfilePage() {
   const [team, setTeam] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [alreadyJoined, setAlreadyJoined] = useState(false)
 
   // Theme styles - matching joining-fee page
   const pageBg = isDark ? "bg-black" : "bg-gray-50"
@@ -67,6 +78,7 @@ export default function TeamProfilePage() {
       try {
         setLoading(true)
         const response = await getTeamProfile(teamId)
+        console.log("Team Profile Response:", response)
         const teamData = response?.data || response
 
         if (!teamData || !teamData._id) {
@@ -78,7 +90,7 @@ export default function TeamProfilePage() {
         }
       } catch (err) {
         console.error("Error fetching team:", err)
-        setError(err?.message || "Failed to load team details")
+        setAlreadyJoined(true)
         setTeam(null)
       } finally {
         setLoading(false)
@@ -131,6 +143,32 @@ export default function TeamProfilePage() {
             ))}
           </div>
         </div>
+      </div>
+    )
+  }
+
+  if (alreadyJoined) {
+    return (
+      <div className={`p-4 sm:p-6 flex items-center justify-center min-h-screen ${pageBg}`}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className={`${cardBg} rounded-2xl sm:rounded-3xl p-6 sm:p-8 max-w-xs sm:max-w-sm w-full text-center shadow-xl border ${borderColor} mx-4`}
+        >
+          <div className={`w-16 h-16 sm:w-20 sm:h-20 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-5 sm:mb-6`}>
+            <CheckCircle className="w-8 h-8 sm:w-10 sm:h-10 text-orange-500" />
+          </div>
+          <h2 className={`text-xl sm:text-2xl mb-2 sm:mb-3 ${textColor}`}>Already Joined</h2>
+          <p className={`${mutedText} mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base`}>
+            You have already joined this team.
+          </p>
+          <button
+            onClick={() => router.push('/teams')}
+            className="w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-lg shadow-pink-500/20 active:scale-95 transition-transform text-sm sm:text-base"
+          >
+            Back to Teams
+          </button>
+        </motion.div>
       </div>
     )
   }
@@ -340,10 +378,62 @@ export default function TeamProfilePage() {
           </div>
         </motion.div>
 
-        {/* Info Sections */}
-        <div className="space-y-3 sm:space-y-4">
+        {/* Members - 3 by 3 Grid */}
+          {members.length > 0 && (
+            <motion.div variants={itemVariants} className={`${cardBg} rounded-2xl sm:rounded-3xl p-4 sm:p-6 border ${borderColor} shadow-sm`}>
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h3 className="text-xs sm:text-sm font-Poppins font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
+                  Squad Members
+                </h3>
+                <span className={`text-[9px] sm:text-[10px] font-Poppins font-black ${mutedBg} px-2 py-1 rounded-md ${mutedText} uppercase tracking-widest`}>
+                  {members.length} Total
+                </span>
+              </div>
 
-          {/* About */}
+              <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                {members.slice(0, 9).map((member, index) => (
+                  <div key={member._id || index} className="flex flex-col items-center text-center group">
+                    <div className="relative mb-2 sm:mb-3">
+                      <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl ${mutedBg} p-0.5 group-hover:bg-gradient-to-br group-hover:from-pink-500 group-hover:to-orange-400 transition-all duration-300`}>
+                        <div className={`w-full h-full rounded-[0.6rem] sm:rounded-[0.9rem] ${cardBg} flex items-center justify-center overflow-hidden`}>
+                          {(member.user?.profile_image_url || member.user?.avatar) ? (
+                            <img
+                              src={getFullImageUrl(member.user?.profile_image_url || member.user?.avatar)}
+                              alt={member.user?.full_name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-sm font-Poppins font-black text-gray-400">
+                              {member.user?.full_name?.charAt(0)?.toUpperCase() || "M"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {member.role === 'owner' && (
+                        <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full p-1 border-2 border-white">
+                          <Crown className="w-2 h-2 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <p className={`text-[10px] sm:text-xs ${textColor} truncate w-full max-w-[80px] sm:max-w-[100px]`}>{member.user?.full_name}</p>
+                    <p className="text-[8px] sm:text-[9px] font-Poppins font-black uppercase tracking-widest text-gray-400">{member.role}</p>
+                  </div>
+                ))}
+              </div>
+
+              {members.length > 9 && (
+                <button className={`w-full mt-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl ${mutedBg} border ${borderColor} text-[10px] sm:text-xs font-Poppins font-black uppercase tracking-widest ${mutedText} hover:${textColor} hover:${mutedBg} transition-all`}>
+                  View All {members.length} Members
+                </button>
+              )}
+            </motion.div>
+          )}
+
+          {/* Info Sections */}
+          <div className="space-y-3 sm:space-y-4">
+
+            {/* About */}
           {teamData.description && (
             <motion.div variants={itemVariants} className={`${cardBg} rounded-2xl sm:rounded-3xl p-4 sm:p-6 border ${borderColor} shadow-sm`}>
               <h3 className="text-xs sm:text-sm font-Poppins font-black uppercase tracking-widest text-gray-400 mb-3 sm:mb-4 flex items-center gap-2">
@@ -458,66 +548,6 @@ export default function TeamProfilePage() {
               </div>
             </motion.div>
           )}
-
-          {/* Members */}
-          {members.length > 0 && (
-            <motion.div variants={itemVariants} className={`${cardBg} rounded-2xl sm:rounded-3xl p-4 sm:p-6 border ${borderColor} shadow-sm`}>
-              <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <h3 className="text-xs sm:text-sm font-Poppins font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
-                  <Users className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
-                  Squad Members
-                </h3>
-                <span className={`text-[9px] sm:text-[10px] font-Poppins font-black ${mutedBg} px-2 py-1 rounded-md ${mutedText} uppercase tracking-widest`}>
-                  {members.length} Total
-                </span>
-              </div>
-
-              <div className="space-y-3 sm:space-y-4">
-                {members.slice(0, 5).map((member, index) => (
-                  <div key={member._id || index} className="flex items-center gap-3 sm:gap-4 group">
-                    <div className="relative shrink-0">
-                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${mutedBg} p-0.5 group-hover:bg-gradient-to-br group-hover:from-pink-500 group-hover:to-orange-400 transition-all duration-300`}>
-                        <div className={`w-full h-full rounded-[0.6rem] sm:rounded-[0.9rem] ${cardBg} flex items-center justify-center overflow-hidden`}>
-                          {member.user?.profile_image_url ? (
-                            <img
-                              src={member.user.profile_image_url}
-                              alt={member.user?.full_name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-xs font-Poppins font-black text-gray-400">
-                              {member.user?.full_name?.charAt(0)?.toUpperCase() || "M"}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {member.role === 'owner' && (
-                        <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full p-1 border-2 border-white">
-                          <Crown className="w-2 h-2 text-white" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={` text-xs sm:text-sm ${textColor} truncate`}>{member.user?.full_name}</p>
-                      <p className="text-[9px] sm:text-[10px] font-Poppins font-black uppercase tracking-widest text-gray-400">{member.role}</p>
-                    </div>
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      className={`p-1.5 sm:p-2 rounded-lg ${mutedBg} border ${borderColor} ${mutedText} shrink-0`}
-                    >
-                      <MoreVertical size={13} />
-                    </motion.button>
-                  </div>
-                ))}
-
-                {members.length > 5 && (
-                  <button className={`w-full py-2.5 sm:py-3 rounded-xl sm:rounded-2xl ${mutedBg} border ${borderColor} text-[10px] sm:text-xs font-Poppins font-black uppercase tracking-widest ${mutedText} hover:${textColor} hover:${mutedBg} transition-all`}>
-                    View All {members.length} Members
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          )}
         </div>
 
         {/* Footer */}
@@ -532,7 +562,7 @@ export default function TeamProfilePage() {
 
       {/* Fixed Bottom CTA */}  
       <AnimatePresence>
-        {!teamData.is_member && (
+        {(!teamData.is_member || alreadyJoined) && (
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -540,15 +570,27 @@ export default function TeamProfilePage() {
             className=" bottom-0 inset-x-0 px-3 sm:px-6 pb-5 sm:pb-6 pt-4 bg-gradient-to-t from-white via-white/90 to-transparent z-50"
           >
             <div className="max-w-2xl mx-auto">
-              <Link
-                href={`/teams/join-team/onboarding?teamId=${teamId}`}
-                className="relative group block w-full"
-              >
-                <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-orange-500 rounded-xl sm:rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
-                <div className="relative flex items-center justify-center w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-Poppins font-semibold text-sm sm:text-base tracking-wide shadow-xl shadow-pink-500/20 transition-all active:scale-95">
-                  Join Team
-                </div>
-              </Link>
+              {alreadyJoined ? (
+                <button
+                  onClick={() => router.push('/teams')}
+                  className="relative group block w-full"
+                >
+                  <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-orange-500 rounded-xl sm:rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
+                  <div className="relative flex items-center justify-center w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-Poppins font-semibold text-sm sm:text-base tracking-wide shadow-xl shadow-pink-500/20 transition-all active:scale-95">
+                    Already Joined - Back to Teams
+                  </div>
+                </button>
+              ) : (
+                <Link
+                  href={`/teams/join-team/onboarding?teamId=${teamId}`}
+                  className="relative group block w-full"
+                >
+                  <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-orange-500 rounded-xl sm:rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
+                  <div className="relative flex items-center justify-center w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-Poppins font-semibold text-sm sm:text-base tracking-wide shadow-xl shadow-pink-500/20 transition-all active:scale-95">
+                    Join Team
+                  </div>
+                </Link>
+              )}
             </div>
           </motion.div>
         )}

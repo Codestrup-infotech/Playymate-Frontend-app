@@ -1,6 +1,6 @@
 "use client";
 
-import { Phone, Video } from "lucide-react";
+import { FaPhone, FaVideo } from "react-icons/fa";
 import { initiateCall, storeCallSession } from "@/app/user/call-now";
 
 export default function CallNow({ selectedConv, myId }) {
@@ -61,7 +61,7 @@ export default function CallNow({ selectedConv, myId }) {
         title="Voice Call"
         className="w-9 h-9 rounded-full bg-pink-50 hover:bg-pink-100 flex items-center justify-center transition-colors"
       >
-        <Phone className="w-4 h-4 text-pink-500" />
+        <FaPhone className="w-4 h-4 text-pink-500" />
       </button>
 
       <button
@@ -69,7 +69,7 @@ export default function CallNow({ selectedConv, myId }) {
         title="Video Call"
         className="w-9 h-9 rounded-full bg-pink-50 hover:bg-pink-100 flex items-center justify-center transition-colors"
       >
-        <Video className="w-4 h-4 text-pink-500" />
+        <FaVideo className="w-4 h-4 text-pink-500" />
       </button>
     </div>
   );

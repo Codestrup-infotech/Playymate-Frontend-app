@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Check, Wallet, Trophy, Calendar, ShieldCheck, Zap, Sparkles } from "lucide-react"
+import { ArrowLeft, Check, Wallet, Trophy, Calendar, ShieldCheck, Zap, Sparkles, CheckCircle } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { getTeamProfile, previewMembership } from "@/lib/api/teamApi"
 
@@ -16,6 +16,7 @@ function OnboardingContent() {
   const [membershipData, setMembershipData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [alreadyJoined, setAlreadyJoined] = useState(false)
   const [selectedOption, setSelectedOption] = useState(null)
 
   useEffect(() => {
@@ -29,14 +30,26 @@ function OnboardingContent() {
           getTeamProfile(teamId),
           previewMembership(teamId)
         ])
-        setTeamData(team?.data || team)
-        setMembershipData(membership?.data || membership)
+        if (team?.data?._id) {
+          setTeamData(team.data)
+        } else if (team?._id) {
+          setTeamData(team)
+        }
+        if (membership?.data) {
+          setMembershipData(membership.data)
+        } else if (membership) {
+          setMembershipData(membership)
+        }
         if (membership?.options?.length > 0) {
           setSelectedOption(membership.options[0].type)
         }
       } catch (err) {
         console.error("Error fetching data:", err)
-        setError("Failed to load team details")
+        if (err?.message?.includes("409") || err?.status === 409) {
+          setAlreadyJoined(true)
+        } else {
+          setError("Failed to load team details")
+        }
       }
       setLoading(false)
     }
@@ -87,8 +100,34 @@ function OnboardingContent() {
     )
   }
 
+  if (alreadyJoined) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-sm"
+        >
+          <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-8 h-8 text-orange-500" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Already Joined</h2>
+          <p className="text-slate-500 mb-6">You have already joined this team.</p>
+          <button
+            onClick={() => router.push("/teams")}
+            className="w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-3 rounded-xl font-semibold shadow-lg"
+          >
+            Back to Teams
+          </button>
+        </motion.div>
+      </div>
+    )
+  }
+
   const membershipOptions = membershipData?.options || []
-  const walletBalances = membershipData?.wallet_balances || {}
+  const walletBalances = membershipData?.wallet_balances 
+  const goldCoinsBalance = typeof walletBalances?.gold_coins === 'object' ? walletBalances.gold_coins?.balance || walletBalances.gold_coins || 0 : walletBalances?.gold_coins || 0
+  const diamondsBalance = typeof walletBalances?.diamonds === 'object' ? walletBalances.diamonds?.balance || walletBalances.diamonds || 0 : walletBalances?.diamonds || 0
   const currentPrice = membershipOptions.find(o => o.type === selectedOption)?.price || teamData?.membership?.fee_amount || 0
 
   return (
@@ -230,28 +269,28 @@ function OnboardingContent() {
             )}
 
             {/* WALLET BALANCES */}
-            {(walletBalances.gold_coins > 0 || walletBalances.diamonds > 0) && (
+            {(goldCoinsBalance > 0 || diamondsBalance > 0) && (
               <section>
                 <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">Your Rewards</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  {walletBalances.gold_coins > 0 && (
+                  {goldCoinsBalance > 0 && (
                     <div className="bg-amber-50/50 rounded-2xl p-4 border border-amber-100 flex items-center gap-3">
                       <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
                         <Wallet size={20} />
                       </div>
                       <div>
-                        <p className="text-amber-700 font-black text-lg leading-none">{walletBalances.gold_coins}</p>
+                        <p className="text-amber-700 font-black text-lg leading-none">{goldCoinsBalance}</p>
                         <p className="text-[10px] text-amber-600/80 font-bold uppercase tracking-wider">Gold Coins</p>
                       </div>
                     </div>
                   )}
-                  {walletBalances.diamonds > 0 && (
+                  {diamondsBalance > 0 && (
                     <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100 flex items-center gap-3">
                       <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
                         <Zap size={20} />
                       </div>
                       <div>
-                        <p className="text-blue-700 font-black text-lg leading-none">{walletBalances.diamonds}</p>
+                        <p className="text-blue-700 font-black text-lg leading-none">{diamondsBalance}</p>
                         <p className="text-[10px] text-blue-600/80 font-bold uppercase tracking-wider">Diamonds</p>
                       </div>
                     </div>

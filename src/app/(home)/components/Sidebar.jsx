@@ -369,18 +369,16 @@ export default function Sidebar() {
         `}
       >
         {/* Logo */}
-        <div className="flex items-center h-16 px-3 flex-shrink-0">
+        <div className="flex items-center gap-2 h-16 px-3 flex-shrink-0">
           <img
             src="/playymate-icon.png"
             alt="Playymate Icon"
-            className={`w-10 h-10 object-contain transition-all duration-300 ${
-              isHover ? "opacity-0 w-0" : "opacity-100 w-10 mx-auto"
-            }`}
+            className="w-10 h-10 object-contain flex-shrink-0"
           />
           <img
             src="/playymate-logo.png"
             alt="Playymate Logo"
-            className={`h-8 object-contain transition-all duration-300 ${
+            className={`h-8 object-contain transition-all duration-300 flex-shrink-0 ${
               isHover ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
             }`}
           />
